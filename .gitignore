@@ -1,0 +1,14 @@
+# Windows
+desktop.ini
+
+# CNH e comprovante de residência (pastas de contrato) — só local
+contratos/**/CNH.*
+contratos/**/cnh.*
+contratos/**/Residencia.*
+contratos/**/Residência.*
+contratos/**/residencia.*
+contratos/**/residência.*
+
+# CRLV / documento do veículo — só local
+veiculos/*
+!veiculos/.gitkeep
