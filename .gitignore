@@ -1,0 +1,20 @@
+# Windows
+desktop.ini
+
+# CNH e comprovante de residência (pastas de contrato) — só local
+contratos/**/CNH.*
+contratos/**/cnh.*
+contratos/**/Residencia.*
+contratos/**/Residência.*
+contratos/**/residencia.*
+contratos/**/residência.*
+
+# CRLV / documento do veículo — só local
+veiculos/*
+!veiculos/.gitkeep
+
+# Boletos/comprovantes de seguro — canónico em Dropbox (seguroComprovantesDir)
+despesas/**/Seguro/
+
+# Node (sync CRLV em PDF)
+.cursor/skills/cadastrar-veiculo/scripts/pdf-deps/node_modules/
