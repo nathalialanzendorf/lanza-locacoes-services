@@ -1,27 +1,15 @@
 /**
- * Atualiza `database/veiculos.json`: `fipe`, `fipeCodigo`, `fipeModelo`,
- * `fipeValor`, `fipeReferencia` via API parallelum (mesma base que fipe.py).
- *
- * Uso (na raiz do repo):
- *   node .cursor/skills/cadastrar-veiculo/scripts/atualizar_fipe_veiculos.mjs
- *   node .../atualizar_fipe_veiculos.mjs --placa ABC1D23   # só essa placa
- *
- * `EXTRAS_BY_PLACA`: motor/portas quando o CRLV não basta ou o `fipeModelo`
- * está desatualizado (ex.: AVU-6740 4p, MLN-0B87 1.6).
- *
- * Em ambientes com falha de verificação TLS/revogação, o script usa
- * rejectUnauthorized: false apenas para estes GETs públicos.
+ * Atualiza `database/veiculos.json`: fipe, fipeCodigo, fipeModelo, fipeValor, fipeReferencia.
+ * Port de atualizar_fipe_veiculos.mjs.
  */
-import fs from "fs";
-import https from "https";
+import fs from "node:fs";
+import path from "node:path";
+import { fipeGet } from "../lib/fipeParallelum.js";
+import { REPO_ROOT } from "../lib/repoRoot.js";
 
-const ROOT = new URL("../../../../", import.meta.url);
-const DB = new URL("database/veiculos.json", ROOT);
+const DB = path.join(REPO_ROOT, "database", "veiculos.json");
 
-const API_HOST = "fipe.parallelum.com.br";
-const API_BASE = "/api/v2/cars";
-
-const BRAND_HINTS = {
+const BRAND_HINTS: Record<string, string[]> = {
   VW: ["vw", "volks"],
   HYUNDAI: ["hyundai"],
   FORD: ["ford"],
@@ -30,39 +18,12 @@ const BRAND_HINTS = {
   PEUGEOT: ["peugeot"],
 };
 
-/** Texto extra só para pontuação / motor / portas (CRLV incompleto ou fipeModelo desatual). */
-const EXTRAS_BY_PLACA = {
+const EXTRAS_BY_PLACA: Record<string, string> = {
   "AVU-6740": "4p",
   "MLN-0B87": "1.6",
 };
 
-const agent = new https.Agent({ rejectUnauthorized: false });
-
-function get(path) {
-  return new Promise((resolve, reject) => {
-    const opts = {
-      hostname: API_HOST,
-      path: API_BASE + path,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; LanzaFipeSync/1)" },
-      agent,
-    };
-    https
-      .get(opts, (res) => {
-        let body = "";
-        res.on("data", (c) => (body += c));
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(body));
-          } catch (e) {
-            reject(new Error(`JSON ${path}: ${e.message}`));
-          }
-        });
-      })
-      .on("error", reject);
-  });
-}
-
-const _MES = {
+const _MES: Record<string, number> = {
   janeiro: 1,
   fevereiro: 2,
   março: 3,
@@ -78,16 +39,16 @@ const _MES = {
   dezembro: 12,
 };
 
-function refParaMesano(ref) {
+function refParaMesano(ref: string): string {
   const m = String(ref || "")
     .toLowerCase()
     .match(/([a-zçãéíóúâ]+)\s+de\s+(\d{4})/);
   if (!m) return "";
-  const mo = _MES[m[1]] || 0;
+  const mo = _MES[m[1]!] || 0;
   return mo ? `${mo}-${m[2]}` : "";
 }
 
-function slugMarca(nome) {
+function slugMarca(nome: string): string {
   const n = String(nome || "")
     .trim()
     .toLowerCase();
@@ -95,32 +56,45 @@ function slugMarca(nome) {
   return n.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function anoReferencia(anoModelo) {
+function anoReferencia(anoModelo: string): number | null {
   const s = String(anoModelo || "").trim();
   const parts = s.split("/").map((x) => x.trim());
-  if (parts.length >= 2 && /^\d{4}$/.test(parts[1])) return parseInt(parts[1], 10);
-  if (parts.length >= 1 && /^\d{4}$/.test(parts[0])) return parseInt(parts[0], 10);
+  if (parts.length >= 2 && /^\d{4}$/.test(parts[1]!)) return parseInt(parts[1]!, 10);
+  if (parts.length >= 1 && /^\d{4}$/.test(parts[0]!)) return parseInt(parts[0]!, 10);
   return null;
 }
 
-function hintBlob(v) {
+function hintBlob(v: Veiculo): string {
   const extra = EXTRAS_BY_PLACA[v.placa] || "";
   return `${v.marcaModelo || ""} ${v.fipeModelo || ""} ${extra}`.toLowerCase();
 }
 
-function tokensFromHints(marcaModelo, fipeModelo, extraLower) {
+type Veiculo = {
+  placa: string;
+  marcaModelo?: string;
+  fipeModelo?: string;
+  anoModelo?: string;
+  observacao?: string;
+  [key: string]: unknown;
+};
+
+function tokensFromHints(
+  marcaModelo: string,
+  fipeModelo: string,
+  extraLower: string,
+): string[] {
   const rest = (marcaModelo || "").split("/").slice(1).join(" ");
   const raw = `${rest} ${fipeModelo || ""} ${extraLower || ""}`.toLowerCase();
   return [
     ...new Set(
       raw
         .split(/[^a-z0-9çãéíóúâ]+/)
-        .filter((t) => t.length >= 2)
+        .filter((t) => t.length >= 2),
     ),
   ];
 }
 
-function scoreModel(nameLower, toks) {
+function scoreModel(nameLower: string, toks: string[]): number {
   let s = 0;
   for (const t of toks) {
     if (nameLower.includes(t)) s += t.length >= 4 ? 3 : 2;
@@ -128,20 +102,18 @@ function scoreModel(nameLower, toks) {
   return s;
 }
 
-/** Motores tipo 1.0, 1.6: prioriza `marcaModelo` + extras (evita fipeModelo desatual). */
-function engineVersionsFromHints(v) {
+function engineVersionsFromHints(v: Veiculo): string[] {
   const mm = (v.marcaModelo || "").toLowerCase();
   const ex = (EXTRAS_BY_PLACA[v.placa] || "").toLowerCase();
   const chunk = `${mm} ${ex}`;
-  let engines = [...chunk.matchAll(/\b(\d\.\d)\b/g)].map((m) => m[1]);
+  let engines = [...chunk.matchAll(/\b(\d\.\d)\b/g)].map((m) => m[1]!);
   engines = [...new Set(engines)];
   if (engines.length) return engines;
   const fm = (v.fipeModelo || "").toLowerCase();
-  return [...new Set([...fm.matchAll(/\b(\d\.\d)\b/g)].map((m) => m[1]))];
+  return [...new Set([...fm.matchAll(/\b(\d\.\d)\b/g)].map((m) => m[1]!))];
 }
 
-/** Portas: primeiro `EXTRAS_BY_PLACA`, depois marcaModelo, por último fipeModelo. */
-function doorFromHints(v) {
+function doorFromHints(v: Veiculo): string | null {
   const ex = (EXTRAS_BY_PLACA[v.placa] || "").toLowerCase();
   const m0 = ex.match(/\b([2-5])p\b/);
   if (m0) return `${m0[1]}p`;
@@ -153,8 +125,7 @@ function doorFromHints(v) {
   return m2 ? `${m2[1]}p` : null;
 }
 
-/** Exige `Xp` quando `doorFromHints` indicar. */
-function doorConstraint(v, nameLower) {
+function doorConstraint(v: Veiculo, nameLower: string): number {
   const want = doorFromHints(v);
   if (!want) return 0;
   if (nameLower.includes(want)) return 40;
@@ -164,10 +135,14 @@ function doorConstraint(v, nameLower) {
   return -12;
 }
 
-function scoreModelFull(m, v) {
+function scoreModelFull(m: { name: string }, v: Veiculo): number {
   const hintsLower = hintBlob(v);
   const nl = m.name.toLowerCase();
-  const toks = tokensFromHints(v.marcaModelo, v.fipeModelo, EXTRAS_BY_PLACA[v.placa] || "");
+  const toks = tokensFromHints(
+    v.marcaModelo || "",
+    v.fipeModelo || "",
+    EXTRAS_BY_PLACA[v.placa] || "",
+  );
   let sc = scoreModel(nl, toks);
 
   const engines = engineVersionsFromHints(v);
@@ -186,7 +161,19 @@ function scoreModelFull(m, v) {
   return sc;
 }
 
-function findBrand(brands, prefix) {
+type Brand = { code: string; name: string };
+type Model = { code: string; name: string };
+type Year = { code: string; name: string };
+type FipeDetail = {
+  codeFipe?: string;
+  model?: string;
+  price?: string;
+  referenceMonth?: string;
+  modelYear?: string;
+  brand?: string;
+};
+
+function findBrand(brands: Brand[], prefix: string): Brand | undefined {
   const p = String(prefix || "").trim().toUpperCase();
   const hints = BRAND_HINTS[p] || [p.toLowerCase()];
   return brands.find((b) => {
@@ -195,16 +182,20 @@ function findBrand(brands, prefix) {
   });
 }
 
-function yearRows(years) {
+function yearRows(years: Year[]) {
   return years
     .map((e) => {
       const m = e.name.match(/\b(20\d{2})\b/);
-      return m ? { code: e.code, name: e.name, yr: parseInt(m[1], 10) } : null;
+      return m ? { code: e.code, name: e.name, yr: parseInt(m[1]!, 10) } : null;
     })
-    .filter(Boolean);
+    .filter((x): x is { code: string; name: string; yr: number } => Boolean(x));
 }
 
-function pickYearCode(years, targetYear, hintsLower) {
+function pickYearCode(
+  years: Year[],
+  targetYear: number,
+  hintsLower: string,
+): string | null {
   let pool = yearRows(years);
   if (!pool.length) return null;
 
@@ -232,17 +223,28 @@ function pickYearCode(years, targetYear, hintsLower) {
     const hit = pool.find((e) => e.yr === ty);
     if (hit) return hit.code;
   }
-  pool.sort((a, b) => Math.abs(a.yr - targetYear) - Math.abs(b.yr - targetYear));
-  return pool[0].code;
+  pool.sort(
+    (a, b) => Math.abs(a.yr - targetYear) - Math.abs(b.yr - targetYear),
+  );
+  return pool[0]!.code;
 }
 
-async function resolveVehicle(v, brands) {
+async function resolveVehicle(
+  v: Veiculo,
+  brands: Brand[],
+): Promise<{
+  fipe: string;
+  fipeCodigo: string | undefined;
+  fipeModelo: string | undefined;
+  fipeValor: string | undefined;
+  fipeReferencia: string | undefined;
+}> {
   const marcaModelo = v.marcaModelo || "";
   const prefix = marcaModelo.split("/")[0]?.trim() || "";
   const brand = findBrand(brands, prefix);
   if (!brand) throw new Error(`marca não encontrada: ${prefix} (${v.placa})`);
 
-  const models = await get(`/brands/${brand.code}/models`);
+  const models = await fipeGet<Model[]>(`/brands/${brand.code}/models`);
   const scored = models
     .map((m) => ({ m, sc: scoreModelFull(m, v) }))
     .filter((x) => x.sc > -1e8)
@@ -253,34 +255,35 @@ async function resolveVehicle(v, brands) {
     throw new Error(`modelo não encontrado: ${marcaModelo} (${v.placa})`);
   }
 
-  const targetY = anoReferencia(v.anoModelo);
+  const targetY = anoReferencia(v.anoModelo || "");
   if (!targetY) throw new Error(`ano modelo inválido: ${v.anoModelo} (${v.placa})`);
 
   const hints = hintBlob(v);
 
-  /** Entre os modelos bem pontuados, prefere o que aproxima `modelYear` do ano do CRLV. */
-  let bestD = null;
+  let bestD: FipeDetail | null = null;
   let bestDist = 1e9;
   let bestSc = -1e10;
 
   for (const { m, sc } of scored) {
-    let years;
+    let years: Year[];
     try {
-      years = await get(`/brands/${brand.code}/models/${m.code}/years`);
+      years = await fipeGet<Year[]>(
+        `/brands/${brand.code}/models/${m.code}/years`,
+      );
     } catch {
       continue;
     }
     const ycode = pickYearCode(years, targetY, hints);
     if (!ycode) continue;
-    let d;
+    let d: FipeDetail;
     try {
-      d = await get(
-        `/brands/${brand.code}/models/${m.code}/years/${ycode}`
+      d = await fipeGet<FipeDetail>(
+        `/brands/${brand.code}/models/${m.code}/years/${ycode}`,
       );
     } catch {
       continue;
     }
-    const my = parseInt(d.modelYear, 10);
+    const my = parseInt(String(d.modelYear), 10);
     if (Number.isNaN(my)) continue;
     const dist = Math.abs(my - targetY);
     if (dist < bestDist || (dist === bestDist && sc > bestSc)) {
@@ -295,7 +298,7 @@ async function resolveVehicle(v, brands) {
   }
 
   const marca_slug = slugMarca(bestD.brand || brand.name);
-  const mesano = refParaMesano(bestD.referenceMonth);
+  const mesano = refParaMesano(bestD.referenceMonth || "");
   const url = `https://veiculos.fipe.org.br?carro/${marca_slug}/${mesano}/${bestD.codeFipe}/${bestD.modelYear}`;
 
   return {
@@ -307,51 +310,53 @@ async function resolveVehicle(v, brands) {
   };
 }
 
-function parseArgs() {
-  const argv = process.argv.slice(2);
-  let placaFilter = null;
+function parseArgs(argv: string[]): { placaFilter: string | null } {
+  let placaFilter: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--placa" && argv[i + 1]) {
-      placaFilter = argv[i + 1];
+      placaFilter = argv[i + 1]!;
       i++;
     }
   }
   return { placaFilter };
 }
 
-function normPlaca(s) {
+function normPlaca(s: string): string {
   return String(s || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
 }
 
-async function main() {
-  const { placaFilter } = parseArgs();
+type VeiculosDb = { veiculos: Veiculo[]; atualizadoEm?: string };
+
+async function runFipeSyncCore(
+  placaFilter: string | null,
+): Promise<{ errors: { placa: string; erro: string }[]; notFound?: string }> {
   const raw = fs.readFileSync(DB, "utf8");
-  const data = JSON.parse(raw);
-  const brands = await get("/brands");
-  const errors = [];
+  const data = JSON.parse(raw) as VeiculosDb;
+  const brands = await fipeGet<Brand[]>("/brands");
+  const errors: { placa: string; erro: string }[] = [];
 
   const lista = placaFilter
     ? data.veiculos.filter((v) => normPlaca(v.placa) === normPlaca(placaFilter))
     : data.veiculos;
 
   if (placaFilter && lista.length === 0) {
-    console.error("Placa nao encontrada em veiculos.json:", placaFilter);
-    process.exit(1);
+    return { errors: [], notFound: placaFilter };
   }
 
   for (const v of lista) {
     try {
       const upd = await resolveVehicle(v, brands);
       Object.assign(v, upd);
-      if (v.placa === "RAH-4F54" && v.observacao && /fipe/i.test(v.observacao)) {
+      if (v.placa === "RAH-4F54" && v.observacao && /fipe/i.test(String(v.observacao))) {
         delete v.observacao;
       }
       console.log("OK", v.placa, "->", upd.fipeCodigo, upd.fipeModelo);
     } catch (e) {
-      console.error("ERRO", v.placa, e.message);
-      errors.push({ placa: v.placa, erro: e.message });
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("ERRO", v.placa, msg);
+      errors.push({ placa: v.placa, erro: msg });
     }
   }
 
@@ -361,11 +366,31 @@ async function main() {
 
   if (errors.length) {
     console.error("\nFalhas:", JSON.stringify(errors, null, 2));
-    process.exitCode = 1;
+  }
+  return { errors };
+}
+
+/** Chamado após cadastrar veículo — não encerra o processo em falha FIPE. */
+export async function syncFipeNovoVeiculo(placa: string): Promise<void> {
+  if (!placa?.trim()) return;
+  const r = await runFipeSyncCore(placa.trim());
+  if (r.notFound) {
+    console.error("[aviso] Placa nao encontrada em veiculos.json:", r.notFound);
+    return;
+  }
+  if (r.errors.length) {
+    console.error("[aviso] FIPE sync com falhas (veja acima)");
+  } else {
+    console.log("[fipe] campos FIPE atualizados na API");
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+export async function main(argv: string[]): Promise<void> {
+  const { placaFilter } = parseArgs(argv);
+  const r = await runFipeSyncCore(placaFilter);
+  if (r.notFound) {
+    console.error("Placa nao encontrada em veiculos.json:", r.notFound);
+    process.exit(1);
+  }
+  if (r.errors.length) process.exitCode = 1;
+}

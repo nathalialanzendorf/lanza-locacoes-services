@@ -27,7 +27,7 @@ Para `Outros`, pedir **descrição** curta. Nos demais, usar o nome do tipo salv
 3. Executar:
 
 ```bash
-python ".cursor/skills/cadastrar-despesa/scripts/gravar_despesa.py" "Manutenção" "50,00" "10/06/2026" "MLX-2H34" "Conserto buzina"
+npx tsx src/run.ts gravar-despesa "Manutenção" "50,00" "10/06/2026" "MLX-2H34" "Conserto buzina"
 ```
 
 Argumentos: `<categoria> <valor> <data> <placa> [descricao]`

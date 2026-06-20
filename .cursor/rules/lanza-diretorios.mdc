@@ -17,5 +17,5 @@ Valores exatos e subpastas opcionais estão em **`config/lanza_paths.json`** na 
 
 ## Ao gerar contrato ou relatório
 
-- Usar os caminhos do JSON acima por defeito (scripts `gerar_contrato.py` e `montar_relatorio.py` já leem esse ficheiro).
+- Usar os caminhos do JSON acima por defeito (CLI em `src/` — por exemplo `gerar-contrato` e `montar-relatorio` via `npx tsx src/run.ts` — já leem esse ficheiro).
 - Se o utilizador indicar outro caminho, prevalece o indicado.

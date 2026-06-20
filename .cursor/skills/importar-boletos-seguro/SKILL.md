@@ -75,9 +75,7 @@ Montar lista JSON e executar (o ficheiro de entrada pode estar em `relatorios/` 
 
 
 ```bash
-
-python ".cursor/skills/importar-boletos-seguro/scripts/gravar_despesas.py" "relatorios/_boletos_tmp.json"
-
+npx tsx src/run.ts gravar-despesas-seguro "relatorios/_boletos_tmp.json"
 ```
 
 
@@ -100,7 +98,7 @@ Formato do JSON (array):
 
 
 
-`origem` deve ser **única por ficheiro** (caminho relativo a `documentosRaiz` em `lanza_paths.json`, ou caminho absoluto normalizado) para o `gravar_despesas.py` fazer dedupe na reimportação.
+`origem` deve ser **única por ficheiro** (caminho relativo a `documentosRaiz` em `lanza_paths.json`, ou caminho absoluto normalizado) para o comando `gravar-despesas-seguro` fazer dedupe na reimportação.
 
 
 

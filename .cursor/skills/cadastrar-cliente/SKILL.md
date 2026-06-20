@@ -20,7 +20,7 @@ Skill para **cadastrar um cliente** (motorista/locatário) extraindo dados da **
 
 - **CNH:** dados pessoais + CNH.
 - **Comprovante:** CEP, logradouro, número, complemento, bairro, cidade, UF. Telefone e e-mail: do comprovante se houver; senão **perguntar**.
-- **Destino:** `database/clientes.json` (array `clientes`). Schema em `schemaCliente` no próprio arquivo. **`id`** = **uuid** (gerado pelo `merge_cliente.py`); chave natural: **`cpf`**.
+- **Destino:** `database/clientes.json` (array `clientes`). Schema em `schemaCliente` no próprio arquivo. **`id`** = **uuid** (gerado pelo merge TypeScript); chave natural: **`cpf`**.
 
 ## Campos a extrair da CNH
 
@@ -63,7 +63,7 @@ Skill para **cadastrar um cliente** (motorista/locatário) extraindo dados da **
 5. **Gravar** — Montar objeto `cliente` (sem `id`), salvar JSON temporário e executar o merge por CPF:
 
 ```bash
-python ".cursor/skills/cadastrar-cliente/scripts/merge_cliente.py" caminho/do/cliente_tmp.json
+npx tsx src/run.ts merge-cliente caminho/do/cliente_tmp.json
 ```
 
 O script gera `id` (UUID), atualiza se CPF já existir e define `atualizadoEm`.
@@ -71,8 +71,8 @@ O script gera `id` (UUID), atualiza se CPF já existir e define `atualizadoEm`.
 6. **Rastreame** (opcional, após gravar) — Verificar/cadastrar motorista:
 
 ```bash
-python ".cursor/skills/cadastrar-cliente/scripts/rastreame.py" check "06852388310" "Nome Completo"
-python ".cursor/skills/cadastrar-cliente/scripts/rastreame.py" add "database/_cliente_tmp.json"
+npx tsx src/run.ts rastreame check "06852388310" "Nome Completo"
+npx tsx src/run.ts rastreame add "database/_cliente_tmp.json"
 ```
 
 Autenticação: variáveis `RASTREAME_LOGIN` + `RASTREAME_SENHA`, ou `RASTREAME_AUTH` (token manual, prioridade).

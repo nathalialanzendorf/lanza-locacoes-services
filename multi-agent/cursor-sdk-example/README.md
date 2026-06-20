@@ -23,10 +23,10 @@ $env:CURSOR_API_KEY = "cursor_..."
 npm run contrato -- "D:/Dropbox/Aluguel Carros/19.06.2026 - Cliente/CNH.pdf" "D:/Dropbox/Aluguel Carros/19.06.2026 - Cliente/Residencia.jpg"
 ```
 
-Ou:
+Ou (na mesma pasta, após `npm install`):
 
 ```bash
-node orchestrator.mjs "caminho/para/CNH.pdf" "caminho/para/Residencia.jpg"
+npx tsx orchestrator.ts "caminho/para/CNH.pdf" "caminho/para/Residencia.jpg"
 ```
 
 O `cwd` do agente é a **raiz do repositório** `worklanza`, para que ferramentas encontrem `.cursor/skills/contrato/` e `templates/`.

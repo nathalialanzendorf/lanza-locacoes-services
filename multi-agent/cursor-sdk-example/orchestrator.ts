@@ -1,6 +1,6 @@
 /**
  * Orquestrador multiagente: 3x Agent.prompt em sequência (Extrator → Montador → Revisor).
- * Uso: node orchestrator.mjs <path-cnh-relativo-ao-repo> <path-residencia-relativo-ao-repo>
+ * Uso: npx tsx orchestrator.ts <path-cnh-relativo-ao-repo> <path-residencia-relativo-ao-repo>
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,15 +8,15 @@ import { fileURLToPath } from "node:url";
 import { Agent } from "@cursor/sdk";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-/** Raiz do repositório worklanza (dois níveis acima desta pasta). */
+/** Raiz do repositório (dois níveis acima desta pasta). */
 const REPO_ROOT = join(__dirname, "..", "..");
 const PROMPTS_DIR = join(__dirname, "..", "prompts");
 
-function loadPrompt(name) {
+function loadPrompt(name: string): string {
   return readFileSync(join(PROMPTS_DIR, name), "utf8");
 }
 
-async function main() {
+async function main(): Promise<void> {
   const apiKey = process.env.CURSOR_API_KEY;
   if (!apiKey) {
     console.error("Defina a variável de ambiente CURSOR_API_KEY.");
@@ -27,7 +27,7 @@ async function main() {
   const residPath = process.argv[3];
   if (!cnhPath || !residPath) {
     console.error(
-      "Uso: node orchestrator.mjs <path-cnh> <path-residencia> (caminhos relativos à raiz do repo)",
+      "Uso: npx tsx orchestrator.ts <path-cnh> <path-residencia> (caminhos relativos à raiz do repo)",
     );
     process.exit(1);
   }

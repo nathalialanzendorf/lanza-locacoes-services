@@ -1,2 +1,2 @@
-# Ferramentas opcionais do repositório (ex.: sincronizar CRLV em PDF)
-pypdf>=4.0
+# Opcional — legado
+# A sincronização CRLV/PDF e demais ferramentas de operação usam Node na raiz do repo (npm install).

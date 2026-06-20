@@ -34,12 +34,12 @@ Para cada veículo, confirmar se ficou locado o mês todo, devolução em data X
 - Conferir **Seguro** na competência (avisar se faltar, exceto parceiros da lista sem seguro).
 - Perguntar se há mais despesas antes de fechar (**cadastrar-despesa**).
 
-## Entrada do script
+## Entrada (`montar-relatorio`)
 
 Montar `entrada.json` e rodar:
 
 ```bash
-python ".cursor/skills/relatorio-prestacao-contas/scripts/montar_relatorio.py" "relatorios/_entrada_tmp.json"
+npx tsx src/run.ts montar-relatorio "relatorios/_entrada_tmp.json"
 ```
 
 Exemplo:

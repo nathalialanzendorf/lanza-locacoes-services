@@ -38,12 +38,12 @@ Gera **Contrato de Locação** a partir de `templates/Contrato - Modelo v3.docx`
 | 6 meses | 180 |
 | 1 ano | 365 |
 
-## Gerar (script)
+## Gerar (TypeScript)
 
-Montar `dados.json` e executar (JSON de entrada pode ficar em `relatorios/` ou na raiz do repo):
+Montar `dados.json` e executar na raiz do repo (após `npm install` na raiz):
 
 ```bash
-python ".cursor/skills/gerar-contrato/scripts/gerar_contrato.py" "relatorios/_dados_contrato_tmp.json"
+npx tsx src/run.ts gerar-contrato "relatorios/_dados_contrato_tmp.json"
 ```
 
 Exemplo de `dados.json` (use caminhos absolutos ou relativos ao cwd). Se **omitir** `contratosDir`, o script usa `config/lanza_paths.json` (`D:\Dropbox\Aluguel Carros` por defeito):
@@ -64,11 +64,11 @@ Exemplo de `dados.json` (use caminhos absolutos ou relativos ao cwd). Se **omiti
 }
 ```
 
-O script cria `DD.MM.AAAA - Nome Cliente/` dentro de `contratosDir` (pasta operacional, p.ex. `D:\Dropbox\Aluguel Carros`) com `.docx`, `.pdf` (Word COM no Windows) e cópia da CNH se `cnhArquivo` existir.
+O script cria `DD.MM.AAAA - Nome Cliente/` dentro de `contratosDir` (pasta operacional, p.ex. `D:\Dropbox\Aluguel Carros`) com `.docx`, `.pdf` (Microsoft Word via COM no Windows, invocado por PowerShell) e cópia da CNH se `cnhArquivo` existir.
 
 ## Dependências
 
-Python: `python-docx`, `pywin32` (PDF no Windows).
+Node.js; dependências na raiz do repo (`pizzip`, `@xmldom/xmldom`). PDF: **Word instalado** no Windows (mesmo requisito prático do fluxo antigo em Python).
 
 ## Skills relacionadas
 

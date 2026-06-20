@@ -1,66 +1,41 @@
 /**
- * Mesma lógica que sincronizar_veiculos_crlv.py — usa pdf-parse (Node).
- *
- * Uso (na raiz do repo):
- *   npm install --prefix ".cursor/skills/cadastrar-veiculo/scripts/pdf-deps"
- *   node ".cursor/skills/cadastrar-veiculo/scripts/sincronizar_veiculos_crlv.mjs"
- *   node .../sincronizar_veiculos_crlv.mjs --dry-run
- *   node .../sincronizar_veiculos_crlv.mjs --placa MLN-0B87
+ * Sincroniza campos do CRLV (PDF) em database/veiculos.json — port de sincronizar_veiculos_crlv.mjs.
  */
-import { createRequire } from "module";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import pdfParse from "pdf-parse";
+import { REPO_ROOT } from "../lib/repoRoot.js";
+import { readLanzaPaths } from "../lib/lanzaPaths.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(path.join(__dirname, "pdf-deps", "package.json"));
-let pdfParse;
-try {
-  pdfParse = require("pdf-parse");
-} catch {
-  console.error(
-    "Instale dependências:\n" +
-      '  npm install --prefix ".cursor/skills/cadastrar-veiculo/scripts/pdf-deps"'
-  );
-  process.exit(1);
-}
+const DBV = path.join(REPO_ROOT, "database", "veiculos.json");
+const VEIC_DIR = path.join(REPO_ROOT, "veiculos");
 
-const ROOT = path.resolve(__dirname, "../../../../");
-const DBV = path.join(ROOT, "database", "veiculos.json");
-const CFG = path.join(ROOT, "config", "lanza_paths.json");
-const VEIC_DIR = path.join(ROOT, "veiculos");
-
-function compactPlaca(p) {
+function compactPlaca(p: string): string {
   return String(p || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
 }
 
-function formatPlacaHyphen(p) {
+function formatPlacaHyphen(p: string): string {
   const c = compactPlaca(p);
   if (c.length === 7) return `${c.slice(0, 3)}-${c.slice(3)}`;
   return c;
 }
 
-function loadDocumentosRaiz() {
-  if (!fs.existsSync(CFG)) return null;
-  try {
-    const cfg = JSON.parse(fs.readFileSync(CFG, "utf8"));
-    const p = cfg.documentosRaiz;
-    return p ? p : null;
-  } catch {
-    return null;
-  }
+function loadDocumentosRaiz(): string | null {
+  const cfg = readLanzaPaths();
+  const p = cfg.documentosRaiz;
+  return p || null;
 }
 
-function normalizePdfStem(stem) {
+function normalizePdfStem(stem: string): string {
   stem = stem.replace(/\s*\(\d+\)\s*$/i, "").trim();
   return compactPlaca(stem);
 }
 
-function* walkPdf(dir) {
+function* walkPdf(dir: string): Generator<string> {
   if (!fs.existsSync(dir)) return;
-  let entries;
+  let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
@@ -74,17 +49,17 @@ function* walkPdf(dir) {
         e.isFile() &&
         e.name.toLowerCase().endsWith(".pdf") &&
         !e.name.startsWith("~$")
-      )
+      ) {
         yield full;
+      }
     } catch {
       /* skip */
     }
   }
 }
 
-function collectCrlvIndex(roots) {
-  /** @type {Map<string, string[]>} */
-  const buckets = new Map();
+function collectCrlvIndex(roots: string[]): Record<string, string> {
+  const buckets = new Map<string, string[]>();
   for (const root of roots) {
     if (!root || !fs.existsSync(root)) continue;
     for (const pdf of walkPdf(root)) {
@@ -92,11 +67,10 @@ function collectCrlvIndex(roots) {
       const key = normalizePdfStem(stem);
       if (key.length !== 7) continue;
       if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key).push(pdf);
+      buckets.get(key)!.push(pdf);
     }
   }
-  /** @type {Record<string, string>} */
-  const index = {};
+  const index: Record<string, string> = {};
   for (const [key, paths] of buckets) {
     paths.sort((a, b) => {
       const da = a.split(path.sep).length;
@@ -104,22 +78,22 @@ function collectCrlvIndex(roots) {
       if (da !== db) return da - db;
       return a.localeCompare(b);
     });
-    index[key] = paths[0];
+    index[key] = paths[0]!;
   }
   return index;
 }
 
-async function extractPdfText(filePath) {
+async function extractPdfText(filePath: string): Promise<string> {
   const buf = fs.readFileSync(filePath);
   const data = await pdfParse(buf);
   return data.text || "";
 }
 
-function lineBlocks(text) {
+function lineBlocks(text: string): string[] {
   return text.replace(/\r/g, "\n").split("\n").map((ln) => ln.trim());
 }
 
-function nextMeaningful(lines, start) {
+function nextMeaningful(lines: string[], start: number): string | null {
   const skip = new Set(["", "-", ".", "..."]);
   for (let j = start; j < Math.min(start + 8, lines.length); j++) {
     const s = lines[j]?.trim() || "";
@@ -128,11 +102,11 @@ function nextMeaningful(lines, start) {
   return null;
 }
 
-function findLineValue(lines, ...labels) {
+function findLineValue(lines: string[], ...labels: string[]): string | null {
   for (let i = 0; i < lines.length; i++) {
-    const u = lines[i].toUpperCase();
+    const u = lines[i]!.toUpperCase();
     for (const lab of labels) {
-      if (u.includes(lab.toUpperCase()) && lines[i].length < 80) {
+      if (u.includes(lab.toUpperCase()) && lines[i]!.length < 80) {
         const v = nextMeaningful(lines, i + 1);
         if (v) return v;
       }
@@ -141,30 +115,29 @@ function findLineValue(lines, ...labels) {
   return null;
 }
 
-function parseCrlv(text) {
-  /** @type {Record<string, string>} */
-  const out = {};
+function parseCrlv(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
   const lines = lineBlocks(text);
   const raw = lines.join("\n");
 
   let m = raw.match(/CHASSI\s*[:\s]*([A-HJ-NPR-Z0-9]{17})/i);
   if (!m) m = raw.match(/\b([A-HJ-NPR-Z0-9]{17})\b/);
-  if (m && m[1].length === 17) out.chassi = m[1].toUpperCase();
+  if (m && m[1]!.length === 17) out.chassi = m[1]!.toUpperCase();
 
   m = raw.match(/RENAVAM\s*[:\s]*(\d{10,11})\b/i);
-  if (m) out.renavam = m[1];
+  if (m) out.renavam = m[1]!;
 
   m = raw.match(
-    /PLACA\s*[:\s]*([A-Z]{3}[\dA-Z][A-Z0-9]{4}|[A-Z]{3}\d{4})\b/i
+    /PLACA\s*[:\s]*([A-Z]{3}[\dA-Z][A-Z0-9]{4}|[A-Z]{3}\d{4})\b/i,
   );
-  if (m) out.placa_doc = formatPlacaHyphen(m[1]);
+  if (m) out.placa_doc = formatPlacaHyphen(m[1]!);
 
   let mm = findLineValue(
     lines,
     "MARCA / MODELO",
     "MARCA/MODELO",
     "MARCA E MODELO",
-    "MARCAMODELO"
+    "MARCAMODELO",
   );
   if (mm) {
     mm = mm.replace(/\s+/g, " ").trim();
@@ -186,7 +159,7 @@ function parseCrlv(text) {
     "COR PREDOMINANTE",
     "COR",
     "COR DO VEÍCULO",
-    "COR DO VEICULO"
+    "COR DO VEICULO",
   );
   if (cor) {
     cor = cor.replace(/\s+/g, " ").trim();
@@ -194,20 +167,21 @@ function parseCrlv(text) {
   }
 
   if (!out.marcaModelo) {
-    m = raw.match(
-      /([A-Z]{2,15})\s*\/\s*([A-Z0-9][A-Z0-9\s.\-]{2,40})/i
-    );
-    if (m && m[0].length < 60)
-      out.marcaModelo = `${m[1].toUpperCase()}/${m[2].toUpperCase().trim()}`;
+    m = raw.match(/([A-Z]{2,15})\s*\/\s*([A-Z0-9][A-Z0-9\s.\-]{2,40})/i);
+    if (m && m[0]!.length < 60) {
+      out.marcaModelo = `${m[1]!.toUpperCase()}/${m[2]!.toUpperCase().trim()}`;
+    }
   }
 
   return out;
 }
 
-function mergeIntoVeiculo(existing, parsed) {
-  /** @type {Record<string, [string, string]>} */
-  const changes = {};
-  const fieldMap = [
+function mergeIntoVeiculo(
+  existing: Record<string, unknown>,
+  parsed: Record<string, string>,
+): Record<string, [string, string]> {
+  const changes: Record<string, [string, string]> = {};
+  const fieldMap: [string, string][] = [
     ["marcaModelo", "marcaModelo"],
     ["anoModelo", "anoModelo"],
     ["chassi", "chassi"],
@@ -218,7 +192,7 @@ function mergeIntoVeiculo(existing, parsed) {
     if (!parsed[srcKey]) continue;
     const newv = String(parsed[srcKey]).trim();
     if (!newv) continue;
-    const oldv = String(existing[jsonKey] || "").trim();
+    const oldv = String(existing[jsonKey] ?? "").trim();
     if (oldv !== newv) {
       existing[jsonKey] = newv;
       changes[jsonKey] = [oldv, newv];
@@ -226,7 +200,7 @@ function mergeIntoVeiculo(existing, parsed) {
   }
   if (parsed.placa_doc) {
     const newp = formatPlacaHyphen(parsed.placa_doc);
-    const oldp = String(existing.placa || "")
+    const oldp = String(existing.placa ?? "")
       .trim()
       .toUpperCase();
     if (compactPlaca(newp) !== compactPlaca(oldp)) {
@@ -236,22 +210,21 @@ function mergeIntoVeiculo(existing, parsed) {
   return changes;
 }
 
-function parseArgs() {
-  const argv = process.argv.slice(2);
+function parseArgs(argv: string[]): { dryRun: boolean; placa: string | null } {
   let dryRun = false;
-  let placa = null;
+  let placa: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--dry-run") dryRun = true;
     if (argv[i] === "--placa" && argv[i + 1]) {
-      placa = argv[i + 1];
+      placa = argv[i + 1]!;
       i++;
     }
   }
   return { dryRun, placa };
 }
 
-async function main() {
-  const { dryRun, placa: filtroRaw } = parseArgs();
+export async function main(argv: string[]): Promise<void> {
+  const { dryRun, placa: filtroRaw } = parseArgs(argv);
   const filtro = filtroRaw ? compactPlaca(filtroRaw) : null;
 
   if (!fs.existsSync(DBV)) {
@@ -259,10 +232,13 @@ async function main() {
     process.exit(1);
   }
 
-  const data = JSON.parse(fs.readFileSync(DBV, "utf8"));
+  const data = JSON.parse(fs.readFileSync(DBV, "utf8")) as {
+    veiculos: Record<string, unknown>[];
+    atualizadoEm?: string;
+  };
   const veiculos = data.veiculos || [];
 
-  const roots = [];
+  const roots: string[] = [];
   const dr = loadDocumentosRaiz();
   if (dr) roots.push(dr);
   if (fs.existsSync(VEIC_DIR)) roots.push(VEIC_DIR);
@@ -279,10 +255,10 @@ async function main() {
   }
 
   let totalChanges = 0;
-  const notFound = [];
+  const notFound: string[] = [];
 
   for (const v of veiculos) {
-    const placa = v.placa || "";
+    const placa = String(v.placa ?? "");
     const key = compactPlaca(placa);
     if (filtro && key !== filtro) continue;
     const pdf = index[key];
@@ -290,16 +266,21 @@ async function main() {
       notFound.push(placa);
       continue;
     }
-    let text;
+    let text: string;
     try {
       text = await extractPdfText(pdf);
     } catch (e) {
-      console.error(`[erro] ${placa} <- ${pdf}:`, e.message);
+      console.error(
+        `[erro] ${placa} <- ${pdf}:`,
+        e instanceof Error ? e.message : e,
+      );
       continue;
     }
     const parsed = parseCrlv(text);
     if (!Object.keys(parsed).length) {
-      console.error(`[aviso] ${placa}: nenhum campo extraído de ${path.basename(pdf)}`);
+      console.error(
+        `[aviso] ${placa}: nenhum campo extraído de ${path.basename(pdf)}`,
+      );
       continue;
     }
     const ch = mergeIntoVeiculo(v, parsed);
@@ -332,8 +313,3 @@ async function main() {
     console.log("Nenhuma alteração aplicada.");
   }
 }
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
