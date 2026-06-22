@@ -76,7 +76,7 @@ function getPText(p: Element): string {
 }
 
 function removeHyperlinks(p: Element): void {
-  const hls = [...p.getElementsByTagNameNS(W, "hyperlink")];
+  const hls = Array.from(p.getElementsByTagNameNS(W, "hyperlink"));
   for (const hl of hls) {
     const par = hl.parentNode;
     if (par) par.removeChild(hl);
@@ -417,7 +417,7 @@ export function gerar(dados: GerarContratoDados): {
       t = t.replace(/todas as segundas-feiras/g, diaPag);
     }
     const novo = t.replace(moneyRe, (whole, g1, g2) => {
-      const m = { 0: whole, 1: g1, 2: g2 } as RegExpExecArray;
+      const m = { 0: whole, 1: g1, 2: g2 } as unknown as RegExpExecArray;
       return troca(m);
     });
     if (novo !== orig) {

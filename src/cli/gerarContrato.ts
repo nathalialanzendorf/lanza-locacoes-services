@@ -13,7 +13,7 @@ export function main(argv: string[]): void {
   const dados = JSON.parse(fs.readFileSync(jsonPath, "utf8")) as GerarContratoDados;
   for (const k of ["template", "contratosDir", "cnhArquivo"] as const) {
     if (dados[k]) {
-      (dados as Record<string, string | undefined>)[k] = absRepo(dados[k] as string);
+      (dados as unknown as Record<string, string | undefined>)[k] = absRepo(dados[k] as string);
     }
   }
   const r = gerar(dados);

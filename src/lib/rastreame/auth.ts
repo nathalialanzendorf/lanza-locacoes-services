@@ -2,6 +2,17 @@
  * Autenticação e headers HTTP comuns para rastreame.com.br.
  * Reutilizável por motorista, gastos e outras integrações.
  */
+import { loadLocalEnv } from "../loadLocalEnv.js";
+
+loadLocalEnv();
+
+/** Só para ambientes com MITM/proxy que quebram a cadeia TLS (ex.: antivírus). */
+if (process.env.RASTREAME_TLS_INSECURE === "1") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  console.warn(
+    "[rastreame] RASTREAME_TLS_INSECURE=1 — verificação TLS desativada (apenas rede local / diagnóstico).",
+  );
+}
 
 export const RASTREAME_ORIGIN = "https://rastreame.com.br";
 
@@ -67,7 +78,7 @@ export async function requireRastreameToken(): Promise<string> {
   const t = await fetchRastreameToken();
   if (!t) {
     console.error(
-      "ERRO: defina RASTREAME_LOGIN + RASTREAME_SENHA (ou RASTREAME_AUTH) nas variáveis de ambiente.",
+      "ERRO: defina RASTREAME_AUTH (ou RASTREAME_LOGIN+RASTREAME_SENHA) no ambiente ou em `.env` na raiz do repo (ver `.env.example`).",
     );
     process.exit(2);
   }

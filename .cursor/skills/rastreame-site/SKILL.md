@@ -28,6 +28,10 @@ As **regras de negócio** (o *quê* e *quando* cadastrar) ficam nas skills de do
 | `RASTREAME_AUTH` | Token JWT para o header `x-r2f-auth` (prioridade). Expira; renovar via DevTools → Network. |
 | `RASTREAME_LOGIN` + `RASTREAME_SENHA` | Alternativa: login automático para obter token. |
 
+**Ficheiro `.env`:** na raiz do repo, podes definir as mesmas variáveis num ficheiro `.env` (não versionado; ver `.env.example`). A CLI carrega-o automaticamente quando `auth.ts` é importado — útil se o terminal do agente **não** herdar variáveis definidas só nas definições do Cursor.
+
+Se o Node acusar **`UNABLE_TO_VERIFY_LEAF_SIGNATURE`** ao falar com `rastreame.com.br`, trata da CA corporativa ou, só para diagnóstico, `RASTREAME_TLS_INSECURE=1` no `.env` (ver `.env.example`).
+
 **Nunca** versionar tokens, cookies nem `curl` com sessão no Git.
 
 ## Código reutilizável (`src/lib/rastreame/`)
@@ -54,7 +58,7 @@ Comandos que só alteram `database/*.json` (ex.: `merge-cliente`, `gravar-despes
 | **cadastrar-recebimento** | Listar gastos (duplicados, auditoria) | `npx tsx src/run.ts rastreame-gastos list [--page 0] [--size 50]` |
 | **cadastrar-recebimento** | Criar gasto | Montar JSON conforme `cadastrar-recebimento/reference.md` → `npx tsx src/run.ts rastreame-gastos post "relatorios/_gasto.json"` |
 | **cadastrar-recebimento** | Atualizar gasto | Corpo completo típico de `PUT` (espelhar UI) → `npx tsx src/run.ts rastreame-gastos put <id> "relatorios/_gasto_put.json"` |
-| **Lançamento em lote (semanal)** | Contratos ativos na semana → gasto OUTROS sem duplicar | `npx tsx src/run.ts rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias 90]` (dry-run); depois `--execute` |
+| **Lançamento em lote (semanal)** | Contratos ativos na semana → gasto OUTROS sem duplicar | `npx tsx src/run.ts rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias 90]` (dry-run); depois `--execute`. Sem `--info`/`--data-iso`, deriva a segunda da semana do `--inicio`. |
 
 Sempre **confirmar `cwd`** = raiz do repositório antes de `npx tsx`.
 
@@ -68,7 +72,7 @@ npx tsx src/run.ts rastreame-gastos list [--page 0] [--size 50]
 npx tsx src/run.ts rastreame-gastos post "<corpo.json>"
 npx tsx src/run.ts rastreame-gastos put <id> "<corpo.json>"
 
-npx tsx src/run.ts rastreame-lancar-semanal [--inicio 2026-06-22] [--fim 2026-06-28] [--prazo-dias 90] [--info "..."] [--data-iso ...] [--execute]
+npx tsx src/run.ts rastreame-lancar-semanal [--inicio 2026-06-29] [--fim 2026-07-05] [--prazo-dias 90] [--info "..."] [--data-iso ...] [--execute]
 ```
 
 ## Motorista — detalhe

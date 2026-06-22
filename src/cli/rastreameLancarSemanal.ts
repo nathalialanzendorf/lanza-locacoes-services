@@ -3,8 +3,9 @@
  * evitando duplicado (mesmo info + motorista + rastreável).
  *
  * Uso (raiz do repo):
- *   npx tsx src/run.ts rastreame-lancar-semanal --inicio 2026-06-22 --fim 2026-06-28 [--prazo-dias 90] [--dry-run]
+ *   npx tsx src/run.ts rastreame-lancar-semanal --inicio 2026-06-29 --fim 2026-07-05 [--prazo-dias 90]
  *   npx tsx src/run.ts rastreame-lancar-semanal ... --execute
+ *   (Sem `--info` / `--data-iso`, deriva a segunda da semana do `--inicio` e 23:59 America/Recife.)
  *
  * Requer RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA (ver skill rastreame-site).
  */
@@ -19,9 +20,33 @@ import { listMotoristas, type Motorista } from "../lib/rastreame/motorista.js";
 import { listRastreaveis, type Rastreavel } from "../lib/rastreame/rastreavel.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
 
-const INFO_PADRAO = "ATRASADO - Pagamento semanal - Segunda 22";
-/** 22/06/2026 23:59 America/Sao_Paulo ≈ 23/06 02:59 UTC */
-const DATA_ISO_PADRAO = "2026-06-23T02:59:00.000Z";
+/** Segunda-feira da mesma semana civil (domingo = fim de semana anterior). */
+function mondayOnOrBefore(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+  const dow = x.getDay();
+  const delta = dow === 0 ? -6 : 1 - dow;
+  x.setDate(x.getDate() + delta);
+  return x;
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** `info` + `data` alinhados à segunda da semana do `--inicio` (23:59 America/Recife). */
+function infoEDataPadraoParaSemana(inicio: Date): { info: string; dataIso: string } {
+  const seg = mondayOnOrBefore(inicio);
+  const y = seg.getFullYear();
+  const m = seg.getMonth() + 1;
+  const day = seg.getDate();
+  const dataIso = new Date(
+    `${y}-${pad2(m)}-${pad2(day)}T23:59:00-03:00`,
+  ).toISOString();
+  return {
+    info: `ATRASADO - Pagamento semanal - Segunda ${day}`,
+    dataIso,
+  };
+}
 
 type Veiculo = { placa: string; marcaModelo: string; anoModelo: string };
 
@@ -159,8 +184,8 @@ function parseArgs(argv: string[]): {
   let fimS = "2026-06-28";
   let prazoDias = 90;
   let execute = false;
-  let info = INFO_PADRAO;
-  let dataIso = DATA_ISO_PADRAO;
+  let infoOverride: string | undefined;
+  let dataIsoOverride: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === "--inicio" && argv[i + 1]) inicioS = argv[++i]!;
@@ -168,8 +193,8 @@ function parseArgs(argv: string[]): {
     else if (a === "--prazo-dias" && argv[i + 1])
       prazoDias = Number(argv[++i]!);
     else if (a === "--execute") execute = true;
-    else if (a === "--info" && argv[i + 1]) info = argv[++i]!;
-    else if (a === "--data-iso" && argv[i + 1]) dataIso = argv[++i]!;
+    else if (a === "--info" && argv[i + 1]) infoOverride = argv[++i]!;
+    else if (a === "--data-iso" && argv[i + 1]) dataIsoOverride = argv[++i]!;
   }
   const inicio = new Date(inicioS + "T12:00:00");
   const fim = new Date(fimS + "T12:00:00");
@@ -177,6 +202,9 @@ function parseArgs(argv: string[]): {
     console.error("Datas inválidas");
     process.exit(2);
   }
+  const derived = infoEDataPadraoParaSemana(inicio);
+  const info = infoOverride ?? derived.info;
+  const dataIso = dataIsoOverride ?? derived.dataIso;
   return { inicio, fim, prazoDias, execute, info, dataIso };
 }
 
