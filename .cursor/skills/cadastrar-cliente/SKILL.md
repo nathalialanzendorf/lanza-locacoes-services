@@ -16,6 +16,8 @@ Skill para **cadastrar um cliente** (motorista/locatário) extraindo dados da **
 - O usuário anexa ou informa caminhos da **CNH** e do **comprovante** (PDF/JPG/PNG).
 - **Procurar primeiro** em `documentosRaiz` definido em `config/lanza_paths.json` (padrão: `D:\Dropbox\Aluguel Carros` e subpastas). Depois `%USERPROFILE%\Downloads\` (ex.: `CNH-e.pdf`, `residencia.jpg`) — **sempre confirmar** com `Test-Path` / listagem antes de assumir.
 
+**Integração Rastreame (site):** após gravar em `database/`, a **execução** na shell (check/add motorista) segue a skill **rastreame-site** (auth e comandos na mesma skill).
+
 ## Fonte de dados
 
 - **CNH:** dados pessoais + CNH.
@@ -68,14 +70,7 @@ npx tsx src/run.ts merge-cliente caminho/do/cliente_tmp.json
 
 O script gera `id` (UUID), atualiza se CPF já existir e define `atualizadoEm`.
 
-6. **Rastreame** (opcional, após gravar) — Verificar/cadastrar motorista:
-
-```bash
-npx tsx src/run.ts rastreame check "06852388310" "Nome Completo"
-npx tsx src/run.ts rastreame add "database/_cliente_tmp.json"
-```
-
-Autenticação: variáveis `RASTREAME_LOGIN` + `RASTREAME_SENHA`, ou `RASTREAME_AUTH` (token manual, prioridade).
+6. **Rastreame** (opcional, após gravar) — Seguir a skill **rastreame-site** (tabela *cadastrar-cliente*): `rastreame check` e, se aplicável, `rastreame add` com o JSON do cliente.
 
 7. **Resultado** — Informar nome, CPF, `id` local e status no rastreame.
 
@@ -86,5 +81,6 @@ Autenticação: variáveis `RASTREAME_LOGIN` + `RASTREAME_SENHA`, ou `RASTREAME_
 
 ## Skills relacionadas
 
+- Skill **rastreame-site** — comandos no site (motorista, gastos).
 - Skill **cadastrar-veiculo** — CRLV → `veiculos.json`.
 - Skill **gerar-contrato** — exige cliente e veículo cadastrados (ou cadastra no fluxo).

@@ -19,6 +19,8 @@ Comandos:
   gravar-despesas-seguro <boletos.json>
   montar-relatorio <entrada.json>
   rastreame check <cnh> [nome] | rastreame add <cliente.json>
+  rastreame-gastos list [--page 0] [--size 50] | post <corpo.json> | put <id> <corpo.json>
+  rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias N] [--execute]
   fipe marca <texto> | fipe modelos <code> [filtros...] | fipe anos ... | fipe valor ...
   atualizar-fipe-veiculos [--placa PLACA]
   sincronizar-veiculos-crlv [--dry-run] [--placa PLACA]
@@ -43,8 +45,14 @@ Comandos:
     case "montar-relatorio":
       (await import("./cli/montarRelatorio.js")).main(rest);
       break;
+    case "rastreame-gastos":
+      await (await import("./cli/rastreameGastos.js")).main(rest);
+      break;
     case "rastreame":
       await (await import("./cli/rastreame.js")).main(rest);
+      break;
+    case "rastreame-lancar-semanal":
+      await (await import("./cli/rastreameLancarSemanal.js")).main(rest);
       break;
     case "fipe":
       await (await import("./cli/fipe.js")).main(rest);
