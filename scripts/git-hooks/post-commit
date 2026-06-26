@@ -1,0 +1,18 @@
+#!/bin/sh
+# Instalado por scripts/install-git-hooks.ps1
+# Após cada commit em main, envia para origin/main.
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null) || exit 0
+[ "$branch" = "main" ] || exit 0
+
+root=$(git rev-parse --show-toplevel) || exit 0
+
+if command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$root/scripts/sync-to-main.ps1" -PushOnly
+elif command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "$root/scripts/sync-to-main.ps1" -PushOnly
+else
+  git push origin main 2>/dev/null || true
+fi
+
+exit 0

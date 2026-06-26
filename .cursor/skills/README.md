@@ -6,15 +6,18 @@ Skills em `.cursor/skills/<nome>/SKILL.md` são descobertas pelo Cursor neste re
 
 | Pasta | Função |
 |-------|--------|
-| `contrato` | Preencher LOCATÁRIO no modelo Word v3 (fluxo manual / XML). |
 | `cadastrar-cliente` | CNH + comprovante → `database/clientes.json` (+ opcional Rastreame via **rastreame-site**). |
 | `rastreame-site` | Especialista [rastreame.com.br](https://rastreame.com.br/): `rastreame` / `rastreame-gastos`; outras skills delegam a execução aqui. |
-| `cadastrar-despesa` | Lançamento manual → `database/despesas.json`. |
+| `cadastrar-despesa` | Débitos do parceiro → `database/parceiro-despesas.json`. |
 | `cadastrar-veiculo` | CRLV + Fipe + proprietário → `veiculos.json` / vínculos. |
-| `gerar-contrato` | Contrato completo `.docx`/`.pdf` via CLI em `src/` (saída em `contratosDir` do JSON de config). |
-| `importar-boletos-seguro` | PDFs em `seguroComprovantesDir` (`config/lanza_paths.json`, padrão `Proteção Veicular\Comprovantes\2026`) → `despesas.json`. |
+| `gerar-contrato` | Contrato `.docx`/`.pdf`; `--placa` + `--cpf` lê database (cadastra se faltar). |
+| `sync-seguro` | PDFs em `seguroComprovantesDir` → `parceiro-despesas.json`. |
 | `relatorio-prestacao-contas` | Relatório mensal → pasta Financeiro (ver `lanza_paths.json`). |
 | `cadastrar-recebimento` | Recebimentos no Rastreame — **Gastos Gerais** (regras `ATRASADO`, duplicados, parcial); execução: **rastreame-site**. |
+| `encerrar-contrato` | Encerramento / devolução: multas, atrasos, diárias, retenção caução — CLI `encerrar-contrato`. |
+| `sync-infracoes` | Infrações DETRAN SC → `database/cliente-despesas.json` (categoria Infração; API `transito-api`, frota em `veiculos.json`). |
+| `sync-ipva-licenciamento` | IPVA e Licenciamento DETRAN SC → `database/parceiro-despesas.json`. |
+| `renegociar-debitos` | Renegociação no Rastreame: total em aberto, `[NEGOCIADO X]`, parcelas DOCUMENTACAO; execução: **rastreame-site**. |
 
 Toda a documentação técnica Rastreame (auth, `src/lib/rastreame/`, comandos CLI) está na skill **rastreame-site**.
 

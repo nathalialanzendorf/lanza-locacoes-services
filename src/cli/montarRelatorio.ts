@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { REPO_ROOT } from "../lib/repoRoot.js";
+
+import { loadParceiroDespesasDb } from "../lib/parceiroDespesasDb.js";
 import { prestacaoContasBaseDir } from "../lib/lanzaPaths.js";
+import { REPO_ROOT } from "../lib/repoRoot.js";
 
 const DB = path.join(REPO_ROOT, "database");
 
@@ -58,8 +60,7 @@ export function main(argv: string[]): void {
   const rastValor = Number(inp.rastreadorValor ?? 50);
   const rastDia = Number(inp.rastreadorDia ?? 10);
 
-  const despesas = (load("despesas.json") as { despesas: Record<string, unknown>[] })
-    .despesas;
+  const despesas = loadParceiroDespesasDb().parceiroDespesas as Record<string, unknown>[];
   const veiculosArr = (load("veiculos.json") as { veiculos: Record<string, unknown>[] })
     .veiculos;
   const veiculos = new Map(

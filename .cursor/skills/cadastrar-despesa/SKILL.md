@@ -1,19 +1,19 @@
 ---
 name: cadastrar-despesa
 description: >-
-  Registers a vehicle expense in database/despesas.json. Always collects type
-  (maintenance, insurance, tracker, other), amount, date, and vehicle plate.
-  Use when the user asks to register an expense, gasto, despesa, seguro,
-  manutenção, or update despesas.json.
+  Registers a partner/owner vehicle debit in database/parceiro-despesas.json
+  (IPVA, licensing, insurance, tracker, maintenance, etc.). Use when registering
+  an expense, gasto, despesa, seguro, manutenção, IPVA, licenciamento, or updating
+  parceiro-despesas.json.
 ---
 
 # Cadastrar Despesa
 
-Cadastra uma **despesa/gasto** de veículo em `database/despesas.json`. Os gastos alimentam o skill **relatorio-prestacao-contas**.
+Cadastra um **débito a cobrar do parceiro/dono** do veículo em `database/parceiro-despesas.json` (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Alimenta **relatorio-prestacao-contas**.
 
 ## Sempre perguntar (nesta ordem)
 
-1. **Tipo** — `Manutenção`, `Seguro`, `Rastreador` ou `Outros`.
+1. **Tipo** — `Manutenção`, `Seguro`, `Rastreador`, `IPVA`, `Licenciamento` ou `Outros`.
 2. **Valor** — R$ (ex.: `50,00`).
 3. **Data** — DD/MM/AAAA.
 4. **Veículo** — placa de `database/veiculos.json`.
@@ -34,10 +34,11 @@ Argumentos: `<categoria> <valor> <data> <placa> [descricao]`
 
 ## Critério de conclusão
 
-- Registro em `database/despesas.json` com `id` (UUID da **despesa**) e `veiculoId` = **uuid** do veículo em `veiculos.json` (ou `null` com aviso).
+- Registro em `database/parceiro-despesas.json` com `id` (UUID da **despesa**) e `veiculoId` = **uuid** do veículo em `veiculos.json` (ou `null` com aviso).
 
 ## Skills relacionadas
 
-- **importar-boletos-seguro** — seguro em lote.
-- **relatorio-prestacao-contas** — consome despesas.
+- **sync-ipva-licenciamento** — IPVA e Licenciamento em lote a partir do DETRAN SC.
+- **sync-seguro** — seguro em lote.
+- **relatorio-prestacao-contas** — consome `parceiro-despesas.json`.
 - **cadastrar-veiculo** — nova placa.

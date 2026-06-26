@@ -16,7 +16,7 @@ Comandos:
   merge-veiculo <novo.json> <dono>
   merge-cliente <cliente.json>
   gravar-despesa <categoria> <valor> <data> <placa> [descricao]
-  gravar-despesas-seguro <boletos.json>
+  sync-seguro <boletos.json>
   montar-relatorio <entrada.json>
   rastreame check <cnh> [nome] | rastreame add <cliente.json>
   rastreame-gastos list [--page 0] [--size 50] | post <corpo.json> | put <id> <corpo.json>
@@ -25,6 +25,13 @@ Comandos:
   atualizar-fipe-veiculos [--placa PLACA]
   sincronizar-veiculos-crlv [--dry-run] [--placa PLACA]
   gerar-contrato <dados.json>
+  gerar-contrato --placa PLACA --cpf CPF --semana N --caucao N [--periodo "3 meses"] [--cnh-arquivo PATH]
+  gravar-cliente-despesa <lote.json> | gravar-cliente-despesa confirmar <autoInfracao> [condutorId]
+  sync-infracoes [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]
+  sync-ipva-licenciamento [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]
+  encerrar-contrato <pasta-contrato> --encerramento DD/MM/AAAA | encerrar-contrato <entrada.json>
+  renegociar-debitos resumo --motorista <key> --rastreavel <key>
+  renegociar-debitos <entrada.json> [--execute]
 `);
     process.exit(cmd ? 0 : 1);
   }
@@ -39,8 +46,8 @@ Comandos:
     case "gravar-despesa":
       (await import("./cli/gravarDespesa.js")).main(rest);
       break;
-    case "gravar-despesas-seguro":
-      (await import("./cli/gravarDespesasSeguro.js")).main(rest);
+    case "sync-seguro":
+      (await import("./cli/syncSeguro.js")).main(rest);
       break;
     case "montar-relatorio":
       (await import("./cli/montarRelatorio.js")).main(rest);
@@ -65,6 +72,22 @@ Comandos:
       break;
     case "gerar-contrato":
       (await import("./cli/gerarContrato.js")).main(rest);
+      break;
+    case "gravar-cliente-despesa":
+    case "gravar-infracao":
+      (await import("./cli/gravarClienteDespesa.js")).main(rest);
+      break;
+    case "sync-infracoes":
+      await (await import("./cli/syncInfracoes.js")).main(rest);
+      break;
+    case "sync-ipva-licenciamento":
+      await (await import("./cli/syncIpvaLicenciamento.js")).main(rest);
+      break;
+    case "encerrar-contrato":
+      (await import("./cli/encerrarContrato.js")).main(rest);
+      break;
+    case "renegociar-debitos":
+      await (await import("./cli/renegociarDebitos.js")).main(rest);
       break;
     default:
       console.error("Comando desconhecido:", cmd);

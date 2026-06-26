@@ -15,13 +15,31 @@ export function docxPlainText(docxPath: string): string {
     .trim();
 }
 
+/** Normaliza valores R$ fragmentados pelo XML do Word (ex.: `R$ 80 0,00` → `R$800,00`). */
+export function normalizeDocxMoneyText(text: string): string {
+  return text.replace(/R\$\s*([\d\s.,]+)/gi, (_m, num: string) => {
+    const cleaned = num.replace(/\s/g, "");
+    return `R$${cleaned}`;
+  });
+}
+
+function brMoneyToNumber(s: string): number | null {
+  const m = s.match(/R\$\s*([\d.,]+)/i);
+  if (!m) return null;
+  const raw = m[1]!.replace(/\./g, "").replace(",", ".");
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** Procura valor da locação semanal (R$) no texto do contrato. */
 export function extrairValorSemanalReais(text: string): number | null {
-  const t = text.normalize("NFD").replace(/\p{M}/gu, "");
+  const t = normalizeDocxMoneyText(text.normalize("NFD").replace(/\p{M}/gu, ""));
   const patterns: RegExp[] = [
-    /(?:locacao|locaçao|locação)\s+semanal[^\dR$]{0,120}?(R\$\s*[\d.,]+)/i,
-    /semanal[^\dR$]{0,120}?(R\$\s*[\d.,]+)/i,
-    /(R\$\s*[\d.,]+)[^\dR$]{0,120}?semanal/i,
+    /(?:locacao|locaçao|locação)\s+semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /(R\$\s*[\d.,]+)[\s\S]{0,160}?semanal/i,
+    /realizado\s+semanalmente[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /3\.2[\s\S]{0,220}?(R\$\s*[\d.,]+)/i,
   ];
   for (const re of patterns) {
     const m = t.match(re);
@@ -31,12 +49,4 @@ export function extrairValorSemanalReais(text: string): number | null {
     }
   }
   return null;
-}
-
-function brMoneyToNumber(s: string): number | null {
-  const m = s.match(/R\$\s*([\d.,]+)/i);
-  if (!m) return null;
-  const raw = m[1]!.replace(/\./g, "").replace(",", ".");
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
 }

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "run": "tsx src/run.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
+    "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

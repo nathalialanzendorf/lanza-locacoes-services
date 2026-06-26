@@ -1,0 +1,55 @@
+{
+  "veiculoId": "QJB0I83",
+  "multas": [
+    {
+      "autoInfracao": "P07MQ009QP",
+      "descricao": "ESTAC EM LOCAL/HORÁRIO PROIBIDO ESPECIFICAMENTE PELA SINALIZ",
+      "localInfracao": "AVENIDA PAULO FONTES, 1101, CENTRO - FLORIANÓPOLIS - SANTA CATARINA, 88010-230, - FLORIANOPOLIS/SC",
+      "dataAutuacao": "25/08/2022 09:22",
+      "valorMulta": 130.16,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "31/10/2022",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "P0cc2001pu",
+      "descricao": "ESTAC PONTO DE EMBAR/DESEMB DE PASSAGEIROS TRANSP COLETiVO",
+      "localInfracao": "RUA ALTAMIRO GUIMARAES, OFICINAS - TUBARAO - SANTA CATARINA, 88702-270, BRASIL - TUBARAO/SC",
+      "dataAutuacao": "16/04/2026 13:58",
+      "valorMulta": 130.16,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "22/06/2026",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "P0cc2001yr",
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - PONTO OU VAGA DE TAXI",
+      "localInfracao": "RUA PADRE BERNARDO FREUSER, CENTRO - TUBARAO - SANTA CATARINA, 88705-701, BRASI - TUBARAO/SC",
+      "dataAutuacao": "29/04/2026 08:13",
+      "valorMulta": 195.23,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "03/07/2026",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "P0dxg00170",
+      "descricao": "DEIXAR O CONDUTOR DE USAR O CINTO SEGURANÇA",
+      "localInfracao": "AVENIDA PATRICIO LIMA, HUMAITA - TUBARAO - SANTA CATARINA, 88704-410, BRASIL - TUBARAO/SC",
+      "dataAutuacao": "10/05/2026 16:44",
+      "valorMulta": 195.23,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "13/07/2026",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "P0exe000fc",
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENT ESPECIFICADA PELA SINALIZACAO",
+      "localInfracao": "RUA VIDAL RAMOS, CENTRO - TUBARAO - SANTA CATARINA, 88701-160, BRASIL - TUBARAO/SC",
+      "dataAutuacao": "14/05/2026 09:16",
+      "valorMulta": 195.23,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "17/07/2026",
+      "origem": "portal"
+    }
+  ]
+}

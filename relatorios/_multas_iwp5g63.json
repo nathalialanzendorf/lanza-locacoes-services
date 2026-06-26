@@ -1,0 +1,35 @@
+{
+  "veiculoId": "IWP-5G63",
+  "multas": [
+    {
+      "autoInfracao": "Z000021201",
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - ESTACIONAMENTO ROTATIVO",
+      "localInfracao": "AV. MARCOLINO M. CABRAL, NUMERO 917 - TUBARAO/SC",
+      "dataAutuacao": "10/12/2025 16:54",
+      "valorMulta": 195.23,
+      "situacao": "PENALIDADE NOTIFICADA",
+      "limiteDefesa": "24/02/2026",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "J008087450",
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "localInfracao": "SC - BR 101 - KM 432.50 - C - SOMBRIO/SC",
+      "dataAutuacao": "10/04/2026 05:23",
+      "valorMulta": 130.16,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "19/06/2026",
+      "origem": "portal"
+    },
+    {
+      "autoInfracao": "P0drq000lm",
+      "descricao": "EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ",
+      "localInfracao": "RUA NIBELE UGGIONI, VILA FLORESTA I - CRICIUMA - SANTA CATARINA, 88818-500, BR - CRICIUMA/SC",
+      "dataAutuacao": "09/06/2026 10:57",
+      "valorMulta": 195.23,
+      "situacao": "AUTUAÇÃO NOTIFICADA",
+      "limiteDefesa": "14/08/2026",
+      "origem": "portal"
+    }
+  ]
+}

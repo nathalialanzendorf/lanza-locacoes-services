@@ -4,8 +4,8 @@ description: >-
   Specialist for rastreame.com.br: runs CLI commands (motorista, gastos),
   auth env vars, and HTTP patterns for other skills. Use when any workflow
   needs Rastreame API execution, token, rastreame check/add, rastreame-gastos
-  list/post/put, or when cadastrar-cliente / cadastrar-recebimento delegates
-  site actions here.
+  list/post/put, renegociar-debitos, or when cadastrar-cliente /
+  cadastrar-recebimento / renegociar-debitos delegate site actions here.
 ---
 
 # Rastreame — site (especialista)
@@ -19,6 +19,7 @@ As **regras de negócio** (o *quê* e *quando* cadastrar) ficam nas skills de do
 - O utilizador ou outra skill pede ação no **Rastreame** (motorista, gastos, token).
 - A skill **cadastrar-cliente** chegou ao passo opcional **Rastreame** após `merge-cliente`.
 - A skill **cadastrar-recebimento** precisa de `list` / `post` / `put` em gastos.
+- A skill **renegociar-debitos** precisa de `resumo`, dry-run e `--execute` em gastos.
 - Qualquer skill futura que diga “delegar execução ao site Rastreame”.
 
 ## Autenticação — variáveis de ambiente
@@ -40,7 +41,8 @@ Se o Node acusar **`UNABLE_TO_VERIFY_LEAF_SIGNATURE`** ao falar com `rastreame.c
 |--------|------------------|
 | `auth.ts` | `RASTREAME_ORIGIN`, `fetchRastreameToken()`, `requireRastreameToken()`, `rastreameJsonHeaders()`, cache de token. |
 | `motorista.ts` | `listMotoristas()`, `findMotorista()`, `postMotorista()` — API `/keek/rest/motorista`. |
-| `gasto.ts` | `fetchGastosList()`, `postGasto()`, `putGasto()` — API `/keek/rest/gasto`. |
+| `gasto.ts` | `fetchGastosList()`, `fetchGastoById()`, `fetchAllGastos()`, `postGasto()`, `putGasto()` — API `/keek/rest/gasto`. |
+| `renegociacao.ts` | Marcação `[NEGOCIADO X]`, parcelas DOCUMENTACAO — usado por `renegociar-debitos`. |
 | `rastreavel.ts` | `listRastreaveis()` — API `/keek/rest/rastreavel` (usado pelo lançamento semanal). |
 
 Novas integrações Rastreame devem **reutilizar `auth.ts`** para headers e token.
@@ -59,6 +61,8 @@ Comandos que só alteram `database/*.json` (ex.: `merge-cliente`, `gravar-despes
 | **cadastrar-recebimento** | Criar gasto | Montar JSON conforme `cadastrar-recebimento/reference.md` → `npx tsx src/run.ts rastreame-gastos post "relatorios/_gasto.json"` |
 | **cadastrar-recebimento** | Atualizar gasto | Corpo completo típico de `PUT` (espelhar UI) → `npx tsx src/run.ts rastreame-gastos put <id> "relatorios/_gasto_put.json"` |
 | **Lançamento em lote (semanal)** | Contratos ativos na semana → gasto OUTROS sem duplicar | `npx tsx src/run.ts rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias 90]` (dry-run); depois `--execute`. Sem `--info`/`--data-iso`, deriva a segunda da semana do `--inicio`. |
+| **renegociar-debitos** | Listar débitos em aberto | `npx tsx src/run.ts renegociar-debitos resumo --motorista <key> --rastreavel <key>` |
+| **renegociar-debitos** | Marcar `[NEGOCIADO X]` + parcelas DOCUMENTACAO | Montar JSON conforme `renegociar-debitos/reference.md` → dry-run → `npx tsx src/run.ts renegociar-debitos "<json>" [--execute]` |
 
 Sempre **confirmar `cwd`** = raiz do repositório antes de `npx tsx`.
 
@@ -73,6 +77,9 @@ npx tsx src/run.ts rastreame-gastos post "<corpo.json>"
 npx tsx src/run.ts rastreame-gastos put <id> "<corpo.json>"
 
 npx tsx src/run.ts rastreame-lancar-semanal [--inicio 2026-06-29] [--fim 2026-07-05] [--prazo-dias 90] [--info "..."] [--data-iso ...] [--execute]
+
+npx tsx src/run.ts renegociar-debitos resumo --motorista <key> --rastreavel <key>
+npx tsx src/run.ts renegociar-debitos "<entrada.json>" [--execute]
 ```
 
 ## Motorista — detalhe

@@ -1,18 +1,18 @@
 {
-  "descricao": "Despesas/gastos por veículo (Seguro, Rastreador, Manutenção, etc.). Consumido pela skill /relatorio-prestacao-contas para compor os 'Gastos' de cada veículo.",
+  "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
   "atualizadoEm": "2026-06-20",
-  "schemaDespesa": {
+  "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
     "placa": "Placa do veículo (formato ABC-1D23)",
-    "categoria": "Seguro | Rastreador | Manutenção | Outro",
+    "categoria": "Seguro | Rastreador | Manutenção | IPVA | Licenciamento | Outros",
     "descricao": "Descrição da despesa",
     "data": "DD/MM/AAAA (vencimento/competência)",
     "valor": "número (reais)",
     "competencia": "MM/AAAA",
     "origem": "caminho do arquivo de origem (boleto)"
   },
-  "despesas": [
+  "parceiroDespesas": [
     {
       "id": "7edae84f-3241-4b9a-ba1f-c2d9e623d8ee",
       "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",

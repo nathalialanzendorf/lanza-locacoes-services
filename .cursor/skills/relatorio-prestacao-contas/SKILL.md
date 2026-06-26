@@ -2,20 +2,20 @@
 name: relatorio-prestacao-contas
 description: >-
   Builds the monthly partner/vehicle accountability report from
-  database/despesas.json, with fixed tracker charge and insurance validation.
+  database/parceiro-despesas.json, with fixed tracker charge and insurance validation.
   Use when the user asks for prestação de contas, relatório mensal parceiro,
   or arquivo em prestação de contas.
 ---
 
 # Relatório de Prestação de Contas Mensal
 
-Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/Prestação contas parceiro.txt`.
+Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/parceiro-despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/Prestação contas parceiro.txt`.
 
 ## Regras fixas
 
 1. **Sempre perguntar o escopo:** um **parceiro**, uma **placa** ou a **frota toda**. Por defeito **excluir da prestação** a frota própria do **Felipe** (veículos que lhe estão vinculados em `parceiro-veiculo.json`), salvo se o utilizador pedir para incluir.
-2. **Pré-requisito:** seguro do mês importado (**importar-boletos-seguro** a partir dos PDFs em `seguroComprovantesDir`), exceto parceiros sem seguro: **Luiz Paulo, Jhonny, Baiano** (não exigir boleto nem avisar falta para eles).
-3. **Rastreador fixo:** R$ **50,00** no **dia 10** do mês da competência, se ainda não houver rastreador naquele veículo/mês em `despesas.json`.
+2. **Pré-requisito:** seguro do mês importado (**sync-seguro** a partir dos PDFs em `seguroComprovantesDir`), exceto parceiros sem seguro: **Luiz Paulo, Jhonny, Baiano** (não exigir boleto nem avisar falta para eles).
+3. **Rastreador fixo:** R$ **50,00** no **dia 10** do mês da competência, se ainda não houver rastreador naquele veículo/mês em `parceiro-despesas.json`.
 4. **Defaults de ganho:** semanal **R$ 500** e diária **R$ 71,42** (500÷7); sugerir **4 semanas = R$ 2.000**.
 5. **William / PWH-3A45 (Doblo):** ganho mensal fixo **R$ 1.100** (não perguntar semanas).
 6. Veículos do **Felipe** (frota própria) **não entram** na prestação para parceiros, salvo instrução em contrário.
@@ -64,4 +64,4 @@ Saída: `Financeiro/prestação de contas/MM.AAAA/<Parceiro>.txt` por defeito (v
 
 ## Skills relacionadas
 
-- **importar-boletos-seguro**, **cadastrar-despesa**
+- **sync-seguro**, **cadastrar-despesa**

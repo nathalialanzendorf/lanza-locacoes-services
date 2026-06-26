@@ -11,7 +11,7 @@ O repositório **Aworklanza** guarda skills, scripts e `database/`. **Documentos
 
 1. **`D:\Dropbox\Aluguel Carros`** — raiz operacional: **CRLV**, **CNH**, comprovantes, anexos soltos e **pastas de contrato** no formato `DD.MM.AAAA - Nome do cliente` (mesmo nível que a raiz).
 2. **`D:\Dropbox\Aluguel Carros\Financeiro`** — **relatórios de prestação de contas** (subpasta `prestação de contas\MM.AAAA\`) e outros ficheiros financeiros conforme `config/lanza_paths.json`.
-3. **`D:\Dropbox\Aluguel Carros\Proteção Veicular\Comprovantes\2026`** — **PDFs dos comprovantes de seguro** para extração de placa/valor (skill **importar-boletos-seguro**); incluir subpastas se existirem (ex. por mês). Ver `seguroComprovantesDir` em `config/lanza_paths.json`.
+3. **`D:\Dropbox\Aluguel Carros\Proteção Veicular\Comprovantes\2026`** — **PDFs dos comprovantes de seguro** para extração de placa/valor (skill **sync-seguro**); incluir subpastas se existirem (ex. por mês). Ver `seguroComprovantesDir` em `config/lanza_paths.json`.
 
 Valores exatos e subpastas opcionais estão em **`config/lanza_paths.json`** na raiz do repositório.
 
