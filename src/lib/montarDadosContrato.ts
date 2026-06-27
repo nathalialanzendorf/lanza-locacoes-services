@@ -9,7 +9,12 @@ import type { GerarContratoDados } from "./docxGerar.js";
 
 const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
 const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
-const DEFAULT_TEMPLATE = path.join(REPO_ROOT, "templates", "Contrato - Modelo v3.docx");
+const DEFAULT_TEMPLATE = path.join(
+  REPO_ROOT,
+  "templates",
+  "contratos",
+  "Contrato - Modelo v3.docx",
+);
 
 export type ClienteDb = {
   id?: string;

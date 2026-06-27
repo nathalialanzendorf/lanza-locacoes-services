@@ -173,7 +173,7 @@ Opções:
   --dia-pagamento TEXTO  Padrão: todos os sábados
   --cnh-arquivo CAMINHO  Copia CNH.pdf na pasta do contrato
   --diaria VALOR         Padrão: 120
-  --template CAMINHO     templates/Contrato - Modelo v3.docx
+  --template CAMINHO     templates/contratos/Contrato - Modelo v3.docx
   --contratos-dir DIR    config/lanza_paths.json
   --out dados.json       Grava JSON montado (sem gerar .docx)
   --dry-run              Mostra JSON montado

@@ -9,7 +9,7 @@ description: >-
 
 # Relatório de Prestação de Contas Mensal
 
-Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/parceiro-despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/Prestação contas parceiro.txt`.
+Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/parceiro-despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/prestacao-contas/Prestação contas parceiro.txt`.
 
 **Idempotência:** skill só leitura (gera `.txt`); dados idempotentes vêm de **sync-seguro**, **sync-rastreador**, etc. — ver [`_idempotencia.md`](../_idempotencia.md).
 
