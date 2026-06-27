@@ -23,6 +23,8 @@ Defina `DETRAN_SC_AUTH` e `DETRAN_SC_EMPRESA` nas variáveis de ambiente do util
 
 Token expira (~5 h). **Nunca** versionar no Git.
 
+**Captcha** (confirmado 28/06/2026): obrigatório para **iniciar** uma consulta nova. Sem captcha, `requisitar-consulta` só devolve ticket se já houver consulta **pendente** para a placa (ex.: logo após consultar no portal) — senão responde `Captcha inválido`. Logo, **não há varredura 100% automática**; a frota é capturada no browser. Ver [reference.md](reference.md).
+
 ## Resumo rápido
 
 ```bash

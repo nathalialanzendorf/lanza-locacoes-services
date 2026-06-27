@@ -11,16 +11,40 @@ description: >-
 
 Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/parceiro-despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/prestacao-contas/Prestação contas parceiro.txt`.
 
-**Idempotência:** skill só leitura (gera `.txt`); dados idempotentes vêm de **sync-seguro**, **sync-rastreador**, etc. — ver [`_idempotencia.md`](../_idempotencia.md).
+**Idempotência:** skill só leitura (gera `.txt`); dados idempotentes vêm de **sync-seguro**, **cadastro-despesa** (`gravar-rastreador`), etc. — ver [`_idempotencia.md`](../_idempotencia.md).
 
 ## Regras fixas
 
 1. **Sempre perguntar o escopo:** um **parceiro**, uma **placa** ou a **frota toda**. Por defeito **excluir da prestação** a frota própria do **Felipe** (veículos que lhe estão vinculados em `parceiro-veiculo.json`), salvo se o utilizador pedir para incluir.
 2. **Pré-requisito:** seguro do mês importado (**sync-seguro** a partir dos PDFs em `seguroComprovantesDir`), exceto parceiros sem seguro: **Luiz Paulo, Jhonny, Baiano** (não exigir boleto nem avisar falta para eles).
-3. **Rastreador fixo:** **R$ 50,00** no **dia 10** da competência. Correr **`sync-rastreador`** antes do relatório; o `montar-relatorio` só completa se faltar entrada no veículo/mês.
+3. **Rastreador fixo:** **R$ 50,00** no **dia 10** da competência. Correr **`gravar-rastreador`** (skill **cadastro-despesa**) antes do relatório; o `montar-relatorio` só completa se faltar entrada no veículo/mês.
 4. **Defaults de ganho:** semanal **R$ 500** e diária **R$ 71,42** (500÷7); sugerir **4 semanas = R$ 2.000**.
 5. **William / PWH-3A45 (Doblo):** ganho mensal fixo **R$ 1.100** (não perguntar semanas).
 6. Veículos do **Felipe** (frota própria) **não entram** na prestação para parceiros, salvo instrução em contrário.
+7. **Veículos particulares** (`"particular": true` em `veiculos.json`, ex.: Nivus RYC-7C32, Baja Bugg ICZ-2H47) **não entram** na prestação de contas — o `montar-relatorio` os pula automaticamente.
+8. **IPVA / Licenciamento (DETRAN):** ver secção própria abaixo — sempre **perguntar ao utilizador com seletor** antes de incluir.
+
+## IPVA e Licenciamento
+
+O sync DETRAN (**sync-ipva-licenciamento**) grava em `parceiro-despesas.json` **todas as formas do mesmo IPVA**: a **cota única** *e* as **3 parcelas** (1ª/2ª/3ª), por vencimento. **São alternativas do mesmo imposto** — nunca somar cota única + parcelas (duplicaria o valor).
+
+Antes de incluir IPVA/Licenciamento no relatório, **sempre usar seletor**, por veículo que tenha esses débitos na competência:
+
+### IPVA
+
+1. **Quem paga?**
+   - **Parceiro paga por conta própria** → **não entra** na prestação (não cobrar).
+   - **Locadora paga e cobra do parceiro** → entra na prestação.
+2. **Se a locadora paga, qual forma?** (só para IPVA, que tem parcelamento)
+   - **Cota única — R$ X** (valor cheio), ou
+   - **3 parcelas — R$ Y cada** (incluir as parcelas conforme vencimento).
+   - Incluir **apenas a opção escolhida**; **nunca somar** as duas.
+
+### Licenciamento
+
+Mesma pergunta de **quem paga** (parceiro por conta própria → não entra; locadora paga e cobra → entra). **Não** perguntar cota única vs parcelas — o licenciamento é **valor único, sem parcelamento**.
+
+Montar o `entrada.json` já com as opções escolhidas (no IPVA: cota única **ou** parcelas, nunca ambas). As linhas não escolhidas ficam no database, mas **não entram** no relatório do mês.
 
 ## Competência e período
 

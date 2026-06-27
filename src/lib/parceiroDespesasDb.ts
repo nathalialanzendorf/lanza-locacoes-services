@@ -23,6 +23,12 @@ export type ParceiroDespesaRegistro = {
   valor: number;
   competencia: string;
   origem: string;
+  /** id da Manutenção espelhada no Rastreame (despesa de parceiro → tela Manutenção). */
+  rastreameManutencaoId?: string | number | null;
+  /** Instante (ISO) do último push para o Rastreame. */
+  rastreameSyncEm?: string | null;
+  /** Hash do conteúdo enviado ao Rastreame (evita PUT desnecessário). */
+  rastreameHash?: string | null;
 };
 
 export type ParceiroDespesaInput = {
@@ -60,6 +66,8 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   valor: "número (reais)",
   competencia: "MM/AAAA",
   origem: "manual | detran-sc | caminho boleto | ...",
+  rastreameManutencaoId: "id da Manutenção espelhada no Rastreame (null se ainda não enviada)",
+  rastreameSyncEm: "ISO do último push para o Rastreame (tela Manutenção)",
 };
 
 const DEFAULT_DESCRICAO =
@@ -243,6 +251,11 @@ function findMatchingIndices(
       indices.push(i);
       return;
     }
+    // A chave de negócio (placa|competência|categoria) reconcilia entradas
+    // manuais com as de sync. Não deve fundir dois débitos DISTINTOS vindos de
+    // sync (origens únicas por idDebito) — ex.: IPVA cota única e 1ª parcela
+    // caem na mesma competência/categoria mas são alternativas a coexistir.
+    if (opts.origem !== "manual" && d.origem !== "manual") return;
     const dKey = chaveNegocioParceiroDespesa(
       d.placa,
       d.competencia,
@@ -338,4 +351,21 @@ export function gravarParceiroDespesaManual(
 /** @deprecated use gravarParceiroDespesaManual */
 export function gravarDespesaManual(input: ParceiroDespesaInput): GravarParceiroDespesaResult {
   return gravarParceiroDespesaManual(input);
+}
+
+/**
+ * Marca o espelho no Rastreame (tela Manutenção) de uma despesa de parceiro.
+ * Grava `rastreameManutencaoId`, `rastreameHash` e `rastreameSyncEm`.
+ */
+export function marcarParceiroDespesaRastreameSync(
+  id: string,
+  fields: { manutencaoId?: string | number | null; hash?: string | null },
+): void {
+  const db = loadParceiroDespesasDb();
+  const reg = db.parceiroDespesas.find((d) => d.id === id);
+  if (!reg) return;
+  if (fields.manutencaoId !== undefined) reg.rastreameManutencaoId = fields.manutencaoId;
+  if (fields.hash !== undefined) reg.rastreameHash = fields.hash;
+  reg.rastreameSyncEm = new Date().toISOString();
+  saveParceiroDespesasDb(db);
 }

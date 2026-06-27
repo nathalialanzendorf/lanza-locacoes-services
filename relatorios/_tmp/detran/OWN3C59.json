@@ -1,0 +1,448 @@
+{
+  "placa": "OWN3C59",
+  "renavam": 597756635,
+  "proprietarioAtual": "LANZA LOCACOES DE VEICULOS LTDA",
+  "proprietarioAnterior": "M******* E**** P*****",
+  "principalCondutor": "V******* J*** C******** C******",
+  "cor": "Preta",
+  "marcaModelo": "RENAULT/SANDERO EXP1016V",
+  "anoFabricacao": 2013,
+  "anoModelo": 2014,
+  "motivoBaixa": "Em circulação",
+  "exercicioLicenciamento": 2025,
+  "licenciado": "2025 em 31/10/2025 através do Registro de Veículo (CRV)",
+  "municipio": "TUBARAO",
+  "uf": "SC",
+  "debitos": [
+    {
+      "idDebito": 641712241,
+      "descricaoClasse": "TUBARAO-008072-Z000017399-5541",
+      "dataVencimentoOriginal": "2026-01-09",
+      "valorAtualizado": 205.71,
+      "linhaDigitavel": "00190.00009  02838.969166  41712.241177  9  14930000020571",
+      "emiteGuia": 1,
+      "exercicio": 2025,
+      "dareSat": 0,
+      "vencido": true
+    },
+    {
+      "idDebito": 657472455,
+      "descricaoClasse": "IPVA (Cota Unica) 2026",
+      "dataVencimentoOriginal": "2026-09-30",
+      "valorAtualizado": 591.84,
+      "linhaDigitavel": "85610000005-3  91840024836-8  74026000597-1  75663518053-9",
+      "emiteGuia": 1,
+      "exercicio": 2026,
+      "dareSat": 1,
+      "vencido": false
+    },
+    {
+      "idDebito": 657472456,
+      "descricaoClasse": "IPVA (1a. Cota) 2026",
+      "dataVencimentoOriginal": "2026-09-10",
+      "valorAtualizado": 197.28,
+      "linhaDigitavel": "85670000001-6  97280024836-1  74126000597-9  75663518053-9",
+      "emiteGuia": 1,
+      "exercicio": 2026,
+      "dareSat": 1,
+      "vencido": false
+    },
+    {
+      "idDebito": 657472457,
+      "descricaoClasse": "IPVA (2a. Cota) 2026",
+      "dataVencimentoOriginal": "2026-10-10",
+      "valorAtualizado": 197.28,
+      "linhaDigitavel": "85660000001-7  97280024836-1  74226000597-7  75663518053-9",
+      "emiteGuia": 3,
+      "motivoNaoEmissaoGuia": "1ª Cota não quitada",
+      "exercicio": 2026,
+      "dareSat": 0,
+      "vencido": false
+    },
+    {
+      "idDebito": 657472458,
+      "descricaoClasse": "IPVA (3a. Cota) 2026",
+      "dataVencimentoOriginal": "2026-11-10",
+      "valorAtualizado": 197.28,
+      "linhaDigitavel": "85650000001-8  97280024836-1  74326000597-5  75663518053-9",
+      "emiteGuia": 3,
+      "motivoNaoEmissaoGuia": "2ª Cota não quitada",
+      "exercicio": 2026,
+      "dareSat": 0,
+      "vencido": false
+    },
+    {
+      "idDebito": 657472454,
+      "descricaoClasse": "Licenciamento Anual 2026",
+      "dataVencimentoOriginal": "2026-11-30",
+      "valorAtualizado": 149.37,
+      "linhaDigitavel": "85640000001-9  49370024700-7  06574724540-8  00260021353-8",
+      "emiteGuia": 1,
+      "exercicio": 2026,
+      "dareSat": 1,
+      "vencido": false
+    }
+  ],
+  "infracoes": [
+    {
+      "idAutoInfracao": 42949446,
+      "numeroAuto": "55452346G ",
+      "descricao": "ESTACIONAR NO PASSEIO ",
+      "dataHoraAutuacao": "2019-09-07T16:00:00",
+      "localInfracao": "AV ATILIO PEDRO PAGANI, PROX 367 - PALHOCA/SC",
+      "complemento": "",
+      "valor": 195.23,
+      "situacao": "Autuação notificada",
+      "status": "Em aberto",
+      "senha": "17817CF3",
+      "protocolo": "8064.5452.55452346G ",
+      "dataLimiteDefesa": "2019-10-14",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 68436945,
+      "numeroAuto": "Z000017399",
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - ESTACIONAMENTO ROTATIVO",
+      "dataHoraAutuacao": "2025-07-25T17:14:14",
+      "localInfracao": "RUA SAO MANOEL, NUMERO 25 - TUBARAO/SC",
+      "valor": 195.23,
+      "situacao": "Penalidade notificada",
+      "status": "Em aberto",
+      "senha": "1C5959ED",
+      "protocolo": "8072.5541.Z000017399",
+      "dataLimiteDefesa": "2025-10-10",
+      "prazoDefesaExpirado": true
+    }
+  ],
+  "historicoInfracoes": [
+    {
+      "idAutoInfracao": 45861530,
+      "numeroAuto": "T475731794",
+      "descricao": "DEIXAR O CONDUTOR DE USAR O CINTO SEGURANÇA ",
+      "dataHoraAutuacao": "2020-08-07T11:46:00",
+      "localInfracao": "BR-101 KM-333 UF-SC - TUBARAO/SC",
+      "valor": 195.23,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "protocolo": "100.5185.T475731794",
+      "dataLimiteDefesa": "2020-11-24",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 46484763,
+      "numeroAuto": "T486358747",
+      "descricao": "AVANÇAR O SINAL DE PARADA OBRIGATORIA ",
+      "dataHoraAutuacao": "2020-10-10T18:42:00",
+      "localInfracao": "BR-101 KM-331 UF-SC - TUBARAO/SC",
+      "valor": 293.47,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "protocolo": "100.6050.T486358747",
+      "dataLimiteDefesa": "2021-01-28",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 58647119,
+      "numeroAuto": "R668290117",
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "dataHoraAutuacao": "2023-07-28T08:31:00",
+      "localInfracao": "BR-101 KM-336 UF-SC - TUBARAO/SC",
+      "valor": 130.16,
+      "situacao": "Penalidade notificada",
+      "status": "Cancelada",
+      "protocolo": "100.7455.R668290117",
+      "dataLimiteDefesa": "2023-10-20",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 59880857,
+      "numeroAuto": "R697341615",
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "dataHoraAutuacao": "2023-11-10T07:45:00",
+      "localInfracao": "BR-101 KM-336 UF-SC - TUBARAO/SC",
+      "valor": 130.16,
+      "situacao": "Penalidade notificada",
+      "status": "Justificada",
+      "protocolo": "100.7455.R697341615",
+      "dataLimiteDefesa": "2024-02-04",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 61877904,
+      "numeroAuto": "R752194607",
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "dataHoraAutuacao": "2024-04-17T07:33:00",
+      "localInfracao": "BR-101 KM-336 UF-SC - TUBARAO/SC",
+      "valor": 130.16,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "protocolo": "100.7455.R752194607",
+      "dataLimiteDefesa": "2024-07-06",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 63120144,
+      "numeroAuto": "R806484179",
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "dataHoraAutuacao": "2024-07-26T16:16:00",
+      "localInfracao": "BR-101 KM-336 UF-SC - TUBARAO/SC",
+      "valor": 130.16,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "protocolo": "100.7455.R806484179",
+      "dataLimiteDefesa": "2024-10-14",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 64967522,
+      "numeroAuto": "55510765W ",
+      "descricao": "DEIXAR DE EFETUAR REG DO VEIC EM 30 DIAS QDO FOR TRANSF PROP",
+      "dataHoraAutuacao": "2024-12-27T16:38:10",
+      "localInfracao": "RUA ALTAMIRO GUIMARAES, 864 - TUBARAO/SC",
+      "valor": 130.16,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "senha": "0D4581C2",
+      "protocolo": "8786.6920.55510765W ",
+      "dataLimiteDefesa": "2025-03-17",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 66170015,
+      "numeroAuto": "C139011265",
+      "descricao": "DEIXAR O CONDUTOR DE USAR O CINTO SEGURANÇA ",
+      "dataHoraAutuacao": "2025-03-08T15:02:00",
+      "localInfracao": "SC370 -146.5-ENTR. SC-108 (P/ SÃO LUDGERO)  - GRAVATAL (ENTR. SC-435) - BRACO DO NORTE/SC",
+      "complemento": "Em frente a Cia da Cerâmica                                                     ",
+      "valor": 195.23,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "senha": "9CC89261",
+      "protocolo": "8785.5185.C139011265",
+      "dataLimiteDefesa": "2025-05-12",
+      "prazoDefesaExpirado": true
+    },
+    {
+      "idAutoInfracao": 75443567,
+      "numeroAuto": "N005035885",
+      "descricao": "RECUSAR SUBMETER TESTE/EX CLIN/PERIC/PROC FORMA ART 277CTB",
+      "dataHoraAutuacao": "2026-05-30T00:22:00",
+      "localInfracao": "SC - BR 101 - KM 334.00 - D - TUBARAO/SC",
+      "valor": 2934.7,
+      "situacao": "Penalidade notificada",
+      "status": "Paga",
+      "protocolo": "100.7579.N005035885",
+      "dataLimiteDefesa": "2026-07-24",
+      "prazoDefesaExpirado": false
+    }
+  ],
+  "dividaAtiva": [],
+  "dataAtualizacao": "2026-06-28T15:24:29",
+  "dataAquisicao": "2025-10-14",
+  "pendente": false,
+  "tipo": "Automovel",
+  "categoria": "Particular",
+  "carroceria": "Nao Aplicavel",
+  "especie": "Passageiro",
+  "placaAnterior": "OWN3259/SP",
+  "lugares": 5,
+  "combustivel": "Alcool-Gasol",
+  "restricaoVenda": "Sem gravame",
+  "informacoesPendentesSng": [],
+  "processos": [
+    {
+      "numeroProcesso": "1324957/2025",
+      "interessadoDocumento": "179*******7",
+      "dataHoraInicio": "2025-10-31T09:45:00",
+      "dataHoraFim": "2025-10-31T13:28:00",
+      "situacao": "Encerrado",
+      "servicos": [
+        {
+          "servico": "Baixa de Alienação Fiduciária",
+          "dataHoraExecucao": "2025-10-31T09:45:10.1"
+        },
+        {
+          "servico": "Transferência de Propriedade",
+          "dataHoraExecucao": "2025-10-31T09:45:10.1"
+        },
+        {
+          "servico": "Geração de guia de pagamento",
+          "dataHoraExecucao": "2025-10-31T09:45:10.15"
+        },
+        {
+          "servico": "Auditoria",
+          "dataHoraExecucao": "2025-10-31T13:28:34.736"
+        },
+        {
+          "servico": "Autorização Nova PIV",
+          "dataHoraExecucao": "2025-10-31T13:28:34.74"
+        },
+        {
+          "servico": "Emissão de CRV/CRLVe",
+          "dataHoraExecucao": "2025-10-31T13:29:35"
+        },
+        {
+          "servico": "Conversão Nova PIV",
+          "dataHoraExecucao": "2025-10-31T09:45:10.1"
+        }
+      ]
+    },
+    {
+      "numeroProcesso": "1607948/2024",
+      "interessadoDocumento": "595*******5",
+      "dataHoraInicio": "2024-12-27T16:25:00",
+      "dataHoraFim": "2024-12-27T16:37:00",
+      "situacao": "Encerrado",
+      "servicos": [
+        {
+          "servico": "Transferência de Propriedade",
+          "dataHoraExecucao": "2024-12-27T16:25:46.22"
+        },
+        {
+          "servico": "Alienação Fiduciária",
+          "dataHoraExecucao": "2024-12-27T16:25:46.22"
+        },
+        {
+          "servico": "Geração de guia de pagamento",
+          "dataHoraExecucao": "2024-12-27T16:25:46.436"
+        },
+        {
+          "servico": "Auditoria",
+          "dataHoraExecucao": "2024-12-27T16:37:37.31"
+        },
+        {
+          "servico": "Emissão de CRV/CRLVe",
+          "dataHoraExecucao": "2024-12-27T16:38:11.683"
+        }
+      ]
+    },
+    {
+      "numeroProcesso": "731964/2017",
+      "interessadoDocumento": "085*******5",
+      "dataHoraInicio": "2017-08-07T10:35:00",
+      "dataHoraFim": "2017-08-09T16:10:00",
+      "situacao": "Encerrado",
+      "servicos": [
+        {
+          "servico": "Transferência de Propriedade",
+          "dataHoraExecucao": "2017-08-07T10:35:12.526"
+        },
+        {
+          "servico": "Geração de guia de pagamento",
+          "dataHoraExecucao": "2017-08-07T10:35:12.54"
+        },
+        {
+          "servico": "Auditoria",
+          "dataHoraExecucao": "2017-08-09T16:10:43.66"
+        },
+        {
+          "servico": "Emissão CRV(1ª via)",
+          "dataHoraExecucao": "2017-08-09T17:06:22.7"
+        }
+      ]
+    },
+    {
+      "numeroProcesso": "460750/2017",
+      "interessadoDocumento": "008*******6",
+      "dataHoraInicio": "2017-05-22T12:07:00",
+      "dataHoraFim": "2017-05-23T16:42:00",
+      "situacao": "Encerrado",
+      "servicos": [
+        {
+          "servico": "Transferência de Propriedade",
+          "dataHoraExecucao": "2017-05-22T12:07:12.5"
+        },
+        {
+          "servico": "Geração de guia de pagamento",
+          "dataHoraExecucao": "2017-05-22T12:07:12.516"
+        },
+        {
+          "servico": "Auditoria",
+          "dataHoraExecucao": "2017-05-23T16:42:57.8"
+        },
+        {
+          "servico": "Emissão CRV(1ª via)",
+          "dataHoraExecucao": "2017-05-24T08:34:11.41"
+        }
+      ]
+    },
+    {
+      "numeroProcesso": "1026773/2016",
+      "interessadoDocumento": "021*******2",
+      "dataHoraInicio": "2016-11-28T11:33:00",
+      "dataHoraFim": "2016-12-20T16:18:00",
+      "situacao": "Encerrado",
+      "servicos": [
+        {
+          "servico": "Trânsferência outra UF",
+          "dataHoraExecucao": "2016-11-28T11:33:53.403"
+        },
+        {
+          "servico": "Transferência de Propriedade",
+          "dataHoraExecucao": "2016-11-28T11:33:53.403"
+        },
+        {
+          "servico": "Geração de guia de pagamento",
+          "dataHoraExecucao": "2016-11-28T11:33:53.42"
+        },
+        {
+          "servico": "Auditoria",
+          "dataHoraExecucao": "2016-12-20T16:18:32.883"
+        },
+        {
+          "servico": "Emissão CRV(1ª via)",
+          "dataHoraExecucao": "2016-12-21T11:05:12.893"
+        }
+      ]
+    }
+  ],
+  "editaisCedo": [],
+  "ipvasNotificados": [],
+  "recursosInfracao": [
+    {
+      "numeroProcesso": 12414,
+      "anoProcesso": 2021,
+      "dataDefesa": "2021-08-03",
+      "codigoInstancia": 9,
+      "instancia": "Indicação Condutor",
+      "numeroAuto": "86358747",
+      "tipoAuto": "T4",
+      "orgaoAuto": 100,
+      "descricaoAuto": "UF:RD-000100-T486358747-6050-2",
+      "descricaoInfracao": "AVANÇAR O SINAL DE PARADA OBRIGATORIA",
+      "cidadeAuto": "TUBARAO",
+      "dataHoraAuto": "2020-10-10T18:42:00",
+      "nomeLocal": "BR-101 KM-331 UF-SC",
+      "resultadoRecurso": "",
+      "resultadoIndicacao": "DEFERIDO em 03/08/2021",
+      "motivoResultadoInfracao": "",
+      "motivoResultadoIndicacao": "",
+      "informacaoRequerente": "Proprietário"
+    },
+    {
+      "numeroProcesso": 804,
+      "anoProcesso": 2019,
+      "dataDefesa": "2019-10-03",
+      "codigoInstancia": 1,
+      "instancia": "Defesa Autuação",
+      "numeroAuto": "452346G",
+      "tipoAuto": "55",
+      "orgaoAuto": 8064,
+      "descricaoAuto": "PALHOCA-008064-55452346G-5452-1",
+      "descricaoInfracao": "ESTACIONAR NO PASSEIO",
+      "cidadeAuto": "PALHOCA",
+      "dataHoraAuto": "2019-09-07T16:00:00",
+      "nomeLocal": "AV ATILIO PEDRO PAGANI, PROX 367",
+      "complemento": "",
+      "resultadoRecurso": "Processo Cadastrado sem decisão",
+      "resultadoIndicacao": "",
+      "motivoResultadoIndicacao": "",
+      "informacaoRequerente": "Proprietário"
+    }
+  ],
+  "avisos": [],
+  "csvGnvVencido": false,
+  "origemDados": "Cadastro",
+  "hash": "81538f9960f23272c4f69141c9e7229e",
+  "token": "ecebb093-f293-479c-a4d6-e05f9e3a923a"
+}

@@ -17,6 +17,8 @@ Calcula o **acerto** de um contrato: multas, parcelas em aberto, diárias de atr
 
 **Idempotência:** skill só leitura — reexecutar gera o mesmo relatório; não altera bases.
 
+> **Veículos particulares** (`"particular": true` em `veiculos.json`) não têm contrato de locação — `calcularEncerramentoContrato` recusa essas placas.
+
 ## Quando usar
 
 - Simular ou apresentar acerto antes de devolver caução.
@@ -76,6 +78,8 @@ Exemplo `entrada.json`:
 | **Parcelas em aberto** | Vencimentos semanais não listados em `semanasPagas` |
 | **Retenção caução** | caução × (diasRestantes ÷ prazoDias) |
 | **Saldo** | caução − total débitos |
+
+> **Infrações fora do cálculo:** as **quitadas no DETRAN** (`quitadaDetran: true`) e as **sem data de autuação** (não há como comparar com a vigência) **não entram** na cobrança do locatário — só multas **com data**, **não quitadas** e **não pagas**, no período. (Ver regra em **sync-infracoes**.)
 
 Detalhes: `reference.md` nesta pasta.
 

@@ -95,6 +95,12 @@ export function main(argv: string[]): void {
       avisosGlobais.push(`Veículo ${placa} não cadastrado — pulado.`);
       continue;
     }
+    if ((v as { particular?: boolean }).particular === true) {
+      avisosGlobais.push(
+        `Veículo ${placa} é PARTICULAR (não-locação) — não entra em prestação de contas. Pulado.`,
+      );
+      continue;
+    }
     const parceiro = donoNome(String(v.id));
     const list = porParceiro.get(parceiro) ?? [];
     list.push([item, v]);
@@ -155,26 +161,24 @@ export function main(argv: string[]): void {
       const modelo = modeloCurto(String(v.marcaModelo ?? ""));
       const ano = anoCurto(String(v.anoModelo ?? ""));
       const L: string[] = [
-        `*${vPlaca} - ${modelo} ${ano} (${parceiro})*`,
+        `🚗 *${vPlaca} — ${modelo} ${ano}* (${parceiro})`,
         "",
+        "📋 *Gastos*",
       ];
       for (const d of gastos) {
-        L.push(
-          `\t${d.data}\t${d.descricao}\tR$ ${brl(Number(d.valor))}`,
-        );
+        L.push(`• ${d.data} — ${d.descricao} — R$ ${brl(Number(d.valor))}`);
       }
-      L.push("", `Total: R$ ${brl(soma)}`, "");
-      L.push(`Desconto mês anterior: R$ ${brl(devido)}`);
-      let dm = `Desconto manutenção: R$ ${brl(dval)}`;
-      if (desc.descricao) dm += ` (${desc.descricao})`;
-      L.push(dm);
+      L.push(`💰 Subtotal gastos: R$ ${brl(soma)}`, "");
       L.push(
-        "",
-        `Total Ganho: R$ ${brl(gval)}` +
+        `💵 Ganho: R$ ${brl(gval)}` +
           (ganho.descricao ? ` (${ganho.descricao})` : ""),
       );
-      L.push(`Total Descontos: R$ ${brl(totalDescontos)}`);
-      L.push("", `*TOTAL: R$ ${brl(total)}*`);
+      L.push(`➖ Desconto mês anterior: R$ ${brl(devido)}`);
+      let dm = `🔧 Desconto manutenção: R$ ${brl(dval)}`;
+      if (desc.descricao) dm += ` (${desc.descricao})`;
+      L.push(dm);
+      L.push(`➖ Total descontos: R$ ${brl(totalDescontos)}`);
+      L.push("", `✅ *TOTAL: R$ ${brl(total)}*`);
       linhas.push(L.join("\n"));
       tg += totalDescontos;
       tga += gval;
@@ -182,22 +186,21 @@ export function main(argv: string[]): void {
     }
 
     linhas.push(
-      `=== CONSOLIDADO ${parceiro.toUpperCase()} — ${comp} ===\n` +
-        `TOTAL Descontos:\tR$ ${brl(tg)}\n` +
-        `TOTAL Ganhos:\t\tR$ ${brl(tga)}\n` +
-        `TOTAL líquido:\t\tR$ ${brl(tt)}`,
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+        `📊 *CONSOLIDADO ${parceiro.toUpperCase()} — ${comp}*\n` +
+        `➖ Total descontos: R$ ${brl(tg)}\n` +
+        `💵 Total ganhos: R$ ${brl(tga)}\n` +
+        `✅ *Total líquido: R$ ${brl(tt)}*`,
     );
 
     const cab: string[] = [];
-    const compTxt =
+    const periodoTxt =
       periodo.inicio && periodo.fim
-        ? ` (Competência ${periodo.inicio} a ${periodo.fim})`
+        ? `🗓️ Competência: ${periodo.inicio} a ${periodo.fim}`
         : "";
-    if (rotulo) {
-      cab.push(rotulo + compTxt);
-    } else if (compTxt) {
-      cab.push("Relatório" + compTxt);
-    }
+    const titulo = rotulo ?? (periodoTxt ? "Relatório de prestação de contas" : "");
+    if (titulo) cab.push(`📄 *${titulo}*`);
+    if (periodoTxt) cab.push(periodoTxt);
     const corpo = linhas.join("\n\n\n");
     const texto = (cab.length ? cab.join("\n") + "\n\n\n" : "") + corpo + "\n";
     const saida = path.join(outDir, `${parceiro}.txt`);

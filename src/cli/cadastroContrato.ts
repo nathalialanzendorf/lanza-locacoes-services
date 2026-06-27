@@ -275,6 +275,7 @@ function parseMotivo(v: string | null): MotivoEncerramento | null {
   const t = (v ?? "").trim().toLowerCase();
   if (t === "devolvido" || t === "devolucao" || t === "devolução") return "devolvido";
   if (t === "recuperado" || t === "recolhido") return "recuperado";
+  if (t === "troca" || t === "trocado") return "troca";
   return null;
 }
 
@@ -282,7 +283,7 @@ function cmdEncerrar(argv: string[]): void {
   let pasta: string | null = null;
   let data: string | null = null;
   let motivo: MotivoEncerramento | null = null;
-  let quebra = true;
+  let quebra: boolean | null = null;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -296,17 +297,21 @@ function cmdEncerrar(argv: string[]): void {
   if (!pasta || !data || !motivo) {
     console.error(`Uso:
   cadastro-contrato encerrar <pasta-contrato|--id uuid> \\
-    --data DD/MM/AAAA --motivo devolvido|recuperado [--quebra|--sem-quebra]
+    --data DD/MM/AAAA --motivo devolvido|recuperado|troca [--quebra|--sem-quebra]
 
 Efetiva encerramento em database/contratos.json (use relatorio-encerramento-contrato antes para o acerto).
+"troca" não é quebra por padrão (gera novo contrato com outro veículo; caução transfere).
 `);
     process.exit(1);
   }
 
+  // "troca" não é quebra por padrão (novo contrato com outro veículo); demais motivos: quebra.
+  const quebraFinal = quebra ?? (motivo === "troca" ? false : true);
+
   const r = encerrarContratoDb(pasta, {
     dataEncerramento: data,
     motivoEncerramento: motivo,
-    quebraContrato: quebra,
+    quebraContrato: quebraFinal,
   });
   console.log(`Encerrado: ${r.clienteNome} | ${r.placa} | v${r.versao}`);
   console.log(`  Data: ${r.dataEncerramento} | Motivo: ${r.motivoEncerramento} | Quebra: ${r.quebraContrato ? "sim" : "não"}`);
