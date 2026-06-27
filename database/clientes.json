@@ -1,6 +1,6 @@
 {
   "descricao": "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.",
-  "atualizadoEm": "2026-06-20",
+  "atualizadoEm": "2026-06-26",
   "schemaCliente": {
     "id": "uuid",
     "nome": "Nome completo",
@@ -56,15 +56,760 @@
         "observacoes": null
       },
       "endereco": {
-        "cep": null,
-        "logradouro": null,
+        "cep": "88715-000",
+        "logradouro": "Rua Manoel Cruz",
         "numero": null,
         "complemento": null,
-        "bairro": null,
-        "cidade": null,
-        "uf": null
+        "bairro": "Centro",
+        "cidade": "Jaguaruna",
+        "uf": "SC"
       },
-      "id": "30f48e6a-0213-4d33-9f39-3e84c4b4c747"
+      "id": "30f48e6a-0213-4d33-9f39-3e84c4b4c747",
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Baiano - PEUGEOT 2008 2020-2021\\20.06.2026 - Ceres Beatriz Gonzaga Pereira\\CNH.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Baiano - PEUGEOT 2008 2020-2021\\20.06.2026 - Ceres Beatriz Gonzaga Pereira",
+      "origemImportacao": "cnh-pasta-contrato"
+    },
+    {
+      "nome": "Vitor Hugo Pacifico Machado",
+      "cpf": "109.394.129-98",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua João Batista Larroyd , 308",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Humaita de Cima",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-172"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.04.2026 - Vitor (recuperado 02.04)\\CNH.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.04.2026 - Vitor (recuperado 02.04)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "83867662-f5e2-4936-82d6-83faf9fe0b3a"
+    },
+    {
+      "nome": "LUIZ FILIPE BERTO MATIAS",
+      "cpf": "133.438.799-08",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Clementina Ronchi 252",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Defende",
+        "cidade": "Criciúma",
+        "uf": "SC",
+        "cep": "88808"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.08.2025 - Luiz Filipe Berto Matias (devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.08.2025 - Luiz Filipe Berto Matias (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "c3ab9fc6-ced5-4e39-9648-62f1a74aac08"
+    },
+    {
+      "nome": "VITOR BASSANI PADILHA",
+      "cpf": "877.654.620-91",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Av. Porto Alegre, 897",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Brasília",
+        "cidade": "Criciúma",
+        "uf": "SC",
+        "cep": "88813-200"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.06.2026 - Vitor Bassani Padilha\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.06.2026 - Vitor Bassani Padilha",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "5b036529-56e0-40c2-b395-18061ab27f65"
+    },
+    {
+      "nome": "MIKAEL SCHMIDT",
+      "cpf": "110.944.049-93",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Da Paz, 155",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Santa Luzia",
+        "cidade": "Criciuma",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.07.2025 - Mikael Schmidt (devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.07.2025 - Mikael Schmidt (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "8cb42547-f0b8-4485-b746-3cef7e30b054"
+    },
+    {
+      "nome": "FABIANA DA SILVA ANTUNES CHAVES",
+      "cpf": "003.925.089-07",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Vila Padre Itamar Luis costa, 1117",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São João ME",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-070"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\04.10.2025 - Fabiana da Silva Antunes Chavea (devolvido 13.11)\\CNH.jpg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\04.10.2025 - Fabiana da Silva Antunes Chavea (devolvido 13.11)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "a582a855-9a4a-424a-9257-b535d3af79c0"
+    },
+    {
+      "nome": "SUSANA DA SILVA",
+      "cpf": "003.925.309-02",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Lucia Kulakowski Saldanha, 249 AP 202, Ed. Cerâmica Res. II",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São João (Margem Esquerda)",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "8"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "0eafaf84-8700-4d16-8295-25619305410b"
+    },
+    {
+      "nome": "MARIA LUIZA VARGAS MINA DE OLIVEIRA",
+      "cpf": "103.127.799-41",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Teresa Cristina 355 , Quadra",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Oficinas",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.07.2025 - Maria Luiza Vargas Mina de Oliveira (devolvido 06.07)\\CNH 1.jpeg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.07.2025 - Maria Luiza Vargas Mina de Oliveira (devolvido 06.07)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "2df336db-f9bd-4df5-82d0-d23edd184650"
+    },
+    {
+      "nome": "DOUGLAS CAVALCANTE PEREIRA",
+      "cpf": "996.977.002.06",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Presidente Getúlio Vargas S/N",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Revoredo",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88704-715"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\05.08.2025 - Douglas Cavalcante Pereira (devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\05.08.2025 - Douglas Cavalcante Pereira (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "94ac09ef-aad3-49a9-a706-560f5c4709a8"
+    },
+    {
+      "nome": "JAVIER ALEXANDER DURAN CARRERO",
+      "cpf": "708.006.582-80",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Avenida Nicolau Manoel Da Silva 739",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Monte Castelo",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-791"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.09.25 - Javier Alexander Duran Carrero(devolvido)\\CNH.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.09.25 - Javier Alexander Duran Carrero(devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "c99ec984-3300-4e4f-bdee-5f56f32a25e2"
+    },
+    {
+      "nome": "ALBERTO JOSE GONZALEZ SALAZAR",
+      "cpf": "711.240.812-16",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Martinho Fraga 5922 , CASA 1 bairro São Martinho , cidade Tubarão , estado Santa Catarina , CEP 88 708 - 814 . As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: MLN-0B87 , marca/modelo FORD/FIESTA FLEX (Fiesta 1.6 16V Flex Mec. 5p) , Chassi 9BFZF55A8E8053063 , RENAVAM 590047108, ano/modelo 2013/2014 , cor BRANCO . 1.1.1 Informações t abela Fipe: http://veiculos.fipe.org.br?carro/ford/5-2025/003310-3/2014 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 06 / 1 2 / 2025 as 11 :00 e terminando no dia 0 6 / 0 3/ 202 6 as 11 :00 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução , descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado semanalmente todas as segundas-feiras",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO. 3.3 O pagamento do valor ca u ção da locação deste veículo, será no valor de R$1. 5 00,00 (Mil e quinhentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas. 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, será cálculado o valor proporcional ao tempo restante do contrato, e será realizado o recolhimento do veículo. 3.6 . A devolução do caução , descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "7f095a7f-992b-4842-95b6-522bcb00a0b8"
+    },
+    {
+      "nome": "SERGIO ALEXANDRE PINTO GLORIA",
+      "cpf": "020.113.930-86",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua L Av. Giocondo Tasso, 735",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO. 3.2 O pagamento do valor calção da locação deste veículo, será no valor de R$1.300,00 (Mil e trezentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas. 3.3 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.4 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento, o valor do calção, descrito na cláusula 3.2, não será devolvido pelo LOCADOR. 3 .5 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4 ª - PROTEÇÕES E COBERTURAS 4 . 1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4 . 2 . Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO , que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR , devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4 .3 . O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6. 2 , fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4 . 4 . A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato . Cláusula 5 ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Cabeçuda",
+        "cidade": "Laguna",
+        "uf": "SC",
+        "cep": "88790-000"
+      },
+      "cnh": {},
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)\\CNH.jpg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "8357d4ce-2174-4918-bb1c-9b037473d5eb"
+    },
+    {
+      "nome": "ALISSON DA SILVA DE SOUZA",
+      "cpf": "144.491.739-02",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Nicolau Manoel da Silva, sn",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Martinho",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FIESTA 2012-2013\\06.06.25 - Alisson da Silva de Souza (devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FIESTA 2012-2013\\06.06.25 - Alisson da Silva de Souza (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "2c6e7aba-bd76-40e4-ba75-8f2798e57cfc"
+    },
+    {
+      "nome": "MATHEUS CANTO ANSELMO",
+      "cpf": "141.247.049.84",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Ferreira Lima, 50 Ap 202",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Centro",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2015-2015\\07.03.2026 - Matheus Canto Anselmo\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2015-2015\\07.03.2026 - Matheus Canto Anselmo",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "2a920f4d-d21d-438e-aa8c-cdf8455ea926"
+    },
+    {
+      "nome": "NOE DE OLIVEIRA JUNIOR",
+      "cpf": "052.137.819-26",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Alair Antônio da silveira , casa 1 bairro Caputera , cidade Laguna , estado Santa Catarina , CEP 88 790 -000 . As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: MLX - 2H34 , marca/modelo HYUNDAI HB20 1.0 (HB20 Comf./C.Plus/C.Style 1.0 Flex 12V) , Chassi 9BHBG51CAEP128235 , RENAVAM 557053293 , ano/modelo 201 3 /2014 , cor BRANCO . 1.1.1 Informações t abela Fipe: https://veiculos.fipe.org.br?carro/hyundai/5-2025/015088-6/2014 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 08 / 10 / 2025 as 08 : 00 e terminando no dia 0 6 / 01 /202 6 as 08 : 00 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução, descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado todas as terças-feiras",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO. 3.3 O valor ca u ção da locação deste veículo não será cobrado. 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, não será devolvido pelo LOCADOR, além do recolhimento do veículo. 3.6 . A devolução do caução, descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\08.10.2025 - Noe de Oliveira Junior (recuperado 08.12)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\08.10.2025 - Noe de Oliveira Junior (recuperado 08.12)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "656291e2-8b83-4ee3-8905-43d5193a54b7"
+    },
+    {
+      "nome": "RENAN PETERS DA SILVA",
+      "cpf": "102.826.879-39",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua José Rodolfo Correa, 320",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Recife",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88705-794"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\08.10.2025 - Renan Peters da Silva (devolvido 14.01)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\08.10.2025 - Renan Peters da Silva (devolvido 14.01)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "d2eb7a7e-c4f1-4077-9bb1-9247c5363891"
+    },
+    {
+      "nome": "LUIS ROSSANO QUIROGA CUNHA",
+      "cpf": "013.114.980-60",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Travessa Onofre Stupp, 19",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Portinho",
+        "cidade": "Laguna",
+        "uf": "SC",
+        "cep": "88790-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.03.2025 - Luis Rossano Quiroga Cunha (devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.03.2025 - Luis Rossano Quiroga Cunha (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "93675f58-3def-4c9e-b31d-390efdf47e6d"
+    },
+    {
+      "nome": "NATALIA TEIXEIRA SERAFIM",
+      "cpf": "096.617.499-22",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Thereza Demboski Milak , 280, Casa-8MQV+327 bairro Linha Batista , cidade Criciúma, estado Santa Catarina , CEP 88800-000 As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: AVU-6740 , marca/modelo VW- VOLKSWAGEN/ GOL 1.0 ( Gol (novo) 1.0 Mi Total Flex 8V 4p) Chassi 9BWAA05UIDT118971 , RENAVAM 00480715769, ano/modelo 2012/2013 , cor PRATA . 1.1.1 Informações t abela Fipe: https://veiculos.fipe.org.br?carro/vw-volkswagen/3-2026/005275-2/2013 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 10/04/2026 as 18:00 e terminando no dia 09/07/2026 as 18:00 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.1.1 Este veículo está sendo locado para fins profissionais, atuando como entregador(a) da Shoppe . Não possui EAR na sua habilitação e não poderá ser como motorista de aplicativos ou entregador de outras empresas que exijam o mesmo. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução, descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado semanalmente todas as sábados",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO. 3.3 O pagamento do valor caução da locação deste veículo, será no valor de R$1.500,00 (Mil e quinhentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas. Onde o pagamento deverá ser efetuado juntamente com o pagamento semanal parcelado em 15 vezes, totalizando R$100,00 por semana. 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, será cálculado o valor proporcional ao tempo restante do contrato, e será realizado o recolhimento do veículo. 3.6 . A devolução do caução, descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\10.04.2026 - Natalia Teixeira Serafim (devolvido 08.05.26)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\10.04.2026 - Natalia Teixeira Serafim (devolvido 08.05.26)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "0d989340-7ca2-4fed-9615-f09fe57a8571"
+    },
+    {
+      "nome": "ALVARO LUIZ COLLARES LADO",
+      "cpf": "004.499.610-10",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Lote 3 1, Quadra",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Praia do pescador",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88914-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Alvaro Luiz Collares Lado (Devolvido)\\CNH-e.pdf.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Alvaro Luiz Collares Lado (Devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "cf49702d-a4ba-4b42-8459-c88ff412d5d4"
+    },
+    {
+      "nome": "WESLLEY DIAS CORREA",
+      "cpf": "886.814.600-97",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Heitor Villa Lobos, 70 casa 3",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Centro",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Weslley Dias Correa (devolvido 11.01.26)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Weslley Dias Correa (devolvido 11.01.26)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "ae9a098f-c428-48fb-83af-8fbac45ee072"
+    },
+    {
+      "nome": "GUSTAVO COSTA DE QUADRO",
+      "cpf": "074.864.179-36",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua 15 de Novembro, 398 Ed das Alamedas, APT 103 bairro Centro , cidade Içara , estado Santa Catarina , CEP 88820 -0 92 . As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: QJB-0I83 , marca/modelo VW- VOLKSWAGEN/FOX CONNECT MB (Fox Connect 1.6 Flex 8V 5p) , Chassi 9BWAB45Z4J4036819 , RENAVAM 1151385473, ano/modelo 2018/2018 , cor BRANCA . 1.1.1 Informações t abela Fipe: https://veiculos.fipe.org.br?carro/vw-volkswagen/5-2025/005481-0/2018 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 10 / 1 2 / 2025 as 20 :00 e terminando no dia 10 / 0 3 /202 6 as 20 :00 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução, descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado semanalmente todas as quintas-feiras",
+        "numero": "o valor de R$ 8000 ,00 ( Oito centos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO. 3.3 O pagamento do valor ca u ção da locação deste veículo, será no valor de R$1. 5 00,00 (Mil e quinhentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas. 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, será cálculado o valor proporcional ao tempo restante do contrato, e será realizado o recolhimento do veículo. 3.6 . A devolução do caução, descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.12.2025 - Gustavo Costa de Quadros (troca)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.12.2025 - Gustavo Costa de Quadros (troca)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "3b0778b6-9d31-4d45-a9d5-691b27ca62dc"
+    },
+    {
+      "nome": "LUIZ MARCELO PORTO MENEZES MOREIRA",
+      "cpf": "079.792.694-11",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Rua La Paz Casa 10",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Passagem",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "8"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05.26)\\CNH-e.pdf.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05.26)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "06249058-70f8-4ad1-a151-cc6b33320c5a"
+    },
+    {
+      "nome": "VIRGINIA JOSE CARABALLO CAMACHO",
+      "cpf": "708.627.522-05",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua João Bristot 1222",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Bernardo",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-600"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\12.05.2026 - Virginia Jose Caraballo Camacho\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\12.05.2026 - Virginia Jose Caraballo Camacho",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "caf97370-463d-468f-af8c-931906c89ca2"
+    },
+    {
+      "nome": "RAFAELA CARDOSO DEBIAZI",
+      "cpf": "110.866.919-03",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Estrada Geral Lage ado",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Gabriel",
+        "cidade": "Treze de Maio",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\13.11.2025 - Rafaela Cardoso Debiazi\\CNH-e Rafaela.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\13.11.2025 - Rafaela Cardoso Debiazi",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "548b6bad-d9a8-445e-94f4-dddd40d40e30"
+    },
+    {
+      "nome": "MONICA GUIMARAES DE OLIVEIRA",
+      "cpf": "010.447.769-51",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Coronel Cabral 458 AP303",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Centro",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88701-050"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\17.05.2025 - Monica Guimaraes de Oliveira (devolvido 20.05)\\CNH.jpg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\17.05.2025 - Monica Guimaraes de Oliveira (devolvido 20.05)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "b68066a6-7b6e-4f81-8483-ed20103448b0"
+    },
+    {
+      "nome": "SERGIO MEDEIROS CAMARGO MARCELO",
+      "cpf": "090.908.109-35",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Rosinaldo Gomes, 282",
+        "numero": "",
+        "complemento": "",
+        "bairro": "PraiaRedonda",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88706-072"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\17.08.2025 - Sergio Medeiros Camargo Marcelo\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\17.08.2025 - Sergio Medeiros Camargo Marcelo",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "80666f66-0424-4a33-8aca-db3a4a9207be"
+    },
+    {
+      "nome": "MATHEUS MORAES MARQUES",
+      "cpf": "131.264.089-82",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Rua Rosalino João Batista",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Oficinas",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88702-085"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\18.10.2025 - Matheus Moraes Marques (devolvido)\\CNH.jpeg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\18.10.2025 - Matheus Moraes Marques (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "995dc8b2-6db6-41bf-88fd-676366691adb"
+    },
+    {
+      "nome": "VICTOR ALISSON AZEVEDO MUNIZ",
+      "cpf": "040.363.982-45",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Vanteiro Margotti, 103",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Centro",
+        "cidade": "Morro da Fumaça",
+        "uf": "SC",
+        "cep": "88830-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\20.01.2026 - Victor Alisson Azevedo Muniz\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\20.01.2026 - Victor Alisson Azevedo Muniz",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "325d84a1-f8b8-412c-9a38-462c884065a6"
+    },
+    {
+      "nome": "REINIER FIGUEROA YERA",
+      "cpf": "712.096.212-40",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Avenida Felipe Schmidt, SN",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Basilio",
+        "cidade": "Braço do Norte",
+        "uf": "SC",
+        "cep": "88750-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\20.04.2026 - Reinier Figueroa Yera\\CNH.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\20.04.2026 - Reinier Figueroa Yera",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "ed1a153f-7533-475e-88e8-aeeba3b712d9"
+    },
+    {
+      "nome": "MATHEUS OSMAN PEREIRA DE QUADROS",
+      "cpf": "022.288.160-78",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Celso Esmeraldino Menezes, 1350 F undos",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Humaitá de Cima",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-090"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\21.05.2025 - Matheus Osman Pereira de Quadros(devolvido)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\21.05.2025 - Matheus Osman Pereira de Quadros(devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "4cf1fe6e-c55b-4399-85c5-e80f2c95d880"
+    },
+    {
+      "nome": "ALAN LAMBERTI JOBIM",
+      "cpf": "974.734.130-15",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Lote 31, Quadra",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Praia do pescador",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88914-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\22.04.2025 - Alan Lamberti Jobim  (devolvido)\\CNH-e.pdf.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\22.04.2025 - Alan Lamberti Jobim  (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "ae503083-2cd3-4ef1-829c-be55d7953a29"
+    },
+    {
+      "nome": "ANDRESSA DA SILVA MARQUES",
+      "cpf": "040.469.370-92",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Estrada Geral Tamborete S/N",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Tamborete",
+        "cidade": "Imaruí",
+        "uf": "SC",
+        "cep": "88770"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\22.07.2025 - Andressa da Silva Marques (recuperado)\\CNH-e.pdf (16).pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\22.07.2025 - Andressa da Silva Marques (recuperado)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "cdce8613-4da4-4865-a158-c5779b0f4783"
+    },
+    {
+      "nome": "DIEGO JOSSY DA SILVA SANTA ROSA",
+      "cpf": "043.203.662-80",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua José Acácio Moreira, 415 AP 301",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Dehon",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88704-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\22.09.2025 - Diego Jossy da Silva Santa Rosa (Devolvido 12.01)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\22.09.2025 - Diego Jossy da Silva Santa Rosa (Devolvido 12.01)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "5fcce2b1-ed1d-4254-a5df-7e241d491810"
+    },
+    {
+      "nome": "TIAGO AUGUSTO DA SILVA PIARETI",
+      "cpf": "388.519.608-52",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Rua Silvio Búrigo, 3083 Bloco G AP 103 bairro Monte Castelo cidade Tubarão estado Santa Catarina CEP 88701-180 . As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: IXT - 7I93 , marca/modelo RENAULT/SANDERO 1.0 Flex ( SANDERO Expression Hi-Flex 1.0 16V 5p ), Chassi 93Y5SRF84HJ699432 , RENAVAM 01113955780 , ano/modelo 2017 / 2017 , cor Preta 1.1.1 Informações tabela Fipe: http://veiculos.fipe.org.br?carro/renault/3-2026/025244-1/2017 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 24 /0 3 /2026 as 20 :00 e terminando no dia 22 /0 6 /2026 as 20 :00 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução, descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado semanalmente todas as quartas-feiras",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento da primeira semana deverá ser efetuado no momento da retirada do veículo pelo LOCATÁRIO no valor de R$150,00 e o restante deverá ser pago juntamente com as próximas 4 semanas no valor de R$125,00 , totalizando R$ 500,00. 3.3 O pagamento do valor caução da locação deste veículo, será no valor de R$1.500,00 (Mil e quinhentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas, pa 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, será cálculado o valor proporcional ao tempo restante do contrato, e será realizado o recolhimento do veículo. 3.6 . A devolução do caução, descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2017-2017\\24.03.26 - Tiago Augusto da Silva Piareti\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2017-2017\\24.03.26 - Tiago Augusto da Silva Piareti",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "ad051658-2cd2-4adf-8b4e-7405175799d3"
+    },
+    {
+      "nome": "RO NA LD VIANA JUNIOR",
+      "cpf": "096.583.289-97",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua José Realino Gomes , 340",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Coloninha",
+        "cidade": "Araranguá",
+        "uf": "SC",
+        "cep": "88906-804"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\24.05.2026 - Ronald Viana Junior (trocado)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\24.05.2026 - Ronald Viana Junior (trocado)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "9c055b90-e03b-4225-9e5d-0aaf512faffe"
+    },
+    {
+      "nome": "LUCAS DA SILVA DIMAS",
+      "cpf": "112.856.279-03",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Thadeu Silvestre 116, casa 01",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Milanese",
+        "cidade": "Criciúma",
+        "uf": "SC",
+        "cep": "88804-540"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "b4f659e6-91a0-4f4d-aa92-09249d8a603c"
+    },
+    {
+      "nome": "DJAIR CARDOSO FERNANDES",
+      "cpf": "090.329.699-15",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Eponina dos Santos Cardoso, 109",
+        "numero": "",
+        "complemento": "",
+        "bairro": "São Clemente",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "1a5ea522-2a15-4f49-8150-9baf63239139"
+    },
+    {
+      "nome": "CLOVIS ADAIR GONCALVES CRISPIM",
+      "cpf": "930.320.210-49",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Castro Alves, 1431 bairro Caçador , cidade Capivari de Baixo , estado Santa Catarina , CEP 88 745 -000 . As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Locação de Automóvel por prazo determinado , que se regerá pelas cláusulas seguintes e pelas condições descritas no presente. Estão inclusos no contrato laudo de vistoria, termo de responsabilidade por avarias, infrações e acidentes de trânsito. Cláusula 1ª - DO OBJETO 1.1 O presente contrato tem como OBJETO a locação do automóvel de placa: IVP - 8D76 , marca/modelo HYUNDAI HB20 1.0 (HB20 Comf./C.Plus/C.Style 1.0 Flex 12V) , Chassi 9BHBG51CAEP279912 , RENAVAM 01010485501 , ano/modelo 2014/2014 , cor BRANCO . 1.1.1 Informações t abela Fipe: https://veiculos.fipe.org.br?carro/hyundai/5-2025/015088-6/2014 1.2 A presente locação terá o lapso temporal de validade de 90 dias , podendo ser renovado por vontade das partes, iniciando no dia 28/ 10 / 2025 as 13 : 3 0 e terminando no dia 26 / 01 /202 6 as 1 3 : 3 0 , com tolerância de no máximo 1 hora. Data na qual o automóvel deverá ser devolvido no estado em que foi locado, sem avarias. Cláusula 2ª – DAS OBRIGAÇÕES 2.1. O LOCATÁRIO declara estar cientes da obrigatoriedade de possuir CNH – Carteira Nacional de Habilitação categoria “B” no ato de celebração deste contrato. Está ciente da responsabilidade quanto à integridade do veículo desde a retirada até a devolução ao LOCADOR. 2.2. O LOCATÁRIO declara-se único e o principal responsável por eventual dano proveniente de mau uso do veículo durante o prazo de vigência do contrato. 2.3. O LOCATÁRIO declara estar ciente de que o veículo está limitado a utilização nas rodovias dos estados de SANTA CATARINA, sob pena de rescisão contratual, multa e perda das garantias contratadas, responsabilizando-se única e exclusivamente por quaisquer danos causados ao veículo por terceiros. 2.3.1. Havendo necessidade de utilização do veículo contratado fora da área previamente delimitada o LOCATÁRIO tem obrigação de comunicar previamente através de canal de voz ou mensagem de texto aguardando a devida autorização. O descumprimento desta exigência contratual acarretará automaticamente rescisão contratual e multa no valor de R$200,00 (Duzentos reais). 2.4. Em hipótese alguma o LOCADOR será responsabilizada por danos causados pelo LOCATÁRIO ou terceiros transportados pelo mesmo; havendo quaisquer autuações, processos, penalidades ou crimes de trânsito oriundos de tal natureza o LOCATÁRIO terá total e única responsabilidade sendo o LOCADOR excluído das responsabilidades. Se o LOCADOR for incluído em processo de autuação por penalidade caberá ao LOCATÁRIO o reembolso todos os valores comprovadamente desembolsados pela mesma, incluindo valores provenientes de custas processuais, honorários advocatícios, depósitos recursais e quaisquer outros valores despendidos de autuações e processos de trânsito. 2.5. O LOCATÁRIO não poderá utilizar o veículo nas situações descritas no item “2.5.1”. Responsabilizando-se civil e criminalmente por tais violações; isentando o LOCADOR de qualquer responsabilidade por tais violações. Ensejando a resolução do presente contrato e seus consectários, bem como a possibilidade de ressarcimento sobre danos por parte desta. 2.5.1. Configura uso inadequado do veículo as seguintes práticas do LOCATÁRIO: a. Transporte de mercadorias ou materiais ilegais; b. Violar ou adulterar os equipamentos de aferição de quilometragem; c. Abastecer o veículo com combustível fora dos padrões do fabricante; d. Transportar pessoas ou bens além da capacidade especificada pelo fabricante; e. áreas proibidas ao tráfego veicular ou que apresentem risco ao veículo; f. conduzir o veículo sob o efeito de bebida alcóolica; g. conduzir ou transportar passageiros sem utilizar dos dispositivos de segurança do veículo em conformidade com código de trânsito brasileiro (CTB); h. conceder o veículo a terceiros; i. circular com o veículo fora do território nacional; j. negligenciar os cuidados ao veículo que possam facilitar danos ou furto; k. ocasionar avarias ou danos aos acessórios do veículo contratado; l. transportar bens ou valores monetários que não sejam declarados à Receita Federal do Brasil; 2.6. O LOCADOR não fará substituição de veículo em ocasiões de furto, práticas ilegais, incêndio, colisão ou apreensão por órgão competente. 2.7. Caso o veículo seja apreendido por autoridades de trânsito ou segurança pública, todos os custos processuais e eventuais honorários advocatícios, incluindo os custos de diárias de retenção e multas serão de responsabilidade do LOCATÁRIO e as despesas supracitadas deverão ser pagas diretamente ao LOCADOR. 2.8. Na ocasião de perda total do bem, o LOCATÁRIO deverá ressarcir o valor do bem com referência da tabela FIPE do mês de contratação. 2.9. Em hipótese alguma a LOCADOR ficará responsável por valores indenizatórios a título de lucros cessantes, danos morais, lesão corporal, invalidez permanente ou morte. 2.10. Fica expressamente proibido fumar no interior do veículo. Na vistoria se for identificado danos como queimaduras no interior do veículo, manchas nos tecidos e mau cheiro, resultará em perda do valor do caução, descrito na cláusula 3.2, devido aos danos, custos de limpeza/reparo e desvalorização do veículo. 2.11. Caso o LOCATÁRIO venha a violar a cláusula primeira, fica resguardado ao LOCADOR o direito de realizar as medidas cabíveis de cobrança dos valores devidos e da recuperação do veículo através de denúncia aos órgãos competentes, inclusive débitos oriundos de eventuais avarias e infrações de trânsito. Em caso de apropriação indébita, caberá responsabilidade criminal ao LOCATÁRIO. Cláusula 3ª - DO PAGAMENTO 3.1 Não serão aceitos pagamentos realizados para tercerios, somente para contas bancárias pertencentes a Lanza Locações Veiculares (Chave pix 43.051.371/0001-05 ) ou pessoalmente ao seu representando José Felipe Barreto rodrigues . 3.2 O pagamento da locação deste veículo deverá ser realizado semanalmente todas as terças -feiras",
+        "numero": "o valor de R$650,00 (Seiscentos e cinquenta reais) , pelo período determinado na Cláusula Primeira, onde o pagamento a primeira semana que seria realizado na retirada do veículo, deverá ser efetuado no dia 07/11/2025 . 3.3 O pagamento do valor ca u ção da locação deste veículo, será no valor de R$1. 5 00,00 (Mil e quinhentos reais) onde o mesmo que será devolvido assim que for recebido o veículo pelo LOCADOR, caso não tenha sofrido nenhuma avaria, multa, entre outras despesas. O nde o pagamento do caução que seria realizado na retirada do veículo, deverá ser efetuado no dia 07/11/2025 . 3.4 Este veículo possui rastreamento e em caso de atraso no pagamento o mesmo poderá ser bloqueado e realizado o recolhimento do veículo. Ciente de que do atraso ou inadimplência no pagamento de qualquer custo previsto neste contrato em favor do LOCADOR irá gerar protesto do respectivo débito, direcionando-o a empresa de cobrança podendo ainda informar ao serviço de proteção de crédito (SPC/SERASA). Além de estar sujeito à cobrança judicial de acordo com a legislação vigente até que o pagamento seja efetuado. 3.5 Em caso de rescisão deste termo antes do prazo determinado na Cláusula Primeira, tanto por solicitação do LOCATÁRIO ou devido atraso no pagamento de 3 dias, o valor do caução, descrito na cláusula 3.2, não será devolvido pelo LOCADOR, além do recolhimento do veículo. 3.6 . A devolução do caução, descrito na cláusula 3. 5 , será avaliada em um prazo de até 10 dias, devido a necessidade de aguardar pela verificação da existência de multas e infrações, cobranças em pedágios e estacionamentos rotativos, durante o período utilizado. Podendo haver atrasos no lançamento das cobranças no sistema de cada órgão fiscalizador. 3. 7 Caso o LOCATÁRIO exceder o prazo na devolução do veículo, determinado na Cláusula Primeira, será cobrado o valor de R$ 120,00 (Cento e vinte reais) por dia de atraso. Cláusula 4ª - PROTEÇÕES E COBERTURAS 4.1. O veículo descrito, objeto do contrato está coberto com proteção veicular contratada pelo LOCADOR. 4.2. Em ocorrências de acidentes de trânsito, furto, roubo ou ocorrência de perda total do veículo o LOCATÁRIO será penalizado a pagar o valor da COTA DE PARTICIPAÇÃO, que deverá ser paga diretamente ao LOCADOR detentor do contrato digital da apólice securitária, correspondente à PROTEÇÃO VEICULAR, devendo assim providenciar em até 24h (vinte e quatro horas) da ocorrência o registro junto ao órgão policial responsável através de B.O (Boletim de ocorrência), comunicando imediatamente ao LOCADOR através de canal digital ou ligação por voz, descrevendo as informações do boletim e dados dos possíveis envolvidos tendo obrigatoriedade da devolução da chave de ignição do veículo, ressalva a impossibilidade mecânica ou retenção pelos órgãos de segurança pública. 4.3. O LOCATÁRIO em qualquer das ocorrências mencionadas no item 6.2, fica responsável por eventuais despesas adicionais, não previstas na cobertura, obrigando-se a cobrir tais despesas através de pagamento com cartão de débito ou crédito da sua titularidade ou procurador, no limite de 30 dias após o evento. 4.4. A proteção oferecida pelo LOCADOR será invalidada sempre que o LOCATÁRIO infringir as finalidades deste contrato. Cláusula 5ª - MANUTENÇÃO 5.1 O LOCATÁRIO fica responsável por deslocar o veículo quinzenalmente até mecânica automotiva Auto Tech Medeiros , para realização da vistoria e análise preventiva, sem custos, a fim de garantir o bom funcionamento do veículo. Sediado no endereço Rua João Goulart, 622",
+        "complemento": "",
+        "bairro": "Caçador",
+        "cidade": "Capivari de Baixo",
+        "uf": "SC",
+        "cep": "88745-000"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\28.10.2025 - Clovis Adair Goncalves Crispim (recuperado 27.11)\\CNH-e.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\28.10.2025 - Clovis Adair Goncalves Crispim (recuperado 27.11)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "6fe338f2-d24e-46a6-a751-5bde251708b9"
+    },
+    {
+      "nome": "JORGE EDUARDO DA SILVA",
+      "cpf": "030.887.439-02",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua dos Ferroviarios, 26 , Quadra",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Oficinas",
+        "cidade": "Tubarâo",
+        "uf": "SC",
+        "cep": "88"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\28.10.2025 - Jorge Eduardo da Silva (recuperado 06.12)\\CNH 2.jpeg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\28.10.2025 - Jorge Eduardo da Silva (recuperado 06.12)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "4f96f84c-1288-4aad-a159-4ef66cdbf0fd"
+    },
+    {
+      "nome": "VERIDIANE DE CASTRO RAMOS",
+      "cpf": "831.647.230-91",
+      "telefone": null,
+      "email": null,
+      "endereco": {
+        "logradouro": "Rua Luiz Carlos alvez, 298, APT 301",
+        "numero": "",
+        "complemento": "",
+        "bairro": "Vila Esperança",
+        "cidade": "Tubarão",
+        "uf": "SC",
+        "cep": "88708-294"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\30.06.2025 - Veridiane De Castro Ramos (devolvido)\\CNH.jpeg",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\30.06.2025 - Veridiane De Castro Ramos (devolvido)",
+      "origemImportacao": "cnh-pasta-contrato",
+      "id": "d5ec3405-bb1f-4318-92c9-f7af830ab22b"
     }
   ]
 }

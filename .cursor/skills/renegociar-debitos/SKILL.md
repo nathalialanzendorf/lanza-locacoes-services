@@ -21,13 +21,13 @@ Skill para **renegociar débitos em aberto** de um locatário no **Rastreame** (
 ## Autenticação e execução no site
 
 - **Nunca** colar tokens JWT, cookies ou `curl` com sessão no repositório.
-- **Auth** e comandos HTTP: skill **rastreame-site** (única referência técnica).
+- **Auth** e comandos HTTP: tool `.cursor/tools/rastreame/` (referência técnica).
 
 ## Quando usar
 
 - Cliente pede **renegociar** parcelas / multas / outros débitos lançados no Rastreame.
 - Operador quer **fechar débitos antigos** (marcar como negociados) e **lançar novo plano de parcelas**.
-- Complemento opcional ao **encerrar-contrato** (cálculo local de multas/atrasos) — aqui o foco é o **controlo financeiro no Rastreame**.
+- Complemento opcional ao **relatorio-encerramento-contrato** (cálculo local de multas/atrasos) — aqui o foco é o **controlo financeiro no Rastreame**.
 
 ## Fluxo do agente
 

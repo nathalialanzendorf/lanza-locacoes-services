@@ -79,15 +79,15 @@ Corpo mínimo (como no site):
 
 **Nota:** `data` em ISO; a CLI converte `YYYY-MM-DD` para 23:59 America/Recife.
 
-## Diferença vs cadastrar-recebimento
+## Diferença vs cadastro-recebimento
 
-| Aspecto | cadastrar-recebimento | renegociar-debitos |
+| Aspecto | cadastro-recebimento | renegociar-debitos |
 |---------|----------------------|-------------------|
 | Tipo novo lançamento | `OUTROS` | `DOCUMENTACAO` |
 | Texto parcela | `ATRASADO - Pagamento semanal - …` | `ATRASADO Pagamento negociação - axb` |
 | Débitos antigos | PUT remove ATRASADO / ajusta total | PUT prefixa `[NEGOCIADO X]` |
 
-## Integração com encerrar-contrato
+## Integração com relatorio-encerramento-contrato
 
-- **encerrar-contrato**: calcula multas, semanas em aberto, diárias e caução a partir do contrato Word + `database/cliente-despesas.json`.
+- **relatorio-encerramento-contrato**: calcula multas, semanas em aberto, diárias e caução a partir do contrato Word + `database/cliente-despesas.json`.
 - **renegociar-debitos**: opera sobre **IDs já lançados no Rastreame**; o operador mapeia valores do fechamento para `gastosIds` e parcelas, ou lança manualmente antes.

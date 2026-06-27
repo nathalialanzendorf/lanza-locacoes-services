@@ -7,7 +7,7 @@
  *   npx tsx src/run.ts rastreame-lancar-semanal ... --execute
  *   (Sem `--info` / `--data-iso`, deriva a segunda da semana do `--inicio` e 23:59 America/Recife.)
  *
- * Requer RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA (ver skill rastreame-site).
+ * Requer RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA (ver `.cursor/tools/rastreame/`).
  */
 import fs from "node:fs";
 import path from "node:path";

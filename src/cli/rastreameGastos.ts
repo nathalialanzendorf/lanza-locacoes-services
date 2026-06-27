@@ -36,7 +36,7 @@ export async function main(argv: string[]): Promise<void> {
   rastreame-gastos post <corpo.json>
   rastreame-gastos put <id> <corpo.json>
 
-Regras de negócio (ATRASADO, duplicados, etc.): skill cadastrar-recebimento.`);
+Regras de negócio (ATRASADO, duplicados, etc.): skill cadastro-recebimento.`);
     process.exit(2);
   }
   const cmd = argv[0]!;

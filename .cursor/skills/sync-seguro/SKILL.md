@@ -63,4 +63,4 @@ Formato do JSON (array):
 
 ## Skills relacionadas
 
-- **relatorio-prestacao-contas**, **cadastrar-veiculo**, **cadastrar-despesa**
+- **relatorio-prestacao-contas**, **cadastro-veiculo**, **cadastro-despesa**

@@ -11,15 +11,61 @@ function digits(s: string): string {
   return String(s || "").replace(/\D/g, "");
 }
 
-export type Motorista = { id?: string; key?: string; nome?: string; cnh?: string };
+export type MotoristaRastreame = {
+  id?: string | number;
+  key?: string | number;
+  nome?: string;
+  cnh?: string;
+  observacao?: string;
+  categoriaCnh?: { key?: string; value?: string };
+  vencimentoCnh?: string;
+  ativo?: boolean;
+};
 
-export async function listMotoristas(): Promise<Motorista[]> {
-  const r = await fetch(`${MOTORISTA_BASE}?ativo=true&size=2000`, {
+/** @deprecated use MotoristaRastreame */
+export type Motorista = MotoristaRastreame;
+
+async function fetchMotoristaList(url: string): Promise<MotoristaRastreame[]> {
+  const r = await fetch(url, {
     headers: await rastreameJsonHeaders(false),
   });
-  const d = (await r.json()) as { content?: Motorista[] } | Motorista[];
-  if (Array.isArray(d)) return d;
-  return d.content ?? [];
+  const raw = await r.text();
+  if (!r.ok) {
+    throw new Error(`HTTP ${r.status} ao listar motoristas: ${raw.slice(0, 200)}`);
+  }
+  let d: unknown;
+  try {
+    d = JSON.parse(raw);
+  } catch {
+    throw new Error(`Resposta inválida ao listar motoristas: ${raw.slice(0, 200)}`);
+  }
+  if (d && typeof d === "object" && "message" in d && !("content" in d)) {
+    throw new Error(`Rastreame: ${String((d as { message?: string }).message)}`);
+  }
+  if (Array.isArray(d)) return d as MotoristaRastreame[];
+  const page = d as { content?: MotoristaRastreame[] };
+  return page.content ?? [];
+}
+
+export async function listMotoristas(): Promise<MotoristaRastreame[]> {
+  const urls = [
+    `${MOTORISTA_BASE}?ativo=true&size=2000`,
+    `${MOTORISTA_BASE}/?ativo=true&size=2000`,
+    `${MOTORISTA_BASE}`,
+    `${MOTORISTA_BASE}/`,
+  ];
+  let lastErr: Error | null = null;
+  for (const url of urls) {
+    try {
+      const list = await fetchMotoristaList(url);
+      if (list.length > 0) return list;
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      if (lastErr.message.includes("Autenticação")) throw lastErr;
+    }
+  }
+  if (lastErr) throw lastErr;
+  return [];
 }
 
 export async function findMotorista(

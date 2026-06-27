@@ -25,7 +25,14 @@ export function clearRastreameTokenCache(): void {
   tokenCache = null;
 }
 
-async function login(): Promise<string | null> {
+/** Invalida token em cache e tenta login por credenciais (útil após HTTP 401). */
+export async function refreshRastreameToken(): Promise<string | null> {
+  clearRastreameTokenCache();
+  delete process.env.RASTREAME_AUTH;
+  return fetchRastreameToken();
+}
+
+export async function loginRastreame(): Promise<string | null> {
   const lg = process.env.RASTREAME_LOGIN;
   const sn = process.env.RASTREAME_SENHA;
   if (!lg || !sn) return null;
@@ -66,7 +73,7 @@ async function login(): Promise<string | null> {
 /** Token para pedidos autenticados; `null` se faltar configuração. */
 export async function fetchRastreameToken(): Promise<string | null> {
   if (tokenCache) return tokenCache;
-  const t = process.env.RASTREAME_AUTH || (await login());
+  const t = process.env.RASTREAME_AUTH?.trim() || (await loginRastreame());
   if (t) tokenCache = t;
   return t;
 }

@@ -3,7 +3,7 @@
  * A listagem usa parâmetros típicos Spring Data; se falhar, ajustar query
  * conforme o XHR capturado no DevTools na UI de gastos.
  */
-import { RASTREAME_ORIGIN, rastreameJsonHeaders } from "./auth.js";
+import { RASTREAME_ORIGIN, rastreameJsonHeaders, refreshRastreameToken } from "./auth.js";
 
 const GASTO_ROOT = `${RASTREAME_ORIGIN}/keek/rest/gasto`;
 

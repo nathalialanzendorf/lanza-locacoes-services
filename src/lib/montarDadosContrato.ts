@@ -102,7 +102,7 @@ export function loadVeiculosDb(): VeiculoDb[] {
 export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
   const list = loadClientesDb();
   if (list.length === 0) {
-    throw new Error("database/clientes.json vazio — use cadastrar-cliente antes de gerar o contrato.");
+    throw new Error("database/clientes.json vazio — use cadastro-cliente antes de gerar o contrato.");
   }
 
   if (cpf) {
@@ -110,7 +110,7 @@ export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
     const c = list.find((x) => normCpfDigits(x.cpf) === key);
     if (!c) {
       throw new Error(
-        `Cliente com CPF ${cpf} não encontrado em clientes.json — use cadastrar-cliente.`,
+        `Cliente com CPF ${cpf} não encontrado em clientes.json — use cadastro-cliente.`,
       );
     }
     return c;
@@ -124,7 +124,7 @@ export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
     });
     if (matches.length === 0) {
       throw new Error(
-        `Cliente "${nome}" não encontrado em clientes.json — use cadastrar-cliente ou informe --cpf.`,
+        `Cliente "${nome}" não encontrado em clientes.json — use cadastro-cliente ou informe --cpf.`,
       );
     }
     if (matches.length > 1) {
@@ -143,7 +143,7 @@ export function findVeiculoDb(placa: string): VeiculoDb {
   const v = list.find((x) => placasIguais(x.placa, placa));
   if (!v) {
     throw new Error(
-      `Placa ${formatPlacaHyphen(placa)} não encontrada em veiculos.json — use cadastrar-veiculo.`,
+      `Placa ${formatPlacaHyphen(placa)} não encontrada em veiculos.json — use cadastro-veiculo.`,
     );
   }
   return v;
@@ -171,7 +171,7 @@ function validarEnderecoCliente(c: ClienteDb): void {
   if (!strField(e.uf)) faltando.push("uf");
   if (faltando.length > 0) {
     throw new Error(
-      `Endereço incompleto para ${c.nome} em clientes.json (${faltando.join(", ")}) — atualize via cadastrar-cliente.`,
+      `Endereço incompleto para ${c.nome} em clientes.json (${faltando.join(", ")}) — atualize via cadastro-cliente.`,
     );
   }
 }

@@ -9,7 +9,7 @@ import {
   sincronizarMultasVeiculoDetranSc,
   type SyncVeiculoResult,
 } from "../lib/detranSc/syncVeiculo.js";
-import { REPO_ROOT } from "../lib/repoRoot.js";
+import { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../lib/relatoriosPaths.js";
 
 function printResumo(r: SyncVeiculoResult): void {
   console.log(
@@ -113,7 +113,8 @@ Sem --placa: percorre todos os veículos em database/veiculos.json (placa + rena
     `\nFrota: ${results.length} veículos | novos: ${novos} | atualizados: ${atualizados}`,
   );
 
-  const outPath = path.join(REPO_ROOT, "relatorios", "_sync_infracoes.json");
+  ensureRelatoriosDirs();
+  const outPath = path.join(RELATORIOS_SYNC_DIR, "_sync_infracoes.json");
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(
     outPath,

@@ -32,7 +32,7 @@ Para cada veículo, confirmar se ficou locado o mês todo, devolução em data X
 ## Validação
 
 - Conferir **Seguro** na competência (avisar se faltar, exceto parceiros da lista sem seguro).
-- Perguntar se há mais despesas antes de fechar (**cadastrar-despesa**).
+- Perguntar se há mais despesas antes de fechar (**cadastro-despesa**).
 
 ## Entrada (`montar-relatorio`)
 
@@ -64,4 +64,4 @@ Saída: `Financeiro/prestação de contas/MM.AAAA/<Parceiro>.txt` por defeito (v
 
 ## Skills relacionadas
 
-- **sync-seguro**, **cadastrar-despesa**
+- **sync-seguro**, **cadastro-despesa**

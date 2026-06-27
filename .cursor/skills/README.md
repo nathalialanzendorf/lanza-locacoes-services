@@ -2,23 +2,23 @@
 
 Skills em `.cursor/skills/<nome>/SKILL.md` são descobertas pelo Cursor neste repositório.
 
-**Pastas operacionais (contratos, documentos, prestação de contas no disco):** ver `config/lanza_paths.json` e a regra `.cursor/rules/lanza-diretorios.mdc` (padrão `D:\Dropbox\Aluguel Carros` e `...\Financeiro`).
+**Pastas operacionais:** `config/lanza_paths.json` e `.cursor/rules/lanza-diretorios.mdc`.
+
+**Tools (auth/API):** `.cursor/tools/` — ver `.cursor/rules/lanza-tools.mdc`. Skills de sync DETRAN **usam** a tool `detran-sc/`; Rastreame é só tool (skills de cadastro delegam).
 
 | Pasta | Função |
 |-------|--------|
-| `cadastrar-cliente` | CNH + comprovante → `database/clientes.json` (+ opcional Rastreame via **rastreame-site**). |
-| `rastreame-site` | Especialista [rastreame.com.br](https://rastreame.com.br/): `rastreame` / `rastreame-gastos`; outras skills delegam a execução aqui. |
-| `cadastrar-despesa` | Débitos do parceiro → `database/parceiro-despesas.json`. |
-| `cadastrar-veiculo` | CRLV + Fipe + proprietário → `veiculos.json` / vínculos. |
-| `gerar-contrato` | Contrato `.docx`/`.pdf`; `--placa` + `--cpf` lê database (cadastra se faltar). |
-| `sync-seguro` | PDFs em `seguroComprovantesDir` → `parceiro-despesas.json`. |
-| `relatorio-prestacao-contas` | Relatório mensal → pasta Financeiro (ver `lanza_paths.json`). |
-| `cadastrar-recebimento` | Recebimentos no Rastreame — **Gastos Gerais** (regras `ATRASADO`, duplicados, parcial); execução: **rastreame-site**. |
-| `encerrar-contrato` | Encerramento / devolução: multas, atrasos, diárias, retenção caução — CLI `encerrar-contrato`. |
-| `sync-infracoes` | Infrações DETRAN SC → `database/cliente-despesas.json` (categoria Infração; API `transito-api`, frota em `veiculos.json`). |
-| `sync-ipva-licenciamento` | IPVA e Licenciamento DETRAN SC → `database/parceiro-despesas.json`. |
-| `renegociar-debitos` | Renegociação no Rastreame: total em aberto, `[NEGOCIADO X]`, parcelas DOCUMENTACAO; execução: **rastreame-site**. |
+| `cadastro-cliente` | CRUD locatário → `clientes.json` (+ Rastreame via tool). |
+| `cadastro-veiculo` | CRUD veículo → `veiculos.json`. |
+| `cadastro-despesa` | CRUD débitos parceiro → `parceiro-despesas.json`. |
+| `cadastro-recebimento` | CRUD recebimentos Rastreame (tool). |
+| `cadastro-contrato` | CRUD contrato Word/PDF + `contratos.json`. |
+| `relatorio-encerramento-contrato` | Acerto de encerramento (sem gravar contrato). |
+| `relatorio-prestacao-contas` | Relatório mensal parceiro. |
+| **`sync-infracoes`** | Multas/infrações DETRAN → `cliente-despesas.json` (tool DETRAN). |
+| **`sync-ipva-licenciamento`** | IPVA/licenciamento DETRAN → `parceiro-despesas.json` (tool DETRAN). |
+| `sync-seguro` | PDFs seguro → `parceiro-despesas.json`. |
+| `importar-boletos-seguro` | Lote boletos seguro. |
+| `renegociar-debitos` | Renegociação Rastreame (tool). |
 
-Toda a documentação técnica Rastreame (auth, `src/lib/rastreame/`, comandos CLI) está na skill **rastreame-site**.
-
-**CLI TypeScript** em **`src/`**: na raiz do repo, `npm install` uma vez; invocar com `npx tsx src/run.ts …` (ver `README.md` na raiz).
+**CLI:** `npx tsx src/run.ts …` na raiz do repo.

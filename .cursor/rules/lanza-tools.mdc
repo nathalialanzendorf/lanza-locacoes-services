@@ -1,0 +1,35 @@
+---
+description: Integrações externas — Rastreame é tool; DETRAN SC tem tool + skills sync-infracoes e sync-ipva-licenciamento.
+alwaysApply: true
+---
+
+# Lanza — skills vs tools
+
+## Skills (`.cursor/skills/`)
+
+Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a ação:
+
+| Área | Skills |
+|------|--------|
+| Cadastro / contrato | `cadastro-cliente`, `cadastro-veiculo`, `cadastro-despesa`, `cadastro-recebimento`, `cadastro-contrato` |
+| Relatórios | `relatorio-encerramento-contrato`, `relatorio-prestacao-contas` |
+| Sync | `sync-infracoes`, `sync-ipva-licenciamento`, `sync-seguro`, `importar-boletos-seguro` |
+| Outros | `renegociar-debitos` |
+
+## Tools (`.cursor/tools/` + `src/`)
+
+**Integração técnica** — auth, API, CLI. Skills de sync/cadastro **delegam** execução à tool correspondente.
+
+| Integração | Tool (documentação) | Quem usa |
+|------------|---------------------|----------|
+| **Rastreame** | `.cursor/tools/rastreame/` | Skills `cadastro-cliente`, `cadastro-recebimento`, `renegociar-debitos` (sem skill própria Rastreame) |
+| **DETRAN SC** | `.cursor/tools/detran-sc/` | Skills **`sync-infracoes`**, **`sync-ipva-licenciamento`** |
+
+Índice: `.cursor/tools/README.md`.
+
+## Quando usar o quê
+
+- **Sync multas / infrações DETRAN** → skill **`sync-infracoes`** (lê tool DETRAN, corre `npx tsx src/run.ts sync-infracoes …`).
+- **Sync IPVA / licenciamento DETRAN** → skill **`sync-ipva-licenciamento`**.
+- **Motorista / gastos Rastreame** → skill de cadastro correspondente + tool Rastreame.
+- **MCP:** não usado; integrações são CLI TypeScript em `src/lib/`.

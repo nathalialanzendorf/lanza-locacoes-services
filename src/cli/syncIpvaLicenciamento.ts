@@ -9,7 +9,7 @@ import {
   type SyncDespesasResult,
 } from "../lib/detranSc/syncDespesasVeiculo.js";
 import { loadVeiculosParaSync } from "../lib/detranSc/syncVeiculo.js";
-import { REPO_ROOT } from "../lib/repoRoot.js";
+import { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../lib/relatoriosPaths.js";
 
 function printResumo(r: SyncDespesasResult): void {
   console.log(
@@ -87,7 +87,8 @@ Variáveis (.env): DETRAN_SC_AUTH, DETRAN_SC_EMPRESA [, DETRAN_SC_APP_VERSION]
   }
   console.log(`\nFrota: ${results.length} veículos | novos: ${novos} | atualizados: ${atualizados}`);
 
-  const outPath = path.join(REPO_ROOT, "relatorios", "_sync_ipva_licenciamento.json");
+  ensureRelatoriosDirs();
+  const outPath = path.join(RELATORIOS_SYNC_DIR, "_sync_ipva_licenciamento.json");
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(
     outPath,

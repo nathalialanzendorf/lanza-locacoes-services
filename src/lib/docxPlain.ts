@@ -31,16 +31,8 @@ function brMoneyToNumber(s: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Procura valor da locação semanal (R$) no texto do contrato. */
-export function extrairValorSemanalReais(text: string): number | null {
+function extrairValorPorPatterns(text: string, patterns: RegExp[]): number | null {
   const t = normalizeDocxMoneyText(text.normalize("NFD").replace(/\p{M}/gu, ""));
-  const patterns: RegExp[] = [
-    /(?:locacao|locaçao|locação)\s+semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
-    /semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
-    /(R\$\s*[\d.,]+)[\s\S]{0,160}?semanal/i,
-    /realizado\s+semanalmente[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
-    /3\.2[\s\S]{0,220}?(R\$\s*[\d.,]+)/i,
-  ];
   for (const re of patterns) {
     const m = t.match(re);
     if (m) {
@@ -49,4 +41,35 @@ export function extrairValorSemanalReais(text: string): number | null {
     }
   }
   return null;
+}
+
+/** Procura valor da locação semanal (R$) no texto do contrato. */
+export function extrairValorSemanalReais(text: string): number | null {
+  return extrairValorPorPatterns(text, [
+    /(?:locacao|locaçao|locação)\s+semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /semanal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /(R\$\s*[\d.,]+)[\s\S]{0,160}?semanal/i,
+    /realizado\s+semanalmente[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /3\.2[\s\S]{0,220}?(R\$\s*[\d.,]+)/i,
+  ]);
+}
+
+/** Procura valor da locação mensal (R$) no texto do contrato. */
+export function extrairValorMensalReais(text: string): number | null {
+  return extrairValorPorPatterns(text, [
+    /(?:locacao|locaçao|locação)\s+mensal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /mensal[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /(R\$\s*[\d.,]+)[\s\S]{0,160}?mensal/i,
+    /realizado\s+mensalmente[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+  ]);
+}
+
+/** Procura valor da locação diária (R$) no texto do contrato. */
+export function extrairValorDiariaReais(text: string): number | null {
+  return extrairValorPorPatterns(text, [
+    /(?:locacao|locaçao|locação)\s+di[aá]ria[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /di[aá]ria[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+    /(R\$\s*[\d.,]+)[\s\S]{0,160}?di[aá]ria/i,
+    /realizado\s+diariamente[\s\S]{0,160}?(R\$\s*[\d.,]+)/i,
+  ]);
 }

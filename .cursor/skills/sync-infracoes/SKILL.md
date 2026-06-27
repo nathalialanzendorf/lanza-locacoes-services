@@ -1,88 +1,61 @@
 ---
 name: sync-infracoes
 description: >-
-  Syncs traffic infractions from DETRAN SC (servicos.detran.sc.gov.br transito-api)
-  into database/cliente-despesas.json (categoria Infração) using placa and renavam
-  from database/veiculos.json. Maps infracoes (notified, no boleto), debitos
-  (unpaid multa boletos only), and historicoInfracoes (paid at DETRAN). Use when
-  syncing multas, infrações, sync infracoes, DETRAN SC, atualizar cliente-despesas.json,
-  or consulta veículo frota.
+  Syncs traffic fines and infractions from DETRAN SC into database/cliente-despesas.json
+  for tenant billing and contract closure. Uses tool .cursor/tools/detran-sc/.
+  Use when syncing multas, infrações, DETRAN SC, cliente-despesas, or before relatorio-encerramento-contrato.
 ---
 
-# Sync infrações — DETRAN SC
+# Sync infrações — DETRAN SC → cliente-despesas.json
 
-Consulta **placa + RENAVAM** de cada veículo em `database/veiculos.json` no portal **Detran Digital SC** (`transito-api`) e grava/atualiza `database/cliente-despesas.json` (categoria **Infração**).
+Skill de **negócio**: trazer multas e infrações do **DETRAN SC** para `database/cliente-despesas.json` (categoria `Infração`), para cobrança do locatário e **relatorio-encerramento-contrato**.
 
-## Semântica da resposta DETRAN (regras Lanza)
+**Execução técnica** (auth, API, headers): tool **`.cursor/tools/detran-sc/`** — ler [README.md](../../tools/detran-sc/README.md) e [infracoes.md](../../tools/detran-sc/infracoes.md) antes de correr a CLI.
 
-| Bloco API | Significado | Ação no `cliente-despesas.json` |
-|-----------|-------------|------------------------|
-| **`infracoes`** | Autuações **notificadas**, **sem boleto** — ainda não pagas | Cadastrar/atualizar como **cobrável locatário** (`quitadaDetran: false`) |
-| **`debitos`** | Mistura: multas com boleto em aberto **+** licenciamento/IPVA | Importar **só multas**; **ignorar** licenciamento, IPVA, DPVAT, taxas DETRAN (dono/parceiro) |
-| **`historicoInfracoes`** | Multas com boleto **gerado e pagas** no DETRAN | Cadastrar/atualizar com **`quitadaDetran: true`** — **não** entra no encerramento de contrato |
+## Quando usar
 
-O campo `paga` em `cliente-despesas.json` continua reservado para **pagamento pelo locatário à Lanza**. Não confundir com quitada no DETRAN.
+- Utilizador pede **sync multas / infrações / DETRAN** para locatários.
+- Antes de **relatorio-encerramento-contrato** — garantir multas atualizadas.
+- Após cadastrar veículo — exige `renavam` em `database/veiculos.json`.
 
-## Autenticação (`.env` na raiz)
+## Semântica (resumo)
 
-| Variável | Origem |
-|----------|--------|
-| `DETRAN_SC_AUTH` | Header `Authorization: Bearer …` — DevTools → Network em [servicos.detran.sc.gov.br](https://servicos.detran.sc.gov.br/) |
-| `DETRAN_SC_EMPRESA` | Header `X-Empresa` (ex. `5071090`) |
-| `DETRAN_SC_APP_VERSION` | Opcional — header `X-App-Version` (copiar do portal se 401/403) |
+| Origem DETRAN | Gravação |
+|---------------|----------|
+| `infracoes` (autuação) | Cobrável; `quitadaDetran: false` |
+| `debitos` (multas) | Importar **só multas** (ignorar IPVA/licenciamento) |
+| `historicoInfracoes` | `quitadaDetran: true` — não cobrar no encerramento |
 
-**Nunca** versionar token JWT nem colar `curl` com sessão no Git.
-
-Token expira (≈5 h); renovar no portal quando a CLI falhar com 401.
-
-## Executar (CLI)
-
-Na raiz do repo, após `npm install`:
-
-```bash
-# Toda a frota (placa + renavam de veiculos.json)
-npx tsx src/run.ts sync-infracoes
-
-# Uma placa
-npx tsx src/run.ts sync-infracoes --placa QJB-0I83
-
-# Simular sem gravar
-npx tsx src/run.ts sync-infracoes --dry-run --placa QJB-0I83
-
-# Resposta já capturada (debug)
-npx tsx src/run.ts sync-infracoes --placa QJB-0I83 --ticket d3a46e54-373a-4689-9a7a-4138adcd0159
-
-# JSON salvo do DevTools
-npx tsx src/run.ts sync-infracoes --placa QJB-0I83 --json relatorios/_detran_resposta.json
-```
-
-Relatório de lote: `relatorios/_sync_infracoes.json`.
+`paga` = locatário pagou à Lanza (independente de `quitadaDetran`).
 
 ## Fluxo do agente
 
-1. Confirmar `DETRAN_SC_AUTH` e `DETRAN_SC_EMPRESA` no `.env` (ou pedir ao operador).
-2. `--dry-run --placa X` num veículo de teste.
-3. Sincronizar frota ou placa pedida.
-4. Listar multas **novas** com `condutorConfirmado: false` — operador confirma condutor antes de cobrar (**encerrar-contrato**).
-5. Confirmar condutor: `npx tsx src/run.ts gravar-cliente-despesa confirmar <autoInfracao>`.
+1. Confirmar `.env`: `DETRAN_SC_AUTH`, `DETRAN_SC_EMPRESA` (tool DETRAN).
+2. **Teste:** `sync-infracoes --dry-run --placa PLACA`.
+3. **Produção:** frota ou `--placa PLACA`.
+4. Revisar `relatorios/sync/_sync_infracoes.json`.
+5. Multas novas com `condutorConfirmado: false` → confirmar condutor antes de cobrar (`gravar-cliente-despesa confirmar <autoInfracao>`).
 
-## Campos gravados
+## CLI
 
-- Chave natural: `autoInfracao`
-- `origem`: `detran-sc`
-- `quitadaDetran`: `true` se veio de `historicoInfracoes`
-- Inferência de condutor: mesma lógica de `gravar-cliente-despesa` (contratos + data da autuação)
+```bash
+npx tsx src/run.ts sync-infracoes
+npx tsx src/run.ts sync-infracoes --placa QJB-0I83
+npx tsx src/run.ts sync-infracoes --dry-run --placa QJB-0I83
+```
 
-## Critério de conclusão
+Debug offline (resposta já capturada): `--json relatorios/_tmp/_detran_resposta.json` — ver tool.
 
-- Veículos sem `renavam` em `veiculos.json` são ignorados (avisar operador).
-- Débitos de licenciamento/IPVA **não** aparecem em `cliente-despesas.json`.
-- Multas cobráveis têm `quitadaDetran !== true`.
-- Duplicados por `autoInfracao` são atualizados (situação/valor), não duplicados.
+## Destino
+
+- **Ficheiro:** `database/cliente-despesas.json`
+- **Chave:** `autoInfracao`
+- **Campos:** `origem: detran-sc`, `categoria: Infração`
+
+Detalhes de API e módulos: [reference.md](reference.md) e `.cursor/tools/detran-sc/reference.md`.
 
 ## Skills relacionadas
 
-- **encerrar-contrato** — usa `cliente-despesas.json` (só categoria Infração; exclui `quitadaDetran` e `paga`).
-- **sync-ipva-licenciamento** — IPVA/Licenciamento do mesmo portal → `parceiro-despesas.json`.
-- **cadastrar-veiculo** — garante `renavam` correto para a consulta.
-- Detalhes API / mapeamento: [reference.md](reference.md)
+- **sync-ipva-licenciamento** — IPVA/licenciamento do **mesmo** portal → `parceiro-despesas.json` (não misturar).
+- **relatorio-encerramento-contrato** — consome infrações (`paga`, `quitadaDetran`).
+- **cadastro-veiculo** — `renavam` obrigatório para consulta DETRAN.
