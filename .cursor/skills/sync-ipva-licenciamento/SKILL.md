@@ -52,6 +52,12 @@ npx tsx src/run.ts sync-ipva-licenciamento --dry-run --placa MKV-6268
 | `origem` | `detran-sc/debitos/{PLACA}/{categoria}/{id}` |
 | Ficheiro | `database/parceiro-despesas.json` |
 
+## Idempotência
+
+- **Chave:** `origem` = `detran-sc/debitos/{PLACA}/{categoria}/{id}`.
+- Reexecutar sync **atualiza** débitos existentes; **não duplica**.
+- Ver [`_idempotencia.md`](../_idempotencia.md).
+
 Detalhes: [reference.md](reference.md) e `.cursor/tools/detran-sc/`.
 
 ## Skills relacionadas

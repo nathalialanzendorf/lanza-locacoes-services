@@ -18,7 +18,13 @@ Skills em `.cursor/skills/<nome>/SKILL.md` são descobertas pelo Cursor neste re
 | **`sync-infracoes`** | Multas/infrações DETRAN → `cliente-despesas.json` (tool DETRAN). |
 | **`sync-ipva-licenciamento`** | IPVA/licenciamento DETRAN → `parceiro-despesas.json` (tool DETRAN). |
 | `sync-seguro` | PDFs seguro → `parceiro-despesas.json`. |
+| **`sync-rastreador`** | Rastreador fixo R$ 50/mês → `parceiro-despesas.json`. |
+| **`sync-recebimentos`** | Gastos Gerais Rastreame ↔ `cliente-despesas.json`. |
+| **`sync-motoristas`** | Motoristas Rastreame ↔ `clientes.json`. |
+| **`sync-rastreaveis`** | Rastreáveis Rastreame ↔ `veiculos.json`. |
 | `importar-boletos-seguro` | Lote boletos seguro. |
+
+**Idempotência:** ver [`.cursor/skills/_idempotencia.md`](.cursor/skills/_idempotencia.md) — toda skill de sync deve ser reexecutável sem duplicar.
 | `renegociar-debitos` | Renegociação Rastreame (tool). |
 
 **CLI:** `npx tsx src/run.ts …` na raiz do repo.

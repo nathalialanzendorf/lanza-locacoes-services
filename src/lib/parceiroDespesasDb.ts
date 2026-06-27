@@ -83,6 +83,21 @@ export function competenciaFromData(data: string): string {
   return "";
 }
 
+/** Chave de negócio para dedupe idempotente (syncs e manual). */
+export function chaveNegocioParceiroDespesa(
+  placa: string,
+  competencia: string,
+  categoria: string,
+  descricao?: string,
+  manual = false,
+): string {
+  const base = `${compactPlaca(placa)}|${competencia}|${String(categoria).trim().toLowerCase()}`;
+  if (manual && descricao) {
+    return `${base}|${String(descricao).trim().toLowerCase()}`;
+  }
+  return base;
+}
+
 function resolveVeiculo(placa: string): { id: string | null; placa: string } {
   const veic = JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as {
     veiculos: { id: string; placa: string }[];
@@ -163,13 +178,82 @@ function despesaChanged(
   a: ParceiroDespesaRegistro,
   input: ParceiroDespesaInput,
   valor: number,
+  competencia: string,
 ): boolean {
   return (
     a.valor !== valor ||
     a.data !== String(input.data).trim() ||
     a.descricao !== String(input.descricao).trim() ||
-    a.categoria !== String(input.categoria).trim()
+    a.categoria !== String(input.categoria).trim() ||
+    a.competencia !== competencia
   );
+}
+
+function pickCanonicIndex(
+  despesas: ParceiroDespesaRegistro[],
+  indices: number[],
+  origem: string,
+): number {
+  if (!indices.length) return -1;
+  const byOrigem = indices.find((i) => despesas[i]!.origem === origem);
+  if (byOrigem != null) return byOrigem;
+  const prefixed = indices.find((i) => {
+    const o = despesas[i]!.origem;
+    return (
+      o.startsWith("rastreador-fixo/") ||
+      o.startsWith("detran-sc/") ||
+      o.includes("Proteção Veicular/")
+    );
+  });
+  return prefixed ?? indices[0]!;
+}
+
+function removeDuplicateIds(
+  db: ParceiroDespesasDb,
+  keepId: string,
+  allIds: string[],
+): void {
+  const remove = new Set(allIds.filter((id) => id !== keepId));
+  if (!remove.size) return;
+  db.parceiroDespesas = db.parceiroDespesas.filter((d) => !remove.has(d.id));
+}
+
+function findMatchingIndices(
+  despesas: ParceiroDespesaRegistro[],
+  opts: {
+    origem: string;
+    placa: string;
+    competencia: string;
+    categoria: string;
+    descricao: string;
+    manual: boolean;
+  },
+): number[] {
+  const indices: number[] = [];
+  const bizKey = chaveNegocioParceiroDespesa(
+    opts.placa,
+    opts.competencia,
+    opts.categoria,
+    opts.descricao,
+    opts.manual,
+  );
+
+  despesas.forEach((d, i) => {
+    if (opts.origem !== "manual" && d.origem === opts.origem) {
+      indices.push(i);
+      return;
+    }
+    const dKey = chaveNegocioParceiroDespesa(
+      d.placa,
+      d.competencia,
+      d.categoria,
+      d.descricao,
+      opts.manual,
+    );
+    if (dKey === bizKey) indices.push(i);
+  });
+
+  return [...new Set(indices)];
 }
 
 export function sincronizarParceiroDespesa(
@@ -180,37 +264,52 @@ export function sincronizarParceiroDespesa(
   const { id: veiculoId, placa } = resolveVeiculo(input.placa);
   const competencia = input.competencia?.trim() || competenciaFromData(input.data);
   const origem = input.origem?.trim() || "manual";
+  const manual = origem === "manual";
+  const descricao = String(input.descricao).trim();
+  const categoria = String(input.categoria).trim();
 
-  if (origem !== "manual") {
-    const idx = db.parceiroDespesas.findIndex((d) => d.origem === origem);
-    if (idx >= 0) {
-      const ex = db.parceiroDespesas[idx]!;
-      if (!despesaChanged(ex, input, valor)) {
-        return { registro: ex, aviso: null, acao: "sem_alteracao" };
-      }
-      ex.categoria = String(input.categoria).trim();
-      ex.descricao = String(input.descricao).trim();
-      ex.data = String(input.data).trim();
-      ex.valor = valor;
-      ex.competencia = competencia;
-      ex.placa = placa;
-      ex.veiculoId = veiculoId;
-      db.parceiroDespesas[idx] = ex;
-      saveParceiroDespesasDb(db);
-      return {
-        registro: ex,
-        aviso: veiculoId ? null : "placa não cadastrada em veiculos.json",
-        acao: "atualizado",
-      };
+  const matches = findMatchingIndices(db.parceiroDespesas, {
+    origem,
+    placa,
+    competencia,
+    categoria,
+    descricao,
+    manual,
+  });
+
+  if (matches.length) {
+    const idx = pickCanonicIndex(db.parceiroDespesas, matches, origem);
+    const keepId = db.parceiroDespesas[idx]!.id;
+    const matchIds = matches.map((i) => db.parceiroDespesas[i]!.id);
+    removeDuplicateIds(db, keepId, matchIds);
+    const ex = db.parceiroDespesas.find((d) => d.id === keepId)!;
+    if (!despesaChanged(ex, input, valor, competencia)) {
+      return { registro: ex, aviso: null, acao: "sem_alteracao" };
     }
+    ex.categoria = categoria;
+    ex.descricao = descricao;
+    ex.data = String(input.data).trim();
+    ex.valor = valor;
+    ex.competencia = competencia;
+    ex.placa = placa;
+    ex.veiculoId = veiculoId;
+    if (origem !== "manual") ex.origem = origem;
+    const exIdx = db.parceiroDespesas.findIndex((d) => d.id === keepId);
+    if (exIdx >= 0) db.parceiroDespesas[exIdx] = ex;
+    saveParceiroDespesasDb(db);
+    return {
+      registro: ex,
+      aviso: veiculoId ? null : "placa não cadastrada em veiculos.json",
+      acao: "atualizado",
+    };
   }
 
   const registro: ParceiroDespesaRegistro = {
     id: crypto.randomUUID(),
     veiculoId,
     placa,
-    categoria: String(input.categoria).trim(),
-    descricao: String(input.descricao).trim(),
+    categoria,
+    descricao,
     data: String(input.data).trim(),
     valor,
     competencia,

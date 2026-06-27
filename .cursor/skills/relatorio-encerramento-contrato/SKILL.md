@@ -15,6 +15,8 @@ Calcula o **acerto** de um contrato: multas, parcelas em aberto, diárias de atr
 
 **Não grava** em `database/contratos.json`. Para efetivar encerramento → skill **cadastro-contrato** (`encerrar`).
 
+**Idempotência:** skill só leitura — reexecutar gera o mesmo relatório; não altera bases.
+
 ## Quando usar
 
 - Simular ou apresentar acerto antes de devolver caução.

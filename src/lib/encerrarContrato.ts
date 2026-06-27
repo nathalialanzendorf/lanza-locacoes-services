@@ -175,6 +175,15 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
       `Contrato v${registroVigente.versao} (renovação); acerto referente só a este período, não a versões anteriores.`,
     );
   }
+  if (registroVigente?.prazoDias != null && registroVigente.prazoDias > 0) {
+    contrato.prazoDias = registroVigente.prazoDias;
+  }
+  const fimPrevistoDb = registroVigente?.dataFimPrevista
+    ? parseDataBr(registroVigente.dataFimPrevista)
+    : null;
+  if (fimPrevistoDb) {
+    contrato.fim = fimPrevistoDb;
+  }
   const diasLocacao = daysBetween(contrato.inicio, encerramento);
   const diasRestantes = Math.max(0, contrato.prazoDias - diasLocacao);
   const proporcaoRestante = contrato.prazoDias > 0 ? diasRestantes / contrato.prazoDias : 0;

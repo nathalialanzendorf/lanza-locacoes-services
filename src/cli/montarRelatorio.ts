@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { loadParceiroDespesasDb } from "../lib/parceiroDespesasDb.js";
+import { rastreadorValorFixo } from "../lib/rastreadorFixo.js";
 import { prestacaoContasBaseDir } from "../lib/lanzaPaths.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
 
@@ -57,7 +58,7 @@ export function main(argv: string[]): void {
   const periodo = inp.periodo ?? {};
   const rotulo = inp.rotulo;
 
-  const rastValor = Number(inp.rastreadorValor ?? 50);
+  const rastValor = Number(inp.rastreadorValor ?? rastreadorValorFixo(comp));
   const rastDia = Number(inp.rastreadorDia ?? 10);
 
   const despesas = loadParceiroDespesasDb().parceiroDespesas as Record<string, unknown>[];

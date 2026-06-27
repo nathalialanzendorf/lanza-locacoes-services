@@ -120,7 +120,7 @@
       "quebraContrato": true,
       "motivoEncerramento": "devolvido",
       "status": "encerrado",
-      "prazoDias": 90,
+      "prazoDias": 180,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "segunda",
       "diaPagamentoMes": null,

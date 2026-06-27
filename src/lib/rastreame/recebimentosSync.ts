@@ -23,6 +23,7 @@ import {
   putGasto,
   type GastoRecord,
 } from "./gasto.js";
+import { gastoDuplicado } from "./gastoDup.js";
 import { listMotoristas, type MotoristaRastreame } from "./motorista.js";
 import { extrairPlacaDeRastreavel, refKey } from "./placaRastreavel.js";
 import { listRastreaveis, type Rastreavel } from "./rastreavel.js";
@@ -288,6 +289,7 @@ async function pushOneRegistro(
     clientes: ClienteDb[];
     motoristas: MotoristaRastreame[];
     rastreaveis: Rastreavel[];
+    gastos: GastoRecord[];
     dryRun: boolean;
   },
 ): Promise<"criado" | "atualizado" | "inativado" | "ignorado" | "erro"> {
@@ -319,6 +321,17 @@ async function pushOneRegistro(
   const total = reg.valorMulta;
 
   if (!reg.rastreameId) {
+    const dup = gastoDuplicado(ctx.gastos, motoristaKey, rastreavelKey, info);
+    if (dup?.id != null) {
+      if (ctx.dryRun) {
+        console.log(
+          `[push dry-run] link ${reg.autoInfracao} → id=${dup.id} (já no Rastreame)`,
+        );
+        return "criado";
+      }
+      marcarRastreameSyncOk(reg.id, dup.id);
+      return "criado";
+    }
     if (ctx.dryRun) {
       console.log(
         `[push dry-run] POST ${reg.autoInfracao} | ${reg.veiculoId} | R$ ${total} | motorista=${motoristaKey} rastreavel=${rastreavelKey}`,
@@ -392,6 +405,7 @@ export async function pushRecebimentosToRastreame(
   const clientes = loadClientes();
   const motoristas = await listMotoristas();
   const rastreaveis = await listRastreaveis();
+  const gastos = await fetchAllGastos(100);
 
   const candidatos = db.clienteDespesas.filter((m) => {
     if (!isSyncRastreameEligible(m)) return false;
@@ -408,6 +422,7 @@ export async function pushRecebimentosToRastreame(
         clientes,
         motoristas,
         rastreaveis,
+        gastos,
         dryRun: opts.dryRun ?? false,
       });
       if (acao === "criado") result.criados++;
@@ -449,10 +464,12 @@ export async function replicarClienteDespesaNoRastreame(
   const clientes = loadClientes();
   const motoristas = await listMotoristas();
   const rastreaveis = await listRastreaveis();
+  const gastos = await fetchAllGastos(100);
   const acao = await pushOneRegistro(reg, {
     clientes,
     motoristas,
     rastreaveis,
+    gastos,
     dryRun: opts?.dryRun ?? false,
   });
   if (acao === "erro") {

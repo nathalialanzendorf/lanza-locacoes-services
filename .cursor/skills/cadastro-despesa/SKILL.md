@@ -14,8 +14,8 @@ Cadastra, edita e exclui **débitos do parceiro/dono** em `database/parceiro-des
 
 | Operação | Como |
 |----------|------|
-| **Cadastrar** | `gravar-despesa` ou sync DETRAN/sync-seguro |
-| **Editar** | Alterar registro em `parceiro-despesas.json` ou novo `gravar-despesa` |
+| **Cadastrar** | `gravar-despesa` (idempotente) ou sync DETRAN/sync-seguro/sync-rastreador |
+| **Editar** | Repetir `gravar-despesa` com **mesma** placa + competência + categoria + descrição (atualiza) |
 | **Excluir** | Remover entrada do JSON (confirmar com operador) |
 
 ## Sempre perguntar (nesta ordem)
@@ -38,6 +38,12 @@ npx tsx src/run.ts gravar-despesa "Manutenção" "50,00" "10/06/2026" "MLX-2H34"
 ```
 
 Argumentos: `<categoria> <valor> <data> <placa> [descricao]`
+
+## Idempotência
+
+- **Chave manual:** `placa + competencia + categoria + descricao`.
+- Repetir o mesmo comando **atualiza** o registo existente (`sem_alteracao` se nada mudou).
+- Syncs automáticos (seguro, rastreador, DETRAN) têm chaves próprias — ver [`_idempotencia.md`](../_idempotencia.md).
 
 ## Critério de conclusão
 

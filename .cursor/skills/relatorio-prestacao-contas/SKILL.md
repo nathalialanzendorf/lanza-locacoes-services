@@ -11,11 +11,13 @@ description: >-
 
 Gera o **relatório mensal** por veículo e consolidado por parceiro. Gastos em `database/parceiro-despesas.json`; ganho, devido do mês anterior e desconto de manutenção vêm das perguntas. Formato alinhado a `templates/Prestação contas parceiro.txt`.
 
+**Idempotência:** skill só leitura (gera `.txt`); dados idempotentes vêm de **sync-seguro**, **sync-rastreador**, etc. — ver [`_idempotencia.md`](../_idempotencia.md).
+
 ## Regras fixas
 
 1. **Sempre perguntar o escopo:** um **parceiro**, uma **placa** ou a **frota toda**. Por defeito **excluir da prestação** a frota própria do **Felipe** (veículos que lhe estão vinculados em `parceiro-veiculo.json`), salvo se o utilizador pedir para incluir.
 2. **Pré-requisito:** seguro do mês importado (**sync-seguro** a partir dos PDFs em `seguroComprovantesDir`), exceto parceiros sem seguro: **Luiz Paulo, Jhonny, Baiano** (não exigir boleto nem avisar falta para eles).
-3. **Rastreador fixo:** R$ **50,00** no **dia 10** do mês da competência, se ainda não houver rastreador naquele veículo/mês em `parceiro-despesas.json`.
+3. **Rastreador fixo:** **R$ 50,00** no **dia 10** da competência. Correr **`sync-rastreador`** antes do relatório; o `montar-relatorio` só completa se faltar entrada no veículo/mês.
 4. **Defaults de ganho:** semanal **R$ 500** e diária **R$ 71,42** (500÷7); sugerir **4 semanas = R$ 2.000**.
 5. **William / PWH-3A45 (Doblo):** ganho mensal fixo **R$ 1.100** (não perguntar semanas).
 6. Veículos do **Felipe** (frota própria) **não entram** na prestação para parceiros, salvo instrução em contrário.
@@ -49,7 +51,6 @@ Exemplo:
   "competencia": "06/2026",
   "rotulo": "Relatório de junho/2026",
   "periodo": {"inicio": "01/06/2026", "fim": "30/06/2026"},
-  "rastreadorValor": 50.0,
   "rastreadorDia": 10,
   "veiculos": [
     {"placa":"MLN-0B87",

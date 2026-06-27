@@ -52,6 +52,13 @@ Debug offline (resposta já capturada): `--json relatorios/_tmp/_detran_resposta
 - **Chave:** `autoInfracao`
 - **Campos:** `origem: detran-sc`, `categoria: Infração`
 
+## Idempotência
+
+- **Chave:** `autoInfracao` (case-insensitive) via `sincronizarClienteDespesa`.
+- Reexecutar sync frota/placa **atualiza** multas existentes; **não duplica**.
+- `--dry-run` não grava; produção é segura para repetir após falha parcial.
+- Ver [`_idempotencia.md`](../_idempotencia.md).
+
 Detalhes de API e módulos: [reference.md](reference.md) e `.cursor/tools/detran-sc/reference.md`.
 
 ## Skills relacionadas

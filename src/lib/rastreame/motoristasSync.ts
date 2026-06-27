@@ -17,6 +17,7 @@ import {
   buildMotoristaPayload,
   fetchAllMotoristas,
   fetchMotoristaByKey,
+  findMotorista,
   inativarMotorista,
   postMotoristaPayload,
   putMotorista,
@@ -125,6 +126,19 @@ async function pushOneCliente(
   const payload = buildMotoristaPayload(c);
 
   if (!c.rastreameMotoristaKey) {
+    const cnh = String(c.cnh?.numero ?? "");
+    const existente = await findMotorista(cnh, c.nome ?? "");
+    if (existente) {
+      const key = motoristaKey(existente);
+      if (key) {
+        if (ctx.dryRun) {
+          console.log(`[push dry-run] link ${c.nome} → key=${key} (já no Rastreame)`);
+          return "criado";
+        }
+        marcarClienteRastreameSyncOk(c.id, key, existente.id);
+        return "criado";
+      }
+    }
     if (ctx.dryRun) {
       console.log(`[push dry-run] POST ${c.nome} | CPF ${c.cpf ?? "?"}`);
       return "criado";

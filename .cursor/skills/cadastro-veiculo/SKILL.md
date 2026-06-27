@@ -88,6 +88,12 @@ npx tsx src/run.ts merge-veiculo caminho/veiculo_tmp.json "Nome do Proprietario"
 
 O script deduplica por **placa**, atualiza `parceiros.json` se necessário e recria o vínculo em `parceiro-veiculo.json`. **Em veículo novo** (`cadastrado`, não atualização por placa), após gravar, chama automaticamente a sincronização FIPE (`atualizar-fipe-veiculos --placa …`) no mesmo processo para preencher/atualizar `fipe`, `fipeCodigo`, `fipeModelo`, `fipeValor` e `fipeReferencia`. Se a API falhar, aparece aviso no console; corrija dados ou `EXTRAS_BY_PLACA` e rode `atualizar-fipe-veiculos` manualmente.
 
+## Idempotência
+
+- **Chave:** `placa` (normalizada).
+- `merge-veiculo` com mesma placa **atualiza**; vínculo parceiro substituído, não duplicado.
+- Ver [`_idempotencia.md`](../_idempotencia.md).
+
 ## Critério de conclusão
 
 - CRLV extraído; consulta FIPE (comando `fipe` ou campos preenchidos antes do merge); proprietário coletado; confirmação antes de gravar.

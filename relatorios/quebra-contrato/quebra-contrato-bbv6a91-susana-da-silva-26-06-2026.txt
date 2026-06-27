@@ -19,9 +19,9 @@ Caução: R$ 1500.00
   Subtotal infrações: R$ 423.63
 
 --- Manutenção / avarias (não pagas) ---
-  Conserto Gol — batida lateral da porta | 26/06/2026 | R$ 500.00 | A cobrar
+  Conserto Gol — batida lateral da porta (orçamento pendente) | 26/06/2026 | orçamento pendente | Orçamento pendente
   Conserto Gol — parachoque traseiro (orçamento pendente) | 26/06/2026 | orçamento pendente | Orçamento pendente
-  Subtotal manutenção: R$ 500.00
+  Subtotal manutenção: R$ 0.00
 
 --- Locação semanal em aberto ---
   (nenhuma parcela em aberto)
@@ -37,13 +37,8 @@ Caução: R$ 1500.00
   Caução a devolver (após retenção): R$ 866.67
 
 --- Totais ---
-  Total débitos: R$ 1556.96
-  Saldo caução (caução − débitos): R$ -56.96 (locatário deve complementar)
-
---- Observações ---
-  • Locação semanal: todas pagas (venc. 12/05 a 16/06; 16/06 quitada em 19/06 após troca quarta→sexta).
-  • Semana venc. 23/06 (24/06): isenta — veículo devolvido em 26/06 antes do pagamento (pagava para rodar).
-  • Parachoque traseiro: orçamento pendente — valor será incluído quando definido.
+  Total débitos: R$ 1056.96
+  Saldo caução (caução − débitos): R$ 443.04 (a devolver ao locatário)
 
 --- Avisos ---
   • Há manutenção com orçamento pendente (valor zero) — atualizar quando houver orçamento.

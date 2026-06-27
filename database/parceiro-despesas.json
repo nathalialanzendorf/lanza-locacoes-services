@@ -19,10 +19,10 @@
       "placa": "MLN-0B87",
       "categoria": "Rastreador",
       "descricao": "Rastreador",
-      "data": "10/04/2026",
-      "valor": 40,
+      "data": "10/05/2026",
+      "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Ana.txt"
+      "origem": "rastreador-fixo/MLN0B87/05-2026"
     },
     {
       "id": "f2df5450-86e2-4530-8780-a9bf881e6b28",
@@ -33,7 +33,7 @@
       "data": "10/05/2026",
       "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Luiz.txt"
+      "origem": "rastreador-fixo/IWP5G63/05-2026"
     },
     {
       "id": "dac78a98-875d-4de0-a567-c15a23ae52fe",
@@ -55,7 +55,7 @@
       "data": "10/05/2026",
       "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Luiz.txt"
+      "origem": "rastreador-fixo/MLX2H34/05-2026"
     },
     {
       "id": "47dabd25-1f16-4eda-a827-9ff7a9567e09",
@@ -77,7 +77,7 @@
       "data": "10/05/2026",
       "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Luiz.txt"
+      "origem": "rastreador-fixo/IXT7I93/05-2026"
     },
     {
       "id": "f4e088b5-1eab-4d85-bac2-fb6b1cbbed83",
@@ -99,7 +99,7 @@
       "data": "10/05/2026",
       "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Luiz.txt"
+      "origem": "rastreador-fixo/RAH4F54/05-2026"
     },
     {
       "id": "fa480c9c-52fa-4fc7-a467-875cba70e993",
@@ -107,10 +107,10 @@
       "placa": "AVU-6740",
       "categoria": "Rastreador",
       "descricao": "Rastreador",
-      "data": "10/04/2026",
-      "valor": 40,
+      "data": "10/05/2026",
+      "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Maicon.txt"
+      "origem": "rastreador-fixo/AVU6740/05-2026"
     },
     {
       "id": "4165e089-e200-451b-aafd-93b768251071",
@@ -140,10 +140,10 @@
       "placa": "BBV-6A91",
       "categoria": "Rastreador",
       "descricao": "Rastreador",
-      "data": "10/04/2026",
-      "valor": 40,
+      "data": "10/05/2026",
+      "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Maicon.txt"
+      "origem": "rastreador-fixo/BBV6A91/05-2026"
     },
     {
       "id": "ab04bb51-79fb-4184-8947-a4d167d9cf35",
@@ -151,10 +151,10 @@
       "placa": "MKV-6268",
       "categoria": "Rastreador",
       "descricao": "Rastreador",
-      "data": "10/04/2026",
-      "valor": 40,
+      "data": "10/05/2026",
+      "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/Regiane.txt"
+      "origem": "rastreador-fixo/MKV6268/05-2026"
     },
     {
       "id": "e253851f-4eea-4c13-907c-9765ad879dc3",
@@ -185,9 +185,9 @@
       "categoria": "Rastreador",
       "descricao": "Rastreador",
       "data": "10/05/2026",
-      "valor": 20,
+      "valor": 50,
       "competencia": "05/2026",
-      "origem": "prestação de contas/05.2026/William.txt"
+      "origem": "rastreador-fixo/PWH3A45/05-2026"
     },
     {
       "id": "b6bb71d3-8624-4a1f-a591-fbda03353603",
@@ -198,7 +198,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/AVU6740/06-2026"
     },
     {
       "id": "912b45f1-2d4d-40ec-9d16-acea9e7ec0b2",
@@ -209,7 +209,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/BBV6A91/06-2026"
     },
     {
       "id": "c2c6bfb4-1062-40f2-a274-798c97c373c2",
@@ -220,7 +220,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/MKV6268/06-2026"
     },
     {
       "id": "6d60649f-9360-42cc-a236-f5239778890e",
@@ -231,7 +231,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/MLN0B87/06-2026"
     },
     {
       "id": "723eb9aa-2b87-4b56-8d86-0b3f6ba091f6",
@@ -242,7 +242,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/PWH3A45/06-2026"
     },
     {
       "id": "f8c80d6e-cf71-4c77-80e7-17cb13931225",
@@ -253,7 +253,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/IWP5G63/06-2026"
     },
     {
       "id": "8474fbd5-10e5-45d3-87c4-e53ac4179174",
@@ -264,7 +264,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/MLX2H34/06-2026"
     },
     {
       "id": "139c0dcf-8e1f-4f18-8550-28bf70de9740",
@@ -275,7 +275,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/IXT7I93/06-2026"
     },
     {
       "id": "012b3870-304e-4303-9063-8266cc597af0",
@@ -286,7 +286,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/RAH4F54/06-2026"
     },
     {
       "id": "97a2d0fe-9bd3-4763-b403-ae61d71845b9",
@@ -297,7 +297,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/IYR8F19/06-2026"
     },
     {
       "id": "378c58a9-949b-49de-b735-b4a911f77d2d",
@@ -308,7 +308,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/QJB0I83/06-2026"
     },
     {
       "id": "cda9fa10-25b7-4cd2-b32d-39dcc376d782",
@@ -319,7 +319,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/MLW7I09/06-2026"
     },
     {
       "id": "e3b06ef3-8f89-42e2-9f49-48b02418c838",
@@ -330,7 +330,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/FHG0B73/06-2026"
     },
     {
       "id": "5fd7ff8b-6f81-42f5-aa42-90b9bbef37db",
@@ -341,7 +341,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/OZC0B50/06-2026"
     },
     {
       "id": "a17edddd-a564-4687-8c3e-5318393bb052",
@@ -352,7 +352,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/OWN3C59/06-2026"
     },
     {
       "id": "5415f006-a340-4a30-a1f1-20d45b456018",
@@ -363,7 +363,7 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "cadastro em lote rastreador junho/2026"
+      "origem": "rastreador-fixo/RLA1G81/06-2026"
     },
     {
       "id": "a98e41c0-32a0-4392-aa94-a698874704b4",
@@ -1882,6 +1882,787 @@
       "valor": 291.92,
       "competencia": "06/2026",
       "origem": "Proteção Veicular/Comprovantes/2026/06 Junho/RYC7C32 - NIVUS.pdf"
+    },
+    {
+      "id": "84760a73-eaa2-47a6-b6d9-10058238a517",
+      "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+      "placa": "AVU-6740",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/AVU6740/01-2026"
+    },
+    {
+      "id": "f9424182-c888-47f4-bf59-f5203db94d4b",
+      "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+      "placa": "AVU-6740",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/AVU6740/02-2026"
+    },
+    {
+      "id": "ae37ea9c-dbbd-4562-8253-429543ff91d7",
+      "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+      "placa": "AVU-6740",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/AVU6740/03-2026"
+    },
+    {
+      "id": "e8c3934b-37b7-4e25-ab9c-efdd9ec20ea8",
+      "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+      "placa": "AVU-6740",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/AVU6740/04-2026"
+    },
+    {
+      "id": "f2a0a9e9-b1f1-454d-be75-d4c1dcf3b748",
+      "veiculoId": "77c7be82-a74d-4895-8466-5ecbadf10989",
+      "placa": "BBV-6A91",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/BBV6A91/01-2026"
+    },
+    {
+      "id": "e4251ce9-8a7e-4527-a4c0-346ee07a26a0",
+      "veiculoId": "77c7be82-a74d-4895-8466-5ecbadf10989",
+      "placa": "BBV-6A91",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/BBV6A91/02-2026"
+    },
+    {
+      "id": "7bccd99f-4cc3-485f-acfc-ad7fc9596d97",
+      "veiculoId": "77c7be82-a74d-4895-8466-5ecbadf10989",
+      "placa": "BBV-6A91",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/BBV6A91/03-2026"
+    },
+    {
+      "id": "fc3c3d6a-e3fe-4798-ada1-47b35697f9c8",
+      "veiculoId": "77c7be82-a74d-4895-8466-5ecbadf10989",
+      "placa": "BBV-6A91",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/BBV6A91/04-2026"
+    },
+    {
+      "id": "c5ef8f1f-9411-4375-ba8e-ca52688e5799",
+      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+      "placa": "MKV-6268",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/MKV6268/01-2026"
+    },
+    {
+      "id": "d10284fe-f1db-4491-8e52-47ad82b2ea5a",
+      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+      "placa": "MKV-6268",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/MKV6268/02-2026"
+    },
+    {
+      "id": "7f44c1c9-62bd-4845-bde7-b2704be3b1a1",
+      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+      "placa": "MKV-6268",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/MKV6268/03-2026"
+    },
+    {
+      "id": "a9c794ac-65e7-4b24-b787-24a07cf5a1b3",
+      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+      "placa": "MKV-6268",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/MKV6268/04-2026"
+    },
+    {
+      "id": "1c65251f-11cd-4fd2-bfb1-d734f93ec7c7",
+      "veiculoId": "359000ba-3b11-4d88-be89-94bb583e4e0d",
+      "placa": "MLN-0B87",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/MLN0B87/01-2026"
+    },
+    {
+      "id": "6a303150-6a96-4c2c-8f24-5478ee34518f",
+      "veiculoId": "359000ba-3b11-4d88-be89-94bb583e4e0d",
+      "placa": "MLN-0B87",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/MLN0B87/02-2026"
+    },
+    {
+      "id": "9dc5bc85-1861-4b5e-a66e-78081d625426",
+      "veiculoId": "359000ba-3b11-4d88-be89-94bb583e4e0d",
+      "placa": "MLN-0B87",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/MLN0B87/03-2026"
+    },
+    {
+      "id": "e3f3b2ea-7c82-4e8c-9361-fa4c322e19aa",
+      "veiculoId": "359000ba-3b11-4d88-be89-94bb583e4e0d",
+      "placa": "MLN-0B87",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/MLN0B87/04-2026"
+    },
+    {
+      "id": "64d34fc4-bcd4-4611-b236-3839ac91a312",
+      "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+      "placa": "PWH-3A45",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/PWH3A45/01-2026"
+    },
+    {
+      "id": "9ef183d8-34f5-4ed9-b9c2-2c1a4707ed74",
+      "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+      "placa": "PWH-3A45",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/PWH3A45/02-2026"
+    },
+    {
+      "id": "6b19ff16-8afd-4929-b1e2-f8918e61f4fe",
+      "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+      "placa": "PWH-3A45",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/PWH3A45/03-2026"
+    },
+    {
+      "id": "3fe8dfaf-f9f8-4c1b-a4e1-2cdea870426a",
+      "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+      "placa": "PWH-3A45",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/PWH3A45/04-2026"
+    },
+    {
+      "id": "199d0e6d-4dcc-4893-bd72-15fd203cd8d5",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/IWP5G63/01-2026"
+    },
+    {
+      "id": "d67d845b-bbd0-470c-af75-1f8c702e64d7",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/IWP5G63/02-2026"
+    },
+    {
+      "id": "397429c2-000a-4438-a3e1-11d097693a0a",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/IWP5G63/03-2026"
+    },
+    {
+      "id": "94c84ebf-e5c0-4abd-bbe5-614aad54d939",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/IWP5G63/04-2026"
+    },
+    {
+      "id": "d1b66487-359e-455f-af11-30d9db3348c4",
+      "veiculoId": "6339e116-b95a-43e7-8d48-f01b63201dd3",
+      "placa": "MLX-2H34",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/MLX2H34/01-2026"
+    },
+    {
+      "id": "09eac60e-84d3-44de-88fa-6938c4a56ffd",
+      "veiculoId": "6339e116-b95a-43e7-8d48-f01b63201dd3",
+      "placa": "MLX-2H34",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/MLX2H34/02-2026"
+    },
+    {
+      "id": "797e2a4b-db9b-4906-b575-d10344c5729e",
+      "veiculoId": "6339e116-b95a-43e7-8d48-f01b63201dd3",
+      "placa": "MLX-2H34",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/MLX2H34/03-2026"
+    },
+    {
+      "id": "44d438cb-8ced-48a1-b2d3-4e6705ca1c4c",
+      "veiculoId": "6339e116-b95a-43e7-8d48-f01b63201dd3",
+      "placa": "MLX-2H34",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/MLX2H34/04-2026"
+    },
+    {
+      "id": "fbd669c0-7fd8-439d-be63-fea062db899c",
+      "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+      "placa": "IXT-7I93",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/IXT7I93/01-2026"
+    },
+    {
+      "id": "e86b906d-02d9-4579-8bc2-9fb230367c2b",
+      "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+      "placa": "IXT-7I93",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/IXT7I93/02-2026"
+    },
+    {
+      "id": "31bfc93c-d096-4b06-940a-7b8c0a32d993",
+      "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+      "placa": "IXT-7I93",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/IXT7I93/03-2026"
+    },
+    {
+      "id": "b83fd907-09b9-4500-b674-a334ae34c27a",
+      "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+      "placa": "IXT-7I93",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/IXT7I93/04-2026"
+    },
+    {
+      "id": "4fcfc413-9369-4a70-bd36-341afffc0485",
+      "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+      "placa": "RAH-4F54",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/RAH4F54/01-2026"
+    },
+    {
+      "id": "824c01b2-c936-4d10-be4c-6312d6366cd9",
+      "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+      "placa": "RAH-4F54",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/RAH4F54/02-2026"
+    },
+    {
+      "id": "73434589-970c-4270-9c85-022722c7a212",
+      "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+      "placa": "RAH-4F54",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/RAH4F54/03-2026"
+    },
+    {
+      "id": "26abed92-4888-471a-b86e-bf5f65cddba7",
+      "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+      "placa": "RAH-4F54",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/RAH4F54/04-2026"
+    },
+    {
+      "id": "673e39ff-ca6c-4723-a34c-a21717712e79",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/IYR8F19/01-2026"
+    },
+    {
+      "id": "9c93fe95-a93f-434e-9051-09633f015d47",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/IYR8F19/02-2026"
+    },
+    {
+      "id": "b1cc83c4-512c-4da1-a2e7-16f8e087aaf7",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/IYR8F19/03-2026"
+    },
+    {
+      "id": "f1521e15-cb55-499f-beda-e01d2d0be9d1",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/IYR8F19/04-2026"
+    },
+    {
+      "id": "c15b2620-68f4-4193-9564-5e76a5bdb079",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/IYR8F19/05-2026"
+    },
+    {
+      "id": "be3a6996-9b30-404d-a512-37a73fbbf068",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/QJB0I83/01-2026"
+    },
+    {
+      "id": "84645566-774a-4a90-82ba-ec0616eb247e",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/QJB0I83/02-2026"
+    },
+    {
+      "id": "bb84173f-381e-4fd6-b4ed-6154f930f8e8",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/QJB0I83/03-2026"
+    },
+    {
+      "id": "650be42c-09c6-4da5-8376-bf9fe96c4b3a",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/QJB0I83/04-2026"
+    },
+    {
+      "id": "d32875e3-042a-46b3-9350-1e04cdfa3178",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/QJB0I83/05-2026"
+    },
+    {
+      "id": "b2b09943-8c54-488a-a1c4-1107cd718be0",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/MLW7I09/01-2026"
+    },
+    {
+      "id": "91786911-9f0d-4f5a-bdc8-0c680fa30dbc",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/MLW7I09/02-2026"
+    },
+    {
+      "id": "0f20fc7a-1b4a-48ee-a1b4-d81f0aac7d2b",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/MLW7I09/03-2026"
+    },
+    {
+      "id": "08eb2785-a70a-417d-9f32-5475661e6b9d",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/MLW7I09/04-2026"
+    },
+    {
+      "id": "a2b144d3-f5c3-4a58-abde-a02bce5d86b5",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/MLW7I09/05-2026"
+    },
+    {
+      "id": "5a53d839-53d5-40d7-af98-291703abc142",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/FHG0B73/01-2026"
+    },
+    {
+      "id": "9dc96dde-769a-48ac-bf31-9a40039f109f",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/FHG0B73/02-2026"
+    },
+    {
+      "id": "6f9ed92b-69c4-4123-bb69-42f60b42911f",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/FHG0B73/03-2026"
+    },
+    {
+      "id": "f420854e-f339-42c0-b0df-f84df45c34d4",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/FHG0B73/04-2026"
+    },
+    {
+      "id": "19b66b80-4677-4a06-8a34-edd79a527d90",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/FHG0B73/05-2026"
+    },
+    {
+      "id": "c75fa4c8-3774-49f5-b426-90a4815ab6c9",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/OZC0B50/01-2026"
+    },
+    {
+      "id": "e288023b-03f5-40aa-9c41-43389c52618d",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/OZC0B50/02-2026"
+    },
+    {
+      "id": "704a8c9b-31f5-4fef-9fc1-760ec72e7459",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/OZC0B50/03-2026"
+    },
+    {
+      "id": "2c58e9dc-7df2-4275-8e87-0f36eb0d813f",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/OZC0B50/04-2026"
+    },
+    {
+      "id": "1b45ea94-7b5a-4747-b155-57a9d025f2ac",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/OZC0B50/05-2026"
+    },
+    {
+      "id": "d1ce9400-184b-4c7b-96d7-a55d72beb6c2",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/OWN3C59/01-2026"
+    },
+    {
+      "id": "b1834fda-8d1e-413b-9bc2-853c5f152495",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/OWN3C59/02-2026"
+    },
+    {
+      "id": "09804ddb-adad-48d8-a8f1-21790837b953",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/OWN3C59/03-2026"
+    },
+    {
+      "id": "3a8fc286-a57b-4b37-8602-0c10da95383f",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/OWN3C59/04-2026"
+    },
+    {
+      "id": "ba671054-9cc7-4684-b3d1-dcdc404bbed7",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/OWN3C59/05-2026"
+    },
+    {
+      "id": "dce62c14-291c-46f3-90a1-27c73eea3efd",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/01/2026",
+      "valor": 50,
+      "competencia": "01/2026",
+      "origem": "rastreador-fixo/RLA1G81/01-2026"
+    },
+    {
+      "id": "4ceff1cd-78f4-45e7-be4e-a2855c16d23e",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/02/2026",
+      "valor": 50,
+      "competencia": "02/2026",
+      "origem": "rastreador-fixo/RLA1G81/02-2026"
+    },
+    {
+      "id": "508f5236-4b83-44a5-a45e-c9ca6313a5a3",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/03/2026",
+      "valor": 50,
+      "competencia": "03/2026",
+      "origem": "rastreador-fixo/RLA1G81/03-2026"
+    },
+    {
+      "id": "c76ff44a-4681-43b2-b3df-a41cba30a2c7",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/04/2026",
+      "valor": 50,
+      "competencia": "04/2026",
+      "origem": "rastreador-fixo/RLA1G81/04-2026"
+    },
+    {
+      "id": "6f313acc-17fa-431c-88ad-c40e62b4be2b",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/05/2026",
+      "valor": 50,
+      "competencia": "05/2026",
+      "origem": "rastreador-fixo/RLA1G81/05-2026"
     }
   ]
 }

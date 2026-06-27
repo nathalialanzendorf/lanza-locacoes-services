@@ -54,7 +54,14 @@ Formato do JSON (array):
 ]
 ```
 
-`origem` deve ser **única por ficheiro** (caminho relativo a `documentosRaiz` em `lanza_paths.json`, ou caminho absoluto normalizado) para o comando `sync-seguro` fazer dedupe na reimportação.
+`origem` deve ser **única por ficheiro** (caminho relativo a `documentosRaiz` em `lanza_paths.json`, ou caminho absoluto normalizado) para dedupe na reimportação.
+
+## Idempotência
+
+- **Chaves:** `origem` (caminho PDF) **ou** `placa + competencia + Seguro`.
+- Reexecutar `sync-seguro --scan ...` **atualiza** valores existentes; **não duplica** o mesmo boleto.
+- Dois PDFs do **mesmo veículo/mês** colapsam num único registo (mantém o canónico).
+- Ver também [`_idempotencia.md`](../_idempotencia.md).
 
 ## Critério de conclusão
 

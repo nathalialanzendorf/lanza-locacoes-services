@@ -175,11 +175,12 @@ function extrairPeriodo(
   );
   if (m) {
     const ini = parseDataBr(m[1]!.replace(/\s/g, ""));
-    const fim = parseDataBr(m[2]!.replace(/\s/g, ""));
-    if (ini && fim) return { inicio: ini, fim, extraidoDoDocx: true };
+    const fimDocx = parseDataBr(m[2]!.replace(/\s/g, ""));
+    if (ini && fimDocx) {
+      return { inicio: ini, fim: fimDocx, extraidoDoDocx: true };
+    }
   }
-  const fim = new Date(inicioPasta);
-  fim.setDate(fim.getDate() + prazoDias);
+  const fim = addDays(inicioPasta, prazoDias);
   return { inicio: inicioPasta, fim, extraidoDoDocx: false };
 }
 
@@ -367,7 +368,7 @@ export function extrairContrato(
     throw new Error(`Valor da locação não encontrado no contrato (${pagamento.tipoContrato}): ${docx}`);
   }
 
-  const prazoDias = extrairPrazoDias(texto) ?? 90;
+  let prazoDias = extrairPrazoDias(texto) ?? 90;
   let periodo = extrairPeriodo(texto, inicioPasta, prazoDias);
   if (opts.paraEncerramento && totalDocumentosContrato > 1 && !periodo.extraidoDoDocx) {
     for (const alt of docxsOrdenados.slice(1)) {
@@ -387,6 +388,12 @@ export function extrairContrato(
     );
   }
   const { inicio, fim } = periodo;
+  if (periodo.extraidoDoDocx) {
+    const span = daysBetween(inicio, fim);
+    if (Math.abs(span - prazoDias) > 2) {
+      prazoDias = span;
+    }
+  }
   const refSemanal = valorSemanal ?? (valorMensal ? valorMensal / 4.33 : valorBase);
   const valorCaucao = extrairCaucao(texto, refSemanal);
 

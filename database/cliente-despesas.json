@@ -928,17 +928,17 @@
       "categoria": "Manutenção",
       "veiculoId": "BBV-6A91",
       "autoInfracao": "MAN-2026-BBV-PORTA-LATERAL",
-      "descricao": "Conserto Gol — batida lateral da porta",
+      "descricao": "Conserto Gol — batida lateral da porta (orçamento pendente)",
       "localInfracao": "",
       "dataAutuacao": "26/06/2026",
-      "valorMulta": 500,
-      "situacao": "A cobrar",
+      "valorMulta": 0,
+      "situacao": "Orçamento pendente",
       "limiteDefesa": "",
       "condutorId": "0eafaf84-8700-4d16-8295-25619305410b",
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-27T02:41:39.784Z",
-      "atualizadoEm": "2026-06-27T02:41:47.058Z",
+      "atualizadoEm": "2026-06-27T16:55:21.653Z",
       "origem": "manual"
     },
     {
@@ -956,7 +956,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-27T02:41:39.792Z",
-      "atualizadoEm": "2026-06-27T02:41:54.099Z",
+      "atualizadoEm": "2026-06-27T16:55:28.250Z",
       "origem": "manual"
     }
   ]

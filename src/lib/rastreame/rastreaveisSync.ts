@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import {
   editarVeiculo,
@@ -173,7 +173,7 @@ export async function pullRastreaveisFromRastreame(
 
 async function pushOneVeiculo(
   v: VeiculoRegistro,
-  ctx: { parceiros: Map<string, string>; dryRun: boolean },
+  ctx: { parceiros: Map<string, string>; rastreaveis: Rastreavel[]; dryRun: boolean },
 ): Promise<"criado" | "atualizado" | "inativado" | "ignorado" | "erro"> {
   const parceiro = parceirosNome(ctx.parceiros, v.id);
   const label = buildRastreavelLabel(v, parceiro);
@@ -194,6 +194,21 @@ async function pushOneVeiculo(
   }
 
   if (!v.rastreameRastreavelKey) {
+    const existente = ctx.rastreaveis.find((r) => {
+      const p = extrairPlacaDeRastreavel(String(r.value ?? ""));
+      return p != null && placasIguais(p, v.placa);
+    });
+    if (existente) {
+      const key = refKey(existente);
+      if (key) {
+        if (ctx.dryRun) {
+          console.log(`[push dry-run] link ${v.placa} → key=${key} (já no Rastreame)`);
+          return "criado";
+        }
+        marcarVeiculoRastreameSyncOk(v.id, key, label);
+        return "criado";
+      }
+    }
     if (ctx.dryRun) {
       console.log(`[push dry-run] POST ${v.placa} | ${label.slice(0, 70)}`);
       return "criado";
@@ -244,6 +259,7 @@ export async function pushRastreaveisToRastreame(
 
   const db = loadVeiculosDb();
   const parceiros = loadParceiroPorVeiculo();
+  const rastreaveis = await fetchAllRastreaveis();
   const candidatos = db.veiculos.filter((v) => isSyncRastreameEligible(v) || v.ativo === false);
 
   for (const v of candidatos) {
@@ -251,6 +267,7 @@ export async function pushRastreaveisToRastreame(
     try {
       const acao = await pushOneVeiculo(v, {
         parceiros,
+        rastreaveis,
         dryRun: opts.dryRun ?? false,
       });
       if (acao === "criado") result.criados++;

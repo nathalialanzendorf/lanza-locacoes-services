@@ -91,6 +91,12 @@ Varre `documentosRaiz` (`D:\Dropbox\Aluguel Carros`), pastas `DD.MM.AAAA - Nome`
 
 7. **Resultado** — Informar nome, CPF, `id` local e status no rastreame.
 
+## Idempotência
+
+- **Chave:** `cpf` (preferencial), depois CNH, depois `rastreameMotoristaKey`.
+- `merge-cliente` com mesmo CPF **atualiza**; não duplica.
+- Ver [`_idempotencia.md`](../_idempotencia.md).
+
 ## Critério de conclusão
 
 - Campos legíveis extraídos; confirmação antes de gravar.

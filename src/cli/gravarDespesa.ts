@@ -16,7 +16,8 @@ export function main(argv: string[]): void {
   });
 
   const aviso = r.aviso ? `  (${r.aviso})` : "";
+  const dup = r.acao === "sem_alteracao" ? " [já existia]" : "";
   console.log(
-    `Despesa gravada: ${r.registro.categoria} R$ ${r.registro.valor.toFixed(2)} em ${r.registro.data} -> ${r.registro.placa}${aviso}`,
+    `Despesa ${r.acao}: ${r.registro.categoria} R$ ${r.registro.valor.toFixed(2)} em ${r.registro.data} -> ${r.registro.placa}${dup}${aviso}`,
   );
 }

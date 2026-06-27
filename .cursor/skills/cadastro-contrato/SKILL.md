@@ -88,6 +88,12 @@ npx tsx src/run.ts cadastro-contrato gerar "relatorios/_dados_contrato_tmp.json"
 - `registrar-contrato` → `cadastro-contrato sincronizar`
 - `registrar-encerramento-contrato` → `cadastro-contrato encerrar` (motivo `devolvido` + quebra)
 
+## Idempotência
+
+- **`sincronizar`:** chave `pastaContrato` — reexecutar **atualiza** `contratos.json`, não duplica.
+- **`gerar`:** cria ficheiros Word/PDF; repetir pode sobrescrever na mesma pasta (confirmar com operador).
+- Ver [`_idempotencia.md`](../_idempotencia.md).
+
 ## Skills relacionadas
 
 - **cadastro-cliente**, **cadastro-veiculo** — onboarding antes de gerar.

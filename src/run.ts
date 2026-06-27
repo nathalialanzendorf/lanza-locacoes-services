@@ -17,6 +17,7 @@ Comandos:
   merge-cliente <cliente.json>
   gravar-despesa <categoria> <valor> <data> <placa> [descricao]
   sync-seguro <boletos.json> | sync-seguro --ano 2025 --ano 2026 [--out JSON]
+  sync-rastreador [--desde MM/AAAA] [--ate MM/AAAA] [--dry-run]
   montar-relatorio <entrada.json>
   rastreame check <cnh> [nome] | rastreame add <cliente.json>
   rastreame-gastos list [--page 0] [--size 50] | post <corpo.json> | put <id> <corpo.json>
@@ -55,6 +56,9 @@ Comandos:
       break;
     case "sync-seguro":
       await (await import("./cli/syncSeguro.js")).main(rest);
+      break;
+    case "sync-rastreador":
+      (await import("./cli/syncRastreador.js")).main(rest);
       break;
     case "montar-relatorio":
       (await import("./cli/montarRelatorio.js")).main(rest);
