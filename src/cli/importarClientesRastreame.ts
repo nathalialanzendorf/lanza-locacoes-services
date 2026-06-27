@@ -8,7 +8,7 @@ export async function main(argv: string[]): Promise<void> {
   importar-clientes-rastreame [--dry-run]
 
 Lista motoristas em rastreame.com.br (/keek/rest/motorista) e grava em database/clientes.json.
-Requer RASTREAME_AUTH (ou login/senha) no .env — ver .cursor/tools/rastreame/.
+Requer RASTREAME_AUTH (ou login/senha) nas variáveis de ambiente do utilizador — ver .cursor/tools/rastreame/.
 
 --dry-run  Mostra o que seria importado sem gravar.
 `);

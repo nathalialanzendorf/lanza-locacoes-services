@@ -25,7 +25,7 @@ Relatório: `relatorios/sync/_sync_infracoes.json`.
 
 ## Fluxo operacional
 
-1. Credenciais no `.env` (ver [README.md](README.md)).
+1. Credenciais nas variáveis de ambiente do utilizador (ver [README.md](README.md)).
 2. `--dry-run --placa X` em teste.
 3. Sync frota ou placa.
 4. Multas novas com `condutorConfirmado: false` → confirmar antes de cobrar.

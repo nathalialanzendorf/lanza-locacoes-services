@@ -46,7 +46,7 @@ Opções alternativas (debug / resposta já capturada):
   --ticket UUID --placa PLACA     resposta-consulta com ticket do DevTools
   --json arquivo.json --placa PLACA   processar JSON salvo (sem chamar API)
 
-Variáveis (.env): DETRAN_SC_AUTH, DETRAN_SC_EMPRESA [, DETRAN_SC_APP_VERSION]
+Variáveis de ambiente do utilizador: DETRAN_SC_AUTH, DETRAN_SC_EMPRESA [, DETRAN_SC_APP_VERSION]
 
 Sem --placa: percorre todos os veículos em database/veiculos.json (placa + renavam).
 `);

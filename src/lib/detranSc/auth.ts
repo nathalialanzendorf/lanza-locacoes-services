@@ -19,7 +19,7 @@ export function requireDetranScAuth(): string {
   const t = process.env.DETRAN_SC_AUTH?.trim();
   if (!t) {
     console.error(
-      "ERRO: defina DETRAN_SC_AUTH (Bearer JWT) no `.env` na raiz do repo (ver `.env.example`).",
+      "ERRO: defina DETRAN_SC_AUTH (Bearer JWT) nas variáveis de ambiente do utilizador/sistema — não use `.env` para credenciais.",
     );
     console.error(
       "Obter em servicos.detran.sc.gov.br → DevTools → Network → pedido com Authorization.",
@@ -33,7 +33,7 @@ export function requireDetranScEmpresa(): string {
   const e = process.env.DETRAN_SC_EMPRESA?.trim();
   if (!e) {
     console.error(
-      "ERRO: defina DETRAN_SC_EMPRESA (header X-Empresa) no `.env` (ver `.env.example`).",
+      "ERRO: defina DETRAN_SC_EMPRESA (header X-Empresa) nas variáveis de ambiente do utilizador/sistema.",
     );
     process.exit(2);
   }

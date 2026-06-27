@@ -41,7 +41,7 @@ Opções alternativas:
   --ticket UUID --placa PLACA
   --json arquivo.json --placa PLACA
 
-Variáveis (.env): DETRAN_SC_AUTH, DETRAN_SC_EMPRESA [, DETRAN_SC_APP_VERSION]
+Variáveis de ambiente do utilizador: DETRAN_SC_AUTH, DETRAN_SC_EMPRESA [, DETRAN_SC_APP_VERSION]
 `);
       return;
     }

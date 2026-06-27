@@ -85,7 +85,7 @@ export async function requireRastreameToken(): Promise<string> {
   const t = await fetchRastreameToken();
   if (!t) {
     console.error(
-      "ERRO: defina RASTREAME_AUTH (ou RASTREAME_LOGIN+RASTREAME_SENHA) no ambiente ou em `.env` na raiz do repo (ver `.env.example`).",
+      "ERRO: defina RASTREAME_AUTH (ou RASTREAME_LOGIN+RASTREAME_SENHA) nas variáveis de ambiente do utilizador/sistema — não use `.env` para credenciais (ver `.env.example` e scripts/set-rastreame-auth-user-env.ps1).",
     );
     process.exit(2);
   }

@@ -30,7 +30,7 @@ Mesma resposta API que **sync-infracoes**, destinos diferentes:
 
 ## Fluxo do agente
 
-1. Confirmar `.env` DETRAN (tool).
+1. Confirmar variáveis de ambiente do utilizador (DETRAN) — ver tool.
 2. **Teste:** `sync-ipva-licenciamento --dry-run --placa PLACA`.
 3. **Produção:** frota ou `--placa PLACA`.
 4. Revisar `relatorios/sync/_sync_ipva_licenciamento.json`.

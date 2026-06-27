@@ -4,15 +4,23 @@ Integração HTTP com [rastreame.com.br](https://rastreame.com.br/). Execução 
 
 Skills que **usam** esta tool: `cadastro-cliente`, `cadastro-recebimento`, `renegociar-debitos` (regras de negócio ficam nas skills).
 
-## Autenticação (`.env`)
+## Autenticação (variáveis de ambiente do utilizador)
+
+**Não** grave credenciais em `.env`. Defina no Windows (utilizador) ou no perfil do shell:
 
 | Variável | Uso |
 |----------|-----|
 | `RASTREAME_AUTH` | JWT → header `x-r2f-auth` (prioridade). Renovar via DevTools → Network. |
-| `RASTREAME_LOGIN` + `RASTREAME_SENHA` | Login automático alternativo. |
-| `RASTREAME_TLS_INSECURE=1` | Só diagnóstico se `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. |
+| `RASTREAME_LOGIN` + `RASTREAME_SENHA` | Alternativa: login automático para obter token. |
+| `RASTREAME_TLS_INSECURE=1` | Só diagnóstico TLS — pode ir no `.env` (não é credencial). |
 
-Ficheiro `.env` na raiz do repo (não versionado; ver `.env.example`). A CLI carrega-o quando `auth.ts` é importado — útil se o terminal do agente não herdar variáveis do Cursor.
+```powershell
+[Environment]::SetEnvironmentVariable("RASTREAME_AUTH", "<token>", "User")
+# ou
+.\scripts\set-rastreame-auth-user-env.ps1 -Token "<token>"
+```
+
+Feche e reabra o terminal (ou o Cursor) após alterar variáveis de utilizador.
 
 **Nunca** versionar tokens no Git.
 

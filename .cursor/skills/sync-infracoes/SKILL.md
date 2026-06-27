@@ -30,7 +30,7 @@ Skill de **negócio**: trazer multas e infrações do **DETRAN SC** para `databa
 
 ## Fluxo do agente
 
-1. Confirmar `.env`: `DETRAN_SC_AUTH`, `DETRAN_SC_EMPRESA` (tool DETRAN).
+1. Confirmar variáveis de ambiente do utilizador: `DETRAN_SC_AUTH`, `DETRAN_SC_EMPRESA` (tool DETRAN).
 2. **Teste:** `sync-infracoes --dry-run --placa PLACA`.
 3. **Produção:** frota ou `--placa PLACA`.
 4. Revisar `relatorios/sync/_sync_infracoes.json`.

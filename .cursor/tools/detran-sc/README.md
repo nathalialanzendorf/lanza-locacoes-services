@@ -11,13 +11,15 @@ Dois comandos CLI (mesma auth, destinos diferentes):
 
 Referência API: [reference.md](reference.md)
 
-## Autenticação (`.env`)
+## Autenticação (variáveis de ambiente do utilizador)
 
 | Variável | Uso |
 |----------|-----|
 | `DETRAN_SC_AUTH` | JWT Bearer (sem prefixo `Bearer` no valor) |
 | `DETRAN_SC_EMPRESA` | Header `X-Empresa` |
-| `DETRAN_SC_APP_VERSION` | Opcional — header `X-App-Version` |
+| `DETRAN_SC_APP_VERSION` | Opcional — header `X-App-Version` (pode ir no `.env`) |
+
+Defina `DETRAN_SC_AUTH` e `DETRAN_SC_EMPRESA` nas variáveis de ambiente do utilizador — **não** em `.env`.
 
 Token expira (~5 h). **Nunca** versionar no Git.
 

@@ -1,6 +1,7 @@
 /**
  * Carrega `REPO_ROOT/.env` em `process.env` (só chaves ainda não definidas).
- * Útil quando o terminal não herda variáveis definidas só na UI do Cursor.
+ * Credenciais (tokens, login/senha) **não** são lidas daqui — use variáveis de
+ * ambiente do utilizador/sistema (Windows: variáveis de ambiente do utilizador).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +9,15 @@ import path from "node:path";
 import { REPO_ROOT } from "./repoRoot.js";
 
 let loaded = false;
+
+/** Chaves que nunca devem vir do ficheiro `.env` (só `process.env` do SO). */
+const CREDENTIAL_KEYS = new Set([
+  "RASTREAME_AUTH",
+  "RASTREAME_LOGIN",
+  "RASTREAME_SENHA",
+  "DETRAN_SC_AUTH",
+  "DETRAN_SC_EMPRESA",
+]);
 
 export function loadLocalEnv(): void {
   if (loaded) return;
@@ -21,6 +31,7 @@ export function loadLocalEnv(): void {
     const eq = t.indexOf("=");
     if (eq <= 0) continue;
     const key = t.slice(0, eq).trim();
+    if (CREDENTIAL_KEYS.has(key)) continue;
     let val = t.slice(eq + 1).trim();
     if (
       (val.startsWith('"') && val.endsWith('"')) ||
