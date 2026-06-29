@@ -22,6 +22,22 @@ function brl(v: number): string {
   });
 }
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+type ValorItem = { descricao: string; valor: number };
+
+/** Lê `itens` de um campo (ganho / descontoManutencao) — [] se ausente. */
+function lerItens(x: unknown): ValorItem[] {
+  const arr = (x as { itens?: unknown })?.itens;
+  if (!Array.isArray(arr)) return [];
+  return arr.map((i) => ({
+    descricao: String((i as ValorItem)?.descricao ?? ""),
+    valor: Number((i as ValorItem)?.valor) || 0,
+  }));
+}
+
 function norm(p: string): string {
   return String(p || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
@@ -133,9 +149,9 @@ export function main(argv: string[]): void {
     particular: boolean;
     gastos: GastoDados[];
     subtotalGastos: number;
-    ganho: { valor: number; descricao: string };
+    ganho: { valor: number; descricao: string; itens: ValorItem[] };
     devidoMesAnterior: number;
-    descontoManutencao: { valor: number; descricao: string };
+    descontoManutencao: { valor: number; descricao: string; itens: ValorItem[] };
     totalDescontos: number;
     total: number;
     pendencias: GastoDados[];
@@ -192,15 +208,24 @@ export function main(argv: string[]): void {
 
       gastos.sort((a, b) => String(a.data ?? "").localeCompare(String(b.data ?? "")));
       const soma = gastos.reduce((s, d) => s + Number(d.valor), 0);
-      const ganho = (item as { ganho?: { valor?: number; descricao?: string } }).ganho ?? {};
-      const gval = Number(ganho.valor ?? 0) || 0;
+      const ganho =
+        (item as { ganho?: { valor?: number; descricao?: string; itens?: unknown } }).ganho ??
+        {};
+      const ganhoItens = lerItens(ganho);
+      const gval = ganhoItens.length
+        ? round2(ganhoItens.reduce((s, i) => s + i.valor, 0))
+        : Number(ganho.valor ?? 0) || 0;
       const devido = Number((item as { devidoMesAnterior?: number }).devidoMesAnterior ?? 0) || 0;
       const desc =
-        (item as { descontoManutencao?: { valor?: number; descricao?: string } })
-          .descontoManutencao ?? {};
-      const dval = Number(desc.valor ?? 0) || 0;
-      const totalDescontos = soma + devido + dval;
-      const total = gval - totalDescontos;
+        (item as {
+          descontoManutencao?: { valor?: number; descricao?: string; itens?: unknown };
+        }).descontoManutencao ?? {};
+      const manutItens = lerItens(desc);
+      const dval = manutItens.length
+        ? round2(manutItens.reduce((s, i) => s + i.valor, 0))
+        : Number(desc.valor ?? 0) || 0;
+      const totalDescontos = round2(soma + devido + dval);
+      const total = round2(gval - totalDescontos);
 
       const modelo = modeloCurto(String(v.marcaModelo ?? ""));
       const ano = anoCurto(String(v.anoModelo ?? ""));
@@ -213,14 +238,21 @@ export function main(argv: string[]): void {
         L.push(`• ${d.data} — ${d.descricao} — R$ ${brl(Number(d.valor))}`);
       }
       L.push(`💰 Subtotal gastos: R$ ${brl(soma)}`, "");
-      L.push(
-        `💵 Ganho: R$ ${brl(gval)}` +
-          (ganho.descricao ? ` (${ganho.descricao})` : ""),
-      );
+      if (ganhoItens.length) {
+        L.push(`💵 Ganho: R$ ${brl(gval)}`);
+        for (const it of ganhoItens) L.push(`   • ${it.descricao}`);
+      } else {
+        L.push(`💵 Ganho: R$ ${brl(gval)}` + (ganho.descricao ? ` (${ganho.descricao})` : ""));
+      }
       L.push(`➖ Desconto mês anterior: R$ ${brl(devido)}`);
-      let dm = `🔧 Desconto manutenção: R$ ${brl(dval)}`;
-      if (desc.descricao) dm += ` (${desc.descricao})`;
-      L.push(dm);
+      if (manutItens.length) {
+        L.push(`🔧 Desconto manutenção: R$ ${brl(dval)}`);
+        for (const it of manutItens) L.push(`   • ${it.descricao}`);
+      } else {
+        let dm = `🔧 Desconto manutenção: R$ ${brl(dval)}`;
+        if (desc.descricao) dm += ` (${desc.descricao})`;
+        L.push(dm);
+      }
       L.push(`➖ Total descontos: R$ ${brl(totalDescontos)}`);
       L.push("", `✅ *TOTAL: R$ ${brl(total)}*`);
 
@@ -282,9 +314,13 @@ export function main(argv: string[]): void {
           valor: Number(d.valor) || 0,
         })),
         subtotalGastos: soma,
-        ganho: { valor: gval, descricao: String(ganho.descricao ?? "") },
+        ganho: { valor: gval, descricao: String(ganho.descricao ?? ""), itens: ganhoItens },
         devidoMesAnterior: devido,
-        descontoManutencao: { valor: dval, descricao: String(desc.descricao ?? "") },
+        descontoManutencao: {
+          valor: dval,
+          descricao: String(desc.descricao ?? ""),
+          itens: manutItens,
+        },
         totalDescontos,
         total,
         pendencias: pendencias.map((d) => ({

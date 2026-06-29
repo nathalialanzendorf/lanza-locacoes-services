@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-06-28",
+  "atualizadoEm": "2026-06-29",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -3853,6 +3853,182 @@
       "valor": 114.09,
       "competencia": "07/2026",
       "origem": "detran-rs/debitos/PWH3A45/Licenciamento/2026"
+    },
+    {
+      "id": "d72137c9-4d70-49f5-9d18-c15b201447ca",
+      "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+      "placa": "AVU-6740",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/AVU6740/07-2026"
+    },
+    {
+      "id": "1040c0fb-7659-4d32-89c7-68723de5b707",
+      "veiculoId": "77c7be82-a74d-4895-8466-5ecbadf10989",
+      "placa": "BBV-6A91",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/BBV6A91/07-2026"
+    },
+    {
+      "id": "241cd7da-8b15-410a-a0af-0b42019c4eff",
+      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+      "placa": "MKV-6268",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/MKV6268/07-2026"
+    },
+    {
+      "id": "2aa1815d-26e1-48ed-8095-4b5e8ab60ffe",
+      "veiculoId": "359000ba-3b11-4d88-be89-94bb583e4e0d",
+      "placa": "MLN-0B87",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/MLN0B87/07-2026"
+    },
+    {
+      "id": "b5e7a12c-d0ac-47b8-916d-bd160e8f1af3",
+      "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+      "placa": "PWH-3A45",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/PWH3A45/07-2026"
+    },
+    {
+      "id": "1ed37940-4acc-4d30-8935-17ea4ad0de61",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/IWP5G63/07-2026"
+    },
+    {
+      "id": "3d8f0da1-ff88-465a-98cd-46b259a894f9",
+      "veiculoId": "6339e116-b95a-43e7-8d48-f01b63201dd3",
+      "placa": "MLX-2H34",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/MLX2H34/07-2026"
+    },
+    {
+      "id": "bc572a9b-8a37-4fa5-bdfc-a8a23effe294",
+      "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+      "placa": "IXT-7I93",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/IXT7I93/07-2026"
+    },
+    {
+      "id": "12e9ddc8-4979-4045-911b-810cbef2984b",
+      "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+      "placa": "RAH-4F54",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/RAH4F54/07-2026"
+    },
+    {
+      "id": "e6901034-66da-44a6-9ab4-600700b5fd97",
+      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+      "placa": "IYR-8F19",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/IYR8F19/07-2026"
+    },
+    {
+      "id": "e3225b7b-9f63-407c-ac85-4650eb3c38ea",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/QJB0I83/07-2026"
+    },
+    {
+      "id": "00b3491f-459f-499a-932e-155867577a10",
+      "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+      "placa": "MLW-7I09",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/MLW7I09/07-2026"
+    },
+    {
+      "id": "6849f083-ef5b-4dcb-808b-66eb4d2e4a1d",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/FHG0B73/07-2026"
+    },
+    {
+      "id": "9741dd8e-b6c3-4221-892d-20036475b343",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/OZC0B50/07-2026"
+    },
+    {
+      "id": "6f5a6740-2c45-44b0-b1d7-51f9b2f4cb4c",
+      "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+      "placa": "OWN-3C59",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/OWN3C59/07-2026"
+    },
+    {
+      "id": "ad1ba5b5-e039-4c54-a091-1dd514ae6148",
+      "veiculoId": "c83e65be-1516-42b2-a94a-95de4ab204ab",
+      "placa": "RLA-1G81",
+      "categoria": "Rastreador",
+      "descricao": "Rastreador",
+      "data": "10/07/2026",
+      "valor": 50,
+      "competencia": "07/2026",
+      "origem": "rastreador-fixo/RLA1G81/07-2026"
     }
   ]
 }

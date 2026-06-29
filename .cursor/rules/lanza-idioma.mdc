@@ -1,0 +1,12 @@
+---
+description: Idioma das respostas do agente no projeto Lanza (sempre português)
+alwaysApply: true
+---
+
+# Idioma — sempre português (PT-BR)
+
+- **Responder SEMPRE em português** (PT-BR) ao utilizador, independentemente do idioma da pergunta, dos comentários no código ou da documentação consultada.
+- Vale para **toda** a comunicação visível: mensagens de chat, explicações, resumos, planos, listas de tarefas (todos), perguntas de esclarecimento, descrições de ações e mensagens de erro reformuladas.
+- Mantém-se mesmo que o utilizador escreva noutro idioma (inglês, espanhol, etc.): a resposta continua em português.
+- **Não traduzir** o que deve permanecer no original: nomes de ficheiros, caminhos, comandos, identificadores de código, nomes de variáveis/funções, mensagens de commit existentes e citações literais de logs/erros.
+- Mensagens de commit e conteúdo escrito em ficheiros do repositório seguem a convenção já existente do projeto; esta regra trata apenas da **resposta ao utilizador**.

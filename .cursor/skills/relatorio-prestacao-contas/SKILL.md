@@ -76,6 +76,35 @@ Regras do lembrete (`montar-relatorio`):
 
 Para cada veículo, confirmar se ficou locado o mês todo, devolução em data X, ou parado. **Sugestão:** inferir de pastas `DD.MM.AAAA - cliente` em `contratosDir` (`config/lanza_paths.json`, padrão `D:\Dropbox\Aluguel Carros`) e cláusula 1.2 dos contratos; validar com o usuário.
 
+### Linha do tempo `database/locacoes.json`
+
+Quando existir, **consultar `database/locacoes.json`** (CLI `locacoes`, lib `src/lib/locacoesDb.ts`) como **fonte do período de uso** de cada veículo no mês. Cada registro tem `situacao` (**reserva | manutencao | locado**), `inicio`/`fim` (DD/MM/AAAA, `fim` vazio = vigente), e — só quando `locado` — `tipoLocacao` (diaria|semanal|mensal), `valorCobrado` (por unidade, cobrado do cliente) e `valorPago` (por unidade, repassado ao parceiro). A diferença `valorCobrado − valorPago` é a **taxa de controle** da locadora (tipicamente **R$ 150/semana** em veículo de parceiro).
+
+Como cada `situacao` afeta o relatório do mês:
+
+- **`locado`** → conta para o **ganho** do veículo no período. O ganho do relatório usa o **`valorPago`** (o que o parceiro recebe), **não** o `valorCobrado`.
+- **`manutencao`** → veículo **parado**: as diárias do período **não** rendem ao parceiro e são **descontadas** (alimenta `descontoManutencao`), valorizadas pela **diária do `valorPago`** (`valorPago` ÷ dias da unidade).
+- **`reserva`** → outro veículo entregue no lugar de um em manutenção (`substituiPlaca`/`substituiVeiculoId` aponta o substituído): entra no **ganho** do veículo reserva pelo seu **`valorPago`**. Útil para **troca de veículo por manutenção** sem confundir os contratos.
+
+### Formato das linhas (regras fixas)
+
+O `montar-relatorio` aceita, em `ganho` e `descontoManutencao`, um array **`itens`** `[{descricao, valor}]` (o total é a soma dos `valor`). Regras de texto — o comando `locacoes sugerir` já gera assim:
+
+- **Ganho:** uma linha por segmento, com a palavra da unidade **por extenso** (`semana`/`semanas`, `diária`/`diárias`), o **período** (`DD/MM até DD/MM`) e a taxa (`R$ X/sem`). **Nunca incluir o nome do cliente.** Locado e reserva são linhas separadas. Ex.:
+  - `3 semanas locado 01/06 até 21/06 (R$ 500,00/sem)`
+  - `1 semana reserva 22/06 até 28/06 (R$ 500,00)`
+- **Desconto manutenção:** **uma linha por registro** de manutenção (não agregar), com dias + período + valor. Ex.:
+  - `7 diárias parado 01/06 até 07/06 (R$ 500,00)`
+  - `1 diária parado 10/06 (R$ 71,43)`
+
+Usar o comando de **sugestão** (skill **cadastro-locacao**) para agregar a tabela no período e obter ganho/desconto/diárias por veículo; **validar com o utilizador** antes de montar o `entrada.json`:
+
+```bash
+npx tsx src/run.ts locacoes sugerir --competencia MM/AAAA [--placa PLACA]
+```
+
+A skill continua só-leitura para o relatório. Cadastro/edição dos períodos é feito via `npx tsx src/run.ts locacoes add|listar|excluir` (ver `locacoes --help`).
+
 ## Validação
 
 - Conferir **Seguro** na competência (avisar se faltar, exceto parceiros da lista sem seguro).
@@ -89,7 +118,7 @@ Montar `entrada.json` e rodar:
 npx tsx src/run.ts montar-relatorio "relatorios/_entrada_tmp.json"
 ```
 
-Exemplo:
+Exemplo (formato itemizado — `itens` é somado; **sem nome de cliente**):
 
 ```json
 {
@@ -98,13 +127,21 @@ Exemplo:
   "periodo": {"inicio": "01/06/2026", "fim": "30/06/2026"},
   "rastreadorDia": 10,
   "veiculos": [
-    {"placa":"MLN-0B87",
-     "ganho":{"valor":2000.0,"descricao":"4 semanas"},
+    {"placa":"RYC-7C32",
+     "ganho":{"itens":[
+       {"descricao":"3 semanas locado 01/06 até 21/06 (R$ 500,00/sem)","valor":1500},
+       {"descricao":"1 semana reserva 22/06 até 28/06 (R$ 500,00)","valor":500}
+     ]},
      "devidoMesAnterior":0,
-     "descontoManutencao":{"valor":0,"descricao":""}}
+     "descontoManutencao":{"itens":[
+       {"descricao":"7 diárias parado 01/06 até 07/06 (R$ 500,00)","valor":500.0},
+       {"descricao":"1 diária parado 10/06 (R$ 71,43)","valor":71.43}
+     ]}}
   ]
 }
 ```
+
+> Forma simples (sem detalhamento) ainda funciona: `"ganho":{"valor":2000,"descricao":"4 semanas"}` e `"descontoManutencao":{"valor":0,"descricao":""}`.
 
 Saída: `Financeiro/prestação de contas/MM.AAAA/<Parceiro>.txt` por defeito (ver `financeiro` + `prestacaoContasSubpasta` em `config/lanza_paths.json`; se o JSON não existir, cai no legado `prestação de contas/` na raiz do repo).
 
@@ -116,10 +153,10 @@ Além dos `.txt` por parceiro, cada execução grava um **JSON consolidado** em 
 
 - **Local do arquivo:** `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/prestacao-{parceiro}-{MM-AAAA}.canvas.tsx` (um canvas por parceiro, ou um com seletor; kebab-case; só o IDE detecta nesse diretório).
 - **Dados:** leia o JSON e **embuta inline**; importe **só** de `cursor/canvas`; sem rede/imports relativos; cores via `useHostTheme()`.
-- **Conteúdo:** cabeçalho (parceiro, competência, período). Por veículo: tabela de **gastos** (data, descrição, **valor R$**) com subtotal; linha de **ganho**, **desconto mês anterior**, **desconto manutenção** e **TOTAL** em destaque. Bloco **CONSOLIDADO** do parceiro (total descontos, total ganhos, **total líquido**). Se houver, secção **⚠️ Pendências vencidas (lembrete)** — claramente marcada como **não somada** ao total. Omita seções vazias.
+- **Conteúdo:** cabeçalho (parceiro, competência, período). Por veículo: tabela de **gastos** (data, descrição, **valor R$**) com subtotal; **ganho** e **desconto manutenção** com as **sub-linhas de `itens`** (mesmo texto do `.txt`); **desconto mês anterior**; e **TOTAL** em destaque. Bloco **CONSOLIDADO** do parceiro (total descontos, total ganhos, **total líquido**). Se houver, secção **⚠️ Pendências vencidas (lembrete)** — claramente marcada como **não somada** ao total. Omita seções vazias.
 - Sem slop (sem gradiente, emoji como ícone, sombra); rótulos claros com `R$`; o líquido é o número de destaque.
 - Ao terminar, mencione o canvas com link markdown para o caminho do `.canvas.tsx`.
 
 ## Skills relacionadas
 
-- **sync-seguro**, **cadastro-despesa**
+- **sync-seguro**, **cadastro-despesa**, **cadastro-locacao** (sugestão de ganho/desconto/diárias a partir de `locacoes.json`)

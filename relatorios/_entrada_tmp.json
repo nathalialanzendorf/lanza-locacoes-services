@@ -1,0 +1,24 @@
+{
+  "competencia": "06/2026",
+  "rotulo": "Relatório de prestação de contas — junho/2026 (Nivus — TESTE)",
+  "periodo": { "inicio": "01/06/2026", "fim": "30/06/2026" },
+  "rastreadorDia": 10,
+  "veiculos": [
+    {
+      "placa": "RYC-7C32",
+      "ganho": {
+        "itens": [
+          { "descricao": "3 semanas locado 01/06 até 21/06 (R$ 500,00/sem)", "valor": 1500 },
+          { "descricao": "1 semana reserva 22/06 até 28/06 (R$ 500,00)", "valor": 500 }
+        ]
+      },
+      "devidoMesAnterior": 0,
+      "descontoManutencao": {
+        "itens": [
+          { "descricao": "7 diárias parado 01/06 até 07/06 (R$ 500,00)", "valor": 500.0 },
+          { "descricao": "1 diária parado 10/06 (R$ 71,43)", "valor": 71.43 }
+        ]
+      }
+    }
+  ]
+}

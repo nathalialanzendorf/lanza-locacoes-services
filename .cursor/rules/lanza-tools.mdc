@@ -11,9 +11,10 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 
 | Área | Skills |
 |------|--------|
-| Cadastro / contrato | `cadastro-cliente`, `cadastro-veiculo`, `cadastro-despesa`, `cadastro-recebimento`, `cadastro-contrato` |
+| Cadastro / contrato | `cadastro-cliente`, `cadastro-veiculo`, `cadastro-despesa`, `cadastro-recebimento`, `cadastro-contrato`, `cadastro-locacao` |
 | Relatórios | `relatorio-encerramento-contrato`, `relatorio-prestacao-contas` |
 | Sync | `sync-infracoes`, `sync-ipva-licenciamento`, `sync-seguro`, `importar-boletos-seguro` |
+| Triagem | `triagem-locatario` (antecedentes criminais / processos — fontes gratuitas) |
 | Outros | `renegociar-debitos` |
 
 ## Tools (`.cursor/tools/` + `src/`)
@@ -27,8 +28,29 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 | **DETRAN RS** | `.cursor/tools/detran-rs/` | CLI **`sync-detran-rs`** — IPVA/Licenciamento de veículos `ufRegistro="RS"` |
 | **FIPE** | `.cursor/tools/fipe/` | Skill **`cadastro-veiculo`** (consulta/preenchimento FIPE) |
 | **Pedágio Digital** | `.cursor/tools/pedagio-digital/` | Skill **`sync-pedagios`** (passagens em aberto) e **`cadastro-veiculo`** (cadastrar placa) |
+| **CNJ BNMP** | `.cursor/tools/cnj-bnmp/` | Skill **`triagem-locatario`** (mandados/procurados por nome) |
+| **PF Antecedentes (SINIC)** | `.cursor/tools/pf-antecedentes/` | Skill **`triagem-locatario`** (antecedentes criminais nacionais por CPF) |
+| **TJSC Certidões** | `.cursor/tools/tjsc-certidoes/` | Skill **`triagem-locatario`** (certidão criminal estadual — passo assistido) |
 
 Índice: `.cursor/tools/README.md`.
+
+## Triagem de locatário (Chrome real, fontes gratuitas)
+
+- A skill **`triagem-locatario`** consulta **antecedentes criminais e processos**
+  em fontes públicas **gratuitas** via **Chrome real** (mesmo padrão do solver
+  DETRAN SC): o operador resolve captcha/login na janela e o harness CDP captura
+  o resultado. **Não** usa solver pago.
+- Fontes: **CNJ BNMP** (mandados por nome), **PF SINIC** (antecedentes nacionais
+  por CPF → PDF) e **TJSC** (certidão criminal estadual — **assistido**, volta
+  por e-mail). Código em `src/lib/triagem/`; CLI `triagem-locatario`.
+- **LGPD:** antecedentes/processos são dados sensíveis de terceiros — a CLI
+  **recusa** rodar sem `--base-legal` (ex.: consentimento do locatário). A base
+  legal fica gravada no relatório (`relatorios/triagem/`).
+- **Histórico:** cada triagem é gravada em `database/triagem.json` (módulo
+  `src/lib/triagem/triagemDb.ts`), idempotente por `cpf`+data, com vínculo
+  `clienteId`. Consultar com `triagem-locatario --listar [--cpf] [--com-alerta]`.
+- **Homônimos:** BNMP/TJSC buscam por **nome** — sempre conferir CPF/nascimento
+  antes de concluir; o "protocolo" da PF não é prova de condenação.
 
 ## Regra geral dos syncs (ativos)
 

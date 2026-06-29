@@ -1,0 +1,22 @@
+{
+  "descricao": "Histórico de triagens de locatário (antecedentes criminais / processos). id = uuid; chave natural cpf + dataConsulta (1 por dia). clienteId -> clientes.json. Detalhe completo (achados) fica nos relatórios em relatorios/triagem/. Gerado pela skill triagem-locatario; NÃO contém dados de terceiros sem base legal registrada (LGPD).",
+  "atualizadoEm": "2026-06-29",
+  "schemaTriagem": {
+    "id": "uuid",
+    "clienteId": "uuid -> clientes.json (null se o CPF não está cadastrado)",
+    "cpf": "CPF só dígitos (11)",
+    "cpfFormatado": "000.000.000-00",
+    "nome": "Nome civil consultado",
+    "nascimento": "DD/MM/AAAA",
+    "dataConsulta": "AAAA-MM-DD — data da triagem (chave natural com cpf)",
+    "lgpd": "{ baseLegal, titularConsentimento, solicitante, finalidade }",
+    "alertaGeral": "true se alguma fonte sinalizou risco",
+    "resumo": "Conclusão automática (texto)",
+    "fontes": "[] resumo por fonte: { id, nome, status, alerta, observacao, qtdAchados, evidencia, consultadoEm }",
+    "relatorioJson": "Caminho (relativo ao repo) do relatório .json completo",
+    "relatorioMd": "Caminho (relativo ao repo) do resumo .md",
+    "cadastradoEm": "ISO 8601",
+    "atualizadoEm": "ISO 8601"
+  },
+  "triagens": []
+}

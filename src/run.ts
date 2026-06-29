@@ -42,6 +42,7 @@ Comandos:
   sync-infracoes [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]  (infrações; roteia RS p/ tool detran-rs)
   sync-ipva-licenciamento [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]  (IPVA/Lic.; roteia RS p/ tool detran-rs)
   inicio-locacoes <derivar|listar> [--sobrescrever] [--dry-run]
+  locacoes <add|listar|excluir> [opções]   (períodos de locação/reserva/manutenção por veículo)
   sync-pedagios [--placa PLACA] [--dry-run] [--json resposta.json]
   pedagio-digital register --placa PLACA [--modelo X] | veiculos | passagens --placa PLACA [--status aberto|pago]
   sync-gastos-gerais [--dry-run] [--pull-only] [--push-only] [--force-pull] [--motorista KEY]  (alias: sync-recebimentos)
@@ -50,6 +51,8 @@ Comandos:
   sync-motoristas [--dry-run] [--pull-only] [--push-only] [--force-pull]
   renegociar-debitos resumo --motorista <key> --rastreavel <key>
   renegociar-debitos <entrada.json> [--execute]
+  triagem-locatario --cpf CPF --nome "NOME" --nascimento DD/MM/AAAA --base-legal "TEXTO" [--bnmp|--pf|--tjsc] [--timeout-min N] [--sem-browser] [--out] [--json]  (antecedentes/processos em Chrome real; exige base legal LGPD; grava em database/triagem.json)
+  triagem-locatario --listar [--cpf CPF] [--com-alerta] [--json]  (histórico de triagens gravadas)
 `);
     process.exit(cmd ? 0 : 1);
   }
@@ -155,6 +158,10 @@ Comandos:
     case "inicio-locacoes":
       await (await import("./cli/inicioLocacoes.js")).main(rest);
       break;
+    case "locacoes":
+    case "locacao":
+      (await import("./cli/locacoes.js")).main(rest);
+      break;
     case "sync-ipva-licenciamento":
       await (await import("./cli/syncIpvaLicenciamento.js")).main(rest);
       break;
@@ -198,6 +205,9 @@ Comandos:
       break;
     case "renegociar-debitos":
       await (await import("./cli/renegociarDebitos.js")).main(rest);
+      break;
+    case "triagem-locatario":
+      await (await import("./cli/triagemLocatario.js")).main(rest);
       break;
     default:
       console.error("Comando desconhecido:", cmd);
