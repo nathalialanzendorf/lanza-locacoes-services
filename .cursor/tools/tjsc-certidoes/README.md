@@ -3,7 +3,7 @@
 Emissão de **certidão criminal estadual** do Tribunal de Justiça de Santa
 Catarina, pelo sistema de certidões do PJSC
 ([certidoes.tjsc.jus.br](https://certidoes.tjsc.jus.br/)). Abrangência **estadual
-(SC)**. Usada pela skill **triagem-locatario** como **passo assistido/manual**.
+(SC)**. Usada pela skill **relatorio-analise-cadastro** como **passo assistido/manual**.
 
 Por que assistido (não automatizado):
 
@@ -14,9 +14,9 @@ Por que assistido (não automatizado):
 
 Referência técnica: [reference.md](reference.md)
 
-## Como a triagem usa
+## Como a análise de cadastro usa
 
-`src/lib/triagem/tjsc.ts` (via `src/run.ts triagem-locatario`):
+`src/lib/analiseCadastro/tjsc.ts` (via `src/run.ts relatorio-analise-cadastro`):
 
 1. Abre `https://certidoes.tjsc.jus.br/` no Chrome real.
 2. Orienta o operador a logar no gov.br, abrir **Certidões → Requisição**,
@@ -34,5 +34,6 @@ Referência técnica: [reference.md](reference.md)
 
 ## LGPD
 
-Dados criminais de terceiros: a triagem só roda com **base legal** registrada
-(ver skill `triagem-locatario`). Uso restrito à finalidade de triagem.
+Dados criminais de terceiros: a análise de cadastro só roda com **base legal**
+registrada (ver skill `relatorio-analise-cadastro`). Uso restrito à finalidade de
+análise de cadastro.

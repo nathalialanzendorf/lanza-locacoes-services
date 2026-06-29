@@ -51,8 +51,8 @@ Comandos:
   sync-motoristas [--dry-run] [--pull-only] [--push-only] [--force-pull]
   renegociar-debitos resumo --motorista <key> --rastreavel <key>
   renegociar-debitos <entrada.json> [--execute]
-  triagem-locatario --cpf CPF --nome "NOME" --nascimento DD/MM/AAAA --base-legal "TEXTO" [--bnmp|--pf|--tjsc] [--timeout-min N] [--sem-browser] [--out] [--json]  (antecedentes/processos em Chrome real; exige base legal LGPD; grava em database/triagem.json)
-  triagem-locatario --listar [--cpf CPF] [--com-alerta] [--json]  (histórico de triagens gravadas)
+  relatorio-analise-cadastro --cpf CPF --nome "NOME" --nascimento DD/MM/AAAA --base-legal "TEXTO" [--bnmp|--pf|--tjsc] [--aprovar|--reprovar] [--cliente id|cpf] [--timeout-min N] [--sem-browser] [--out] [--json]  (antecedentes/processos em Chrome real; exige base legal LGPD; grava em database/analise-cadastro.json e espelha no cliente)
+  relatorio-analise-cadastro --listar [--cpf CPF] [--com-alerta] [--json]  (histórico de análises de cadastro gravadas)
 `);
     process.exit(cmd ? 0 : 1);
   }
@@ -206,8 +206,8 @@ Comandos:
     case "renegociar-debitos":
       await (await import("./cli/renegociarDebitos.js")).main(rest);
       break;
-    case "triagem-locatario":
-      await (await import("./cli/triagemLocatario.js")).main(rest);
+    case "relatorio-analise-cadastro":
+      await (await import("./cli/relatorioAnaliseCadastro.js")).main(rest);
       break;
     default:
       console.error("Comando desconhecido:", cmd);

@@ -3709,7 +3709,8 @@
       "data": "28/02/2026",
       "valor": 2931.17,
       "competencia": "02/2026",
-      "origem": "detran-sc/debitos/RYC7C32/IPVA/647793430"
+      "origem": "detran-sc/debitos/RYC7C32/IPVA/647793430",
+      "baixa": "29/06/2026"
     },
     {
       "id": "ffa8fbc0-9a84-4ff5-96f0-351c54b00faf",

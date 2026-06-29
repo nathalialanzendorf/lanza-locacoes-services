@@ -56,7 +56,7 @@ Resposta típica do Spring (`Page`): objeto com `content[]` (as peças) +
 - órgão expedidor, município, UF.
 - tipificação penal / síntese da decisão.
 
-O parser de `src/lib/triagem/bnmp.ts` faz **autodetecção** do array de itens
+O parser de `src/lib/analiseCadastro/bnmp.ts` faz **autodetecção** do array de itens
 (`content`/`resultados`/`itens`/`dados`/`pecas`/`mandados`) e achata os campos
 de pessoa, de forma tolerante a variações.
 

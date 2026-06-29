@@ -25,10 +25,10 @@ App público: `https://servicos.pf.gov.br/epol-sinic-publico/`
 Como o resultado é um **PDF** (e não JSON), a triagem **não** chama endpoint:
 
 1. `Browser.setDownloadBehavior` aponta os downloads para
-   `relatorios/_tmp/triagem/downloads/` (feito pelo harness `browser.ts`).
+   `relatorios/_tmp/analise-cadastro/downloads/` (feito pelo harness `browser.ts`).
 2. Após o operador emitir, o harness aguarda o **download concluído**
    (`Browser.downloadWillBegin` / `downloadProgress state=completed`).
-3. `src/lib/triagem/pfSinic.ts` lê o PDF e faz **parse** com `pdf-parse`,
+3. `src/lib/analiseCadastro/pfSinic.ts` lê o PDF e faz **parse** com `pdf-parse`,
    classificando o texto:
    - `NADA CONSTA` → sem alerta.
    - presença de "protocolo" / "consta" / "compareça" → alerta (verificação

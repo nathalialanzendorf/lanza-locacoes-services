@@ -11,12 +11,13 @@ import {
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
+import { RELATORIOS_COBRANCAS_DIR } from "./relatoriosPaths.js";
 
 /** Pasta com os modelos de mensagem (um arquivo .txt por cobrança). */
 export const TEMPLATES_DIR = path.join(REPO_ROOT, "templates", "cobrancas");
 
-/** Onde os textos gerados são salvos. */
-export const COBRANCAS_OUT_DIR = path.join(REPO_ROOT, "relatorios", "cobrancas");
+/** Onde os textos gerados são salvos (`relatorios/_tmp/cobrancas/`). */
+export const COBRANCAS_OUT_DIR = RELATORIOS_COBRANCAS_DIR;
 
 export type TipoCobranca = "semanal" | "estacionamento" | "pedagio" | "multa";
 

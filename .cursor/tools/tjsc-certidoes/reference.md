@@ -9,7 +9,20 @@ Portais:
 
 - **Login gov.br** nível **prata**+ é obrigatório.
 - Além do gov.br, é preciso ter **credencial externa** no PJSC vinculada ao
-  **mesmo CPF** da conta gov.br.
+  **mesmo CPF/CNPJ** da conta gov.br.
+
+### Solicitante PESSOA JURÍDICA (CNPJ da Lanza)
+
+- O **solicitante** da certidão é **quem está logado no gov.br** — não há campo
+  nem seletor de "Perfis" na tela de requisição para trocar para a empresa
+  (confirmado em inspeção: a conta PF aparece como "Perfis: solicitante", sem
+  opção de PJ).
+- Para a requisição sair em nome da **LANZA LOCAÇÕES (CNPJ)**, logar no gov.br
+  com o **certificado digital e-CNPJ** da empresa. Alternativa: cadastrar o
+  operador como **representante do CNPJ** no gov.br (procuração eletrônica) e
+  logar como representante.
+- Dados de contato padrão da requisição: e-mail `lanza.locacoes@gmail.com`,
+  telefone `4898834442` (constante `TELEFONE_CONTATO_LANZA` em `tjsc.ts`).
 
 ## Emissão (certidão criminal)
 

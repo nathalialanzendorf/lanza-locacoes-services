@@ -4,8 +4,30 @@ import crypto from "node:crypto";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { ultimaTriagemPorCpf, type TriagemRegistro } from "./analiseCadastro/triagemDb.js";
 
 export const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
+
+/**
+ * Resultado da análise de cadastro (antecedentes/processos) espelhado no cliente.
+ * O detalhe completo fica em database/analise-cadastro.json + relatorios/analise-cadastro/.
+ */
+export type AnaliseCadastroCliente = {
+  /** Passou na análise? true | false | null (pendente de decisão do operador). */
+  aprovado: boolean | null;
+  /** Quando a análise foi realizada (AAAA-MM-DD). */
+  dataConsulta: string;
+  /** Sinal automático das fontes (true = houve alerta). */
+  alertaGeral: boolean;
+  /** Conclusão automática (texto). */
+  resumo: string;
+  /** id do registro em database/analise-cadastro.json. */
+  analiseId: string | null;
+  /** Caminho do documento legível (.txt). */
+  relatorioTxt: string | null;
+  /** Quando este espelho foi gravado no cliente (ISO 8601). */
+  avaliadoEm: string;
+};
 
 export type ClienteRegistro = ClienteImportado & {
   id: string;
@@ -17,6 +39,7 @@ export type ClienteRegistro = ClienteImportado & {
   atualizadoEm?: string | null;
   ativo?: boolean;
   origemImportacao?: string;
+  analiseCadastro?: AnaliseCadastroCliente | null;
 };
 
 type ClientesDb = {
@@ -164,6 +187,7 @@ export type ClientePatch = Partial<
     | "rastreameMotoristaId"
     | "ativo"
     | "origemImportacao"
+    | "analiseCadastro"
   >
 >;
 
@@ -187,6 +211,60 @@ export function editarCliente(idOrCpf: string, patch: ClientePatch): ClienteRegi
 
 export function excluirCliente(idOrCpf: string): ClienteRegistro | null {
   return editarCliente(idOrCpf, { ativo: false });
+}
+
+/** Monta o espelho de análise de cadastro do cliente a partir de um registro do histórico. */
+export function analiseClienteDeRegistro(t: TriagemRegistro): AnaliseCadastroCliente {
+  return {
+    aprovado: t.aprovado ?? null,
+    dataConsulta: t.dataConsulta,
+    alertaGeral: t.alertaGeral,
+    resumo: t.resumo,
+    analiseId: t.id ?? null,
+    relatorioTxt: t.relatorioTxt ?? t.relatorioJson ?? null,
+    avaliadoEm: nowIso(),
+  };
+}
+
+/**
+ * Grava o resultado da análise de cadastro no cliente (por id ou CPF).
+ * Idempotente — sempre reflete a última análise. Retorna null se não houver
+ * cliente cadastrado para a chave (ex.: análise feita antes do cadastro).
+ */
+export function registrarAnaliseCadastroNoCliente(
+  idOrCpf: string,
+  dados: AnaliseCadastroCliente,
+): ClienteRegistro | null {
+  const db = loadClientesDb();
+  const key = idOrCpf.trim();
+  let idx = db.clientes.findIndex((c) => c.id === key);
+  if (idx < 0) {
+    const byCpf = findClienteByCpf(key);
+    if (byCpf) idx = db.clientes.findIndex((c) => c.id === byCpf.id);
+  }
+  if (idx < 0) return null;
+  const c = db.clientes[idx]!;
+  c.analiseCadastro = dados;
+  // Reprovado na análise (não passou) → inativa o cliente (local).
+  if (dados.aprovado === false) c.ativo = false;
+  c.atualizadoEm = nowIso();
+  db.clientes[idx] = c;
+  saveClientesDb(db);
+  return c;
+}
+
+/**
+ * Se o cliente ainda não tem `analiseCadastro` e existe uma análise no histórico
+ * para o seu CPF, herda automaticamente (caso "analisar antes de cadastrar").
+ */
+function herdarAnaliseCadastro(c: ClienteRegistro): void {
+  if (c.analiseCadastro != null) return;
+  if (!c.cpf) return;
+  const ult = ultimaTriagemPorCpf(String(c.cpf));
+  if (!ult) return;
+  c.analiseCadastro = analiseClienteDeRegistro(ult);
+  // Se a última análise reprovou (não passou), nasce/permanece inativo.
+  if (c.analiseCadastro.aprovado === false) c.ativo = false;
 }
 
 export type UpsertMotoristaInput = ClienteImportado & {
@@ -304,6 +382,7 @@ export function gravarCliente(
       atualizadoEm: ts,
       ativo: cliente.ativo !== false ? true : false,
     };
+    herdarAnaliseCadastro(merged);
     db.clientes[idx] = merged;
     saveClientesDb(db);
     return { registro: merged, acao: "atualizado", aviso: null };
@@ -316,6 +395,7 @@ export function gravarCliente(
     atualizadoEm: ts,
     ativo: cliente.ativo !== false,
   };
+  herdarAnaliseCadastro(registro);
   db.clientes.push(registro);
   saveClientesDb(db);
   void opts?.syncRastreame;

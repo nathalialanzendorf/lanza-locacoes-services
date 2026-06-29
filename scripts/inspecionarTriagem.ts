@@ -5,7 +5,7 @@
  *
  *   npx tsx scripts/inspecionarTriagem.ts [bnmp|pf|tjsc]
  */
-import { TriagemBrowser, sleep } from "../src/lib/triagem/browser.js";
+import { TriagemBrowser, sleep } from "../src/lib/analiseCadastro/browser.js";
 
 const PORTAIS: Record<string, string> = {
   bnmp: "https://portalbnmp.cnj.jus.br/#/pesquisa-peca",

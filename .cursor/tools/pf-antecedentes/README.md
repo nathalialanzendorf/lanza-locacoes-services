@@ -5,7 +5,7 @@ Emissão pública da **Certidão de Antecedentes Criminais (CAC)** em
 Consulta o **SINIC** (Sistema Nacional de Informações Criminais), de **cobertura
 nacional** (Justiças Federal, Estadual, Eleitoral e Militar, Polícia Federal,
 Polícias Civis e Penais). É a fonte mais abrangente de antecedentes criminais.
-Usada pela skill **triagem-locatario** (busca por **CPF + dados pessoais**).
+Usada pela skill **relatorio-analise-cadastro** (busca por **CPF + dados pessoais**).
 
 - **Gratuita**, pela internet, validade de **90 dias**.
 - **Captcha:** reCAPTCHA. Por isso usamos **Chrome real** (o operador resolve).
@@ -15,15 +15,15 @@ Usada pela skill **triagem-locatario** (busca por **CPF + dados pessoais**).
 
 Referência técnica: [reference.md](reference.md)
 
-## Como a triagem usa
+## Como a análise de cadastro usa
 
-`src/lib/triagem/pfSinic.ts` (via `src/run.ts triagem-locatario`):
+`src/lib/analiseCadastro/pfSinic.ts` (via `src/run.ts relatorio-analise-cadastro`):
 
 1. Abre a página de emissão da CAC no Chrome real.
 2. O operador **preenche os dados** (CPF, nome, nascimento, filiação) e
    **resolve o reCAPTCHA**, e clica em emitir.
 3. O harness CDP **captura o PDF** baixado, salva como evidência em
-   `relatorios/_tmp/triagem/downloads/` e faz **parse** do texto.
+   `relatorios/_tmp/analise-cadastro/downloads/` e faz **parse** do texto.
 4. Classifica o resultado: **NADA CONSTA** (sem alerta) vs **protocolo/consta**
    (alerta — exige verificação presencial por causa de homônimos).
 
@@ -36,5 +36,6 @@ Referência técnica: [reference.md](reference.md)
 
 ## LGPD
 
-Dados criminais de terceiros: a triagem só roda com **base legal** registrada
-(ver skill `triagem-locatario`). Uso restrito à finalidade de triagem.
+Dados criminais de terceiros: a análise de cadastro só roda com **base legal**
+registrada (ver skill `relatorio-analise-cadastro`). Uso restrito à finalidade de
+análise de cadastro.

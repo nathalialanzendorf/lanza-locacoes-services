@@ -2,11 +2,11 @@
 
 Consulta pública de **mandados de prisão / pessoas procuradas e foragidas** em
 [portalbnmp.cnj.jus.br](https://portalbnmp.cnj.jus.br/). Cobertura **nacional**.
-Usada pela skill **triagem-locatario** (busca por **nome**).
+Usada pela skill **relatorio-analise-cadastro** (busca por **nome**).
 
 - **Busca por nome:** pública, **sem login**.
 - **Busca por CPF:** restrita a usuários autenticados com certificado digital
-  (não disponível na consulta pública) — por isso a triagem busca por **nome** e
+  (não disponível na consulta pública) — por isso a análise de cadastro busca por **nome** e
   depois confere CPF/nascimento manualmente (homônimos).
 - **Captcha:** o portal exige passar um **captcha** antes de liberar a busca; a
   sessão (cookie `portalbnmp`) fica válida por um tempo curto. Por isso usamos
@@ -14,9 +14,9 @@ Usada pela skill **triagem-locatario** (busca por **nome**).
 
 Referência técnica (endpoints): [reference.md](reference.md)
 
-## Como a triagem usa
+## Como a análise de cadastro usa
 
-`src/lib/triagem/bnmp.ts` (via `src/run.ts triagem-locatario`):
+`src/lib/analiseCadastro/bnmp.ts` (via `src/run.ts relatorio-analise-cadastro`):
 
 1. Abre `https://portalbnmp.cnj.jus.br/#/pesquisa-peca` no Chrome real.
 2. O operador **passa o captcha** e **pesquisa pelo nome** do locatário.
@@ -33,5 +33,6 @@ Referência técnica (endpoints): [reference.md](reference.md)
 
 ## LGPD
 
-Dados criminais de terceiros: a triagem só roda com **base legal** registrada
-(ver skill `triagem-locatario`). Uso restrito à finalidade de triagem.
+Dados criminais de terceiros: a análise de cadastro só roda com **base legal**
+registrada (ver skill `relatorio-analise-cadastro`). Uso restrito à finalidade de
+análise de cadastro.

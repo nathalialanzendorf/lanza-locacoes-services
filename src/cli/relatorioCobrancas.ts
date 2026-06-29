@@ -29,7 +29,7 @@ Opções:
   --auto AUTO     (multa) filtra um único auto de infração
   --nome NOME     Nome do cliente na saudação (padrão: inferido do contrato/multa)
   --no-salvar     Só imprime no terminal (não grava .txt)
-  --out DIR       Diretório de saída [padrão relatorios/cobrancas/]
+  --out DIR       Diretório de saída [padrão relatorios/_tmp/cobrancas/]
 
 Exemplos:
   relatorio-cobrancas semanal --placa AVU-6740 --dia 1

@@ -16,6 +16,15 @@ Skill para **cadastrar, editar e excluir** clientes (motoristas/locatários) em 
 - O campo **`observacao` do Rastreame NÃO é usado** (nem escrito, nem lido). Não popular observação ao cadastrar.
 - Os **demais campos** (endereço, RG/órgão, nascimento, filiação, nº espelho, órgão emissor/UF, 1ª habilitação, EAR, observações) **só existem na database cliente** — nunca vão para o Rastreame.
 
+## Análise de cadastro (coluna `analiseCadastro`)
+
+- Antes de fechar locação, faça a **análise de cadastro** (skill **`relatorio-analise-cadastro`**) do candidato. **Recomendado: análise → decisão → cadastro.**
+- O cliente tem a coluna **`analiseCadastro`** em `clientes.json`: **`aprovado`** (passou? `true`/`false`/`null`=pendente) e **`dataConsulta`** (quando foi feita), além de `alertaGeral`, `resumo`, `analiseId` e `relatorioTxt`.
+- **Herança automática:** ao cadastrar (via `merge-cliente`/importação), se já existir uma análise para o **CPF**, o cliente **herda** a última automaticamente — mesmo que a análise tenha sido feita antes do cadastro. Não é preciso re-rodar.
+- **Reprovado nasce inativo:** se a análise herdada/aplicada estiver com `aprovado=false`, o cliente fica **`ativo=false`** (inativação local; o sync não empurra ao Rastreame).
+- **Achados detalhados:** `database/cliente-analise.json` guarda, por **CPF × site × dia**, o que foi identificado em cada portal (BNMP/PF/TJSC). É só leitura/auditoria — preenchido pela skill da análise.
+- Para registrar/mudar a decisão depois: `merge-cliente editar <id|cpf> patch.json` com `{ "analiseCadastro": { "aprovado": true, ... } }`, ou re-rodar a análise com `--aprovar`/`--reprovar`.
+
 ## Operações
 
 | Operação | Como |
@@ -116,6 +125,7 @@ Varre `documentosRaiz` (`D:\Dropbox\Aluguel Carros`), pastas `DD.MM.AAAA - Nome`
 
 ## Skills relacionadas
 
+- Skill **relatorio-analise-cadastro** — análise de cadastro (antecedentes/processos) do candidato; preenche a coluna `analiseCadastro` (o cliente a herda no cadastro).
 - Skill **sync-cliente** — sincroniza Rastreame ↔ `clientes.json` (mesma regra: só campos nativos, sem observação).
 - Tool **Rastreame** (`.cursor/tools/rastreame/`) — comandos no site (motorista, gastos).
 - Skill **cadastro-veiculo** — CRLV → `veiculos.json`.

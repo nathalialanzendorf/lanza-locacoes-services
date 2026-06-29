@@ -1,0 +1,16 @@
+{
+  "_comentario": "Identidade da empresa Lanza (locadora). Usada em contratos, relatórios e como contato/solicitante nas requisições (ex.: certidões TJSC). Editar se mudar de dados cadastrais.",
+  "razaoSocial": "Lanza Locações de Veículos LTDA",
+  "nomeFantasia": "Lanza Locações",
+  "cnpj": "43.051.371/0001-05",
+  "representante": "Jose Felipe Barreto Rodrigues",
+  "email": "lanza.locacoes@gmail.com",
+  "telefone": "4898834442",
+  "endereco": {
+    "logradouro": "Avenida João Manoel Galdino da Luz, 507",
+    "bairro": "Vila Esperança",
+    "municipio": "Tubarão",
+    "uf": "SC",
+    "cep": "88708-319"
+  }
+}

@@ -21,9 +21,9 @@ Regra do projeto: skills de domínio **delegam execução** às tools (shell `np
 | **DETRAN RS** | [detran-rs/README.md](detran-rs/README.md) | `src/lib/detranRs/` | `sync-detran-rs` (IPVA/Licenciamento, veículos `ufRegistro="RS"`) |
 | **FIPE** | [fipe/README.md](fipe/README.md) | `src/lib/fipe/` | `fipe`, `atualizar-fipe-veiculos` |
 | **Pedágio Digital** | [pedagio-digital/README.md](pedagio-digital/README.md) | `src/lib/pedagioDigital/` | `sync-pedagios`, `pedagio-digital` |
-| **CNJ BNMP** | [cnj-bnmp/README.md](cnj-bnmp/README.md) | `src/lib/triagem/bnmp.ts` | `triagem-locatario` (skill triagem-locatario) |
-| **PF Antecedentes (SINIC)** | [pf-antecedentes/README.md](pf-antecedentes/README.md) | `src/lib/triagem/pfSinic.ts` | `triagem-locatario` (skill triagem-locatario) |
-| **TJSC Certidões** | [tjsc-certidoes/README.md](tjsc-certidoes/README.md) | `src/lib/triagem/tjsc.ts` | `triagem-locatario` (skill triagem-locatario) |
+| **CNJ BNMP** | [cnj-bnmp/README.md](cnj-bnmp/README.md) | `src/lib/analiseCadastro/bnmp.ts` | `relatorio-analise-cadastro` (skill relatorio-analise-cadastro) |
+| **PF Antecedentes (SINIC)** | [pf-antecedentes/README.md](pf-antecedentes/README.md) | `src/lib/analiseCadastro/pfSinic.ts` | `relatorio-analise-cadastro` (skill relatorio-analise-cadastro) |
+| **TJSC Certidões** | [tjsc-certidoes/README.md](tjsc-certidoes/README.md) | `src/lib/analiseCadastro/tjsc.ts` | `relatorio-analise-cadastro` (skill relatorio-analise-cadastro) |
 | **Init Database** | [init-database/README.md](init-database/README.md) | `src/cli/` (referenciados) | (re)construção de `database/*.json` após perda de dados |
 
 ## Quando ler tools (checklist do agente)

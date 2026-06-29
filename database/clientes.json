@@ -30,6 +30,15 @@
       "bairro": "Bairro",
       "cidade": "Cidade",
       "uf": "UF (ex.: SP)"
+    },
+    "analiseCadastro": {
+      "aprovado": "Passou na análise de cadastro? true | false | null (pendente de decisão do operador)",
+      "dataConsulta": "AAAA-MM-DD — quando a análise foi realizada",
+      "alertaGeral": "Sinal automático das fontes (true = houve alerta)",
+      "resumo": "Conclusão automática (texto)",
+      "analiseId": "id do registro em database/analise-cadastro.json",
+      "relatorioTxt": "Caminho do documento legível (.txt)",
+      "avaliadoEm": "ISO 8601 — quando este espelho foi gravado no cliente"
     }
   },
   "clientes": [

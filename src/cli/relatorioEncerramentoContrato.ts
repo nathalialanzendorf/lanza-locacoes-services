@@ -63,7 +63,7 @@ export function main(argv: string[]): void {
   relatorio-encerramento-contrato <pasta-contrato> --encerramento DD/MM/AAAA [opções]
   relatorio-encerramento-contrato <entrada.json> [opções]
 
-Grava automaticamente em relatorios/quebra-contrato/:
+Grava automaticamente em relatorios/_tmp/quebra-contrato/:
   quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.txt   (documento p/ WhatsApp)
   quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.json  (dados p/ canvas)
 
