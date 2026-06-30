@@ -27,6 +27,8 @@ const CREDENTIAL_KEYS = new Set([
   "PEDAGIO_DIGITAL_SENHA",
   "PEDAGIO_DIGITAL_COOKIE",
   "PEDAGIO_DIGITAL_CSRF",
+  "PAGBANK_AUTH",
+  "PAGBANK_COOKIE",
 ]);
 
 export function loadLocalEnv(): void {

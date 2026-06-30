@@ -3,6 +3,40 @@
 Autenticação e execução CLI no site: tool `.cursor/tools/rastreame/`.
 
 Documentação auxiliar para a skill **cadastro-recebimento**. Os exemplos usam **IDs fictícios**; substituir por valores reais obtidos na UI ou em respostas da API. **Não** versionar tokens.
+
+## Confirmação antes de gravar
+
+Regra de negócio na skill (`SKILL.md`, secção **Confirmação obrigatória**):
+
+1. Montar tabela com **todos** os registos a criar/atualizar (colunas: Rastreável | Data | Descrição | Motorista | Tipo | Total).
+2. Pedir **Sim/Não por linha** (seletor, um registo de cada vez).
+3. **Só após Sim em cada linha do lote:** `gravar-cliente-despesa` → database; depois push Rastreame.
+
+Não executar CLI de gravação nem `POST`/`PUT` na API antes da confirmação.
+
+## CLI `baixa-recebimento` (plano de baixa)
+
+Monta o plano **sem gravar** — o agente usa a saída JSON para a tabela de confirmação:
+
+```powershell
+# Unitário
+npx tsx src/run.ts baixa-recebimento plano --cliente Virginia --valor 650 --data 18/06/2026 --hora 06:10 --json
+
+# Lote PagBank
+npx tsx src/run.ts pagbank match --inicio 2026-05-31 --fim 2026-06-29 --json
+```
+
+Cada linha em `plano.linhas[]` vira uma pergunta Sim/Não. Campo `patch` vai para `gravar-cliente-despesa editar`.
+
+### Campo `comprovante` (Rastreame)
+
+Não existe em `cliente-despesas.json`. Após push, se `comprovanteRastreame` estiver preenchido:
+
+1. `fetchGastoById(rastreameId)`
+2. `PUT` com `{ ...gasto, comprovante: "texto" }`
+
+Ver tool `.cursor/tools/pagbank/` para auth do modo lote.
+
 ## Endpoints
 
 | Ação | Método | URL |

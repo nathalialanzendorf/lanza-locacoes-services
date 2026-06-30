@@ -115,6 +115,9 @@ npx tsx src/run.ts renegociar-debitos "<entrada.json>" [--execute]
 | lançamento semanal | Contratos ativos → gasto OUTROS | `rastreame-lancar-semanal` |
 | renegociar-debitos | Resumo e execução | `renegociar-debitos` |
 
+Regras de negócio em **cadastro-recebimento** (confirmação Sim/Não com tabela antes de gravar,
+`ATRASADO`, duplicados) e **renegociar-debitos** (`[NEGOCIADO X]`).
+
 ## Erros comuns
 
 - **401/403:** token expirado → renovar `RASTREAME_AUTH`.

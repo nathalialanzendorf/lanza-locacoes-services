@@ -4,6 +4,13 @@ import crypto from "node:crypto";
 
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import { isCategoriaInfracao, stripAtrasado, tituloInfracaoBase } from "./infracaoTitulo.js";
+import {
+  dataVencimentoSemanalBr,
+  isPagamentoSemanalDescricao,
+  normalizarBaixaSemanal,
+  proximaParcelaSemanal,
+  stripAtrasadoSemanal,
+} from "./pagamentoSemanal.js";
 import { formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -616,6 +623,7 @@ export type ClienteDespesaPatch = Partial<
     | "rastreameMotoristaKey"
     | "rastreameRastreavelKey"
     | "rastreameDataIso"
+    | "veiculoId"
     | "ativo"
   >
 >;
@@ -634,6 +642,13 @@ export function editarClienteDespesa(
   if (idx < 0) return null;
 
   const m = db.clienteDespesas[idx]!;
+  const eraPaga = m.paga === true;
+  const descricaoAntes = m.descricao;
+  const vencimentoAntes =
+    m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)
+      ? dataVencimentoSemanalBr(m.descricao, m.rastreameDataIso) ?? m.dataAutuacao
+      : m.dataAutuacao;
+
   if (patch.categoria !== undefined) m.categoria = patch.categoria;
   if (patch.descricao !== undefined) m.descricao = String(patch.descricao).trim();
   if (patch.titulo !== undefined) m.titulo = String(patch.titulo).trim();
@@ -656,11 +671,105 @@ export function editarClienteDespesa(
     m.rastreameRastreavelKey = patch.rastreameRastreavelKey;
   }
   if (patch.rastreameDataIso !== undefined) m.rastreameDataIso = patch.rastreameDataIso;
+  if (patch.veiculoId !== undefined) m.veiculoId = formatPlacaHyphen(patch.veiculoId);
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
+
+  if (m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)) {
+    const normalized = normalizarBaixaSemanal({
+      descricao: m.descricao,
+      dataAutuacao: m.dataAutuacao,
+      paga: m.paga,
+      pagaEm: m.pagaEm,
+      rastreameDataIso: m.rastreameDataIso,
+    });
+    if (normalized.descricao !== undefined) m.descricao = normalized.descricao;
+    if (normalized.dataAutuacao !== undefined) m.dataAutuacao = normalized.dataAutuacao;
+    if (normalized.rastreameDataIso !== undefined) m.rastreameDataIso = normalized.rastreameDataIso;
+  }
+
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
+
+  if (
+    !eraPaga &&
+    m.paga === true &&
+    m.ativo !== false &&
+    m.categoria === "Locação semanal" &&
+    isPagamentoSemanalDescricao(descricaoAntes)
+  ) {
+    criarProximaParcelaSemanalSeNecessario(m, descricaoAntes, vencimentoAntes);
+  }
+
   return m;
+}
+
+function normDescSemanal(s: string): string {
+  return stripAtrasadoSemanal(s)
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function criarProximaParcelaSemanalSeNecessario(
+  pago: ClienteDespesaRegistro,
+  descricaoAntes: string,
+  vencimentoAntes: string,
+): ClienteDespesaRegistro | null {
+  const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
+  if (!prox) return null;
+
+  const db = loadClienteDespesasDb();
+  const alvo = normDescSemanal(prox.descricao);
+  const dup = db.clienteDespesas.find(
+    (d) =>
+      d.ativo !== false &&
+      d.veiculoId === pago.veiculoId &&
+      d.categoria === "Locação semanal" &&
+      normDescSemanal(d.descricao) === alvo,
+  );
+  if (dup) return null;
+
+  const aberto = db.clienteDespesas.find(
+    (d) =>
+      d.ativo !== false &&
+      d.paga !== true &&
+      d.veiculoId === pago.veiculoId &&
+      d.condutorId === pago.condutorId &&
+      d.categoria === "Locação semanal" &&
+      /ATRASADO/i.test(d.descricao),
+  );
+  if (aberto) return null;
+
+  const ts = nowIso();
+  const registro: ClienteDespesaRegistro = {
+    id: crypto.randomUUID(),
+    categoria: "Locação semanal",
+    veiculoId: pago.veiculoId,
+    autoInfracao: `LOCAL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+    descricao: prox.descricao,
+    localInfracao: "",
+    dataAutuacao: prox.dataAutuacao,
+    valorMulta: pago.valorMulta,
+    situacao: "Em aberto",
+    limiteDefesa: "",
+    condutorId: pago.condutorId,
+    condutorConfirmado: pago.condutorConfirmado,
+    condutorContrato: pago.condutorContrato,
+    paga: false,
+    pagaEm: null,
+    rastreameMotoristaKey: pago.rastreameMotoristaKey ?? null,
+    rastreameRastreavelKey: pago.rastreameRastreavelKey ?? null,
+    rastreameDataIso: prox.rastreameDataIso,
+    rastreameTipo: pago.rastreameTipo ?? "OUTROS",
+    ativo: true,
+    cadastradoEm: ts,
+    atualizadoEm: ts,
+    origem: "manual",
+  };
+  db.clienteDespesas.push(registro);
+  saveClienteDespesasDb(db);
+  return registro;
 }
 
 export function excluirClienteDespesa(idOrAuto: string): ClienteDespesaRegistro | null {

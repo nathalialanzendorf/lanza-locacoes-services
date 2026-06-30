@@ -38,9 +38,9 @@
       "achados": [],
       "evidencia": null,
       "dataConsulta": "2026-06-29",
-      "consultadoEm": "2026-06-29T10:29:15.508Z",
+      "consultadoEm": "2026-06-29T19:06:21.805Z",
       "analiseId": "bd86a7ee-2d11-49cf-a7ba-774300219091",
-      "atualizadoEm": "2026-06-29T18:17:55.994Z"
+      "atualizadoEm": "2026-06-29T19:06:52.081Z"
     },
     {
       "id": "6d39dcc6-18f7-45a6-a898-7cb11cd69f50",
@@ -58,9 +58,9 @@
       "achados": [],
       "evidencia": "relatorios\\_tmp\\analise-cadastro\\downloads\\pf-cac-04179174901-2026-06-29.pdf",
       "dataConsulta": "2026-06-29",
-      "consultadoEm": "2026-06-29T10:34:42.240Z",
+      "consultadoEm": "2026-06-29T19:06:01.205Z",
       "analiseId": "bd86a7ee-2d11-49cf-a7ba-774300219091",
-      "atualizadoEm": "2026-06-29T18:17:55.994Z"
+      "atualizadoEm": "2026-06-29T19:06:52.081Z"
     },
     {
       "id": "e35957cd-880b-4fb2-ac56-a31d63a8986d",
@@ -74,13 +74,13 @@
       "site": "certidoes.tjsc.jus.br",
       "status": "assistido",
       "alerta": false,
-      "identificado": "Requisição ENVIADA ao TJSC (pedido nº 7035391–7035397) — 1º e 2º grau, modelos Criminal/Cível/Eleitoral/Recuperação-Falência. Certidão CRIMINAL: pedido 7035393 (1º grau) e 7035396 (2º grau). Resposta por e-mail (lanza.locacoes@gmail.com) em até 5 dias úteis. Conferir a caixa de entrada e anexar o(s) PDF(s) ao caso.",
+      "identificado": "Requisição da certidão Criminal ENVIADA ao TJSC (pedidos: 7035843, 7035844; Criminal: 7035843, 7035844). Resposta por e-mail (lanza.locacoes@gmail.com) em até 5 dias úteis. Conferir a caixa de entrada e anexar o(s) PDF(s) ao caso.",
       "achados": [],
       "evidencia": null,
       "dataConsulta": "2026-06-29",
-      "consultadoEm": "2026-06-29T17:06:10.419Z",
+      "consultadoEm": "2026-06-29T19:06:07.061Z",
       "analiseId": "bd86a7ee-2d11-49cf-a7ba-774300219091",
-      "atualizadoEm": "2026-06-29T18:17:55.994Z"
+      "atualizadoEm": "2026-06-29T19:06:52.081Z"
     }
   ]
 }

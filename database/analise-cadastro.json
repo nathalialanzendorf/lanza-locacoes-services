@@ -32,8 +32,8 @@
       "lgpd": {
         "baseLegal": "legitimo interesse (avaliacao de risco da locacao)",
         "titularConsentimento": "Anderson Caetano de Souza",
-        "solicitante": "Operador Lanza",
-        "finalidade": "Triagem de locatário (antecedentes criminais / processos) para análise de risco de locação."
+        "solicitante": "Lanza Locacoes de Veiculos LTDA - CNPJ 43.051.371/0001-05 (repr. Jose Felipe)",
+        "finalidade": "Análise de cadastro de locatário (antecedentes criminais / processos) para análise de risco de locação."
       },
       "alertaGeral": false,
       "aprovado": null,
@@ -47,7 +47,7 @@
           "observacao": "Nenhuma peça encontrada para \"ANDERSON CAETANO DE SOUZA\" no BNMP.",
           "qtdAchados": 0,
           "evidencia": null,
-          "consultadoEm": "2026-06-29T10:29:15.508Z"
+          "consultadoEm": "2026-06-29T19:06:21.805Z"
         },
         {
           "id": "pf-sinic",
@@ -57,22 +57,22 @@
           "observacao": "NADA CONSTA (sem condenação com trânsito em julgado).",
           "qtdAchados": 0,
           "evidencia": "relatorios\\_tmp\\analise-cadastro\\downloads\\pf-cac-04179174901-2026-06-29.pdf",
-          "consultadoEm": "2026-06-29T10:34:42.240Z"
+          "consultadoEm": "2026-06-29T19:06:01.205Z"
         },
         {
           "id": "tjsc",
           "nome": "TJSC — certidão criminal estadual (eproc)",
           "status": "assistido",
           "alerta": false,
-          "observacao": "Requisição ENVIADA ao TJSC (pedidos 7035391–7035397; Criminal = 7035393 1º grau e 7035396 2º grau) — resposta por e-mail (lanza.locacoes@gmail.com) em até 5 dias úteis. Conferir a caixa de entrada e anexar o(s) PDF(s) ao caso.",
+          "observacao": "Requisição da certidão Criminal ENVIADA ao TJSC (pedidos: 7035843, 7035844; Criminal: 7035843, 7035844). Resposta por e-mail (lanza.locacoes@gmail.com) em até 5 dias úteis. Conferir a caixa de entrada e anexar o(s) PDF(s) ao caso.",
           "qtdAchados": 0,
           "evidencia": null,
-          "consultadoEm": "2026-06-29T17:06:10.419Z"
+          "consultadoEm": "2026-06-29T19:06:07.061Z"
         }
       ],
-      "relatorioJson": "relatorios/analise-cadastro/04179174901-2026-06-29.json",
-      "relatorioTxt": "relatorios/analise-cadastro/04179174901-2026-06-29.txt",
-      "atualizadoEm": "2026-06-29T17:17:17.028Z"
+      "relatorioJson": "relatorios/_tmp/analise-cadastro/04179174901-2026-06-29.json",
+      "relatorioTxt": "relatorios/_tmp/analise-cadastro/04179174901-2026-06-29.txt",
+      "atualizadoEm": "2026-06-29T19:06:52.055Z"
     }
   ]
 }

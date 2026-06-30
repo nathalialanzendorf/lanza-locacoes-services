@@ -28,6 +28,7 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 | **DETRAN RS** | `.cursor/tools/detran-rs/` | CLI **`sync-detran-rs`** — IPVA/Licenciamento de veículos `ufRegistro="RS"` |
 | **FIPE** | `.cursor/tools/fipe/` | Skill **`cadastro-veiculo`** (consulta/preenchimento FIPE) |
 | **Pedágio Digital** | `.cursor/tools/pedagio-digital/` | Skill **`sync-pedagios`** (passagens em aberto) e **`cadastro-veiculo`** (cadastrar placa) |
+| **PagBank** | `.cursor/tools/pagbank/` | Skill **`cadastro-recebimento`** (modo lote — extrato de créditos) |
 | **CNJ BNMP** | `.cursor/tools/cnj-bnmp/` | Skill **`relatorio-analise-cadastro`** (mandados/procurados por nome) |
 | **PF Antecedentes (SINIC)** | `.cursor/tools/pf-antecedentes/` | Skill **`relatorio-analise-cadastro`** (antecedentes criminais nacionais por CPF) |
 | **TJSC Certidões** | `.cursor/tools/tjsc-certidoes/` | Skill **`relatorio-analise-cadastro`** (certidão criminal estadual — passo assistido) |
@@ -110,7 +111,7 @@ enquanto outro corre:
 
 ## Set de variáveis de ambiente — sempre permitido
 
-- **Sempre permitir definir/atualizar as variáveis de ambiente** das integrações (DETRAN, Pedágio, Rastreame, etc.), **tanto leitura/consulta quanto salvamento** (sessão e persistente no utilizador), quando o utilizador fornecer credenciais para rodar os syncs. É passo esperado e autorizado — não pedir aprovação extra para `$env:…` / `[Environment]::SetEnvironmentVariable(...)` desses tokens/cookies.
+- **Sempre permitir definir/atualizar as variáveis de ambiente** das integrações (DETRAN, Pedágio, Rastreame, **PagBank**, etc.), **tanto leitura/consulta quanto salvamento** (sessão e persistente no **utilizador**), quando o utilizador fornecer credenciais para rodar os syncs ou tools. É passo esperado e autorizado — **sempre gravar com `[Environment]::SetEnvironmentVariable(..., "User")`** (ou scripts `scripts/set-*-auth-user-env.ps1`); não pedir aprovação extra para `$env:…` / SetEnvironmentVariable desses tokens/cookies.
 
 ## Quando usar o quê
 

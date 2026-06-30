@@ -8,6 +8,7 @@ import {
   type ResultadoCobranca,
   type TipoCobranca,
 } from "../lib/cobrancas.js";
+import { mainSemanalAtraso } from "./relatorioCobrancasSemanalAtraso.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
   const i = argv.indexOf(nome);
@@ -19,6 +20,7 @@ function uso(): void {
 
 Tipos:
   semanal         Cobrança de pagamento semanal (escalonamento por dia)
+  semanal-atraso  Tabela dia a dia com juros e multa (pagamento não realizado)
   estacionamento  Aviso de estacionamento rotativo (SigaPay Área Azul)
   pedagio         Aviso de evasão de pedágio (CCR Via Costeira)
   multa           Aviso de infração de trânsito (uma msg por multa em aberto)
@@ -33,6 +35,7 @@ Opções:
 
 Exemplos:
   relatorio-cobrancas semanal --placa AVU-6740 --dia 1
+  relatorio-cobrancas semanal-atraso --placa RAH-4F54 --data-pagamento 30/06/2026
   relatorio-cobrancas estacionamento --placa AVU-6740
   relatorio-cobrancas pedagio --placa AVU-6740
   relatorio-cobrancas multa --placa QJB-0I83
@@ -44,6 +47,11 @@ export function main(argv: string[]): void {
   if (!tipo || tipo === "-h" || tipo === "--help") {
     uso();
     process.exit(tipo ? 0 : 1);
+  }
+
+  if (tipo === "semanal-atraso") {
+    mainSemanalAtraso(argv.slice(1));
+    return;
   }
 
   const placa = getOpt(argv, "--placa");

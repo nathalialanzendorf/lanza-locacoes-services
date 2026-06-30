@@ -32,6 +32,11 @@ import {
 import { listMotoristas, type MotoristaRastreame } from "./motorista.js";
 import { extrairPlacaDeRastreavel, rastreavelTexto, refKey } from "./placaRastreavel.js";
 import { listRastreaveis, type Rastreavel } from "./rastreavel.js";
+import {
+  dataVencimentoSemanalBr,
+  isPagamentoSemanalDescricao,
+  vencimentoBrToIsoEndDay,
+} from "../pagamentoSemanal.js";
 
 export type SyncRecebimentosOpts = {
   dryRun?: boolean;
@@ -242,20 +247,36 @@ function gastoToUpsertInput(
   const tipo = tipoFromGasto(g);
 
   const categoria = categoriaFromGasto(tipo, info);
+  const dataIsoHint = g.data ? String(g.data) : null;
+  let dataAutuacao = isoToBr(dataIsoHint);
+  // Em aberto: vencimento = dia DD da descrição (não copiar a data de outra parcela).
+  if (
+    emAberto &&
+    categoria === "Locação semanal" &&
+    isPagamentoSemanalDescricao(info)
+  ) {
+    const venc = dataVencimentoSemanalBr(info, dataIsoHint);
+    if (venc) dataAutuacao = venc;
+  }
   return {
     rastreameId: id,
     veiculoId: placa,
     categoria,
     descricao: info,
     titulo: isCategoriaInfracao(categoria) ? stripAtrasado(info) : undefined,
-    dataAutuacao: isoToBr(g.data as string | undefined),
+    dataAutuacao,
     valorMulta: Math.round(Number(g.total ?? 0) * 100) / 100,
     situacao: situacaoFromGasto(info, emAberto),
     paga: !emAberto,
     condutorId: resolveCondutorId(motoristaKey, motoristaNome, ctx.clientes, ctx.motoristas),
     rastreameMotoristaKey: motoristaKey || null,
     rastreameRastreavelKey: rastreavelKey || null,
-    rastreameDataIso: g.data ? String(g.data) : null,
+    rastreameDataIso:
+      emAberto &&
+      categoria === "Locação semanal" &&
+      isPagamentoSemanalDescricao(info)
+        ? vencimentoBrToIsoEndDay(dataAutuacao)
+        : dataIsoHint,
     rastreameTipo: tipo,
   };
 }
@@ -354,7 +375,19 @@ async function pushOneRegistro(
   if (!motoristaKey || !rastreavelKey) return "ignorado";
 
   const info = infoParaRastreame(reg);
+  const emAbertoSemanal =
+    reg.categoria === "Locação semanal" &&
+    reg.paga !== true &&
+    isPagamentoSemanalDescricao(info);
+  let dataAutuacaoPush = reg.dataAutuacao;
+  if (emAbertoSemanal) {
+    const venc = dataVencimentoSemanalBr(info, reg.rastreameDataIso);
+    if (venc) dataAutuacaoPush = venc;
+  }
   const dataIso =
+    (emAbertoSemanal && dataAutuacaoPush
+      ? vencimentoBrToIsoEndDay(dataAutuacaoPush)
+      : null) ||
     reg.rastreameDataIso?.trim() ||
     (reg.dataAutuacao ? brToIsoEndDay(reg.dataAutuacao) : new Date().toISOString());
   const total = reg.valorMulta;

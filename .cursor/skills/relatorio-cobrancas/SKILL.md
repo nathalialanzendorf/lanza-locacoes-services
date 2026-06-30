@@ -37,6 +37,63 @@ A partir da **data prevista** da parcela, uma mensagem por dia de atraso:
 | **3** | 3º dia | **Bloqueio programado** por falta de compensação |
 | **4** | — | Confirmação de **pagamento regularizado** (após pagar) |
 
+## Cobrança semanal — pagamento não realizado (padrão obrigatório)
+
+Quando o pagamento semanal **não foi realizado**, **sempre** calcular e apresentar as tabelas
+dia a dia neste padrão (antes de informar valor ao locatário ou montar baixa integral).
+
+> Implementação: `src/lib/pagamentoSemanalCobranca.ts` · CLI abaixo.
+
+### Valores
+
+| Campo | Fórmula |
+|---|---|
+| **Total/dia em dia** | `valorSemanal ÷ 7` |
+| **Total/dia atrasado** | `valorDiaria` (contrato, ex. R$ 120) |
+| **Juros e multa/dia** | `valorDiaria − (valorSemanal ÷ 7)` (ex. R$ 27,14) |
+
+### Período de cada parcela em aberto
+
+Uma **tabela por vencimento** não pago, em ordem cronológica:
+
+| Parcela | Início | Fim |
+|---|---|---|
+| Com parcela seguinte | vencimento (inclusive) | véspera do próximo vencimento |
+| Última em aberto | vencimento (inclusive) | vencimento + 7 dias (inclusive) |
+
+### Situação por dia
+
+| Situação | Quando |
+|---|---|
+| **Atrasado** | Dia ≥ vencimento **e** dia ≤ data do pagamento (vencimento **incluso** se não pago) |
+| **Em dia** | Dia > data do pagamento (dentro do período da parcela) |
+
+### Colunas da tabela (ordem fixa)
+
+| Data | Dia | Situação | Juros e multa | Total/dia |
+
+- **Juros e multa:** valor quando **Atrasado**; `—` quando **Em dia**.
+- **Total/dia:** `valorDiaria` se Atrasado; `valorSemanal÷7` se Em dia.
+- Subtotais: **Juros e multa** (soma) + **Total** da tabela.
+- Várias parcelas: **Total geral** = soma dos totais de cada tabela.
+
+### CLI
+
+```bash
+npx tsx src/run.ts relatorio-cobrancas semanal-atraso --cliente "Daniel Damasceno" --data-pagamento 30/06/2026
+npx tsx src/run.ts relatorio-cobrancas semanal-atraso --placa RAH-4F54 --vencimento 20/06/2026 --vencimento 27/06/2026 --data-pagamento 30/06/2026 --no-salvar
+```
+
+Sem `--vencimento`, lê despesas **ATRASADO** em aberto do cliente. Valores do contrato ativo
+(`contratos.json`); override com `--valor-semanal` / `--valor-diaria`.
+
+Grava `relatorios/cobrancas/semanal-atraso-*.md` e `dados-semanal-atraso-*.json`.
+
+**Canvas:** ao calcular cobrança semanal em atraso, criar canvas a partir do JSON (mesmo padrão
+da secção Canvas abaixo).
+
+Detalhes: `reference.md` nesta pasta.
+
 ## CLI
 
 ```bash

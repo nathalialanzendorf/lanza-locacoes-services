@@ -24,6 +24,9 @@ Comandos:
   montar-relatorio <entrada.json>
   rastreame login [--save] | rastreame check <cnh> [nome] | rastreame add <cliente.json>
   rastreame-gastos list [--page 0] [--size 50] | post <corpo.json> | put <id> <corpo.json>
+  baixa-recebimento plano --cliente NOME --valor R$ --data DD/MM/AAAA [--hora HH:MM] [--comprovante T] [--json]
+  baixa-recebimento pagbank [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--json]
+  pagbank check | pagbank creditos list [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--json] | pagbank match [--inicio] [--fim] [--json]
   rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias N] [--execute]
   fipe marca <texto> | fipe modelos <code> [filtros...] | fipe anos ... | fipe valor ...
   atualizar-fipe-veiculos [--placa PLACA]
@@ -82,6 +85,12 @@ Comandos:
       break;
     case "rastreame-gastos":
       await (await import("./cli/rastreameGastos.js")).main(rest);
+      break;
+    case "baixa-recebimento":
+      await (await import("./cli/baixaRecebimento.js")).main(rest);
+      break;
+    case "pagbank":
+      await (await import("./cli/pagbank.js")).main(rest);
       break;
     case "rastreame":
       await (await import("./cli/rastreame.js")).main(rest);
