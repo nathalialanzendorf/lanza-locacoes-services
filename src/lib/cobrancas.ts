@@ -376,13 +376,19 @@ function infracoesEmAberto(
 /** Uma mensagem por infração em aberto da placa (ou só a do `auto`, se informado). */
 export function gerarMultas(
   placaRaw: string,
-  opts?: { auto?: string; nome?: string },
+  opts?: { auto?: string; autos?: string[]; nome?: string },
 ): ResultadoCobranca[] {
   const placa = formatPlacaHyphen(placaRaw);
   const v = buscarVeiculo(placa);
   assertVeiculoLocacao(placa, v);
   const tpl = lerTemplate(TEMPLATE_MULTA);
-  const infracoes = infracoesEmAberto(placa, opts?.auto);
+  let infracoes = infracoesEmAberto(placa, opts?.auto);
+  if (opts?.autos?.length) {
+    const autos = new Set(opts.autos.map((a) => a.trim().toUpperCase()));
+    infracoes = infracoes.filter((d) =>
+      autos.has(d.autoInfracao.trim().toUpperCase()),
+    );
+  }
 
   return infracoes.map((d) => {
     const { data, hora } = splitDataHora(d.dataAutuacao);

@@ -63,6 +63,19 @@ export function formatDataBr(d: Date): string {
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+/** Instante ISO → DD/MM/AAAA HH:mm em America/Recife (UTC-3 fixo). */
+export function isoToDataHoraBrRecife(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const br = new Date(d.getTime() - 3 * 3600 * 1000);
+  return `${pad2(br.getUTCDate())}/${pad2(br.getUTCMonth() + 1)}/${br.getUTCFullYear()} ${pad2(br.getUTCHours())}:${pad2(br.getUTCMinutes())}`;
+}
+
+export function dataBrComHora(dataBr: string, horaBr: string | null): string {
+  if (!horaBr) return dataBr;
+  return `${dataBr} ${horaBr}`;
+}
+
 /** 23:59 America/Recife → ISO UTC (mesmo padrão de recebimentosSync). */
 export function vencimentoBrToIsoEndDay(dataBr: string): string {
   const m = dataBr.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
@@ -162,7 +175,7 @@ export function normalizarBaixaSemanal(patch: {
   if (out.pagaEm) {
     const d = new Date(out.pagaEm);
     if (!Number.isNaN(d.getTime())) {
-      out.dataAutuacao = formatDataBr(d);
+      out.dataAutuacao = isoToDataHoraBrRecife(out.pagaEm);
       out.rastreameDataIso = d.toISOString();
     }
   } else if (out.dataAutuacao) {

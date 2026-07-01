@@ -13,7 +13,7 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 |------|--------|
 | Cadastro / contrato | `cadastro-cliente`, `cadastro-veiculo`, `cadastro-despesa`, `cadastro-recebimento`, `cadastro-contrato`, `cadastro-locacao` |
 | Relatórios | `relatorio-encerramento-contrato`, `relatorio-prestacao-contas`, `relatorio-analise-cadastro` |
-| Sync | `sync-infracoes`, `sync-ipva-licenciamento`, `sync-seguro`, `importar-boletos-seguro` |
+| Sync | **`sync`** (orquestração paralela), `sync-infracoes`, `sync-ipva-licenciamento`, `sync-pedagios`, `sync-cliente`, `sync-veiculo`, `sync-recebimentos`, `sync-seguro` |
 | Análise de cadastro | `relatorio-analise-cadastro` (antecedentes criminais / processos — fontes gratuitas) |
 | Outros | `renegociar-debitos` |
 
@@ -115,6 +115,7 @@ enquanto outro corre:
 
 ## Quando usar o quê
 
+- **Rodar todos os syncs / sync completo / `/sync`** → skill **`sync`** (7 agentes paralelos; ver `.cursor/skills/sync/`).
 - **Sync multas / infrações DETRAN** → skill **`sync-infracoes`** (lê tool DETRAN, corre `npx tsx src/run.ts sync-infracoes …`).
 - **Sync IPVA / licenciamento DETRAN** → **SC**: skill **`sync-ipva-licenciamento`**; **RS** (`ufRegistro="RS"`): CLI **`sync-detran-rs`** (tool `.cursor/tools/detran-rs/`).
 - **Sync pedágios / passagens em aberto** → skill **`sync-pedagios`** (lê tool Pedágio Digital, corre `npx tsx src/run.ts sync-pedagios …`).

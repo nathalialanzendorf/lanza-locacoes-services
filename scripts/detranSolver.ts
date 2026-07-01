@@ -15,10 +15,9 @@
  *   3. Para cada veículo ATIVO/SC da frota: minamos um token Turnstile fresco no
  *      próprio browser e chamamos requisitar-consulta?...&c=<token> +
  *      resposta-consulta, gravando o payload.
- *   4. Ingestão: INFRAÇÕES (cliente-despesas) + IPVA/LICENCIAMENTO
- *      (parceiro-despesas), reusando os processadores existentes.
- *   5. SEMPRE fecha o navegador (Browser.close) após capturar os dados — tanto
- *      na varredura completa quanto no modo --so-token.
+ *   4. Fecha o Chrome assim que o login (JWT) é capturado e grava DETRAN_SC_* no env.
+ *   5. Consulta a frota via API Node (sem browser) e ingere INFRAÇÕES + IPVA/LIC.
+ *      Modo --so-token: mina um captcha antes de fechar o Chrome.
  *
  * Uso:
  *   npx tsx scripts/detranSolver.ts [--placa PLACA] [--dry-run] [--so-token]
@@ -32,13 +31,14 @@
  *   CHROME_USER_DATA_DIR         perfil do Chrome (default: tmp dedicado)
  *   DETRAN_SC_DEBUG=1            loga respostas cruas
  */
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 import WebSocket from "ws";
 
+import { consultarVeiculoDetranSc } from "../src/lib/detranSc/consulta.js";
 import { processarDespesasDetranSc } from "../src/lib/detranSc/syncDespesasVeiculo.js";
 import {
   loadVeiculosParaSync,
@@ -256,6 +256,45 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function jwtSemBearer(auth: string): string {
+  return auth.replace(/^Bearer\s+/i, "").trim();
+}
+
+/** Grava JWT/empresa/appVersion capturados no env da sessão e no utilizador (Windows). */
+function persistDetranScAuth(cred: Cred): void {
+  if (!cred.auth) return;
+  const jwt = jwtSemBearer(cred.auth);
+  process.env.DETRAN_SC_AUTH = jwt;
+  if (cred.empresa) process.env.DETRAN_SC_EMPRESA = cred.empresa;
+  if (cred.appVersion) process.env.DETRAN_SC_APP_VERSION = cred.appVersion;
+
+  if (process.platform !== "win32") {
+    console.log("✓ DETRAN_SC_* atualizado nesta sessão (persistência só em Windows).");
+    return;
+  }
+
+  const pairs: [string, string][] = [["DETRAN_SC_AUTH", jwt]];
+  if (cred.empresa) pairs.push(["DETRAN_SC_EMPRESA", cred.empresa]);
+  if (cred.appVersion) pairs.push(["DETRAN_SC_APP_VERSION", cred.appVersion]);
+
+  for (const [name, value] of pairs) {
+    const r = spawnSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        `[Environment]::SetEnvironmentVariable('${name}', $env:LANZA_DETRAN_V, 'User')`,
+      ],
+      { env: { ...process.env, LANZA_DETRAN_V: value }, stdio: "pipe" },
+    );
+    if (r.status !== 0) {
+      console.warn(`AVISO: não gravei ${name} no env do utilizador.`);
+    }
+  }
+  console.log("✓ Credenciais gravadas em DETRAN_SC_* (utilizador).");
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
@@ -282,59 +321,57 @@ async function main(): Promise<void> {
     }
   }
 
-  // 1) Garante o Chrome com a porta de depuração.
-  let wsUrl: string;
-  if (await chromeVivo()) {
-    wsUrl = await esperarDevtools();
-  } else {
-    const chrome = acharChrome();
-    const child = spawn(
-      chrome,
-      [
-        `--remote-debugging-port=${PORT}`,
-        `--user-data-dir=${USER_DATA_DIR}`,
-        "--no-first-run",
-        "--no-default-browser-check",
-        PORTAL,
-      ],
-      { detached: true, stdio: "ignore" },
-    );
-    child.unref();
-    wsUrl = await esperarDevtools();
-  }
-
-  const ws = new WebSocket(wsUrl);
-  await new Promise<void>((resolve, reject) => {
-    ws.once("open", () => resolve());
-    ws.once("error", reject);
-  });
-  // Sem estes handlers, um evento 'error' do ws (sem listener) derruba o Node
-  // (EventEmitter relança). Tratamos para o solver sobreviver a quedas de socket.
-  let wsFechado = false;
-  ws.on("error", (e) => console.error(`[ws] erro: ${(e as Error)?.message ?? e}`));
-  ws.on("close", () => {
-    wsFechado = true;
-  });
-  const cdp = new Cdp(ws);
-
-  // Fecha o Chrome de verdade (não só o socket de depuração) após capturar os
-  // dados. `Browser.close` encerra o navegador pela conexão browser-level; se
-  // falhar, ainda fechamos o WebSocket. Idempotente/best-effort.
-  let navegadorFechado = false;
-  async function fecharNavegador(): Promise<void> {
-    if (navegadorFechado) return;
-    navegadorFechado = true;
-    try {
-      await cdp.send("Browser.close", {}, undefined, 5000);
-    } catch {
-      /* best-effort: pode já estar fechando */
+  // 1) Chrome + CDP — só para capturar login (e --so-token). Fecha ao capturar JWT.
+  let fecharChrome: (() => Promise<void>) | null = null;
+  try {
+    let wsUrl: string;
+    if (await chromeVivo()) {
+      wsUrl = await esperarDevtools();
+    } else {
+      const chrome = acharChrome();
+      const child = spawn(
+        chrome,
+        [
+          `--remote-debugging-port=${PORT}`,
+          `--user-data-dir=${USER_DATA_DIR}`,
+          "--no-first-run",
+          "--no-default-browser-check",
+          PORTAL,
+        ],
+        { detached: true, stdio: "ignore" },
+      );
+      child.unref();
+      wsUrl = await esperarDevtools();
     }
-    try {
-      ws.close();
-    } catch {
-      /* já fechado */
+
+    const ws = new WebSocket(wsUrl);
+    await new Promise<void>((resolve, reject) => {
+      ws.once("open", () => resolve());
+      ws.once("error", reject);
+    });
+    let wsFechado = false;
+    ws.on("error", (e) => console.error(`[ws] erro: ${(e as Error)?.message ?? e}`));
+    ws.on("close", () => {
+      wsFechado = true;
+    });
+    const cdp = new Cdp(ws);
+
+    let navegadorFechado = false;
+    async function fecharNavegador(): Promise<void> {
+      if (navegadorFechado) return;
+      navegadorFechado = true;
+      try {
+        await cdp.send("Browser.close", {}, undefined, 5000);
+      } catch {
+        /* best-effort */
+      }
+      try {
+        ws.close();
+      } catch {
+        /* já fechado */
+      }
     }
-  }
+    fecharChrome = fecharNavegador;
 
   const cred: Cred = {};
   // Sitekey eventualmente capturado da rede (fallback; o default é a constante).
@@ -448,8 +485,8 @@ async function main(): Promise<void> {
     console.log("Chrome aberto. Login AUTOMÁTICO (experimental) em andamento...");
   } else {
     console.log("Chrome aberto. Na janela: basta fazer o LOGIN gov.br (o certificado A1");
-    console.log("é apresentado sozinho pela política) e deixar a janela aberta.");
-    console.log("Não é preciso fazer consulta manual — o solver cuida do captcha.");
+    console.log("é apresentado sozinho pela política). O Chrome fecha ao capturar o token.");
+    console.log("A frota é consultada depois via API (sem browser).");
   }
   console.log("Aguardando login (JWT) (timeout 8 min)...\n");
 
@@ -465,8 +502,7 @@ async function main(): Promise<void> {
   const hostsVistos = new Set<string>();
   while (Date.now() < deadline) {
     if (!(await chromeVivo())) {
-      console.error("Janela do Chrome fechada antes de capturar credenciais. Abortado.");
-      process.exit(1);
+      throw new Error("Janela do Chrome fechada antes de capturar credenciais. Abortado.");
     }
     if (wsFechado) {
       console.error(
@@ -536,46 +572,50 @@ async function main(): Promise<void> {
     }
 
     if (!sid) sid = sessaoPortal();
-    if (cred.auth && sid && sitekey) break;
+    const loginPronto = cred.auth && (soToken ? !!(sid && sitekey) : true);
+    if (loginPronto) break;
     await sleep(2500);
   }
 
   if (!cred.auth) {
-    console.error("✗ Não capturei o token (Authorization). Faça uma consulta no portal e tente de novo.");
-    process.exit(1);
-  }
-  if (!sid) {
-    console.error("✗ Não encontrei a aba do portal DETRAN SC.");
-    process.exit(1);
-  }
-  if (!sitekey) {
-    console.error(
-      "✗ Não descobri o sitekey do Turnstile. Abra a tela de consulta de veículo (que mostra o captcha) e rode de novo, ou defina DETRAN_SC_TURNSTILE_SITEKEY.",
+    throw new Error(
+      "✗ Não capturei o token (Authorization). Faça o login gov.br no portal e tente de novo.",
     );
-    process.exit(1);
+  }
+  if (soToken && !sid) {
+    throw new Error("✗ Não encontrei a aba do portal DETRAN SC.");
+  }
+  if (soToken && !sitekey) {
+    throw new Error(
+      "✗ Não descobri o sitekey do Turnstile. Defina DETRAN_SC_TURNSTILE_SITEKEY ou abra o portal e tente de novo.",
+    );
   }
   console.log(
-    `✓ Login OK (token ${cred.auth.length}c, empresa=${cred.empresa ?? "?"}) | sitekey=${sitekey.slice(0, 10)}…\n`,
+    `✓ Login OK (token ${cred.auth.length}c, empresa=${cred.empresa ?? "?"}) | sitekey=${sitekey?.slice(0, 10) ?? "?"}…\n`,
   );
 
-  // Modo "só token": mina um e sai (para usar com sync-infracoes --captcha).
+  persistDetranScAuth(cred);
+
+  // Modo "só token": mina um captcha antes de fechar (uso único).
   if (soToken) {
     const token = await cdp.evaluate<string>(
       `window.__lanzaMint(${JSON.stringify(sitekey)}, ${JSON.stringify(DETRAN_SC_ACTION)})`,
-      sid,
+      sid!,
     );
     console.log(`TOKEN_OK len=${token.length}`);
-    console.log("Use: npx tsx src/run.ts sync-infracoes --captcha \"<TOKEN>\" --placa <PLACA>");
+    console.log('Use: npx tsx src/run.ts sync-infracoes --captcha "<TOKEN>" --placa <PLACA>');
     console.log("(token de uso único e validade curta — gere e use imediatamente)");
-    // Não imprime o token inteiro em logs; grava em arquivo temp do SO.
     const f = path.join(os.tmpdir(), "detran_turnstile_token.txt");
     fs.writeFileSync(f, token, "utf8");
     console.log(`Token salvo em: ${f}`);
-    await fecharNavegador();
     return;
   }
 
-  // 3) Loop da frota.
+  await fecharNavegador();
+  fecharChrome = null;
+  console.log("Navegador fechado. Consultando frota via API…\n");
+
+  // 3) Loop da frota (API Node — JWT já no env; captcha não exigido).
   const veiculos = loadVeiculosParaSync(placaFiltro);
   console.log(
     `Frota SC ativa: ${veiculos.length} veículo(s)${placaFiltro ? ` (filtro ${placaFiltro})` : ""}${dryRun ? " | DRY-RUN" : ""}\n`,
@@ -588,32 +628,10 @@ async function main(): Promise<void> {
     const renavam = String(v.renavam).replace(/\D/g, "");
     const placaApi = compactPlaca(v.placa);
     try {
-      const token = await cdp.evaluate<string>(
-        `window.__lanzaMint(${JSON.stringify(sitekey)}, ${JSON.stringify(DETRAN_SC_ACTION)})`,
-        sid,
-      );
-      const res = await cdp.evaluate<any>(
-        `window.__lanzaConsulta(${JSON.stringify({
-          placa: placaApi,
-          renavam,
-          captcha: token,
-          auth: cred.auth,
-          empresa: cred.empresa,
-          appVersion: cred.appVersion,
-        })})`,
-        sid,
-      );
+      const payload = await consultarVeiculoDetranSc(v.placa, renavam);
 
-      if (DEBUG) console.error(`[debug] ${v.placa} →`, JSON.stringify(res).slice(0, 300));
+      if (DEBUG) console.error(`[debug] ${v.placa} →`, JSON.stringify(payload).slice(0, 300));
 
-      if (!res || res.status !== "ok" || !res.payload) {
-        falhas++;
-        console.log(`✗ ${v.placa} | ${res?.message ?? "sem payload"}`);
-        await sleep(1500);
-        continue;
-      }
-
-      const payload = res.payload;
       fs.writeFileSync(
         path.join(OUT_DIR, `${placaApi}.json`),
         JSON.stringify(payload, null, 2),
@@ -638,8 +656,12 @@ async function main(): Promise<void> {
   }
 
   console.log(`\nConcluído: ${ok} OK, ${falhas} falha(s). Payloads em ${OUT_DIR}`);
-  await fecharNavegador();
-  console.log("Navegador fechado.");
+  } finally {
+    if (fecharChrome) {
+      await fecharChrome();
+      console.log("Navegador fechado.");
+    }
+  }
 }
 
 // Não deixar o processo morrer em silêncio por um erro assíncrono solto

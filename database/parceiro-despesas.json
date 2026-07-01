@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-06-29",
+  "atualizadoEm": "2026-07-01",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -3445,7 +3445,10 @@
       "data": "10/10/2026",
       "valor": 142.55,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/AVU6740/IPVA/649114503"
+      "origem": "detran-sc/debitos/AVU6740/IPVA/649114503",
+      "rastreameManutencaoId": 380,
+      "rastreameHash": "aaed2b0edbf9e25e",
+      "rastreameSyncEm": "2026-07-01T15:41:46.286Z"
     },
     {
       "id": "a33be447-eecf-4d08-8946-3ac2eb608232",
@@ -3456,7 +3459,10 @@
       "data": "10/11/2026",
       "valor": 142.55,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/AVU6740/IPVA/649114504"
+      "origem": "detran-sc/debitos/AVU6740/IPVA/649114504",
+      "rastreameManutencaoId": 381,
+      "rastreameHash": "c54f1afffd813b70",
+      "rastreameSyncEm": "2026-07-01T15:41:46.509Z"
     },
     {
       "id": "b46d4b6f-cc99-4ac3-859d-2cdf534f1537",
@@ -3467,7 +3473,10 @@
       "data": "10/12/2026",
       "valor": 142.54,
       "competencia": "12/2026",
-      "origem": "detran-sc/debitos/AVU6740/IPVA/649114505"
+      "origem": "detran-sc/debitos/AVU6740/IPVA/649114505",
+      "rastreameManutencaoId": 382,
+      "rastreameHash": "64825aa1138cf4a9",
+      "rastreameSyncEm": "2026-07-01T15:41:46.746Z"
     },
     {
       "id": "ab1af384-68c0-403a-905f-9720d652ace9",
@@ -3478,7 +3487,10 @@
       "data": "30/12/2026",
       "valor": 149.37,
       "competencia": "12/2026",
-      "origem": "detran-sc/debitos/AVU6740/Licenciamento/649114501"
+      "origem": "detran-sc/debitos/AVU6740/Licenciamento/649114501",
+      "rastreameManutencaoId": 409,
+      "rastreameHash": "e0f76cfd39353b57",
+      "rastreameSyncEm": "2026-07-01T15:44:42.422Z"
     },
     {
       "id": "e7f7565c-709b-49d6-b5d2-1564e5dbd3d8",
@@ -3489,7 +3501,10 @@
       "data": "10/09/2026",
       "valor": 459.47,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432410"
+      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432410",
+      "rastreameManutencaoId": 383,
+      "rastreameHash": "3250c9f43d913ae6",
+      "rastreameSyncEm": "2026-07-01T15:41:46.977Z"
     },
     {
       "id": "34a0aa2f-9989-42b7-9790-2584704ad830",
@@ -3500,7 +3515,10 @@
       "data": "10/10/2026",
       "valor": 459.47,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432411"
+      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432411",
+      "rastreameManutencaoId": 384,
+      "rastreameHash": "b8740855fe9f582b",
+      "rastreameSyncEm": "2026-07-01T15:41:47.203Z"
     },
     {
       "id": "42ada357-2153-4619-9147-ced07fba7533",
@@ -3511,7 +3529,10 @@
       "data": "10/11/2026",
       "valor": 459.48,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432412"
+      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432412",
+      "rastreameManutencaoId": 385,
+      "rastreameHash": "fde7e849fd13dce2",
+      "rastreameSyncEm": "2026-07-01T15:41:47.435Z"
     },
     {
       "id": "28eba0d7-bb6e-4734-a27a-58806c2f9f51",
@@ -3522,7 +3543,10 @@
       "data": "30/11/2026",
       "valor": 149.37,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/IYR8F19/Licenciamento/662432408"
+      "origem": "detran-sc/debitos/IYR8F19/Licenciamento/662432408",
+      "rastreameManutencaoId": 410,
+      "rastreameHash": "6a90a0f2192b89f1",
+      "rastreameSyncEm": "2026-07-01T15:44:42.634Z"
     },
     {
       "id": "4ec9a33b-3c05-4fca-85af-f61eaab1043e",
@@ -3533,7 +3557,10 @@
       "data": "10/08/2026",
       "valor": 192.53,
       "competencia": "08/2026",
-      "origem": "detran-sc/debitos/MKV6268/IPVA/656474056"
+      "origem": "detran-sc/debitos/MKV6268/IPVA/656474056",
+      "rastreameManutencaoId": 386,
+      "rastreameHash": "fdf7bad2380908ff",
+      "rastreameSyncEm": "2026-07-01T15:41:47.643Z"
     },
     {
       "id": "652661a0-8306-4e36-b0b1-4d5c3794da80",
@@ -3544,7 +3571,10 @@
       "data": "10/09/2026",
       "valor": 192.53,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/MKV6268/IPVA/656474057"
+      "origem": "detran-sc/debitos/MKV6268/IPVA/656474057",
+      "rastreameManutencaoId": 387,
+      "rastreameHash": "278af69730017031",
+      "rastreameSyncEm": "2026-07-01T15:41:47.848Z"
     },
     {
       "id": "583559bb-6546-458b-8f1c-fba49454373d",
@@ -3555,7 +3585,10 @@
       "data": "10/10/2026",
       "valor": 192.54,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/MKV6268/IPVA/656474058"
+      "origem": "detran-sc/debitos/MKV6268/IPVA/656474058",
+      "rastreameManutencaoId": 388,
+      "rastreameHash": "a146d21e586605ab",
+      "rastreameSyncEm": "2026-07-01T15:41:48.068Z"
     },
     {
       "id": "e43a6108-74d1-428f-92ad-87471778ee7f",
@@ -3566,7 +3599,10 @@
       "data": "31/10/2026",
       "valor": 149.37,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/MKV6268/Licenciamento/656474054"
+      "origem": "detran-sc/debitos/MKV6268/Licenciamento/656474054",
+      "rastreameManutencaoId": 411,
+      "rastreameHash": "23702c939747b302",
+      "rastreameSyncEm": "2026-07-01T15:44:42.850Z"
     },
     {
       "id": "ef510324-1612-46d7-85e4-85f6dbe3781d",
@@ -3577,7 +3613,10 @@
       "data": "10/07/2026",
       "valor": 179.99,
       "competencia": "07/2026",
-      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934759"
+      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934759",
+      "rastreameManutencaoId": 389,
+      "rastreameHash": "1b005e815f85abab",
+      "rastreameSyncEm": "2026-07-01T15:41:48.280Z"
     },
     {
       "id": "0f721876-38e6-443c-a5a8-76b8ba5cdf4e",
@@ -3588,7 +3627,10 @@
       "data": "10/08/2026",
       "valor": 179.99,
       "competencia": "08/2026",
-      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934760"
+      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934760",
+      "rastreameManutencaoId": 390,
+      "rastreameHash": "cbe56214a97266a3",
+      "rastreameSyncEm": "2026-07-01T15:41:48.479Z"
     },
     {
       "id": "604b0a54-2430-48e9-8622-8c2b0dcc6824",
@@ -3599,7 +3641,10 @@
       "data": "10/09/2026",
       "valor": 180,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934761"
+      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934761",
+      "rastreameManutencaoId": 391,
+      "rastreameHash": "a39bd536c7b78967",
+      "rastreameSyncEm": "2026-07-01T15:41:48.676Z"
     },
     {
       "id": "0535fa69-93d9-4d9b-bdd6-8d877c847dae",
@@ -3610,7 +3655,10 @@
       "data": "30/09/2026",
       "valor": 149.37,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/MLN0B87/Licenciamento/660934757"
+      "origem": "detran-sc/debitos/MLN0B87/Licenciamento/660934757",
+      "rastreameManutencaoId": 412,
+      "rastreameHash": "e305443a18f09ef1",
+      "rastreameSyncEm": "2026-07-01T15:44:43.058Z"
     },
     {
       "id": "d0f66ebd-6ddf-48f1-b744-8dccb041f6f6",
@@ -3621,7 +3669,10 @@
       "data": "10/09/2026",
       "valor": 197.28,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472456"
+      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472456",
+      "rastreameManutencaoId": 392,
+      "rastreameHash": "e0d42c00e25ba40f",
+      "rastreameSyncEm": "2026-07-01T15:41:48.955Z"
     },
     {
       "id": "11716a3b-ef0f-49fc-8d95-771cd1d579f6",
@@ -3632,7 +3683,10 @@
       "data": "10/10/2026",
       "valor": 197.28,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472457"
+      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472457",
+      "rastreameManutencaoId": 393,
+      "rastreameHash": "77f99c09b3cce5ea",
+      "rastreameSyncEm": "2026-07-01T15:41:49.161Z"
     },
     {
       "id": "c0637170-23b1-4739-81f0-eba69c59d88a",
@@ -3643,7 +3697,10 @@
       "data": "10/11/2026",
       "valor": 197.28,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472458"
+      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472458",
+      "rastreameManutencaoId": 394,
+      "rastreameHash": "a06cece9bc67ad33",
+      "rastreameSyncEm": "2026-07-01T15:41:49.371Z"
     },
     {
       "id": "46cf5754-8c4c-4a6e-982d-eb19cd9f16f0",
@@ -3654,7 +3711,10 @@
       "data": "30/11/2026",
       "valor": 149.37,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/OWN3C59/Licenciamento/657472454"
+      "origem": "detran-sc/debitos/OWN3C59/Licenciamento/657472454",
+      "rastreameManutencaoId": 413,
+      "rastreameHash": "d8589c2b81f8c4e8",
+      "rastreameSyncEm": "2026-07-01T15:44:43.253Z"
     },
     {
       "id": "be1fa602-26a6-4401-ba45-90df7feb4921",
@@ -3665,7 +3725,10 @@
       "data": "10/10/2026",
       "valor": 244.65,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621166"
+      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621166",
+      "rastreameManutencaoId": 395,
+      "rastreameHash": "a0d28e7c92128e41",
+      "rastreameSyncEm": "2026-07-01T15:41:49.576Z"
     },
     {
       "id": "9e334747-8da5-409f-9d4f-926a7062be3d",
@@ -3676,7 +3739,10 @@
       "data": "10/11/2026",
       "valor": 244.65,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621167"
+      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621167",
+      "rastreameManutencaoId": 396,
+      "rastreameHash": "627a16e067652b84",
+      "rastreameSyncEm": "2026-07-01T15:41:49.782Z"
     },
     {
       "id": "1911dbc0-e9d8-4e39-bf74-ea30b69c07de",
@@ -3687,7 +3753,10 @@
       "data": "10/12/2026",
       "valor": 244.64,
       "competencia": "12/2026",
-      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621168"
+      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621168",
+      "rastreameManutencaoId": 397,
+      "rastreameHash": "dc0c7db22595a667",
+      "rastreameSyncEm": "2026-07-01T15:41:49.989Z"
     },
     {
       "id": "0c0d4889-2045-4221-bff1-a44f4a6078db",
@@ -3698,7 +3767,10 @@
       "data": "30/12/2026",
       "valor": 149.37,
       "competencia": "12/2026",
-      "origem": "detran-sc/debitos/OZC0B50/Licenciamento/654621164"
+      "origem": "detran-sc/debitos/OZC0B50/Licenciamento/654621164",
+      "rastreameManutencaoId": 414,
+      "rastreameHash": "18941c62607e4d80",
+      "rastreameSyncEm": "2026-07-01T15:44:43.475Z"
     },
     {
       "id": "228a06f1-483b-429e-b960-92bc15ad105e",
@@ -3721,7 +3793,10 @@
       "data": "31/10/2026",
       "valor": 427.64,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/AVU6740/IPVA/649114502"
+      "origem": "detran-sc/debitos/AVU6740/IPVA/649114502",
+      "rastreameManutencaoId": 398,
+      "rastreameHash": "a356f4c8e06764a3",
+      "rastreameSyncEm": "2026-07-01T15:41:50.202Z"
     },
     {
       "id": "b2646b31-905c-4a85-a377-2973992657ab",
@@ -3732,7 +3807,10 @@
       "data": "30/09/2026",
       "valor": 1378.42,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432409"
+      "origem": "detran-sc/debitos/IYR8F19/IPVA/662432409",
+      "rastreameManutencaoId": 399,
+      "rastreameHash": "42a3d00ea152d1f1",
+      "rastreameSyncEm": "2026-07-01T15:41:50.414Z"
     },
     {
       "id": "014959c1-16e7-4233-9e88-e406259c7247",
@@ -3743,7 +3821,10 @@
       "data": "31/08/2026",
       "valor": 577.6,
       "competencia": "08/2026",
-      "origem": "detran-sc/debitos/MKV6268/IPVA/656474055"
+      "origem": "detran-sc/debitos/MKV6268/IPVA/656474055",
+      "rastreameManutencaoId": 400,
+      "rastreameHash": "abe4ada6fe00d39a",
+      "rastreameSyncEm": "2026-07-01T15:41:50.635Z"
     },
     {
       "id": "728429bc-b703-4fd9-b227-3f2bfaf0d97a",
@@ -3754,7 +3835,10 @@
       "data": "31/07/2026",
       "valor": 539.98,
       "competencia": "07/2026",
-      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934758"
+      "origem": "detran-sc/debitos/MLN0B87/IPVA/660934758",
+      "rastreameManutencaoId": 401,
+      "rastreameHash": "a90ee9f2d31ec525",
+      "rastreameSyncEm": "2026-07-01T15:41:50.846Z"
     },
     {
       "id": "6c517808-adf9-4f5b-94d3-643426ab8de0",
@@ -3765,7 +3849,10 @@
       "data": "30/09/2026",
       "valor": 591.84,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472455"
+      "origem": "detran-sc/debitos/OWN3C59/IPVA/657472455",
+      "rastreameManutencaoId": 402,
+      "rastreameHash": "ad7f96f77ee66264",
+      "rastreameSyncEm": "2026-07-01T15:41:51.067Z"
     },
     {
       "id": "d8b21573-6769-4aff-bf04-a5f1fae6e3f5",
@@ -3776,7 +3863,10 @@
       "data": "31/10/2026",
       "valor": 733.94,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621165"
+      "origem": "detran-sc/debitos/OZC0B50/IPVA/654621165",
+      "rastreameManutencaoId": 403,
+      "rastreameHash": "110bf84ac28eec74",
+      "rastreameSyncEm": "2026-07-01T15:41:51.274Z"
     },
     {
       "id": "1dc39318-dafa-4c62-ada7-bec228a34c01",
@@ -3787,7 +3877,10 @@
       "data": "30/09/2026",
       "valor": 684.88,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593059"
+      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593059",
+      "rastreameManutencaoId": 404,
+      "rastreameHash": "f2d0ade509cc5beb",
+      "rastreameSyncEm": "2026-07-01T15:41:51.479Z"
     },
     {
       "id": "186ee57c-b1de-431b-a79e-aadd1246457f",
@@ -3798,7 +3891,10 @@
       "data": "10/09/2026",
       "valor": 228.29,
       "competencia": "09/2026",
-      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593060"
+      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593060",
+      "rastreameManutencaoId": 405,
+      "rastreameHash": "ff582e48cdb99757",
+      "rastreameSyncEm": "2026-07-01T15:41:51.686Z"
     },
     {
       "id": "3941bf0f-7c18-4bec-86f0-429d73c1dbda",
@@ -3809,7 +3905,10 @@
       "data": "10/10/2026",
       "valor": 228.29,
       "competencia": "10/2026",
-      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593061"
+      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593061",
+      "rastreameManutencaoId": 406,
+      "rastreameHash": "dc69b13628a6fb08",
+      "rastreameSyncEm": "2026-07-01T15:41:51.899Z"
     },
     {
       "id": "e18b012e-0f3b-4f41-a3c2-9aef1ecf74c5",
@@ -3820,7 +3919,10 @@
       "data": "10/11/2026",
       "valor": 228.3,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593062"
+      "origem": "detran-sc/debitos/MLW7I09/IPVA/656593062",
+      "rastreameManutencaoId": 407,
+      "rastreameHash": "548625241e59f2ed",
+      "rastreameSyncEm": "2026-07-01T15:41:52.123Z"
     },
     {
       "id": "703fa428-352c-461f-b5f1-2b5359e663cf",
@@ -3831,7 +3933,10 @@
       "data": "30/11/2026",
       "valor": 149.37,
       "competencia": "11/2026",
-      "origem": "detran-sc/debitos/MLW7I09/Licenciamento/656593058"
+      "origem": "detran-sc/debitos/MLW7I09/Licenciamento/656593058",
+      "rastreameManutencaoId": 415,
+      "rastreameHash": "3e58b394e8b44496",
+      "rastreameSyncEm": "2026-07-01T15:44:43.732Z"
     },
     {
       "id": "5cc22541-08c9-4d03-9cec-166d39542c52",
@@ -3842,7 +3947,10 @@
       "data": "30/04/2026",
       "valor": 1829.58,
       "competencia": "04/2026",
-      "origem": "detran-rs/debitos/PWH3A45/IPVA/2026-cota-unica"
+      "origem": "detran-rs/debitos/PWH3A45/IPVA/2026-cota-unica",
+      "rastreameManutencaoId": 408,
+      "rastreameHash": "ceb295df62155c3c",
+      "rastreameSyncEm": "2026-07-01T15:41:52.331Z"
     },
     {
       "id": "72161d3d-cb06-4e15-b63b-2c728541880c",
@@ -3853,7 +3961,10 @@
       "data": "31/07/2026",
       "valor": 114.09,
       "competencia": "07/2026",
-      "origem": "detran-rs/debitos/PWH3A45/Licenciamento/2026"
+      "origem": "detran-rs/debitos/PWH3A45/Licenciamento/2026",
+      "rastreameManutencaoId": 416,
+      "rastreameHash": "704eba44b54715cf",
+      "rastreameSyncEm": "2026-07-01T15:44:43.944Z"
     },
     {
       "id": "d72137c9-4d70-49f5-9d18-c15b201447ca",
@@ -3864,7 +3975,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/AVU6740/07-2026"
+      "origem": "rastreador-fixo/AVU6740/07-2026",
+      "rastreameManutencaoId": 162,
+      "rastreameHash": "25a0041b6961db7f",
+      "rastreameSyncEm": "2026-07-01T15:44:43.948Z"
     },
     {
       "id": "1040c0fb-7659-4d32-89c7-68723de5b707",
@@ -3875,7 +3989,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/BBV6A91/07-2026"
+      "origem": "rastreador-fixo/BBV6A91/07-2026",
+      "rastreameManutencaoId": 417,
+      "rastreameHash": "5a5c04842d000d0c",
+      "rastreameSyncEm": "2026-07-01T15:44:44.166Z"
     },
     {
       "id": "241cd7da-8b15-410a-a0af-0b42019c4eff",
@@ -3886,7 +4003,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/MKV6268/07-2026"
+      "origem": "rastreador-fixo/MKV6268/07-2026",
+      "rastreameManutencaoId": 418,
+      "rastreameHash": "be3c5e29eb8cd81c",
+      "rastreameSyncEm": "2026-07-01T15:44:44.362Z"
     },
     {
       "id": "2aa1815d-26e1-48ed-8095-4b5e8ab60ffe",
@@ -3897,7 +4017,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/MLN0B87/07-2026"
+      "origem": "rastreador-fixo/MLN0B87/07-2026",
+      "rastreameManutencaoId": 419,
+      "rastreameHash": "1399dede932a8013",
+      "rastreameSyncEm": "2026-07-01T15:44:44.566Z"
     },
     {
       "id": "b5e7a12c-d0ac-47b8-916d-bd160e8f1af3",
@@ -3908,7 +4031,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/PWH3A45/07-2026"
+      "origem": "rastreador-fixo/PWH3A45/07-2026",
+      "rastreameManutencaoId": 420,
+      "rastreameHash": "81b7fd1330c7f582",
+      "rastreameSyncEm": "2026-07-01T15:44:44.763Z"
     },
     {
       "id": "1ed37940-4acc-4d30-8935-17ea4ad0de61",
@@ -3919,7 +4045,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/IWP5G63/07-2026"
+      "origem": "rastreador-fixo/IWP5G63/07-2026",
+      "rastreameManutencaoId": 421,
+      "rastreameHash": "a1ede2037638ec1e",
+      "rastreameSyncEm": "2026-07-01T15:44:44.977Z"
     },
     {
       "id": "3d8f0da1-ff88-465a-98cd-46b259a894f9",
@@ -3930,7 +4059,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/MLX2H34/07-2026"
+      "origem": "rastreador-fixo/MLX2H34/07-2026",
+      "rastreameManutencaoId": 422,
+      "rastreameHash": "2d6579789af2a044",
+      "rastreameSyncEm": "2026-07-01T15:44:45.180Z"
     },
     {
       "id": "bc572a9b-8a37-4fa5-bdfc-a8a23effe294",
@@ -3941,7 +4073,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/IXT7I93/07-2026"
+      "origem": "rastreador-fixo/IXT7I93/07-2026",
+      "rastreameManutencaoId": 423,
+      "rastreameHash": "f5ab0a2a5424b3aa",
+      "rastreameSyncEm": "2026-07-01T15:44:45.382Z"
     },
     {
       "id": "12e9ddc8-4979-4045-911b-810cbef2984b",
@@ -3952,7 +4087,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/RAH4F54/07-2026"
+      "origem": "rastreador-fixo/RAH4F54/07-2026",
+      "rastreameManutencaoId": 424,
+      "rastreameHash": "06949a56a701b1e4",
+      "rastreameSyncEm": "2026-07-01T15:44:45.579Z"
     },
     {
       "id": "e6901034-66da-44a6-9ab4-600700b5fd97",
@@ -3963,7 +4101,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/IYR8F19/07-2026"
+      "origem": "rastreador-fixo/IYR8F19/07-2026",
+      "rastreameManutencaoId": 425,
+      "rastreameHash": "55612d649bd3f5c4",
+      "rastreameSyncEm": "2026-07-01T15:44:45.969Z"
     },
     {
       "id": "e3225b7b-9f63-407c-ac85-4650eb3c38ea",
@@ -3974,7 +4115,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/QJB0I83/07-2026"
+      "origem": "rastreador-fixo/QJB0I83/07-2026",
+      "rastreameManutencaoId": 426,
+      "rastreameHash": "ec8a557d08b58c1b",
+      "rastreameSyncEm": "2026-07-01T15:44:46.305Z"
     },
     {
       "id": "00b3491f-459f-499a-932e-155867577a10",
@@ -3985,7 +4129,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/MLW7I09/07-2026"
+      "origem": "rastreador-fixo/MLW7I09/07-2026",
+      "rastreameManutencaoId": 427,
+      "rastreameHash": "ae18edf5812a84a8",
+      "rastreameSyncEm": "2026-07-01T15:44:46.507Z"
     },
     {
       "id": "6849f083-ef5b-4dcb-808b-66eb4d2e4a1d",
@@ -3996,7 +4143,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/FHG0B73/07-2026"
+      "origem": "rastreador-fixo/FHG0B73/07-2026",
+      "rastreameManutencaoId": 428,
+      "rastreameHash": "241b21e1e4969f03",
+      "rastreameSyncEm": "2026-07-01T15:44:46.711Z"
     },
     {
       "id": "9741dd8e-b6c3-4221-892d-20036475b343",
@@ -4007,7 +4157,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/OZC0B50/07-2026"
+      "origem": "rastreador-fixo/OZC0B50/07-2026",
+      "rastreameManutencaoId": 429,
+      "rastreameHash": "2385ca6b17e36ddf",
+      "rastreameSyncEm": "2026-07-01T15:44:46.921Z"
     },
     {
       "id": "6f5a6740-2c45-44b0-b1d7-51f9b2f4cb4c",
@@ -4018,7 +4171,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/OWN3C59/07-2026"
+      "origem": "rastreador-fixo/OWN3C59/07-2026",
+      "rastreameManutencaoId": 430,
+      "rastreameHash": "ef1040f404f41b62",
+      "rastreameSyncEm": "2026-07-01T15:44:47.126Z"
     },
     {
       "id": "ad1ba5b5-e039-4c54-a091-1dd514ae6148",

@@ -14,6 +14,7 @@ import {
 } from "../lib/cobrancasAlvos.js";
 import { COBRANCAS_OUT_DIR } from "../lib/cobrancas.js";
 import { loadClientesDb } from "../lib/clientesDb.js";
+import { formatResumoCobrancaSemanal, inferirDiaEscalonamento } from "../lib/pagamentoSemanalCobranca.js";
 import { resolverCliente } from "../lib/recebimento/baixaPlano.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
@@ -64,6 +65,20 @@ function resolverFiltro(argv: string[]): FiltroAlvosCobranca {
   return {};
 }
 
+function hojeBr(): string {
+  const n = new Date();
+  return `${String(n.getDate()).padStart(2, "0")}/${String(n.getMonth() + 1).padStart(2, "0")}/${n.getFullYear()}`;
+}
+
+function rotuloDiaSemanal(vencimentosBr: string[] | undefined, refHoje: string): string {
+  const venc = vencimentosBr?.[0];
+  if (!venc) return "";
+  const dia = inferirDiaEscalonamento(venc, refHoje);
+  if (dia == null) return " · em prazo";
+  const titulos = ["", "lembrete", "aviso", "bloqueio"];
+  return ` · dia ${dia} (${titulos[dia] ?? "?"})`;
+}
+
 function rotuloFiltro(filtro: FiltroAlvosCobranca): string {
   const partes: string[] = [];
   if (filtro.placa) partes.push(`placa ${filtro.placa}`);
@@ -87,7 +102,7 @@ Opções:
   --cliente NOME/CPF/id Filtra locatário (omitir = todos; exclusivo com --placa)
   --placa PLACA         Filtra veículo (omitir = todos; exclusivo com --cliente)
   --listar              Só lista alvos elegíveis (não gera mensagens)
-  --dia N               (pagamento-semanal) dia WhatsApp [padrão 3]
+  --dia N               (pagamento-semanal) força template 1–4 [padrão: auto D+1 lembrete · D+2 aviso · D+3 bloqueio]
   --data-pagamento DD/MM/AAAA  (pagamento-semanal) data p/ tabela de atraso [hoje]
   --no-salvar           Só imprime no terminal
   --out DIR             Diretório de saída [padrão relatorios/_tmp/cobrancas/]
@@ -127,7 +142,7 @@ function imprimirListagem(tipo: TipoCobrancaAction, filtro: FiltroAlvosCobranca)
     const qtd = a.despesas.length;
     const extra =
       tipo === "pagamento-semanal" && a.vencimentosBr?.length
-        ? ` · venc.: ${a.vencimentosBr.join(", ")}`
+        ? ` · venc.: ${a.vencimentosBr.join(", ")}${rotuloDiaSemanal(a.vencimentosBr, hojeBr())}`
         : tipo === "renegociacao" || tipo === "manutencao"
           ? ` · ${brl(a.despesas.reduce((s, d) => s + (Number(d.valorMulta) || 0), 0))}`
           : "";
@@ -151,10 +166,15 @@ export function mainLote(argv: string[]): void {
   const apenasListar = argv.includes("--listar");
   const salvar = !argv.includes("--no-salvar");
   const outDir = getOpt(argv, "--out") ?? COBRANCAS_OUT_DIR;
-  const dia = Number(getOpt(argv, "--dia") ?? 3);
+  const diaRaw = getOpt(argv, "--dia");
+  const diaOverride = diaRaw != null ? Number(diaRaw) : undefined;
   const dataPagamento = getOpt(argv, "--data-pagamento");
 
-  if (tipos.includes("pagamento-semanal") && ![1, 2, 3, 4].includes(dia)) {
+  if (
+    tipos.includes("pagamento-semanal") &&
+    diaOverride != null &&
+    ![1, 2, 3, 4].includes(diaOverride)
+  ) {
     console.error("Erro: --dia deve ser 1, 2, 3 ou 4.");
     process.exit(1);
   }
@@ -176,7 +196,7 @@ export function mainLote(argv: string[]): void {
   for (const tipo of tipos) {
     const result = executarLoteCobranca(tipo, {
       filtro,
-      dia,
+      diaOverride,
       dataPagamentoBr: dataPagamento,
       salvar,
       outDir,
@@ -207,11 +227,14 @@ export function mainLote(argv: string[]): void {
       const a = item.alvo;
       console.log(`${a.placa} · ${a.clienteNome ?? "(sem cliente)"}`);
       if (item.aviso) console.log(`  ⚠ ${item.aviso}`);
-      if (item.semanalAtraso) {
-        console.log(`  Total atraso: ${brl(item.semanalAtraso.totalGeral)}`);
+      if (item.semanalAtraso?.resumo) {
         if (!salvar) {
           console.log("\n" + item.semanalAtraso.markdown);
+        } else {
+          console.log("\n" + formatResumoCobrancaSemanal(item.semanalAtraso.resumo));
         }
+      } else if (item.semanalAtraso && !salvar) {
+        console.log("\n" + item.semanalAtraso.markdown);
       }
       for (const r of item.resultados) {
         console.log("\n" + r.texto);

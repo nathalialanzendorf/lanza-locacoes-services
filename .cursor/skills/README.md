@@ -15,6 +15,7 @@ Skills em `.cursor/skills/<nome>/SKILL.md` são descobertas pelo Cursor neste re
 | `cadastro-contrato` | CRUD contrato Word/PDF + `contratos.json`. |
 | `relatorio-encerramento-contrato` | Acerto de encerramento (sem gravar contrato). |
 | `relatorio-prestacao-contas` | Relatório mensal parceiro. |
+| **`sync`** | Orquestra **todas** as skills de sync em agentes paralelos (`/sync`). |
 | **`sync-infracoes`** | Multas/infrações DETRAN → `cliente-despesas.json` (tool DETRAN). |
 | **`sync-ipva-licenciamento`** | IPVA/licenciamento DETRAN → `parceiro-despesas.json` (tool DETRAN). |
 | **`sync-pedagios`** | Passagens em aberto pedagiodigital.com → `cliente-despesas.json` (tool Pedágio Digital). |

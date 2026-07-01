@@ -18,6 +18,31 @@ Contrato: semanal R$ 650, diária atraso R$ 120 → juros e multa R$ 27,14/dia.
 
 **Total geral:** **R$ 1.691,43**.
 
+## Resumo da cobrança WhatsApp
+
+Antes da tabela e da mensagem, apresentar (implementado em `calcularResumoCobrancaSemanal`):
+
+```
+Pagamento semanal (dia 2 — aviso)
+Vencimento em aberto: 29/06/2026
+Data bloqueio: 02/07/2026
+Total a receber: R$ 360,00 (3 dias atrasados + 0 em dia)
+Juros e multa acumulados: R$ 81,42
+```
+
+Escalonamento (vencimento = D0):
+
+| Data | WhatsApp |
+|---|---|
+| D0 | Sem mensagem (em prazo) |
+| D+1 | Lembrete (dia 1) |
+| D+2 | Aviso (dia 2) |
+| D+3+ | Bloqueio (dia 3) |
+
+- **Data bloqueio** = vencimento + **3 dias**.
+- **Total a receber** = soma até **hoje** (data da cobrança).
+- **Total geral** da tabela completa (até fim do período da parcela) permanece para baixa integral — usar `--data-pagamento` na baixa.
+
 ## Integração cadastro-recebimento
 
 Ao montar `baixa-recebimento plano` para quitação integral de parcelas em atraso:

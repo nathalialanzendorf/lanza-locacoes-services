@@ -12,6 +12,7 @@ import {
 } from "../clienteDespesasDb.js";
 import { findClienteByCpf, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
 import {
+  dataBrComHora,
   dataVencimentoSemanalBr,
   isPagamentoSemanalDescricao,
   proximaParcelaSemanal,
@@ -167,15 +168,8 @@ export function parseHoraBr(raw?: string | null): string | null {
 export function dataHoraToPagaEmIso(dataBr: string, horaBr: string | null): string {
   const m = dataBr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) throw new Error(`Data inválida: ${dataBr}`);
-  const [hh, mm] = (horaBr ?? "12:00").split(":").map(Number);
-  return new Date(
-    Number(m[3]),
-    Number(m[2]) - 1,
-    Number(m[1]),
-    hh,
-    mm,
-    0,
-  ).toISOString();
+  const [hh, mm] = (horaBr ?? "12:00").split(":").map((x) => x.padStart(2, "0"));
+  return new Date(`${m[3]}-${m[2]}-${m[1]}T${hh}:${mm}:00-03:00`).toISOString();
 }
 
 function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: string[] }): ClienteDespesaRegistro[] {
@@ -428,12 +422,13 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       },
       origemExterna: input.origemExterna,
     });
+    const dataPagamento = dataBrComHora(dataBr, horaBr);
     linhas.push({
       num: 2,
       operacao: "criar",
       autoInfracao: null,
       rastreavel,
-      data: dataBr,
+      data: dataPagamento,
       descricao: descQuitada,
       motorista,
       tipo,
@@ -441,9 +436,10 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       patch: {
         descricao: descQuitada,
         valorMulta: valor,
-        dataAutuacao: dataBr,
+        dataAutuacao: dataPagamento,
         paga: true,
         pagaEm: pagaEmIso,
+        rastreameDataIso: pagaEmIso,
         situacao: "Registrado",
         categoria: alvo.categoria,
         rastreameMotoristaKey: alvo.rastreameMotoristaKey,
@@ -468,7 +464,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       operacao: "atualizar",
       autoInfracao: alvo.autoInfracao,
       rastreavel,
-      data: dataBr,
+      data: dataBrComHora(dataBr, horaBr),
       descricao: descQuitada,
       motorista,
       tipo,

@@ -6,7 +6,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  comprovanteDetranParaPush,
   editarClienteDespesa,
+  extrairDetranAutoComprovante,
   isSyncRastreameEligible,
   loadClienteDespesasDb,
   marcarRastreameSyncOk,
@@ -107,7 +109,7 @@ export function categoriaFromInfo(info: string): string {
   const t = info.toLowerCase();
   if (/pagamento semanal|semanal/.test(t)) return "Locação semanal";
   if (/cau[cç][aã]o/.test(t)) return "Caução";
-  if (/manuten|avaria|porta|parachoque|reparo/.test(t)) return "Manutenção";
+  if (/manuten|avaria|porta|parachoque|reparo|[óo]leo|troca de [óo]leo/.test(t)) return "Manutenção";
   if (/lava/.test(t)) return "Lavação";
   if (/estacion/.test(t)) return "Estacionamento";
   if (/ped[aá]gio/.test(t)) return "Pedágio";
@@ -128,8 +130,11 @@ export function categoriaFromGasto(tipo: string | null, info: string): string {
     case "MULTA":
     case "MULTAS":
       return "Infração";
-    case "DOCUMENTACAO":
+    case "DOCUMENTACAO": {
+      const fromInfo = categoriaFromInfo(info);
+      if (fromInfo !== "Outros") return fromInfo;
       return "Renegociação";
+    }
     case "PEDAGIO":
       return "Pedágio";
     case "OUTROS":
@@ -141,7 +146,10 @@ export function categoriaFromGasto(tipo: string | null, info: string): string {
 export function isGastoEmAberto(info: string): boolean {
   const t = String(info ?? "").trim();
   if (t.startsWith("[NEGOCIADO")) return false;
-  return /ATRASADO/i.test(t);
+  // Débitos/créditos lançados sem tag ATRASADO (ex.: "CRÉDITO 3 diárias…" ou legado DÉBITO).
+  if (/^CR[EÉ]DITO\b/i.test(t) || /^D[EÉ]BITO\b/i.test(t)) return true;
+  // Rastreame ocasionalmente grava "ATRSADO" (typo) em vez de "ATRASADO".
+  return /ATRASADO|ATRSAD/i.test(t);
 }
 
 function situacaoFromGasto(info: string, emAberto: boolean): string {
@@ -231,6 +239,7 @@ function infoParaRastreame(reg: ClienteDespesaRegistro): string {
 function gastoToUpsertInput(
   g: GastoRecord,
   ctx: { clientes: ClienteDb[]; motoristas: MotoristaRastreame[] },
+  detranAutoInfracao?: string | null,
 ): UpsertRecebimentoInput | null {
   const id = g.id;
   if (id == null) return null;
@@ -278,7 +287,22 @@ function gastoToUpsertInput(
         ? vencimentoBrToIsoEndDay(dataAutuacao)
         : dataIsoHint,
     rastreameTipo: tipo,
+    detranAutoInfracao: detranAutoInfracao ?? null,
   };
+}
+
+async function resolveComprovanteDetran(g: GastoRecord): Promise<string | null> {
+  const fromList = extrairDetranAutoComprovante(g.comprovante);
+  if (fromList) return fromList;
+  const tipo = tipoFromGasto(g);
+  if (tipo !== "MULTA" && tipo !== "MULTAS") return null;
+  if (g.id == null) return null;
+  try {
+    const full = await fetchGastoById(g.id);
+    return extrairDetranAutoComprovante(full.comprovante);
+  } catch {
+    return null;
+  }
 }
 
 export async function pullRecebimentosFromRastreame(
@@ -314,7 +338,8 @@ export async function pullRecebimentosFromRastreame(
       continue;
     }
 
-    const input = gastoToUpsertInput(g, { clientes, motoristas });
+    const detranAuto = await resolveComprovanteDetran(g);
+    const input = gastoToUpsertInput(g, { clientes, motoristas }, detranAuto);
     if (!input) {
       result.erros.push(
         `gasto ${id}: placa não identificada (${String((g.rastreavel as { value?: string })?.value ?? "")})`,
@@ -410,6 +435,7 @@ async function pushOneRegistro(
       );
       return "criado";
     }
+    const comprovanteDet = comprovanteDetranParaPush(reg);
     const body = {
       total,
       info,
@@ -418,6 +444,7 @@ async function pushOneRegistro(
       motorista: { key: motoristaKey },
       data: dataIso,
       ativo: true,
+      ...(comprovanteDet ? { comprovante: comprovanteDet } : {}),
     };
     const r = await postGasto(body);
     const text = await r.text();
@@ -444,6 +471,7 @@ async function pushOneRegistro(
   }
 
   const atual = await fetchGastoById(reg.rastreameId);
+  const comprovanteDet = comprovanteDetranParaPush(reg);
   const body = {
     ...atual,
     total,
@@ -452,6 +480,7 @@ async function pushOneRegistro(
     ativo: true,
     motorista: { ...(atual.motorista as object), key: motoristaKey },
     rastreavel: { ...(atual.rastreavel as object), key: rastreavelKey },
+    ...(comprovanteDet ? { comprovante: comprovanteDet } : {}),
   };
   const r = await putGasto(reg.rastreameId, body);
   if (!r.ok) {

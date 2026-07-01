@@ -79,6 +79,11 @@ export type ClienteDespesaRegistro = {
   rastreameTipo?: string | null;
   /** Última sincronização bem-sucedida com o Rastreame. */
   rastreameSyncEm?: string | null;
+  /**
+   * Auto DETRAN ligado ao gasto Rastreame (campo `comprovante` no site).
+   * Ex.: RAST-408 → J008087450.
+   */
+  detranAutoInfracao?: string | null;
   /** false = excluído (soft delete); não entra em acertos. */
   ativo?: boolean;
   cadastradoEm: string;
@@ -156,6 +161,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   rastreameDataIso: "data ISO do gasto no Rastreame",
   rastreameTipo: "tipo do gasto no Rastreame (OUTROS, DOCUMENTACAO, ...)",
   rastreameSyncEm: "ISO 8601 — última sync com Rastreame",
+  detranAutoInfracao: "Auto DETRAN (campo comprovante do Rastreame; ex. J008087450)",
   ativo: "boolean — false = excluído (default true)",
 };
 
@@ -792,8 +798,90 @@ export type UpsertRecebimentoRastreameInput = {
   rastreameRastreavelKey?: string | null;
   rastreameDataIso?: string | null;
   rastreameTipo?: string | null;
+  detranAutoInfracao?: string | null;
   force?: boolean;
 };
+
+/** Auto de infração DETRAN a partir do campo `comprovante` do Rastreame. */
+export function extrairDetranAutoComprovante(comprovante: unknown): string | null {
+  const t = String(comprovante ?? "").trim();
+  if (!t) return null;
+  if (/^RAST-\d+$/i.test(t)) return null;
+  const up = t.toUpperCase();
+  if (/^[A-Z][A-Z0-9-]{5,}$/.test(up)) return up;
+  return null;
+}
+
+/** Auto DETRAN para gravar em `comprovante` no Rastreame (tipo MULTA). */
+export function comprovanteDetranParaPush(reg: ClienteDespesaRegistro): string | null {
+  if (!isCategoriaInfracao(reg.categoria)) return null;
+  const linked = reg.detranAutoInfracao?.trim();
+  if (linked) return linked.toUpperCase();
+  const auto = reg.autoInfracao.trim();
+  if (auto && !/^RAST-\d+$/i.test(auto)) return auto.toUpperCase();
+  return null;
+}
+
+/**
+ * Espelho Rastreame (MULTA) ↔ registro DETRAN local via `comprovante`.
+ * Rastreame é fonte da verdade para quitacao (`paga`); DETRAN preserva texto/local.
+ */
+export function vincularInfracaoDetranComRastreame(
+  rastreameId: string | number,
+  detranAuto: string,
+): ClienteDespesaRegistro | null {
+  const db = loadClienteDespesasDb();
+  const rid = String(rastreameId);
+  const autoKey = detranAuto.trim().toUpperCase();
+  const idxRast = db.clienteDespesas.findIndex(
+    (m) => m.rastreameId != null && String(m.rastreameId) === rid,
+  );
+  const idxDetran = db.clienteDespesas.findIndex(
+    (m) => m.autoInfracao.trim().toUpperCase() === autoKey,
+  );
+  if (idxRast < 0) return null;
+
+  const rast = db.clienteDespesas[idxRast]!;
+  rast.detranAutoInfracao = autoKey;
+
+  if (idxDetran >= 0) {
+    const detran = db.clienteDespesas[idxDetran]!;
+    if (!rast.descricao?.trim() && detran.descricao?.trim()) {
+      rast.descricao = detran.descricao;
+    }
+    if (!rast.localInfracao?.trim() && detran.localInfracao?.trim()) {
+      rast.localInfracao = detran.localInfracao;
+    }
+    if (!rast.limiteDefesa?.trim() && detran.limiteDefesa?.trim()) {
+      rast.limiteDefesa = detran.limiteDefesa;
+    }
+    if (detran.condutorConfirmado && !rast.condutorConfirmado) {
+      rast.condutorId = detran.condutorId;
+      rast.condutorConfirmado = detran.condutorConfirmado;
+      rast.condutorContrato = detran.condutorContrato;
+    }
+    if (detran.titulo?.trim() && !rast.titulo?.trim()) {
+      rast.titulo = detran.titulo;
+    }
+
+    detran.rastreameId = rast.rastreameId;
+    detran.detranAutoInfracao = autoKey;
+    detran.paga = rast.paga;
+    detran.pagaEm = rast.pagaEm ?? detran.pagaEm ?? null;
+    if (rast.paga === true) {
+      detran.situacao = "Registrado";
+    } else if (rast.situacao) {
+      detran.situacao = rast.situacao;
+    }
+    detran.atualizadoEm = nowIso();
+    db.clienteDespesas[idxDetran] = detran;
+  }
+
+  rast.atualizadoEm = nowIso();
+  db.clienteDespesas[idxRast] = rast;
+  saveClienteDespesasDb(db);
+  return rast;
+}
 
 export function upsertRecebimentoFromRastreame(
   input: UpsertRecebimentoRastreameInput,
@@ -839,6 +927,7 @@ export function upsertRecebimentoFromRastreame(
       rastreameRastreavelKey: input.rastreameRastreavelKey ?? null,
       rastreameDataIso: input.rastreameDataIso ?? null,
       rastreameTipo: input.rastreameTipo ?? null,
+      detranAutoInfracao: input.detranAutoInfracao ?? null,
       rastreameSyncEm: ts,
       ativo: true,
       cadastradoEm: ts,
@@ -847,6 +936,9 @@ export function upsertRecebimentoFromRastreame(
     };
     db.clienteDespesas.push(registro);
     saveClienteDespesasDb(db);
+    if (input.detranAutoInfracao) {
+      vincularInfracaoDetranComRastreame(input.rastreameId, input.detranAutoInfracao);
+    }
     return { registro, aviso: null, acao: "novo" };
   }
 
@@ -890,12 +982,16 @@ export function upsertRecebimentoFromRastreame(
   m.rastreameRastreavelKey = input.rastreameRastreavelKey ?? m.rastreameRastreavelKey ?? null;
   m.rastreameDataIso = input.rastreameDataIso ?? m.rastreameDataIso ?? null;
   m.rastreameTipo = input.rastreameTipo ?? m.rastreameTipo ?? null;
+  if (input.detranAutoInfracao) m.detranAutoInfracao = input.detranAutoInfracao;
   m.rastreameSyncEm = ts;
   m.ativo = true;
   m.origem = m.origem === "manual" ? m.origem : "rastreame";
   m.atualizadoEm = ts;
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
+  if (input.detranAutoInfracao) {
+    vincularInfracaoDetranComRastreame(input.rastreameId, input.detranAutoInfracao);
+  }
   return {
     registro: m,
     aviso: null,

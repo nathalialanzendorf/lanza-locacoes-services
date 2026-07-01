@@ -43,7 +43,7 @@ npx tsx src/run.ts relatorio-cobrancas --placa RAH-4F54
 
 1. Interpretar parâmetros do utilizador (0–3).
 2. `--listar` para conferir alvos; depois gerar.
-3. **pagamento-semanal**: tabela semanal-atraso + WhatsApp (`--dia` padrão 3).
+3. **pagamento-semanal**: tabela semanal-atraso + WhatsApp (dia **automático**: D+1 lembrete · D+2 aviso · D+3 bloqueio; D0 sem mensagem).
 4. Criar **canvas** a partir dos JSON em `relatorios/_tmp/cobrancas/`.
 
 Modo legado por placa: `semanal`, `semanal-atraso`, `estacionamento`, `multa` — exige `--placa`.

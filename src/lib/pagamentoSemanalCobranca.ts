@@ -3,7 +3,7 @@
  *
  * Padrão Lanza (fonte única): skill relatorio-cobrancas + cadastro-recebimento.
  */
-import { addDays, parseDataBr, startOfDay } from "./contratoExtrair.js";
+import { addDays, daysBetween, parseDataBr, startOfDay } from "./contratoExtrair.js";
 import { formatDataBr } from "./pagamentoSemanal.js";
 
 export type SituacaoDiaSemanal = "Atrasado" | "Em dia";
@@ -35,6 +35,28 @@ export type CobrancaSemanalAtrasoInput = {
   /** Data em que o pagamento integral será/foi recebido. */
   dataPagamentoBr: string;
 };
+
+/** Resumo operacional para cobrança WhatsApp (dia 1–4). */
+export type ResumoCobrancaSemanal = {
+  diaEscalonamento: number;
+  tituloEscalonamento: string;
+  vencimentosEmAbertoBr: string[];
+  dataBloqueioBr: string;
+  totalReceber: number;
+  diasAtrasados: number;
+  diasEmDia: number;
+  jurosMultaAcumulados: number;
+};
+
+const TITULO_ESCALONAMENTO: Record<number, string> = {
+  1: "lembrete",
+  2: "aviso",
+  3: "bloqueio programado",
+  4: "pagamento regularizado",
+};
+
+/** Dia previsto do bloqueio = vencimento + 3 dias corridos. */
+export const DIAS_ATE_BLOQUEIO = 3;
 
 const DOW_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
 
@@ -146,6 +168,98 @@ export function calcularCobrancaSemanalAtraso(
   return { tabelas, totalGeral };
 }
 
+function tituloEscalonamento(dia: number): string {
+  return TITULO_ESCALONAMENTO[dia] ?? `dia ${dia}`;
+}
+
+/**
+ * Escalonamento WhatsApp a partir do vencimento:
+ * - no vencimento (D0): ainda no prazo → null (sem mensagem)
+ * - D+1 → lembrete (dia 1) · D+2 → aviso (dia 2) · D+3+ → bloqueio (dia 3)
+ */
+export function inferirDiaEscalonamento(
+  vencimentoBr: string,
+  hojeBr: string,
+): number | null {
+  const vencimento = parseDataBrOrThrow(vencimentoBr);
+  const hoje = parseDataBrOrThrow(hojeBr);
+  const diasAposVencimento = daysBetween(vencimento, hoje);
+  if (diasAposVencimento <= 0) return null;
+  if (diasAposVencimento >= DIAS_ATE_BLOQUEIO) return 3;
+  return diasAposVencimento;
+}
+
+/** Usa o 1º vencimento em aberto; `--dia` sobrescreve quando informado. */
+export function resolverDiaEscalonamentoSemanal(
+  vencimentosBr: string[],
+  hojeBr: string,
+  diaOverride?: number,
+): number | null {
+  if (diaOverride != null) return diaOverride;
+  const primeiro = vencimentosBr[0];
+  if (!primeiro) return null;
+  return inferirDiaEscalonamento(primeiro, hojeBr);
+}
+
+/**
+ * Total a cobrar na mensagem: soma dos dias até hoje (`dataPagamentoBr`).
+ * Data bloqueio fixa: vencimento + 3 dias.
+ */
+export function calcularResumoCobrancaSemanal(
+  input: CobrancaSemanalAtrasoInput,
+  resultado: { tabelas: TabelaCobrancaSemanal[] },
+  diaEscalonamento: number,
+): ResumoCobrancaSemanal {
+  const primeiroVenc = input.vencimentosBr[0]!;
+  const vencimento = parseDataBrOrThrow(primeiroVenc);
+  const dataBloqueioBr = formatDataBr(addDays(vencimento, DIAS_ATE_BLOQUEIO));
+  const dataCorte = parseDataBrOrThrow(input.dataPagamentoBr);
+
+  let totalReceber = 0;
+  let jurosMultaAcumulados = 0;
+  let diasAtrasados = 0;
+  let diasEmDia = 0;
+
+  for (const tabela of resultado.tabelas) {
+    for (const linha of tabela.linhas) {
+      const d = parseDataBrOrThrow(linha.dataBr);
+      if (d.getTime() > dataCorte.getTime()) continue;
+      totalReceber += linha.totalDia;
+      if (linha.situacao === "Atrasado") {
+        diasAtrasados++;
+        if (linha.jurosMulta != null) jurosMultaAcumulados += linha.jurosMulta;
+      } else {
+        diasEmDia++;
+      }
+    }
+  }
+
+  return {
+    diaEscalonamento,
+    tituloEscalonamento: tituloEscalonamento(diaEscalonamento),
+    vencimentosEmAbertoBr: [...input.vencimentosBr],
+    dataBloqueioBr,
+    totalReceber: round2(totalReceber),
+    diasAtrasados,
+    diasEmDia,
+    jurosMultaAcumulados: round2(jurosMultaAcumulados),
+  };
+}
+
+export function formatResumoCobrancaSemanal(resumo: ResumoCobrancaSemanal): string {
+  const venc =
+    resumo.vencimentosEmAbertoBr.length === 1
+      ? resumo.vencimentosEmAbertoBr[0]!
+      : resumo.vencimentosEmAbertoBr.join(", ");
+  return [
+    `Pagamento semanal (dia ${resumo.diaEscalonamento} — ${resumo.tituloEscalonamento})`,
+    `Vencimento em aberto: ${venc}`,
+    `Data bloqueio: ${resumo.dataBloqueioBr}`,
+    `Total a receber: R$ ${brl(resumo.totalReceber)} (${resumo.diasAtrasados} dias atrasados + ${resumo.diasEmDia} em dia)`,
+    `Juros e multa acumulados: R$ ${brl(resumo.jurosMultaAcumulados)}`,
+  ].join("\n");
+}
+
 function brl(n: number): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -186,12 +300,18 @@ export function formatCobrancaSemanalAtrasoMarkdown(
     placa?: string;
   },
   resultado: ReturnType<typeof calcularCobrancaSemanalAtraso>,
+  resumo?: ResumoCobrancaSemanal,
 ): string {
   const juros = jurosMultaDiario(input.valorSemanal, input.valorDiaria);
   const lines: string[] = [];
 
   if (input.clienteNome || input.placa) {
     lines.push(`**${input.clienteNome ?? "Cliente"}**${input.placa ? ` — ${input.placa}` : ""}`);
+    lines.push("");
+  }
+
+  if (resumo) {
+    lines.push(formatResumoCobrancaSemanal(resumo));
     lines.push("");
   }
 

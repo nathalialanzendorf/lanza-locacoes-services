@@ -9,6 +9,12 @@ import {
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { loadClientesDb } from "./clientesDb.js";
+import {
+  contratoMaisRecentePar,
+  loadContratosDb,
+  type ContratoRegistro,
+} from "./contratosDb.js";
+import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import { dataVencimentoSemanalBr } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadVeiculosDb } from "./veiculosDb.js";
@@ -80,6 +86,156 @@ function clienteElegivel(
   return clientes.has(clienteId);
 }
 
+/** Pagamento semanal só com contrato ativo locatário + veículo (encerrado → renegociação). */
+function temContratoAtivoLocacao(
+  clienteId: string | null | undefined,
+  placa: string,
+): boolean {
+  if (!clienteId) return false;
+  const contrato = contratoMaisRecentePar({ placa, clienteId });
+  return contrato?.status === "ativo";
+}
+
+function contratoAtivoPorPlaca(placa: string): ContratoRegistro | undefined {
+  const p = compactPlaca(placa);
+  const list = loadContratosDb().contratos.filter(
+    (c) => c.status === "ativo" && compactPlaca(c.placa) === p,
+  );
+  if (list.length === 0) return undefined;
+  return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
+}
+
+/**
+ * Despesa ATRASADO pode ter condutorId antigo (ex.: troca de locatário).
+ * Usa o contrato ativo da placa quando o condutor da linha não tem contrato vigente.
+ * Nome de exibição vem do contrato (ex.: Laryssa no cadastro, não Gustavo do Rastreame).
+ */
+function condutorEfetivoPagamentoSemanal(
+  d: ClienteDespesaRegistro,
+  placa: string,
+  clientes: ReturnType<typeof clientesAtivos>,
+): { clienteId: string | null; clienteNome: string | null } {
+  const placaFmt = formatPlacaHyphen(placa);
+
+  if (d.condutorId) {
+    const contratoCondutor = contratoMaisRecentePar({
+      placa: placaFmt,
+      clienteId: d.condutorId,
+    });
+    if (contratoCondutor?.status === "ativo") {
+      const cliente = clientes.get(d.condutorId);
+      return {
+        clienteId: d.condutorId,
+        clienteNome: contratoCondutor.clienteNome ?? cliente?.nome ?? null,
+      };
+    }
+    // Ex-locatário desta placa — semanal vira renegociação.
+    if (contratoCondutor?.status === "encerrado") {
+      return { clienteId: null, clienteNome: null };
+    }
+    // Condutor na linha não é locatário deste veículo — não reatribuir ao atual.
+    return { clienteId: null, clienteNome: null };
+  }
+
+  const vigente = contratoAtivoPorPlaca(placaFmt);
+  if (vigente?.clienteId) {
+    return {
+      clienteId: vigente.clienteId,
+      clienteNome: vigente.clienteNome,
+    };
+  }
+
+  const cliente = d.condutorId ? clientes.get(d.condutorId) : null;
+  return { clienteId: d.condutorId ?? null, clienteNome: cliente?.nome ?? null };
+}
+
+/** ATRASADO antigo já coberto por semana regular paga depois (ex.: Quarta 01 com Quarta 17 paga). */
+function semanalAtrasoObsoleto(
+  d: ClienteDespesaRegistro,
+  todas: ClienteDespesaRegistro[],
+  clienteId: string,
+  placa: string,
+): boolean {
+  const atrasoIso = d.pagaEm ?? d.rastreameDataIso;
+  if (!atrasoIso) return false;
+  const atrasoTime = Date.parse(atrasoIso);
+
+  const placaKey = compactPlaca(placa);
+  for (const other of todas) {
+    if (other.id === d.id) continue;
+    if (other.categoria !== "Locação semanal") continue;
+    if (compactPlaca(other.veiculoId) !== placaKey) continue;
+    if (other.condutorId !== clienteId) continue;
+    if (other.paga !== true) continue;
+
+    const desc = other.descricao ?? "";
+    if (/ATRASADO/i.test(desc)) continue;
+    if (/\[NEGOCIADO/i.test(desc)) continue;
+
+    const pagoIso = other.pagaEm ?? other.rastreameDataIso;
+    if (!pagoIso) continue;
+    if (Date.parse(pagoIso) <= atrasoTime) continue;
+
+    return true;
+  }
+  return false;
+}
+
+/** Condutor responsável pela infração na data da autuação (não o locatário atual da placa). */
+function condutorEfetivoInfracao(
+  d: ClienteDespesaRegistro,
+  clientes: ReturnType<typeof clientesAtivos>,
+): { clienteId: string | null; clienteNome: string | null } {
+  if (d.condutorId) {
+    const cliente = clientes.get(d.condutorId);
+    return { clienteId: d.condutorId, clienteNome: cliente?.nome ?? null };
+  }
+  const sug = inferirCondutorInfracao(
+    formatPlacaHyphen(d.veiculoId),
+    d.dataAutuacao,
+    90,
+  );
+  if (sug.condutorId) {
+    const cliente = clientes.get(sug.condutorId);
+    return {
+      clienteId: sug.condutorId,
+      clienteNome: sug.clienteNome ?? cliente?.nome ?? null,
+    };
+  }
+  return { clienteId: null, clienteNome: null };
+}
+
+function agruparInfracoesPorCondutor(
+  despesas: ClienteDespesaRegistro[],
+  veiculos: ReturnType<typeof veiculosAtivos>,
+  clientes: ReturnType<typeof clientesAtivos>,
+): AlvoCobranca[] {
+  const porChave = new Map<string, AlvoCobranca>();
+
+  for (const d of despesas) {
+    if (!placaElegivel(d.veiculoId, veiculos)) continue;
+    const placa = formatPlacaHyphen(d.veiculoId);
+    const efetivo = condutorEfetivoInfracao(d, clientes);
+    if (efetivo.clienteId && !clienteElegivel(efetivo.clienteId, clientes)) continue;
+
+    const chave = `${compactPlaca(placa)}|${efetivo.clienteId ?? ""}`;
+    let alvo = porChave.get(chave);
+    if (!alvo) {
+      alvo = {
+        tipo: "infracoes",
+        placa,
+        clienteId: efetivo.clienteId,
+        clienteNome: efetivo.clienteNome,
+        despesas: [],
+      };
+      porChave.set(chave, alvo);
+    }
+    alvo.despesas.push(d);
+  }
+
+  return [...porChave.values()].sort((a, b) => a.placa.localeCompare(b.placa));
+}
+
 function agruparPorPlaca(
   tipo: TipoCobrancaAction,
   despesas: ClienteDespesaRegistro[],
@@ -129,18 +285,32 @@ function filtrarPagamentoSemanal(
     if (alvoPlaca && compactPlaca(d.veiculoId) !== alvoPlaca) continue;
 
     const placa = formatPlacaHyphen(d.veiculoId);
-    const chave = `${d.condutorId ?? "?"}|${compactPlaca(placa)}`;
+    const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes);
+    if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa)) {
+      continue;
+    }
+    if (
+      semanalAtrasoObsoleto(
+        d,
+        db.clienteDespesas,
+        efetivo.clienteId,
+        placa,
+      )
+    ) {
+      continue;
+    }
+
+    const chave = `${efetivo.clienteId}|${compactPlaca(placa)}`;
     const venc =
       dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;
-    const cliente = d.condutorId ? clientes.get(d.condutorId) : null;
 
     let alvo = porChave.get(chave);
     if (!alvo) {
       alvo = {
         tipo: "pagamento-semanal",
         placa,
-        clienteId: d.condutorId,
-        clienteNome: cliente?.nome ?? null,
+        clienteId: efetivo.clienteId,
+        clienteNome: efetivo.clienteNome,
         despesas: [],
         vencimentosBr: [],
       };
@@ -240,7 +410,7 @@ export function listarAlvosCobranca(
         }
         return true;
       });
-      alvos = agruparPorPlaca(tipo, despesas, veiculos, clientes);
+      alvos = agruparInfracoesPorCondutor(despesas, veiculos, clientes);
     } else {
       const categoria =
         categoriaMap[tipo as Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">];

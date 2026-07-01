@@ -26,7 +26,11 @@ import { loadContratosDb } from "./contratosDb.js";
 import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import {
   calcularCobrancaSemanalAtraso,
+  calcularResumoCobrancaSemanal,
   formatCobrancaSemanalAtrasoMarkdown,
+  inferirDiaEscalonamento,
+  resolverDiaEscalonamentoSemanal,
+  type ResumoCobrancaSemanal,
 } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca } from "./placa.js";
 
@@ -37,7 +41,9 @@ export type LoteCobrancaItem = {
     markdown: string;
     payload: Record<string, unknown>;
     totalGeral: number;
+    resumo?: ResumoCobrancaSemanal;
   };
+  diaEscalonamento?: number | null;
   arquivos: string[];
   aviso?: string;
 };
@@ -70,11 +76,15 @@ function slug(s: string): string {
     .slice(0, 40);
 }
 
-function contratoAtivoPlaca(placa: string) {
+function contratoAtivoPlaca(placa: string, clienteId?: string | null) {
   const p = compactPlaca(placa);
   const list = loadContratosDb().contratos.filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
+  if (clienteId) {
+    const par = list.find((c) => c.clienteId === clienteId);
+    if (par) return par;
+  }
   list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   return list[0] ?? null;
 }
@@ -101,14 +111,22 @@ function gerarWhatsAppAlvo(
 ): ResultadoCobranca[] {
   const nome = opts?.nome ?? alvo.clienteNome ?? undefined;
   switch (alvo.tipo) {
-    case "pagamento-semanal":
-      return [gerarSemanal(alvo.placa, opts?.dia ?? 3, { nome })];
+    case "pagamento-semanal": {
+      const dia = opts?.dia;
+      if (dia == null) {
+        throw new Error("Dia de escalonamento não informado para pagamento semanal.");
+      }
+      return [gerarSemanal(alvo.placa, dia, { nome })];
+    }
     case "renegociacao":
       return [
         gerarRenegociacao(alvo.placa, somaValorDespesas(alvo.despesas), { nome }),
       ];
     case "infracoes":
-      return gerarMultas(alvo.placa, { nome });
+      return gerarMultas(alvo.placa, {
+        nome,
+        autos: alvo.despesas.map((d) => d.autoInfracao),
+      });
     case "pedagio":
       return [gerarPedagio(alvo.placa, { nome })];
     case "estacionamento-rotativo":
@@ -123,8 +141,9 @@ function gerarWhatsAppAlvo(
 function buildSemanalAtrasoAlvo(
   alvo: AlvoCobranca,
   dataPagamentoBr: string,
-): { markdown: string; payload: Record<string, unknown>; totalGeral: number } | null {
-  const contrato = contratoAtivoPlaca(alvo.placa);
+  diaEscalonamento?: number,
+): { markdown: string; payload: Record<string, unknown>; totalGeral: number; resumo?: ResumoCobrancaSemanal } | null {
+  const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
   const valorSemanal = contrato?.valorSemanal ?? null;
   const valorDiaria = contrato?.valorDiaria ?? null;
   const vencimentos = alvo.vencimentosBr ?? [];
@@ -140,6 +159,10 @@ function buildSemanalAtrasoAlvo(
     dataPagamentoBr,
   };
   const resultado = calcularCobrancaSemanalAtraso(input);
+  const resumo =
+    diaEscalonamento != null
+      ? calcularResumoCobrancaSemanal(input, resultado, diaEscalonamento)
+      : undefined;
   const payload: Record<string, unknown> = {
     ...input,
     tipo: "pagamento-semanal",
@@ -149,6 +172,8 @@ function buildSemanalAtrasoAlvo(
     },
     placa: alvo.placa,
     ...resultado,
+    diaEscalonamento: diaEscalonamento ?? null,
+    resumo: resumo ?? null,
   };
 
   return {
@@ -159,9 +184,11 @@ function buildSemanalAtrasoAlvo(
         placa: alvo.placa,
       },
       resultado,
+      resumo,
     ),
     payload,
     totalGeral: resultado.totalGeral,
+    resumo,
   };
 }
 
@@ -178,7 +205,8 @@ export function executarLoteCobranca(
   tipo: TipoCobrancaAction,
   opts?: {
     filtro?: FiltroAlvosCobranca;
-    dia?: number;
+    /** Sobrescreve inferência automática (D+1 lembrete · D+2 aviso · D+3 bloqueio). */
+    diaOverride?: number;
     dataPagamentoBr?: string;
     salvar?: boolean;
     outDir?: string;
@@ -200,19 +228,40 @@ export function executarLoteCobranca(
     };
 
     if (tipo === "pagamento-semanal") {
-      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr);
+      const vencimentos = alvo.vencimentosBr ?? [];
+      const dia = resolverDiaEscalonamentoSemanal(
+        vencimentos,
+        dataPagamentoBr,
+        opts?.diaOverride,
+      );
+      item.diaEscalonamento = dia;
+
+      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr, dia ?? undefined);
       if (!semanal) {
         item.aviso =
           "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de atraso.";
         ignorados++;
       } else {
         item.semanalAtraso = semanal;
+        if (dia == null) {
+          const venc = vencimentos[0] ?? "?";
+          item.aviso = `Ainda no prazo de pagamento (vencimento ${venc}) — sem mensagem WhatsApp.`;
+        }
       }
     }
 
     try {
-      item.resultados = gerarWhatsAppAlvo(alvo, { dia: opts?.dia });
-      mensagens += item.resultados.length;
+      if (tipo === "pagamento-semanal") {
+        if (item.diaEscalonamento == null) {
+          item.resultados = [];
+        } else {
+          item.resultados = gerarWhatsAppAlvo(alvo, { dia: item.diaEscalonamento });
+          mensagens += item.resultados.length;
+        }
+      } else {
+        item.resultados = gerarWhatsAppAlvo(alvo);
+        mensagens += item.resultados.length;
+      }
     } catch (e) {
       item.aviso = e instanceof Error ? e.message : String(e);
       ignorados++;
@@ -274,7 +323,9 @@ export function salvarLoteConsolidado(
       clienteNome: item.alvo.clienteNome,
       despesas: item.alvo.despesas.length,
       aviso: item.aviso ?? null,
-      totalGeralSemanal: item.semanalAtraso?.totalGeral ?? null,
+      totalGeralSemanal: item.semanalAtraso?.resumo?.totalReceber ?? item.semanalAtraso?.totalGeral ?? null,
+      diaEscalonamento: item.diaEscalonamento ?? null,
+      resumoSemanal: item.semanalAtraso?.resumo ?? null,
       arquivos: item.arquivos,
       cobrancas: item.resultados.map((r) => ({
         titulo: r.titulo,

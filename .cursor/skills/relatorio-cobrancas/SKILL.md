@@ -55,7 +55,7 @@ CLI: tipo → arg/`--tipo`; cliente → `--cliente`; veículo → `--placa`.
 
 | Tipo | Alvos elegíveis |
 |---|---|
-| **pagamento-semanal** | `Locação semanal` + `ATRASADO` + em aberto (frota/cliente ativos) |
+| **pagamento-semanal** | `Locação semanal` + `ATRASADO` + em aberto + **contrato ativo** (cliente + placa) |
 | **renegociacao** | categoria `Renegociação` em aberto |
 | **infracoes** | infrações em aberto (não pagas, não quitadas DETRAN) |
 | **pedagio** | categoria `Pedágio` em aberto |
@@ -70,20 +70,25 @@ npx tsx src/run.ts relatorio-cobrancas pagamento-semanal --cliente "Daniel Damas
 npx tsx src/run.ts relatorio-cobrancas --placa RAH-4F54
 ```
 
-**pagamento-semanal** gera, por alvo: tabela **semanal-atraso** (padrão obrigatório) + WhatsApp (`--dia` padrão **3**). Demais tipos: uma mensagem por placa (infrações: uma por multa).
+**pagamento-semanal** gera, por alvo: tabela **semanal-atraso** (padrão obrigatório) + WhatsApp (dia **automático** por vencimento + hoje). Demais tipos: uma mensagem por placa (infrações: uma por multa).
 
 Grava `.txt`, sidecars JSON e `dados-lote-{tipo}-{data}.json` em `relatorios/_tmp/cobrancas/`.
 
 ## Escalonamento do pagamento semanal
 
-A partir da **data prevista** da parcela, uma mensagem por dia de atraso:
+Contado a partir do **vencimento** (D0). O `--dia` do WhatsApp é **inferido automaticamente** pela data de hoje; use `--dia N` só para forçar um template.
 
-| `--dia` | Quando | Mensagem |
-|---|---|---|
-| **1** | 1º dia após o previsto | Lembrete de pendência |
-| **2** | 2º dia | Atraso — regularizar para **evitar bloqueio** |
-| **3** | 3º dia | **Bloqueio programado** por falta de compensação |
-| **4** | — | Confirmação de **pagamento regularizado** (após pagar) |
+| Data | Mensagem |
+|---|---|
+| **D0** (vencimento) | Ainda no prazo — **sem** mensagem de cobrança |
+| **D+1** | Lembrete (`semanal-1-lembrete.txt`, dia 1) |
+| **D+2** | Aviso (`semanal-2-regularizacao.txt`, dia 2) |
+| **D+3** em diante | Bloqueio programado (`semanal-3-bloqueio.txt`, dia 3) |
+| **Após pagar** | Confirmação (`semanal-4-regularizado.txt`, dia 4 — manual) |
+
+Exemplo (vencimento 01/07): 01/07 em prazo · 02/07 lembrete · 03/07 aviso · 04/07 bloqueio.
+
+**Data bloqueio** no resumo = vencimento + **3 dias** (sempre).
 
 ## Cobrança semanal — pagamento não realizado (padrão obrigatório)
 
@@ -124,6 +129,28 @@ Uma **tabela por vencimento** não pago, em ordem cronológica:
 - **Total/dia:** `valorDiaria` se Atrasado; `valorSemanal÷7` se Em dia.
 - Subtotais: **Juros e multa** (soma) + **Total** da tabela.
 - Várias parcelas: **Total geral** = soma dos totais de cada tabela.
+
+### Resumo da cobrança WhatsApp (pagamento-semanal)
+
+Bloco obrigatório antes da mensagem e da tabela dia a dia (CLI e resposta do agente):
+
+```
+Pagamento semanal (dia N — {título})
+Vencimento em aberto: DD/MM/AAAA
+Data bloqueio: DD/MM/AAAA
+Total a receber: R$ X (N dias atrasados + N em dia)
+Juros e multa acumulados: R$ X
+```
+
+| Campo | Regra |
+|---|---|
+| **dia N — título** | Inferido: D+1 lembrete · D+2 aviso · D+3 bloqueio (`--dia` força) |
+| **Vencimento em aberto** | vencimento(s) das parcelas ATRASADO em aberto |
+| **Data bloqueio** | 1º vencimento em aberto + **3 dias** |
+| **Total a receber** | soma dos dias até **hoje** (`--data-pagamento`) |
+| **Juros e multa acumulados** | soma dos juros/multa nos dias **Atrasado** incluídos no total a receber |
+
+Implementação: `calcularResumoCobrancaSemanal()` · `formatResumoCobrancaSemanal()` em `pagamentoSemanalCobranca.ts`.
 
 ### CLI
 

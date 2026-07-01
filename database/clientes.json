@@ -1,6 +1,6 @@
 {
   "descricao": "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.",
-  "atualizadoEm": "2026-06-28",
+  "atualizadoEm": "2026-07-01",
   "schemaCliente": {
     "id": "uuid",
     "nome": "Nome completo",
@@ -43,7 +43,7 @@
   },
   "clientes": [
     {
-      "nome": "CERES BEATRIZ GONZAGA PEREIRA",
+      "nome": "Ceres Beatriz Gonzaga Pereira",
       "cpf": "654.003.800-34",
       "rg": "1051879193",
       "rgOrgaoExpedidor": "SSP/RS",
@@ -57,7 +57,7 @@
         "categoria": "B",
         "primeiraHabilitacao": "31/05/2017",
         "dataEmissao": "24/02/2025",
-        "validade": "23/02/2030",
+        "validade": "23/02/3020",
         "numeroEspelho": "18560008764",
         "orgaoEmissor": "DETRAN",
         "ufEmissor": "SC",
@@ -76,11 +76,11 @@
       "id": "30f48e6a-0213-4d33-9f39-3e84c4b4c747",
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Baiano - PEUGEOT 2008 2020-2021\\20.06.2026 - Ceres Beatriz Gonzaga Pereira\\CNH.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Baiano - PEUGEOT 2008 2020-2021\\20.06.2026 - Ceres Beatriz Gonzaga Pereira",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "rastreameMotoristaKey": "36",
       "rastreameMotoristaId": 36,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.563Z"
+      "rastreameSyncEm": "2026-07-01T16:03:50.858Z"
     },
     {
       "nome": "Vitor Hugo Pacifico Machado",
@@ -98,7 +98,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.04.2026 - Vitor (recuperado 02.04)\\CNH.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.04.2026 - Vitor (recuperado 02.04)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "83867662-f5e2-4936-82d6-83faf9fe0b3a",
       "dataNascimento": "27/03/1999",
       "localNascimento": "Laguna SC",
@@ -110,7 +110,7 @@
       "rastreameMotoristaKey": "30",
       "rastreameMotoristaId": 30,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.946Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.370Z"
     },
     {
       "nome": "LUIZ FILIPE BERTO MATIAS",
@@ -128,15 +128,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.08.2025 - Luiz Filipe Berto Matias (devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.08.2025 - Luiz Filipe Berto Matias (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "c3ab9fc6-ced5-4e39-9648-62f1a74aac08",
       "rastreameMotoristaKey": "37",
       "rastreameMotoristaId": 37,
-      "rastreameSyncEm": "2026-06-28T22:47:04.733Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.549Z",
       "ativo": true
     },
     {
-      "nome": "VITOR BASSANI PADILHA",
+      "nome": "Vitor Bassani Padilha",
       "cpf": "877.654.620-91",
       "telefone": "(47) 98489-7411",
       "email": null,
@@ -151,7 +151,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.06.2026 - Vitor Bassani Padilha\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.06.2026 - Vitor Bassani Padilha",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "5b036529-56e0-40c2-b395-18061ab27f65",
       "cnh": {
         "numeroRegistro": "07037189893",
@@ -161,7 +161,7 @@
       "rastreameMotoristaKey": "14",
       "rastreameMotoristaId": 14,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.940Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.291Z"
     },
     {
       "nome": "MIKAEL SCHMIDT",
@@ -179,11 +179,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.07.2025 - Mikael Schmidt (devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\04.07.2025 - Mikael Schmidt (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "8cb42547-f0b8-4485-b746-3cef7e30b054",
       "rastreameMotoristaKey": "38",
       "rastreameMotoristaId": 38,
-      "rastreameSyncEm": "2026-06-28T22:47:04.799Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.708Z",
       "ativo": true
     },
     {
@@ -202,15 +202,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\04.10.2025 - Fabiana da Silva Antunes Chavea (devolvido 13.11)\\CNH.jpg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\04.10.2025 - Fabiana da Silva Antunes Chavea (devolvido 13.11)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "a582a855-9a4a-424a-9257-b535d3af79c0",
       "rastreameMotoristaKey": "39",
       "rastreameMotoristaId": 39,
-      "rastreameSyncEm": "2026-06-28T22:47:04.633Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.291Z",
       "ativo": true
     },
     {
-      "nome": "SUSANA DA SILVA",
+      "nome": "Susana da Silva",
       "cpf": "003.925.309-02",
       "telefone": "(48) 9982-5753",
       "email": null,
@@ -225,7 +225,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "0eafaf84-8700-4d16-8295-25619305410b",
       "dataNascimento": "22/01/1980",
       "localNascimento": "Timbó SC",
@@ -237,7 +237,7 @@
       "rastreameMotoristaKey": "31",
       "rastreameMotoristaId": 31,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.899Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.056Z"
     },
     {
       "nome": "MARIA LUIZA VARGAS MINA DE OLIVEIRA",
@@ -255,11 +255,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.07.2025 - Maria Luiza Vargas Mina de Oliveira (devolvido 06.07)\\CNH 1.jpeg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.07.2025 - Maria Luiza Vargas Mina de Oliveira (devolvido 06.07)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "2df336db-f9bd-4df5-82d0-d23edd184650",
       "rastreameMotoristaKey": "40",
       "rastreameMotoristaId": 40,
-      "rastreameSyncEm": "2026-06-28T22:47:04.757Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.587Z",
       "ativo": true
     },
     {
@@ -278,11 +278,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\05.08.2025 - Douglas Cavalcante Pereira (devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\05.08.2025 - Douglas Cavalcante Pereira (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "94ac09ef-aad3-49a9-a706-560f5c4709a8",
       "rastreameMotoristaKey": "41",
       "rastreameMotoristaId": 41,
-      "rastreameSyncEm": "2026-06-28T22:47:04.618Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.258Z",
       "ativo": true
     },
     {
@@ -301,15 +301,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.09.25 - Javier Alexander Duran Carrero(devolvido)\\CNH.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.09.25 - Javier Alexander Duran Carrero(devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "c99ec984-3300-4e4f-bdee-5f56f32a25e2",
       "rastreameMotoristaKey": "42",
       "rastreameMotoristaId": 42,
-      "rastreameSyncEm": "2026-06-28T22:47:04.674Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.387Z",
       "ativo": true
     },
     {
-      "nome": "ALBERTO JOSE GONZALEZ SALAZAR",
+      "nome": "Alberto Jose Gonzalez Salazar",
       "cpf": "711.240.812-16",
       "telefone": "(48) 99645-5358",
       "email": null,
@@ -324,7 +324,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "7f095a7f-992b-4842-95b6-522bcb00a0b8",
       "cnh": {
         "numeroRegistro": "08261009936",
@@ -334,7 +334,7 @@
       "rastreameMotoristaKey": "5",
       "rastreameMotoristaId": 5,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.511Z"
+      "rastreameSyncEm": "2026-07-01T16:03:50.521Z"
     },
     {
       "nome": "SERGIO ALEXANDRE PINTO GLORIA",
@@ -357,7 +357,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)\\CNH.jpg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "8357d4ce-2174-4918-bb1c-9b037473d5eb",
       "rg": "10116702",
       "rgOrgaoExpedidor": "SESEG AM",
@@ -367,7 +367,7 @@
       "rastreameMotoristaKey": "25",
       "rastreameMotoristaId": 25,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.885Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.956Z",
       "atualizadoEm": "2026-06-28T17:19:46.039Z"
     },
     {
@@ -386,15 +386,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FIESTA 2012-2013\\06.06.25 - Alisson da Silva de Souza (devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FIESTA 2012-2013\\06.06.25 - Alisson da Silva de Souza (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "2c6e7aba-bd76-40e4-ba75-8f2798e57cfc",
       "rastreameMotoristaKey": "43",
       "rastreameMotoristaId": 43,
-      "rastreameSyncEm": "2026-06-28T22:47:04.520Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.658Z",
       "ativo": true
     },
     {
-      "nome": "MATHEUS CANTO ANSELMO",
+      "nome": "Matheus Canto Anselmo",
       "cpf": "141.247.049.84",
       "telefone": null,
       "email": null,
@@ -409,7 +409,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2015-2015\\07.03.2026 - Matheus Canto Anselmo\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2015-2015\\07.03.2026 - Matheus Canto Anselmo",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "2a920f4d-d21d-438e-aa8c-cdf8455ea926",
       "rg": "7275184",
       "rgOrgaoExpedidor": "SSP SC",
@@ -424,10 +424,10 @@
       "rastreameMotoristaKey": "27",
       "rastreameMotoristaId": 27,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.770Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.616Z"
     },
     {
-      "nome": "NOE DE OLIVEIRA JUNIOR",
+      "nome": "Noe de Oliveira Junior",
       "cpf": "052.137.819-26",
       "telefone": "(48) 99634-1342",
       "email": null,
@@ -442,7 +442,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\08.10.2025 - Noe de Oliveira Junior (recuperado 08.12)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\08.10.2025 - Noe de Oliveira Junior (recuperado 08.12)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "656291e2-8b83-4ee3-8905-43d5193a54b7",
       "dataNascimento": "12/09/1985",
       "localNascimento": "Florianópolis SC",
@@ -454,10 +454,10 @@
       "rastreameMotoristaKey": "20",
       "rastreameMotoristaId": 20,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.829Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.790Z"
     },
     {
-      "nome": "RENAN PETERS DA SILVA",
+      "nome": "Renan Peters da Silva",
       "cpf": "102.826.879-39",
       "telefone": "(48) 98862-3153",
       "email": null,
@@ -472,7 +472,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\08.10.2025 - Renan Peters da Silva (devolvido 14.01)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\08.10.2025 - Renan Peters da Silva (devolvido 14.01)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "d2eb7a7e-c4f1-4077-9bb1-9247c5363891",
       "rg": "10282687939",
       "rgOrgaoExpedidor": "SSP SC",
@@ -487,7 +487,7 @@
       "rastreameMotoristaKey": "12",
       "rastreameMotoristaId": 12,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.866Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.875Z"
     },
     {
       "nome": "LUIS ROSSANO QUIROGA CUNHA",
@@ -505,15 +505,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.03.2025 - Luis Rossano Quiroga Cunha (devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.03.2025 - Luis Rossano Quiroga Cunha (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "93675f58-3def-4c9e-b31d-390efdf47e6d",
       "rastreameMotoristaKey": "44",
       "rastreameMotoristaId": 44,
-      "rastreameSyncEm": "2026-06-28T22:47:04.726Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.536Z",
       "ativo": true
     },
     {
-      "nome": "NATALIA TEIXEIRA SERAFIM",
+      "nome": "Natalia Teixeira Serafim",
       "cpf": "096.617.499-22",
       "telefone": "(48) 9973-8725",
       "email": null,
@@ -528,7 +528,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\10.04.2026 - Natalia Teixeira Serafim (devolvido 08.05.26)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\10.04.2026 - Natalia Teixeira Serafim (devolvido 08.05.26)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "0d989340-7ca2-4fed-9615-f09fe57a8571",
       "dataNascimento": "18/12/1995",
       "localNascimento": "Criciuma SC",
@@ -540,7 +540,7 @@
       "rastreameMotoristaKey": "32",
       "rastreameMotoristaId": 32,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.823Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.766Z"
     },
     {
       "nome": "ALVARO LUIZ COLLARES LADO",
@@ -558,15 +558,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Alvaro Luiz Collares Lado (Devolvido)\\CNH-e.pdf.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Alvaro Luiz Collares Lado (Devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "cf49702d-a4ba-4b42-8459-c88ff412d5d4",
       "rastreameMotoristaKey": "45",
       "rastreameMotoristaId": 45,
-      "rastreameSyncEm": "2026-06-28T22:47:04.527Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.694Z",
       "ativo": true
     },
     {
-      "nome": "WESLLEY DIAS CORREA",
+      "nome": "Weslley Dias Correa",
       "cpf": "886.814.600-97",
       "telefone": "(48) 99993-1808",
       "email": null,
@@ -581,7 +581,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Weslley Dias Correa (devolvido 11.01.26)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\10.09.2025 - Weslley Dias Correa (devolvido 11.01.26)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "ae9a098f-c428-48fb-83af-8fbac45ee072",
       "rg": "86681460097",
       "rgOrgaoExpedidor": "SSP SC",
@@ -596,10 +596,10 @@
       "rastreameMotoristaKey": "10",
       "rastreameMotoristaId": 10,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.956Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.389Z"
     },
     {
-      "nome": "GUSTAVO COSTA DE QUADRO",
+      "nome": "Laryssa (Gustavo) Costa de Quadros",
       "cpf": "074.864.179-36",
       "telefone": "(48) 99211-1874",
       "email": null,
@@ -614,7 +614,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.12.2025 - Gustavo Costa de Quadros (troca)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\10.12.2025 - Gustavo Costa de Quadros (troca)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "3b0778b6-9d31-4d45-a9d5-691b27ca62dc",
       "rg": "7244136",
       "rgOrgaoExpedidor": "SSP SC",
@@ -629,10 +629,10 @@
       "rastreameMotoristaKey": "6",
       "rastreameMotoristaId": 6,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.710Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.486Z"
     },
     {
-      "nome": "LUIZ MARCELO PORTO MENEZES MOREIRA",
+      "nome": "Luiz Marcelo Porto Menezes Moreira",
       "cpf": "079.792.694-11",
       "telefone": "(48) 99125-2335",
       "email": null,
@@ -647,7 +647,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05.26)\\CNH-e.pdf.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05.26)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "06249058-70f8-4ad1-a151-cc6b33320c5a",
       "rg": "34686045",
       "rgOrgaoExpedidor": "SEDS AL",
@@ -662,10 +662,10 @@
       "rastreameMotoristaKey": "7",
       "rastreameMotoristaId": 7,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.743Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.560Z"
     },
     {
-      "nome": "VIRGINIA JOSE CARABALLO CAMACHO",
+      "nome": "Virginia Jose Caraballo Camacho",
       "cpf": "708.627.522-05",
       "telefone": "(92) 98279-4394",
       "email": null,
@@ -680,7 +680,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\12.05.2026 - Virginia Jose Caraballo Camacho\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\12.05.2026 - Virginia Jose Caraballo Camacho",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "caf97370-463d-468f-af8c-931906c89ca2",
       "cnh": {
         "numeroRegistro": "08827955859",
@@ -690,10 +690,10 @@
       "rastreameMotoristaKey": "33",
       "rastreameMotoristaId": 33,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.931Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.270Z"
     },
     {
-      "nome": "RAFAELA CARDOSO DEBIAZI",
+      "nome": "Rafaela Cardoso Debiazi (Higor)",
       "cpf": "110.866.919-03",
       "telefone": "(48) 99981-1121",
       "email": null,
@@ -708,7 +708,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\13.11.2025 - Rafaela Cardoso Debiazi\\CNH-e Rafaela.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - FIAT DOBLO 2015-2015\\13.11.2025 - Rafaela Cardoso Debiazi",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "548b6bad-d9a8-445e-94f4-dddd40d40e30",
       "rg": "6159825",
       "rgOrgaoExpedidor": "SSP SC",
@@ -723,7 +723,7 @@
       "rastreameMotoristaKey": "8",
       "rastreameMotoristaId": 8,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.843Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.828Z"
     },
     {
       "nome": "MONICA GUIMARAES DE OLIVEIRA",
@@ -741,11 +741,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\17.05.2025 - Monica Guimaraes de Oliveira (devolvido 20.05)\\CNH.jpg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\17.05.2025 - Monica Guimaraes de Oliveira (devolvido 20.05)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "b68066a6-7b6e-4f81-8483-ed20103448b0",
       "rastreameMotoristaKey": "46",
       "rastreameMotoristaId": 46,
-      "rastreameSyncEm": "2026-06-28T22:47:04.814Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.740Z",
       "ativo": true
     },
     {
@@ -764,11 +764,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\17.08.2025 - Sergio Medeiros Camargo Marcelo\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\17.08.2025 - Sergio Medeiros Camargo Marcelo",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "80666f66-0424-4a33-8aca-db3a4a9207be",
       "rastreameMotoristaKey": "47",
       "rastreameMotoristaId": 47,
-      "rastreameSyncEm": "2026-06-28T22:47:04.893Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.971Z",
       "ativo": true
     },
     {
@@ -787,15 +787,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\18.10.2025 - Matheus Moraes Marques (devolvido)\\CNH.jpeg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\18.10.2025 - Matheus Moraes Marques (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "995dc8b2-6db6-41bf-88fd-676366691adb",
       "rastreameMotoristaKey": "48",
       "rastreameMotoristaId": 48,
-      "rastreameSyncEm": "2026-06-28T22:47:04.777Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.631Z",
       "ativo": true
     },
     {
-      "nome": "VICTOR ALISSON AZEVEDO MUNIZ",
+      "nome": "Victor Alisson Azevedo Muniz",
       "cpf": "040.363.982-45",
       "telefone": "(44) 79386-3827",
       "email": null,
@@ -810,7 +810,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\20.01.2026 - Victor Alisson Azevedo Muniz\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\20.01.2026 - Victor Alisson Azevedo Muniz",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "325d84a1-f8b8-412c-9a38-462c884065a6",
       "rg": "11932490",
       "rgOrgaoExpedidor": "SESPC AC",
@@ -825,7 +825,8 @@
       "rastreameMotoristaKey": "24",
       "rastreameMotoristaId": 24,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.925Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.238Z",
+      "atualizadoEm": "2026-07-01T02:56:02.489Z"
     },
     {
       "nome": "REINIER FIGUEROA YERA",
@@ -843,11 +844,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\20.04.2026 - Reinier Figueroa Yera\\CNH.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\20.04.2026 - Reinier Figueroa Yera",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "ed1a153f-7533-475e-88e8-aeeba3b712d9",
       "rastreameMotoristaKey": "49",
       "rastreameMotoristaId": 49,
-      "rastreameSyncEm": "2026-06-28T22:47:04.859Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.862Z",
       "ativo": true
     },
     {
@@ -866,11 +867,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\21.05.2025 - Matheus Osman Pereira de Quadros(devolvido)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\21.05.2025 - Matheus Osman Pereira de Quadros(devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "4cf1fe6e-c55b-4399-85c5-e80f2c95d880",
       "rastreameMotoristaKey": "50",
       "rastreameMotoristaId": 50,
-      "rastreameSyncEm": "2026-06-28T22:47:04.785Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.656Z",
       "ativo": true
     },
     {
@@ -889,11 +890,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\22.04.2025 - Alan Lamberti Jobim  (devolvido)\\CNH-e.pdf.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\22.04.2025 - Alan Lamberti Jobim  (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "ae503083-2cd3-4ef1-829c-be55d7953a29",
       "rastreameMotoristaKey": "51",
       "rastreameMotoristaId": 51,
-      "rastreameSyncEm": "2026-06-28T22:47:04.505Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.295Z",
       "ativo": true
     },
     {
@@ -912,15 +913,15 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\22.07.2025 - Andressa da Silva Marques (recuperado)\\CNH-e.pdf (16).pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - HYUNDAI HB20 2013-2014\\22.07.2025 - Andressa da Silva Marques (recuperado)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "cdce8613-4da4-4865-a158-c5779b0f4783",
       "rastreameMotoristaKey": "52",
       "rastreameMotoristaId": 52,
-      "rastreameSyncEm": "2026-06-28T22:47:04.548Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.807Z",
       "ativo": true
     },
     {
-      "nome": "DIEGO JOSSY DA SILVA SANTA ROSA",
+      "nome": "Diego Jossy da Silva Santa Rosa",
       "cpf": "043.203.662-80",
       "telefone": "(48) 99953-3882",
       "email": null,
@@ -935,7 +936,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\22.09.2025 - Diego Jossy da Silva Santa Rosa (Devolvido 12.01)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\22.09.2025 - Diego Jossy da Silva Santa Rosa (Devolvido 12.01)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "5fcce2b1-ed1d-4254-a5df-7e241d491810",
       "rg": "04320366280",
       "rgOrgaoExpedidor": "SSP SC",
@@ -950,10 +951,10 @@
       "rastreameMotoristaKey": "13",
       "rastreameMotoristaId": 13,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.603Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.223Z"
     },
     {
-      "nome": "TIAGO AUGUSTO DA SILVA PIARETI",
+      "nome": "Tiago Augusto da Silva Piareti",
       "cpf": "388.519.608-52",
       "telefone": "(48) 98816-8308",
       "email": null,
@@ -968,7 +969,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2017-2017\\24.03.26 - Tiago Augusto da Silva Piareti\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2017-2017\\24.03.26 - Tiago Augusto da Silva Piareti",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "ad051658-2cd2-4adf-8b4e-7405175799d3",
       "dataNascimento": "03/01/1989",
       "localNascimento": "SP SP",
@@ -980,10 +981,10 @@
       "rastreameMotoristaKey": "29",
       "rastreameMotoristaId": 29,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.908Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.132Z"
     },
     {
-      "nome": "RO NA LD VIANA JUNIOR",
+      "nome": "Ronald Viana Junior",
       "cpf": "096.583.289-97",
       "telefone": "(51) 99785-6945",
       "email": null,
@@ -998,7 +999,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\24.05.2026 - Ronald Viana Junior (trocado)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\24.05.2026 - Ronald Viana Junior (trocado)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "9c055b90-e03b-4225-9e5d-0aaf512faffe",
       "dataNascimento": "16/05/1995",
       "localNascimento": "Ararangua SC",
@@ -1010,10 +1011,10 @@
       "rastreameMotoristaKey": "35",
       "rastreameMotoristaId": 35,
       "ativo": true,
-      "rastreameSyncEm": "2026-06-28T22:47:04.876Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.925Z"
     },
     {
-      "nome": "LUCAS DA SILVA DIMAS",
+      "nome": "Lucas da Silva Dimas",
       "cpf": "112.856.279-03",
       "telefone": "(48) 99217-1713",
       "email": null,
@@ -1028,7 +1029,7 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "b4f659e6-91a0-4f4d-aa92-09249d8a603c",
       "rg": "4545564",
       "rgOrgaoExpedidor": "SSP SC",
@@ -1043,7 +1044,7 @@
       "rastreameMotoristaKey": "26",
       "rastreameMotoristaId": 26,
       "ativo": false,
-      "rastreameSyncEm": "2026-06-28T22:47:04.717Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.518Z"
     },
     {
       "nome": "DJAIR CARDOSO FERNANDES",
@@ -1061,11 +1062,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)",
-      "origemImportacao": "contrato",
+      "origemImportacao": "rastreame",
       "id": "1a5ea522-2a15-4f49-8150-9baf63239139",
       "rastreameMotoristaKey": "53",
       "rastreameMotoristaId": 53,
-      "rastreameSyncEm": "2026-06-28T22:47:04.611Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.242Z",
       "ativo": true,
       "atualizadoEm": "2026-06-28T17:13:58.377Z"
     },
@@ -1085,11 +1086,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\28.10.2025 - Clovis Adair Goncalves Crispim (recuperado 27.11)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Z Luiz - HYUNDAI HB20 2014-2014\\28.10.2025 - Clovis Adair Goncalves Crispim (recuperado 27.11)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "6fe338f2-d24e-46a6-a751-5bde251708b9",
       "rastreameMotoristaKey": "54",
       "rastreameMotoristaId": 54,
-      "rastreameSyncEm": "2026-06-28T22:47:04.571Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.869Z",
       "ativo": true
     },
     {
@@ -1108,11 +1109,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\28.10.2025 - Jorge Eduardo da Silva (recuperado 06.12)\\CNH 2.jpeg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\28.10.2025 - Jorge Eduardo da Silva (recuperado 06.12)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "4f96f84c-1288-4aad-a159-4ef66cdbf0fd",
       "rastreameMotoristaKey": "55",
       "rastreameMotoristaId": 55,
-      "rastreameSyncEm": "2026-06-28T22:47:04.697Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.455Z",
       "ativo": true
     },
     {
@@ -1131,11 +1132,11 @@
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\30.06.2025 - Veridiane De Castro Ramos (devolvido)\\CNH.jpeg",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\30.06.2025 - Veridiane De Castro Ramos (devolvido)",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "d5ec3405-bb1f-4318-92c9-f7af830ab22b",
       "rastreameMotoristaKey": "56",
       "rastreameMotoristaId": 56,
-      "rastreameSyncEm": "2026-06-28T22:47:04.916Z",
+      "rastreameSyncEm": "2026-07-01T16:03:52.163Z",
       "ativo": true
     },
     {
@@ -1167,7 +1168,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "bf1d4b0e-6c46-4878-8f1f-b639854af568",
-      "rastreameSyncEm": "2026-06-28T22:47:04.541Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.768Z",
       "atualizadoEm": "2026-06-27T21:03:24.085Z"
     },
     {
@@ -1196,7 +1197,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "d83b9728-e78a-4c83-a9a1-b77bfbc08f1d",
-      "rastreameSyncEm": "2026-06-28T22:47:04.556Z",
+      "rastreameSyncEm": "2026-07-01T16:03:50.842Z",
       "atualizadoEm": "2026-06-27T21:03:24.094Z"
     },
     {
@@ -1227,7 +1228,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "0621844a-475e-46a2-b595-89967488dd9c",
-      "rastreameSyncEm": "2026-06-28T22:47:04.588Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.100Z",
       "atualizadoEm": "2026-06-27T21:03:24.109Z"
     },
     {
@@ -1259,7 +1260,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "400d2519-36f7-4d81-af20-782b9b5f9869",
-      "rastreameSyncEm": "2026-06-28T22:47:04.595Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.190Z",
       "atualizadoEm": "2026-06-27T21:03:24.115Z"
     },
     {
@@ -1289,7 +1290,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "81fd1098-b897-4a3b-b80d-9e2b6f43a605",
-      "rastreameSyncEm": "2026-06-28T22:47:04.626Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.280Z",
       "atualizadoEm": "2026-06-27T21:03:24.127Z"
     },
     {
@@ -1318,7 +1319,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "6b965bc9-1ce6-4f61-a99d-2b01a79065db",
-      "rastreameSyncEm": "2026-06-28T22:47:04.666Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.374Z",
       "atualizadoEm": "2026-06-27T21:03:24.133Z"
     },
     {
@@ -1347,8 +1348,8 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "7fa5300b-0223-49a2-bf7b-6d6368f22b9d",
-      "rastreameSyncEm": "2026-06-28T22:47:04.682Z",
-      "atualizadoEm": "2026-06-27T21:03:24.139Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.406Z",
+      "atualizadoEm": "2026-07-01T02:59:04.021Z"
     },
     {
       "nome": "Juliano Foizer Silveira",
@@ -1373,7 +1374,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "a56a4d8e-03d0-4600-b06e-31fab673299a",
-      "rastreameSyncEm": "2026-06-28T22:47:04.703Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.471Z",
       "atualizadoEm": "2026-06-28T16:37:44.488Z"
     },
     {
@@ -1403,7 +1404,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "e5056ec1-efcf-4a6f-a530-59d40124f948",
-      "rastreameSyncEm": "2026-06-28T22:47:04.749Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.573Z",
       "atualizadoEm": "2026-06-27T21:03:24.178Z"
     },
     {
@@ -1435,7 +1436,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "765b6a80-dc50-43ba-9dde-df1e956064be",
-      "rastreameSyncEm": "2026-06-28T22:47:04.764Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.600Z",
       "atualizadoEm": "2026-06-27T21:03:24.185Z"
     },
     {
@@ -1457,7 +1458,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "c23dbf38-59e7-4b05-85ef-6b0313f352d4",
-      "rastreameSyncEm": "2026-06-28T22:47:04.792Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.693Z",
       "atualizadoEm": "2026-06-27T21:03:24.199Z"
     },
     {
@@ -1483,7 +1484,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "61c88b36-3079-40e9-a04d-1138818f0639",
-      "rastreameSyncEm": "2026-06-28T22:47:04.808Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.723Z",
       "atualizadoEm": "2026-06-27T21:03:24.207Z"
     },
     {
@@ -1515,30 +1516,34 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "c8e09888-27d6-4200-8fc6-16acf921812d",
-      "rastreameSyncEm": "2026-06-28T22:47:04.850Z",
+      "rastreameSyncEm": "2026-07-01T16:03:51.843Z",
       "atualizadoEm": "2026-06-27T21:03:24.234Z"
     },
     {
       "nome": "Gabriel Ramos De Oliveira",
       "cpf": "043.132.840-44",
-      "origemImportacao": "contrato",
+      "origemImportacao": "rastreame",
       "id": "9dd0b030-5ee2-4f44-9246-2013940c2524",
       "atualizadoEm": "2026-06-28T17:13:58.310Z",
       "ativo": true,
       "rastreameMotoristaKey": "57",
       "rastreameMotoristaId": 57,
-      "rastreameSyncEm": "2026-06-28T22:47:04.641Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.309Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Willian Pessoa Garcia",
       "cpf": "095.180.669-65",
-      "origemImportacao": "contrato",
+      "origemImportacao": "rastreame",
       "id": "835b8e5b-ecf7-4512-aee8-aa66a3ae71ec",
       "atualizadoEm": "2026-06-28T17:13:58.385Z",
       "ativo": true,
       "rastreameMotoristaKey": "58",
       "rastreameMotoristaId": 58,
-      "rastreameSyncEm": "2026-06-28T22:47:04.964Z"
+      "rastreameSyncEm": "2026-07-01T16:03:52.430Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Cristiane dos Santos",
@@ -1558,13 +1563,15 @@
         "ufEmissor": "SC"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\17.03.25 - Cristiane dos Santos (devolvido 10.04)\\CNH.jpg",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "9c70c7fb-3c0b-446f-a0a3-b0baf841f925",
       "atualizadoEm": "2026-06-28T17:19:46.045Z",
       "ativo": true,
       "rastreameMotoristaKey": "59",
       "rastreameMotoristaId": 59,
-      "rastreameSyncEm": "2026-06-28T22:47:04.578Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.017Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Hamza Issa Mohammad Smreen",
@@ -1583,13 +1590,15 @@
         "ufEmissor": "SP"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\21.01.2025 - Hamza Issa Mohammad Smreen (devolvido)\\CNH - Hamza Issa Mohammad Smreen.pdf",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "b9315aac-b44f-4127-b958-7577dbebc293",
       "atualizadoEm": "2026-06-28T17:19:46.052Z",
       "ativo": true,
       "rastreameMotoristaKey": "60",
       "rastreameMotoristaId": 60,
-      "rastreameSyncEm": "2026-06-28T22:47:04.658Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.356Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Gabriela Galvao Morokowoski",
@@ -1609,13 +1618,15 @@
         "ufEmissor": "SC"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\28.03.2025 - Gabriela Galvao Morokowoski (troca 04.07.2025)\\CNH-e.pdf-12.pdf",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "ed346bef-15b0-41e3-aa96-708b8f51e82a",
       "atualizadoEm": "2026-06-28T17:19:46.057Z",
       "ativo": true,
       "rastreameMotoristaKey": "61",
       "rastreameMotoristaId": 61,
-      "rastreameSyncEm": "2026-06-28T22:47:04.649Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.332Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Jonadabe Boguinha Marques de Seabra",
@@ -1635,13 +1646,15 @@
         "ufEmissor": "SC"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.07.25 - Jonadabe Boguinha Marques de Seabra (devolvido)\\a.jpeg",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "11d0f268-eb4e-4b72-bbcd-fa26ca7d6427",
       "atualizadoEm": "2026-06-28T17:19:46.063Z",
       "ativo": true,
       "rastreameMotoristaKey": "62",
       "rastreameMotoristaId": 62,
-      "rastreameSyncEm": "2026-06-28T22:47:04.690Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.433Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Amanda Silva de Miranda",
@@ -1661,13 +1674,15 @@
         "ufEmissor": "SC"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\26.11.2025 - Amanda Silva de Miranda (devolvido 05.12)\\CNH-e.pdf",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "a9d4a01b-03a1-4867-880f-7d74e138bf1c",
       "atualizadoEm": "2026-06-28T17:19:46.070Z",
       "ativo": true,
       "rastreameMotoristaKey": "63",
       "rastreameMotoristaId": 63,
-      "rastreameSyncEm": "2026-06-28T22:47:04.534Z"
+      "rastreameSyncEm": "2026-07-01T16:03:50.735Z",
+      "telefone": null,
+      "email": null
     },
     {
       "nome": "Rafael Moreira Pontel",
@@ -1687,13 +1702,15 @@
         "ufEmissor": "RS"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\06.03.25 - Rafael Moreira Pontel(devolvido 24.04)\\CNH-e.pdf",
-      "origemImportacao": "cnh-pasta-contrato",
+      "origemImportacao": "rastreame",
       "id": "a64a49f1-2afc-4d27-bc04-fd694c344885",
       "atualizadoEm": "2026-06-28T17:19:46.076Z",
       "ativo": true,
       "rastreameMotoristaKey": "64",
       "rastreameMotoristaId": 64,
-      "rastreameSyncEm": "2026-06-28T22:47:04.837Z"
+      "rastreameSyncEm": "2026-07-01T16:03:51.815Z",
+      "telefone": null,
+      "email": null
     }
   ]
 }

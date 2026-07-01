@@ -1,6 +1,6 @@
 {
   "descricao": "Contratos de locação (ativos e encerrados). id = uuid.",
-  "atualizadoEm": "2026-06-28",
+  "atualizadoEm": "2026-07-01",
   "schemaContrato": {
     "id": "uuid",
     "versao": "Número sequencial por par cliente + veículo (1, 2, 3 … — renovações)",
@@ -1067,10 +1067,10 @@
       "cpf": "040.363.982-45",
       "dataInicio": "20/01/2026",
       "dataFimPrevista": "20/04/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "dataEncerramento": "30/06/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "quarta",
@@ -1081,7 +1081,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:47.162Z",
-      "atualizadoEm": "2026-06-28T17:20:05.625Z"
+      "atualizadoEm": "2026-07-01T02:56:02.470Z"
     },
     {
       "id": "2891dc4d-cbae-4df3-b1a1-df4f73b2369c",
@@ -3185,8 +3185,8 @@
       "dataFimPrevista": "22/08/2026",
       "dataEncerramento": null,
       "quebraContrato": false,
-      "motivoEncerramento": "devolvido",
-      "status": "encerrado",
+      "motivoEncerramento": null,
+      "status": "ativo",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "segunda",
@@ -3707,10 +3707,10 @@
       "cpf": "013.267.140-90",
       "dataInicio": "15/05/2026",
       "dataFimPrevista": "12/08/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "dataEncerramento": "30/06/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "sabado",
@@ -3721,7 +3721,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:48.010Z",
-      "atualizadoEm": "2026-06-28T17:20:06.839Z"
+      "atualizadoEm": "2026-07-01T02:59:04.005Z"
     },
     {
       "id": "5461d437-7f5a-4b5d-a395-65269a557445",

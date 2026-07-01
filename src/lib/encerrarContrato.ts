@@ -36,11 +36,21 @@ export type EncerramentoInput = {
   incluirTodasMultasPlaca?: boolean;
   diasPrimeiroVencimento?: number;
   condutorId?: string | null;
+  /**
+   * `calculado` — vencimentos semanais + diárias de atraso (default).
+   * `abertos-db` — débitos em aberto em cliente-despesas (espelho Rastreame).
+   */
+  fonteDebitos?: "calculado" | "abertos-db";
+  /** Todas as infrações/manutenção em aberto do locatário (qualquer placa), não só a do contrato. */
+  incluirInfracoesCliente?: boolean;
 };
 
 export type ParcelaAtrasada = {
   vencimento: string;
   valorSemanal: number;
+  placa?: string;
+  categoria?: string;
+  descricao?: string;
 };
 
 export type DiariaAtraso = {
@@ -48,6 +58,14 @@ export type DiariaAtraso = {
   diasAtraso: number;
   valorDiaria: number;
   total: number;
+  placa?: string;
+  categoria?: string;
+};
+
+export type CreditoDevolucao = {
+  registro: ClienteDespesaRegistro;
+  valor: number;
+  descricao: string;
 };
 
 export type EncerramentoResult = {
@@ -56,6 +74,7 @@ export type EncerramentoResult = {
   diasLocacao: number;
   diasRestantes: number;
   proporcaoRestante: number;
+  fonteDebitos: "calculado" | "abertos-db";
   infracoes: ClienteDespesaRegistro[];
   totalInfracoes: number;
   /** @deprecated use infracoes */
@@ -68,6 +87,14 @@ export type EncerramentoResult = {
   totalParcelasEmAberto: number;
   diariasAtraso: DiariaAtraso[];
   totalDiariasAtraso: number;
+  /** Renegociação, quebra, outros… (modo abertos-db). */
+  debitosDiversos: ClienteDespesaRegistro[];
+  totalDebitosDiversos: number;
+  /** Valores a devolver ao locatário (ex.: "DÉBITO 3 diárias"). */
+  creditosDevolucao: CreditoDevolucao[];
+  totalCreditosDevolucao: number;
+  /** Caução do contrato + créditos explícitos a devolver ao locatário. */
+  totalCreditos: number;
   retencaoCaucao: number;
   caucaoDevolver: number;
   totalDebitos: number;
@@ -110,6 +137,111 @@ function infracaoPaga(m: ClienteDespesaRegistro, pagasAuto: Set<string>): boolea
   if (pagasAuto.has(m.autoInfracao.trim().toUpperCase())) return true;
   if (m.quitadaDetran === true) return true;
   return m.paga === true;
+}
+
+/** Crédito a devolver ao locatário (descrição começa com CRÉDITO ou legado DÉBITO). */
+export function isCreditoDevolucaoLocatario(m: ClienteDespesaRegistro): boolean {
+  const t = String(m.descricao ?? "").trim();
+  return /^CR[EÉ]DITO\b/i.test(t) || /^D[EÉ]BITO\b/i.test(t);
+}
+
+/** Rótulo padronizado para exibição (sempre CRÉDITO). */
+export function rotuloCreditoDevolucao(descricao: string): string {
+  let t = String(descricao ?? "").trim();
+  t = t.replace(/^D[EÉ]BITO\b/i, "CRÉDITO");
+  t = t.replace(/^CR[EÉ]DITO\b/i, "CRÉDITO");
+  t = t.replace(/vecículo/gi, "veículo");
+  t = t.replace(
+    /Devolução do veículo antes do prazo da semana \(26\/06 entregue\)/i,
+    "devolução antes do prazo (26/06)",
+  );
+  return t;
+}
+
+/** Evita contar espelho RAST-* e DETRAN duas vezes. */
+function dedupeInfracoesEspelho(list: ClienteDespesaRegistro[]): ClienteDespesaRegistro[] {
+  const rastreamePrimario = new Set<string>();
+  for (const m of list) {
+    if (m.rastreameId != null && !/^RAST-\d+$/i.test(m.autoInfracao.trim())) {
+      rastreamePrimario.add(String(m.rastreameId));
+    }
+  }
+  const out: ClienteDespesaRegistro[] = [];
+  const vistos = new Set<string>();
+  for (const m of list) {
+    const auto = m.autoInfracao.trim().toUpperCase();
+    if (
+      /^RAST-\d+$/i.test(auto) &&
+      m.rastreameId != null &&
+      rastreamePrimario.has(String(m.rastreameId))
+    ) {
+      continue;
+    }
+    const key = m.detranAutoInfracao?.trim().toUpperCase() || auto;
+    if (vistos.has(key)) continue;
+    vistos.add(key);
+    out.push(m);
+  }
+  return out;
+}
+
+function despesaNoPeriodo(
+  m: ClienteDespesaRegistro,
+  inicio: Date,
+  encerramento: Date,
+): boolean {
+  const da = parseDataBr(m.dataAutuacao);
+  if (!da) return false;
+  return da >= startOfDay(inicio) && da <= encerramento;
+}
+
+function coletarDebitosAbertosDb(
+  contrato: ContratoExtraido,
+  encerramento: Date,
+  clienteId: string | null,
+  incluirTodas: boolean,
+  pagasAutoSet: Set<string>,
+): {
+  parcelasSemanal: ClienteDespesaRegistro[];
+  diversos: ClienteDespesaRegistro[];
+  creditos: CreditoDevolucao[];
+} {
+  const db = loadClienteDespesasDb();
+  const parcelasSemanal: ClienteDespesaRegistro[] = [];
+  const diversos: ClienteDespesaRegistro[] = [];
+  const creditos: CreditoDevolucao[] = [];
+  /** Lançamentos de acerto no Rastreame podem ser no dia seguinte ao encerramento. */
+  const limite = addDays(startOfDay(encerramento), 7);
+
+  for (const m of db.clienteDespesas) {
+    if (!isClienteDespesaAtiva(m)) continue;
+    if (m.paga === true) continue;
+    if (infracaoPaga(m, pagasAutoSet)) continue;
+    if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) continue;
+    const da = parseDataBr(m.dataAutuacao);
+    if (da && (da < startOfDay(contrato.inicio) || da > limite)) continue;
+
+    if (isCreditoDevolucaoLocatario(m)) {
+      creditos.push({
+        registro: m,
+        valor: round2(m.valorMulta),
+        descricao: rotuloCreditoDevolucao(m.descricao),
+      });
+      continue;
+    }
+
+    if (isInfracaoTransito(m)) continue;
+    if ((m.categoria ?? "") === "Manutenção") continue;
+
+    if ((m.categoria ?? "") === "Locação semanal") {
+      parcelasSemanal.push(m);
+      continue;
+    }
+
+    diversos.push(m);
+  }
+
+  return { parcelasSemanal, diversos, creditos };
 }
 
 function despesaDoContrato(
@@ -218,55 +350,93 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   );
   const incluirTodas =
     input.incluirTodasInfracoesPlaca === true || input.incluirTodasMultasPlaca === true;
+  const fonteDebitos = input.fonteDebitos ?? "calculado";
 
   const intervalo = input.diasPrimeiroVencimento ?? intervaloPagamentoDias(contrato);
   const valorParcela = valorParcelaContrato(contrato);
   const valorDiaria = valorDiariaContrato(contrato);
   const vencimentos = calcularVencimentos(contrato.inicio, encerramento, intervalo);
 
-  const parcelasEmAberto: ParcelaAtrasada[] = [];
-  const diariasAtraso: DiariaAtraso[] = [];
+  let parcelasEmAberto: ParcelaAtrasada[] = [];
+  let diariasAtraso: DiariaAtraso[] = [];
+  let debitosDiversos: ClienteDespesaRegistro[] = [];
+  let creditosDevolucao: CreditoDevolucao[] = [];
 
-  for (const due of vencimentos) {
-    const vencStr = fmtDataBr(due);
-    if (pagasSet.has(vencStr)) continue;
+  if (fonteDebitos === "abertos-db") {
+    avisos.push(
+      "Débitos em aberto lidos de cliente-despesas.json (espelho Rastreame). Linhas CRÉDITO são valor a devolver.",
+    );
+  } else {
+    for (const due of vencimentos) {
+      const vencStr = fmtDataBr(due);
+      if (pagasSet.has(vencStr)) continue;
 
-    parcelasEmAberto.push({
-      vencimento: vencStr,
-      valorSemanal: valorParcela,
-    });
-
-    const diasAtraso = daysBetween(due, encerramento);
-    if (diasAtraso > 0) {
-      diariasAtraso.push({
+      parcelasEmAberto.push({
         vencimento: vencStr,
-        diasAtraso,
-        valorDiaria,
-        total: round2(diasAtraso * valorDiaria),
+        valorSemanal: valorParcela,
+        placa: contrato.placa,
+        categoria: "Locação semanal",
+        descricao: "Vencimento semanal",
       });
+
+      const diasAtraso = daysBetween(due, encerramento);
+      if (diasAtraso > 0) {
+        diariasAtraso.push({
+          vencimento: vencStr,
+          diasAtraso,
+          valorDiaria,
+          total: round2(diasAtraso * valorDiaria),
+          placa: contrato.placa,
+          categoria: "Locação semanal",
+        });
+      }
     }
   }
 
-  const totalParcelasEmAberto = round2(
-    parcelasEmAberto.reduce((s, p) => s + p.valorSemanal, 0),
-  );
-  const totalDiariasAtraso = round2(
-    diariasAtraso.reduce((s, d) => s + d.total, 0),
+  const clienteId = loadClienteId(contrato.cpf, input.condutorId);
+
+  if (fonteDebitos === "abertos-db") {
+    const abertos = coletarDebitosAbertosDb(
+      contrato,
+      encerramento,
+      clienteId,
+      incluirTodas,
+      pagasAutoSet,
+    );
+    parcelasEmAberto = abertos.parcelasSemanal.map((m) => ({
+      vencimento: m.dataAutuacao,
+      valorSemanal: round2(m.valorMulta),
+      placa: m.veiculoId,
+      categoria: m.categoria ?? "Locação semanal",
+      descricao: m.descricao,
+    }));
+    debitosDiversos = abertos.diversos;
+    creditosDevolucao = abertos.creditos;
+  }
+  const incluirInfracoesCliente = input.incluirInfracoesCliente === true;
+  const db = loadClienteDespesasDb();
+  const infracoes = dedupeInfracoesEspelho(
+    db.clienteDespesas.filter((m) => {
+      if (!isClienteDespesaAtiva(m)) return false;
+      if (!isInfracaoTransito(m)) return false;
+      if (infracaoPaga(m, pagasAutoSet)) return false;
+      if (incluirInfracoesCliente && clienteId && m.condutorId === clienteId) {
+        return true;
+      }
+      if (!infracaoDoContrato(m, contrato, clienteId, incluirTodas)) {
+        return false;
+      }
+      const da = parseDataBr(m.dataAutuacao);
+      if (!da) return false;
+      return da >= startOfDay(contrato.inicio) && da <= encerramento;
+    }),
   );
 
-  const clienteId = loadClienteId(contrato.cpf, input.condutorId);
-  const db = loadClienteDespesasDb();
-  const infracoes = db.clienteDespesas.filter((m) => {
-    if (!isClienteDespesaAtiva(m)) return false;
-    if (!isInfracaoTransito(m)) return false;
-    if (infracaoPaga(m, pagasAutoSet)) return false;
-    if (!infracaoDoContrato(m, contrato, clienteId, incluirTodas)) {
-      return false;
-    }
-    const da = parseDataBr(m.dataAutuacao);
-    if (!da) return false;
-    return da >= startOfDay(contrato.inicio) && da <= encerramento;
-  });
+  if (incluirInfracoesCliente) {
+    avisos.push(
+      "Infrações e manutenção em aberto de todas as placas do locatário incluídas no acerto.",
+    );
+  }
 
   if (infracoes.some((m) => !m.condutorConfirmado)) {
     avisos.push(
@@ -285,6 +455,9 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     if (!isClienteDespesaAtiva(m)) return false;
     if ((m.categoria ?? "") !== "Manutenção") return false;
     if (infracaoPaga(m, pagasAutoSet)) return false;
+    if (incluirInfracoesCliente && clienteId && m.condutorId === clienteId) {
+      return true;
+    }
     if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) return false;
     const da = parseDataBr(m.dataAutuacao);
     if (!da) return false;
@@ -299,13 +472,37 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const totalManutencoes = round2(
     manutencoes.reduce((s, m) => s + (m.valorMulta > 0 ? m.valorMulta : 0), 0),
   );
+  const totalParcelasEmAberto = round2(
+    parcelasEmAberto.reduce((s, p) => s + p.valorSemanal, 0),
+  );
+  const totalDiariasAtraso = round2(
+    diariasAtraso.reduce((s, d) => s + d.total, 0),
+  );
+  const totalDebitosDiversos = round2(
+    debitosDiversos.reduce((s, m) => s + (m.valorMulta > 0 ? m.valorMulta : 0), 0),
+  );
+  const totalCreditosDevolucao = round2(
+    creditosDevolucao.reduce((s, c) => s + c.valor, 0),
+  );
+  const temQuebraRastreame =
+    fonteDebitos === "abertos-db" &&
+    debitosDiversos.some((m) => (m.categoria ?? "") === "Quebra contrato");
+  const retencaoNoTotal = temQuebraRastreame ? 0 : retencaoCaucao;
+  if (temQuebraRastreame) {
+    avisos.push(
+      "Quebra de contrato já lançada no Rastreame — retenção proporcional da caução não somada em duplicidade.",
+    );
+  }
   const totalDebitos = round2(
     totalInfracoes +
       totalManutencoes +
       totalParcelasEmAberto +
       totalDiariasAtraso +
-      retencaoCaucao,
+      totalDebitosDiversos +
+      retencaoNoTotal -
+      totalCreditosDevolucao,
   );
+  const totalCreditos = round2(contrato.valorCaucao + totalCreditosDevolucao);
   const caucaoDevolver = round2(Math.max(0, contrato.valorCaucao - retencaoCaucao));
   const saldoFinal = round2(contrato.valorCaucao - totalDebitos);
 
@@ -315,6 +512,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     diasLocacao,
     diasRestantes,
     proporcaoRestante: round2(proporcaoRestante),
+    fonteDebitos,
     infracoes,
     totalInfracoes,
     multas: infracoes,
@@ -325,6 +523,11 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     totalParcelasEmAberto,
     diariasAtraso,
     totalDiariasAtraso,
+    debitosDiversos,
+    totalDebitosDiversos,
+    creditosDevolucao,
+    totalCreditosDevolucao,
+    totalCreditos,
     retencaoCaucao,
     caucaoDevolver,
     totalDebitos,
@@ -336,6 +539,15 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
 export function formatarEncerramentoTexto(r: EncerramentoResult): string {
   const c = r.contrato;
   const pct = (r.proporcaoRestante * 100).toFixed(1).replace(".", ",");
+  const placaLinha = (veiculoId: string | undefined): string =>
+    veiculoId?.trim() || c.placa;
+  const linhaItem = (
+    descricao: string,
+    placa: string,
+    data: string,
+    categoria: string,
+    valor: string,
+  ): string => `• ${descricao} — ${placa} — ${data} — ${categoria} — ${valor}`;
   const lines: string[] = [
     "📄 *ENCERRAMENTO DE CONTRATO*",
     "",
@@ -349,7 +561,7 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
     `• Diária (atraso): R$ ${brl(valorDiariaContrato(c))}`,
     `• Caução: R$ ${brl(c.valorCaucao)}`,
     "",
-    "🚦 *Infrações de trânsito (não pagas)*",
+    "🚦 *Infrações (em aberto)*",
   ];
 
   if (r.infracoes.length === 0) {
@@ -357,7 +569,13 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
   } else {
     for (const m of r.infracoes) {
       lines.push(
-        `• ${m.autoInfracao} — ${m.dataAutuacao} — R$ ${brl(m.valorMulta)} — ${m.situacao}`,
+        linhaItem(
+          m.titulo ?? m.descricao ?? m.autoInfracao,
+          placaLinha(m.veiculoId),
+          m.dataAutuacao,
+          m.categoria ?? "Infração",
+          `R$ ${brl(m.valorMulta)}`,
+        ),
       );
     }
   }
@@ -370,43 +588,109 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
     for (const m of r.manutencoes) {
       const valor =
         m.valorMulta > 0 ? `R$ ${brl(m.valorMulta)}` : "orçamento pendente";
-      lines.push(`• ${m.descricao} — ${m.dataAutuacao} — ${valor} — ${m.situacao}`);
+      lines.push(
+        linhaItem(
+          m.descricao,
+          placaLinha(m.veiculoId),
+          m.dataAutuacao,
+          m.categoria ?? "Manutenção",
+          valor,
+        ),
+      );
     }
   }
   lines.push(`💰 Subtotal manutenção: R$ ${brl(r.totalManutencoes)}`);
   lines.push("");
-  lines.push("📅 *Locação semanal em aberto*");
+  lines.push("📅 *Parcelas semanais (em aberto)*");
   if (r.parcelasEmAberto.length === 0) {
-    lines.push("• (nenhuma parcela em aberto)");
+    lines.push("• (nenhuma)");
   } else {
     for (const p of r.parcelasEmAberto) {
-      lines.push(`• Venc. ${p.vencimento}: R$ ${brl(p.valorSemanal)}`);
+      lines.push(
+        linhaItem(
+          p.descricao ?? "Vencimento semanal",
+          placaLinha(p.placa),
+          p.vencimento,
+          p.categoria ?? "Locação semanal",
+          `R$ ${brl(p.valorSemanal)}`,
+        ),
+      );
     }
   }
   lines.push(`💰 Subtotal parcelas: R$ ${brl(r.totalParcelasEmAberto)}`);
   lines.push("");
-  lines.push("⏱️ *Diárias por atraso (após vencimento semanal)*");
-  if (r.diariasAtraso.length === 0) {
-    lines.push("• (nenhuma)");
-  } else {
-    for (const d of r.diariasAtraso) {
+  if (r.fonteDebitos === "calculado") {
+    lines.push("⏱️ *Diárias por atraso (após vencimento semanal)*");
+    if (r.diariasAtraso.length === 0) {
+      lines.push("• (nenhuma)");
+    } else {
+      for (const d of r.diariasAtraso) {
+        lines.push(
+          linhaItem(
+            `${d.diasAtraso} dia(s) × R$ ${brl(d.valorDiaria)}`,
+            placaLinha(d.placa),
+            d.vencimento,
+            d.categoria ?? "Locação semanal",
+            `R$ ${brl(d.total)}`,
+          ),
+        );
+      }
+    }
+    lines.push(`💰 Subtotal diárias: R$ ${brl(r.totalDiariasAtraso)}`);
+    lines.push("");
+  }
+  if (r.debitosDiversos.length > 0) {
+    lines.push("📋 *Outros valores (em aberto)*");
+    for (const m of r.debitosDiversos) {
       lines.push(
-        `• Venc. ${d.vencimento}: ${d.diasAtraso} dia(s) × R$ ${brl(d.valorDiaria)} = R$ ${brl(d.total)}`,
+        linhaItem(
+          m.descricao,
+          placaLinha(m.veiculoId),
+          m.dataAutuacao,
+          m.categoria ?? "Outros",
+          `R$ ${brl(m.valorMulta)}`,
+        ),
       );
     }
+    lines.push(`💰 Subtotal outros: R$ ${brl(r.totalDebitosDiversos)}`);
+    lines.push("");
   }
-  lines.push(`💰 Subtotal diárias: R$ ${brl(r.totalDiariasAtraso)}`);
-  lines.push("");
+  if (r.creditosDevolucao.length > 0) {
+    lines.push("💚 *Créditos a devolver ao locatário*");
+    for (const cr of r.creditosDevolucao) {
+      lines.push(
+        linhaItem(
+          cr.descricao,
+          placaLinha(cr.registro.veiculoId),
+          cr.registro.dataAutuacao,
+          cr.registro.categoria ?? "Crédito",
+          `R$ ${brl(cr.valor)}`,
+        ),
+      );
+    }
+    lines.push(`💰 Subtotal créditos: R$ ${brl(r.totalCreditosDevolucao)}`);
+    lines.push("");
+  }
   lines.push("📉 *Quebra de contrato (retenção caução)*");
-  lines.push(`• Dias restantes: ${r.diasRestantes} / ${c.prazoDias} (${pct}%)`);
-  lines.push(`• Retenção caução: R$ ${brl(r.retencaoCaucao)}`);
-  lines.push(`• Caução a devolver (após retenção): R$ ${brl(r.caucaoDevolver)}`);
+  const quebraRastreame = r.debitosDiversos.find(
+    (m) => (m.categoria ?? "") === "Quebra contrato",
+  );
+  if (r.fonteDebitos === "abertos-db" && quebraRastreame) {
+    lines.push(
+      `• Quebra de contrato informada no Rastreame (multa R$ ${brl(quebraRastreame.valorMulta)}) — retenção proporcional calculada com base em ${c.prazoDias} dias de contrato e ${r.diasLocacao} dias de locação.`,
+    );
+  } else {
+    lines.push(`• Dias restantes: ${r.diasRestantes} / ${c.prazoDias} (${pct}%)`);
+    lines.push(`• Retenção caução: R$ ${brl(r.retencaoCaucao)}`);
+    lines.push(`• Caução a devolver (após retenção): R$ ${brl(r.caucaoDevolver)}`);
+  }
   lines.push("");
   lines.push("━━━━━━━━━━━━━━━━━━━━");
   lines.push("🧾 *Totais*");
-  lines.push(`• Total débitos: R$ ${brl(r.totalDebitos)}`);
+  lines.push(`• Total débitos (líquido): R$ ${brl(r.totalDebitos)}`);
+  lines.push(`• Total créditos: R$ ${brl(r.totalCreditos)}`);
   lines.push(
-    `${r.saldoFinal < 0 ? "🔴" : "✅"} *Saldo caução: R$ ${brl(r.saldoFinal)}* ${r.saldoFinal < 0 ? "(locatário deve complementar)" : "(a devolver ao locatário)"}`,
+    `${r.saldoFinal < 0 ? "🔴" : "✅"} *Saldo: R$ ${brl(r.saldoFinal)}* ${r.saldoFinal < 0 ? "(locatário deve complementar)" : "(a devolver ao locatário)"}`,
   );
 
   if (r.avisos.length) {
