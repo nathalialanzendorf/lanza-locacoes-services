@@ -3,12 +3,14 @@ import path from "node:path";
 
 import {
   loadPlacasParaSync,
+  normalizarTitulosPedagioNoDb,
   processarPassagensJson,
   processarPassagensJsonLote,
   sincronizarPedagiosFrota,
   sincronizarPedagiosVeiculo,
   type SyncPedagiosResult,
 } from "../lib/pedagioDigital/syncPedagios.js";
+import { pushRecebimentosToRastreame } from "../lib/rastreame/recebimentosSync.js";
 import { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../lib/relatoriosPaths.js";
 
 function printResumo(r: SyncPedagiosResult): void {
@@ -22,17 +24,20 @@ export async function main(argv: string[]): Promise<void> {
   let placa: string | undefined;
   let dryRun = false;
   let jsonIn: string | undefined;
+  let normalizarTitulos = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dry-run") dryRun = true;
+    else if (a === "--normalizar-titulos") normalizarTitulos = true;
     else if (a === "--placa" && argv[i + 1]) placa = argv[++i];
     else if (a === "--json" && argv[i + 1]) jsonIn = argv[++i];
     else if (a === "-h" || a === "--help") {
-      console.log(`sync-pedagios [--placa PLACA] [--dry-run] [--json arquivo.json]
+      console.log(`sync-pedagios [--placa PLACA] [--dry-run] [--json arquivo.json] [--normalizar-titulos]
 
 Grava as passagens EM ABERTO do pedagiodigital.com em database/cliente-despesas.json
-(categoria "Pedágio"); o push para o Rastreame é feito por sync-recebimentos.
+(categoria "Pedágio"); título: ATRASADO Pagamento pedágio dd/mm/aaaa HH:mm.
+Ao final (ou com --normalizar-titulos), faz push para o Rastreame via sync-gastos-gerais.
 
 API: GET /bff/api/Passagem/list-logado?placas=P1,P2,... (uma chamada para toda a frota).
 A sessão do BFF é curta; se expirar, prefira o modo offline abaixo.
@@ -50,9 +55,25 @@ Sem --placa: percorre todas as placas ativas em database/veiculos.json.
     }
   }
 
+  if (normalizarTitulos) {
+    const r = normalizarTitulosPedagioNoDb({ dryRun });
+    console.log(
+      `${dryRun ? "[dry-run] " : ""}Títulos pedágio normalizados: ${r.atualizados}`,
+    );
+    for (const e of r.exemplos) console.log(`  ${e}`);
+    if (!dryRun && r.atualizados > 0) {
+      const push = await pushRecebimentosToRastreame({});
+      console.log(
+        `\nPush Rastreame: criados ${push.criados} | atualizados ${push.atualizados} | ignorados ${push.ignorados}`,
+      );
+      for (const err of push.erros) console.log(`  erro: ${err}`);
+    }
+    return;
+  }
+
   if (jsonIn && placa) {
     loadPlacasParaSync(placa);
-    printResumo(processarPassagensJson(placa, jsonIn, { dryRun }));
+    printResumo(await processarPassagensJson(placa, jsonIn, { dryRun }));
     return;
   }
 
@@ -68,7 +89,7 @@ Sem --placa: percorre todas as placas ativas em database/veiculos.json.
       : "Sincronizando pedágios em aberto (pedagiodigital.com)...",
   );
   const results = jsonIn
-    ? processarPassagensJsonLote(jsonIn, { dryRun })
+    ? await processarPassagensJsonLote(jsonIn, { dryRun })
     : await sincronizarPedagiosFrota({ dryRun });
 
   let novos = 0;
@@ -91,4 +112,12 @@ Sem --placa: percorre todas as placas ativas em database/veiculos.json.
     "utf8",
   );
   console.log(`Relatório: ${outPath}`);
+
+  if (!dryRun) {
+    const push = await pushRecebimentosToRastreame({});
+    console.log(
+      `\nPush Rastreame: criados ${push.criados} | atualizados ${push.atualizados} | ignorados ${push.ignorados}`,
+    );
+    for (const err of push.erros) console.log(`  erro: ${err}`);
+  }
 }

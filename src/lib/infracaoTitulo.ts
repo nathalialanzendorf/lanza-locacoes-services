@@ -2,10 +2,8 @@
  * Título e classificação de infrações de trânsito.
  *
  * Convenção Lanza (decisão 28/06/2026):
- * - `descricao` guarda o **texto cru do DETRAN** (ex.: "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%").
- * - `titulo` guarda o **rótulo curto** para o Gastos Gerais do Rastreame: `Multa {tipo} - {dataAutuacao}`.
- *   A tag `ATRASADO` (débito em aberto) é aplicada na hora do push (fonte única: skill cadastro-recebimento),
- *   resultando em `ATRASADO Multa {tipo} - {dataAutuacao}`.
+ * - `descricao` espelha o **info** do Rastreame (`ATRASADO Multa …` quando em aberto).
+ * - `titulo` guarda o rótulo curto sem a tag (`Multa {tipo} - {dataAutuacao}`).
  */
 
 function norm(s: string): string {
@@ -74,4 +72,45 @@ export function normalizarTituloMulta(s: string): string {
   const m = base.match(/(\d{2}\/\d{2}\/\d{4}(?:\s+\d{2}:\d{2})?)/);
   const dt = m ? m[1]!.trim() : "";
   return dt ? `Multa ${tipo} - ${dt}` : `Multa ${tipo}`;
+}
+
+export type RotuloGastoInput = {
+  categoria?: string;
+  descricao?: string;
+  titulo?: string;
+  dataAutuacao?: string;
+  paga?: boolean;
+  situacao?: string;
+};
+
+/** Débito em aberto para cobrança (espelho Gastos Gerais / Rastreame). */
+export function gastoClienteEmAberto(reg: RotuloGastoInput): boolean {
+  if (reg.paga === true) return false;
+  const info = String(reg.descricao ?? "").trim();
+  if (/^CR[EÉ]DITO\b/i.test(info) || /^D[EÉ]BITO\b/i.test(info)) return true;
+  if (/ATRASADO|ATRSAD/i.test(info)) return true;
+  return reg.situacao === "Em aberto";
+}
+
+/** Rótulo exibido/cobrado — igual ao campo `info` do Rastreame. */
+export function rotuloGastoClienteDespesa(reg: RotuloGastoInput): string {
+  if (isCategoriaInfracao(reg.categoria)) {
+    const base = stripAtrasado(
+      reg.titulo?.trim() ||
+        (pareceTituloMulta(reg.descricao ?? "")
+          ? reg.descricao ?? ""
+          : tituloInfracaoBase(reg.descricao ?? "", reg.dataAutuacao ?? "")),
+    );
+    return reg.paga === true ? base : `ATRASADO ${base}`;
+  }
+  let info = String(reg.descricao ?? "").trim();
+  const emAberto = gastoClienteEmAberto(reg);
+  if (emAberto && !/ATRASADO/i.test(info)) {
+    info = info.replace(/^ATRASADO\s*[-–—]\s*/i, "").trim();
+    info = `ATRASADO ${info}`;
+  }
+  if (!emAberto && reg.paga === true) {
+    info = stripAtrasado(info);
+  }
+  return info;
 }

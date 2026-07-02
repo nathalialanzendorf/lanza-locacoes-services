@@ -293,6 +293,66 @@ export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegist
     .sort((a, b) => dataNum(a.inicio) - dataNum(b.inicio));
 }
 
+/** Início do dia civil (DD/MM/AAAA). */
+function parseBrDayStart(s: string | null | undefined): Date | null {
+  const m = String(s ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!m) return null;
+  const dt = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 0, 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+/** Fim do dia civil (DD/MM/AAAA). */
+function parseBrDayEnd(s: string | null | undefined): Date | null {
+  const m = String(s ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!m) return null;
+  const dt = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 23, 59, 59, 999);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+/** Período de locação/reserva/manutenção cobre a data/hora informada (inclusivo). */
+export function locacaoCobreData(l: LocacaoRegistro, data: Date): boolean {
+  const ini = parseBrDayStart(l.inicio);
+  if (!ini) return false;
+  const fim = l.fim ? parseBrDayEnd(l.fim) : null;
+  return data >= ini && (fim === null || data <= fim);
+}
+
+/**
+ * Reserva substituta vigente na data: veículo reserva com `substituiPlaca` preenchida.
+ * Usado por sync-infracoes/sync-pedagios para vincular débitos do carro reserva
+ * ao contrato do veículo principal em manutenção.
+ */
+export function findReservaSubstitutaNaData(
+  placaReserva: string,
+  data: Date,
+): LocacaoRegistro | null {
+  const db = loadLocacoesDb();
+  const matches = db.locacoes.filter(
+    (l) =>
+      placasIguais(l.placa, placaReserva) &&
+      l.situacao === "reserva" &&
+      Boolean(l.substituiPlaca?.trim()) &&
+      locacaoCobreData(l, data),
+  );
+  if (!matches.length) return null;
+  matches.sort((a, b) => dataNum(b.inicio) - dataNum(a.inicio));
+  return matches[0] ?? null;
+}
+
+/** Manutenção vigente na data (veículo principal parado). */
+export function findManutencaoNaData(placa: string, data: Date): LocacaoRegistro | null {
+  const db = loadLocacoesDb();
+  const matches = db.locacoes.filter(
+    (l) =>
+      placasIguais(l.placa, placa) &&
+      l.situacao === "manutencao" &&
+      locacaoCobreData(l, data),
+  );
+  if (!matches.length) return null;
+  matches.sort((a, b) => dataNum(b.inicio) - dataNum(a.inicio));
+  return matches[0] ?? null;
+}
+
 /** DD/MM/AAAA -> AAAAMMDD (0 se não parsear). */
 function dataNum(d: string | null | undefined): number {
   const m = String(d ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);

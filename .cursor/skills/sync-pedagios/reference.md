@@ -9,7 +9,7 @@ Auth, endpoints e captura de sessão: **`.cursor/tools/pedagio-digital/reference
 | `autoInfracao` | `PED-<id da passagem>` (chave única) |
 | `categoria` | `Pedágio` |
 | `veiculoId` | Placa (ABC-1D23) |
-| `descricao` | `ATRASADO Pagamento pedágio {dd-mm-aaaa HH:mm}` |
+| `descricao` | `ATRASADO Pagamento pedágio {dd/mm/aaaa HH:mm}` |
 | `dataAutuacao` | `DD/MM/AAAA HH:mm` da passagem (base para inferir condutor) |
 | `valorMulta` | Valor da passagem |
 | `localInfracao` | Praça / rodovia (quando houver) |

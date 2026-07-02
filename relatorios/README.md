@@ -6,7 +6,7 @@ Todos os relatórios são gravados sob **`_tmp/<tipo>/`** (uma subpasta por tipo
 
 | Pasta (`_tmp/...`) | Conteúdo |
 |-------|----------|
-| `_tmp/quebra-contrato/` | Acerto de encerramento — `quebra-contrato-*.txt` (documento para o cliente) |
+| `_tmp/encerramento-contrato/` | Acerto de encerramento — `encerramento-contrato-*.txt` (WhatsApp) + `.json` (canvas) |
 | `_tmp/prestacao-contas/` | Relatórios internos do repo (ex. listagens semanais Rastreame) |
 | `_tmp/cobrancas/` | Mensagens de cobrança WhatsApp — `cobranca-*.txt` |
 | `_tmp/sync/` | Lotes DETRAN — `_sync_infracoes.json`, `_sync_ipva_licenciamento.json` |

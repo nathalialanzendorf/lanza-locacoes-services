@@ -45,11 +45,11 @@ function loadVeiculosFrota(placaFiltro?: string): VeiculoFrota[] {
     .map((v) => ({ placa: v.placa!, renavam: String(v.renavam!) }));
 }
 
-function aplicarMulta(
+async function aplicarMulta(
   placa: string,
   m: DetranScMultaNormalizada,
   opts?: { dryRun?: boolean; prazoDias?: number },
-): SincronizarClienteDespesaResult | null {
+): Promise<SincronizarClienteDespesaResult | null> {
   if (opts?.dryRun === true) {
     return {
       registro: {
@@ -75,7 +75,7 @@ function aplicarMulta(
     };
   }
 
-  return sincronizarClienteDespesa(
+  return await sincronizarClienteDespesa(
     placa,
     {
       autoInfracao: m.autoInfracao,
@@ -111,11 +111,11 @@ export async function sincronizarMultasPorTicketDetranSc(
   return processarRespostaDetranSc(placa, raw, opts);
 }
 
-export function processarRespostaDetranSc(
+export async function processarRespostaDetranSc(
   placa: string,
   raw: unknown,
   opts?: { dryRun?: boolean; prazoDias?: number },
-): SyncVeiculoResult {
+): Promise<SyncVeiculoResult> {
   const { cobraveis, historico, debitosIgnoradosProprietario } =
     extrairMultasDetranSc(raw);
 
@@ -133,7 +133,7 @@ export function processarRespostaDetranSc(
   const all = [...cobraveis, ...historico];
 
   for (const m of all) {
-    const r = aplicarMulta(placa, m, opts);
+    const r = await aplicarMulta(placa, m, opts);
     if (!r) continue;
 
     if (m.quitadaDetran) result.historico++;

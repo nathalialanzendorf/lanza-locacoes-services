@@ -28,6 +28,7 @@ import {
 import { gastoDuplicado } from "./gastoDup.js";
 import {
   isCategoriaInfracao,
+  rotuloGastoClienteDespesa,
   stripAtrasado,
   tituloInfracaoBase,
 } from "../infracaoTitulo.js";
@@ -63,12 +64,16 @@ type UpsertRecebimentoInput = Parameters<typeof upsertRecebimentoFromRastreame>[
 
 function isoToBr(iso: string | undefined | null): string {
   if (!iso) return "";
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
+  if (Number.isNaN(d.getTime())) {
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    return String(iso);
+  }
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const br = d.toLocaleString("en-US", { timeZone: "America/Recife" });
+  const parsed = new Date(br);
+  return `${pad(parsed.getDate())}/${pad(parsed.getMonth() + 1)}/${parsed.getFullYear()}`;
 }
 
 function brToIsoEndDay(dataBr: string): string {
@@ -108,12 +113,12 @@ function isGastoAtivo(g: GastoRecord): boolean {
 export function categoriaFromInfo(info: string): string {
   const t = info.toLowerCase();
   if (/pagamento semanal|semanal/.test(t)) return "Locação semanal";
+  if (/quebra|encerramento|rescis/.test(t)) return "Quebra contrato";
   if (/cau[cç][aã]o/.test(t)) return "Caução";
   if (/manuten|avaria|porta|parachoque|reparo|[óo]leo|troca de [óo]leo/.test(t)) return "Manutenção";
   if (/lava/.test(t)) return "Lavação";
   if (/estacion/.test(t)) return "Estacionamento";
   if (/ped[aá]gio/.test(t)) return "Pedágio";
-  if (/quebra|encerramento|rescis/.test(t)) return "Quebra contrato";
   if (/negocia/.test(t)) return "Renegociação";
   return "Outros";
 }
@@ -216,24 +221,7 @@ function resolveMotoristaKey(
 }
 
 function infoParaRastreame(reg: ClienteDespesaRegistro): string {
-  // Infração: título curto (`Multa {tipo} - {data}`) + tag ATRASADO quando em aberto.
-  if (isCategoriaInfracao(reg.categoria)) {
-    const base = stripAtrasado(
-      reg.titulo?.trim() || tituloInfracaoBase(reg.descricao, reg.dataAutuacao),
-    );
-    return reg.paga === true ? base : `ATRASADO ${base}`;
-  }
-
-  let info = String(reg.descricao ?? "").trim();
-  const emAberto =
-    reg.paga !== true && (reg.situacao === "Em aberto" || isGastoEmAberto(info));
-  if (emAberto && !/ATRASADO/i.test(info)) {
-    info = `ATRASADO - ${info}`;
-  }
-  if (!emAberto && reg.paga === true) {
-    info = info.replace(/^ATRASADO\s*[-–—]?\s*/i, "").trim();
-  }
-  return info;
+  return rotuloGastoClienteDespesa(reg);
 }
 
 function gastoToUpsertInput(
@@ -329,7 +317,7 @@ export async function pullRecebimentosFromRastreame(
         if (opts.dryRun) {
           console.log(`[pull dry-run] inativar local RAST-${id} (inativo no Rastreame)`);
         } else {
-          editarClienteDespesa(local.id, { ativo: false });
+          await editarClienteDespesa(local.id, { ativo: false }, { syncRastreame: false });
         }
         result.atualizados++;
       } else {

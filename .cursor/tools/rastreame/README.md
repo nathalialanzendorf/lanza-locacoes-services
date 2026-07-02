@@ -72,7 +72,7 @@ Feche e reabra o terminal (ou o Cursor) após alterar variáveis de utilizador.
 | Módulo | Função |
 |--------|--------|
 | `auth.ts` | Token, headers |
-| `motorista.ts` | `/keek/rest/motorista` |
+| `motorista.ts` | `/keek/rest/motorista` (CRUD, vínculo motorista↔rastreável; push inclui `observacao` com dados extras da CNH) |
 | `gasto.ts` | `/keek/rest/gasto` (Gastos Gerais — despesa de cliente) |
 | `manutencao.ts` | `/keek/rest/manutencao` (Manutenção — despesa de parceiro) |
 | `manutencaoSync.ts` | Push `parceiro-despesas.json` → Manutenção (idempotente) |
@@ -108,6 +108,7 @@ npx tsx src/run.ts renegociar-debitos "<entrada.json>" [--execute]
 | (auth) | Login automático / token | `rastreame login [--save]` |
 | cadastro-cliente | Verificar motorista | `rastreame check` |
 | cadastro-cliente | Criar motorista | `rastreame add` |
+| cadastro-contrato | Reativar/inativar motorista + vínculo veículo | `cadastro-contrato criar` / `renovar` / `encerrar` |
 | cadastro-recebimento | Listar / criar / editar gasto | `rastreame-gastos list\|post\|put` |
 | sync-infracoes / sync-pedagios | Espelhar despesa de cliente → Gastos Gerais | `sync-gastos-gerais` |
 | sync-ipva-licenciamento / sync-seguro / cadastro-despesa | Espelhar despesa de parceiro → Manutenção | `sync-manutencao` |
@@ -117,6 +118,20 @@ npx tsx src/run.ts renegociar-debitos "<entrada.json>" [--execute]
 
 Regras de negócio em **cadastro-recebimento** (confirmação Sim/Não com tabela antes de gravar,
 `ATRASADO`, duplicados) e **renegociar-debitos** (`[NEGOCIADO X]`).
+
+## Ciclo de vida do contrato (motorista ↔ rastreável)
+
+Usado pela skill **cadastro-contrato** (`src/lib/contratoClienteStatus.ts`):
+
+| Ação | Método | Endpoint |
+|------|--------|----------|
+| Listar motoristas (incl. inativos) | GET | `/keek/rest/motorista` |
+| Reativar motorista | POST | `/keek/rest/motorista/{motoristaKey}` |
+| Inativar motorista | DELETE | `/keek/rest/motorista/{motoristaKey}` |
+| Vincular motorista ao veículo | POST | `/keek/rest/motorista/{motoristaKey}/{rastreavelKey}/` |
+| Desvincular (encerramento) | DELETE | `/keek/rest/motorista/{motoristaKey}/{rastreavelKey}?force=true` |
+
+Chaves: `rastreameMotoristaKey` em `clientes.json`, `rastreameRastreavelKey` em `veiculos.json`.
 
 ## Erros comuns
 

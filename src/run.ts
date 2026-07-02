@@ -33,7 +33,7 @@ Comandos:
   sincronizar-veiculos-crlv [--dry-run] [--placa PLACA]
   importar-clientes-rastreame [--dry-run]
   importar-clientes-cnh [--raiz DIR] [--dry-run] [--com-rastreame]
-  cadastro-contrato gerar | sincronizar | encerrar | excluir  (ver --help)
+  cadastro-contrato criar | renovar | encerrar | sincronizar | excluir  (ver --help)
   importar-contratos [RAIZ] [--dry-run]   (varre pastas DD.MM.AAAA - Nome)
   relatorio-encerramento-contrato <pasta> --encerramento DD/MM/AAAA | <entrada.json>
   relatorio-cobrancas [tipo-lote|tipo-placa] [--placa PLACA] [--tipo TIPO] [--listar] …
@@ -45,7 +45,8 @@ Comandos:
   sync-infracoes [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]  (infrações; roteia RS p/ tool detran-rs)
   sync-ipva-licenciamento [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]  (IPVA/Lic.; roteia RS p/ tool detran-rs)
   inicio-locacoes <derivar|listar> [--sobrescrever] [--dry-run]
-  locacoes <add|listar|excluir> [opções]   (períodos de locação/reserva/manutenção por veículo)
+  locacoes <add|listar|excluir|sugerir> [opções]   (movimentação: locado/reserva/manutenção — skill cadastro-movimentacao)
+  movimentacao   (alias de locacoes)
   sync-pedagios [--placa PLACA] [--dry-run] [--json resposta.json]
   pedagio-digital register --placa PLACA [--modelo X] | veiculos | passagens --placa PLACA [--status aberto|pago]
   sync-gastos-gerais [--dry-run] [--pull-only] [--push-only] [--force-pull] [--motorista KEY]  (alias: sync-recebimentos)
@@ -114,13 +115,13 @@ Comandos:
       await (await import("./cli/importarClientesRastreame.js")).main(rest);
       break;
     case "cadastro-contrato":
+      await (await cadastroContrato()).main(rest);
+      break;
     case "gerar-contrato":
+      await (await cadastroContrato()).main(["criar", ...rest]);
+      break;
     case "registrar-contrato":
-      if (cmd === "registrar-contrato") {
-        await (await cadastroContrato()).main(["sincronizar", ...rest]);
-      } else {
-        await (await cadastroContrato()).main(rest);
-      }
+      await (await cadastroContrato()).main(["sincronizar", ...rest]);
       break;
     case "importar-contratos":
       await (await import("./cli/importarContratos.js")).main(rest);
@@ -169,6 +170,8 @@ Comandos:
       break;
     case "locacoes":
     case "locacao":
+    case "movimentacao":
+    case "cadastro-movimentacao":
       (await import("./cli/locacoes.js")).main(rest);
       break;
     case "sync-ipva-licenciamento":

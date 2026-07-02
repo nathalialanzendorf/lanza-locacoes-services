@@ -24,11 +24,13 @@ Skill de **negócio**: trazer as **passagens de pedágio em aberto** do **pedagi
 ## Regras de gravação (verbatim do utilizador)
 
 - **tipo:** Pedágio
-- **Título:** `ATRASADO Pagamento pedágio {dd-mm-aaaa HH:mm}` — incluir na data a **mesma data e horário** em que foi realizada a passagem.
+- **Título:** `ATRASADO Pagamento pedágio {dd/mm/aaaa HH:mm}` — incluir na data a **mesma data e horário** em que foi realizada a passagem (formato brasileiro com barras).
 - **selecionar o veículo** de acordo com a **placa** e **cliente**.
 - **sempre incluir tag confirmação** para verificar se a vinculação do cliente está correta e confirmada.
 
 O **vínculo do cliente é o mesmo das infrações**: condutor inferido pelo contrato ativo na placa **na data/hora da passagem** (`condutorId` + `condutorContrato`), gravado com **`condutorConfirmado: false`** (a "tag confirmação") até o utilizador confirmar.
+
+**Movimentação (`locacoes.json`):** além do período do contrato, considera **reserva** — passagem na placa substituta com `substituiPlaca` vigente na data/hora vincula ao **contrato do veículo principal** em manutenção (skill **cadastro-movimentacao**). Manter `manutencao` + `reserva` cadastrados antes do sync.
 
 ## Apenas veículos ativos
 

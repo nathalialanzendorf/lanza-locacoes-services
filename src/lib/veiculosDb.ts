@@ -31,6 +31,8 @@ export type VeiculoRegistro = {
   fipeReferencia?: string;
   /** key do rastreável em rastreame.com.br */
   rastreameRastreavelKey?: string | number | null;
+  /** Cliente/motorista vinculado ao rastreável (contrato ativo). */
+  clienteVinculadoId?: string | null;
   /** Texto exibido no Rastreame (campo value). */
   rastreameLabel?: string | null;
   rastreameSyncEm?: string | null;
@@ -113,6 +115,7 @@ export type VeiculoPatch = Partial<
     | "fipeReferencia"
     | "rastreameRastreavelKey"
     | "rastreameLabel"
+    | "clienteVinculadoId"
     | "ativo"
     | "origem"
   >

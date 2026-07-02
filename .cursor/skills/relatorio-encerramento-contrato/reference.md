@@ -64,5 +64,5 @@ saldoFinal   = caucao - totalDebitos
 ## Limitações v1
 
 - Não consulta Rastreame automaticamente — informar `semanasPagas` manualmente ou via JSON gerado pelo operador.
-- Saída gravada em `relatorios/quebra-contrato/quebra-contrato-*.txt` (documento para o cliente; use `--no-salvar` para só terminal).
+- Saída gravada em `relatorios/_tmp/encerramento-contrato/encerramento-contrato-*.txt` (WhatsApp; use `--no-salvar` para só terminal). Avisos operacionais aparecem no terminal, **não** no `.txt`.
 - Última semana parcial: cobra parcela semanal inteira se o vencimento caiu antes do encerramento e não foi paga (sem pro-rata diário de locação além das diárias de atraso).

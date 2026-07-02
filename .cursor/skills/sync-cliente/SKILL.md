@@ -11,9 +11,9 @@ Sincroniza clientes (motoristas) entre o Rastreame e `database/clientes.json`.
 
 ## Regra de dados (igual à `cadastro-cliente`)
 
-- **Só os campos nativos** do Rastreame são sincronizados: `nome`, `cpf`, `cnh` (número), `categoriaCnh`, `vencimentoCnh`, `contato` (celular/e-mail).
-- O campo **`observacao` do Rastreame NÃO é usado** — não é lido na importação nem escrito no push. (Observações já existentes no site são preservadas, mas ignoradas.)
-- Endereço, RG/órgão, nascimento, filiação, nº espelho, órgão emissor/UF, 1ª habilitação, EAR e observações **ficam só na database** e são **preservados** no merge — o pull é **não-destrutivo** (só preenche lacunas; usar `--force-pull` para deixar o Rastreame sobrescrever).
+- **Campos nativos** sincronizados: `nome`, `cpf`, `cnh` (número), `categoriaCnh`, `vencimentoCnh`, `contato` (celular/e-mail).
+- **Push:** campos da CNH e **endereço** sem campo nativo vão para **`observacao`** no Rastreame (secções **CNH** + **ENDEREÇO**) — ver formato na skill **cadastro-cliente** (`buildMotoristaObservacao` em `src/lib/rastreame/motorista.ts`).
+- **Pull:** `observacao` **não é lida** — endereço e demais campos extras ficam só na database e são **preservados** no merge (não-destrutivo; só preenche lacunas; usar `--force-pull` para deixar o Rastreame sobrescrever os nativos).
 
 ## CLI
 
@@ -28,8 +28,9 @@ npx tsx src/run.ts sync-motoristas --dry-run --pull-only
 |-------|--------|
 | `--dry-run` | Simula sem gravar local nem chamar POST/PUT |
 | `--pull-only` | Só importa Rastreame → `clientes.json` |
-| `--push-only` | Só exporta `clientes.json` → Rastreame (campos nativos) |
-| `--force-pull` | Rastreame sobrescreve o local (espelho exato) |
+| `--push-only` | Só exporta `clientes.json` → Rastreame (nativos + `observacao`) |
+| `--force-pull` | Rastreame sobrescreve o local (espelho exato dos nativos) |
+| `--force-push` | Empurra todos os clientes elegíveis, mesmo já sincronizados |
 
 > Por defeito: push (local → Rastreame) e depois pull (Rastreame → local).
 
@@ -39,11 +40,13 @@ npx tsx src/run.ts sync-motoristas --dry-run --pull-only
 - Casa registos por **`rastreameMotoristaKey` → CPF → CNH → nome normalizado** (o nome evita duplicar quem já existe localmente sem CPF/CNH casado).
 - Cliente ausente no Rastreame é **inativado** localmente (não apagado).
 
-## Push (campos nativos)
+## Push (nativos + observação)
 
-- PUT/POST enviam **apenas os campos nativos**; `observacao` nunca é enviada.
+- PUT/POST enviam campos nativos **e** `observacao` (dados extras da CNH).
+- Se o motorista já existir no Rastreame (casado por CNH/nome), faz **PUT** para atualizar (incluindo `observacao`).
 - Antes de POST usa `findMotorista(cnh, nome)` para não duplicar.
-- **Inativação só local:** clientes com `ativo === false` **não** são enviados ao Rastreame (push pula inativos). O pull continua atualizando o local com o dado do Rastreame, independente do status. Ver regra em `.cursor/rules/lanza-tools.mdc`.
+- **Inativação só local (push normal):** clientes com `ativo === false` **não** entram no push habitual. Com **`--force-push`**, inativos **com** `rastreameMotoristaKey` são atualizados (dados + `observacao`) e **reinativados** no Rastreame ao final — permanecem inativos localmente e remotamente.
+- O pull continua atualizando o local com o dado do Rastreame, independente do status. Ver regra em `.cursor/rules/lanza-tools.mdc`.
 
 ## Idempotência
 

@@ -101,13 +101,201 @@ function buildContato(
   return { fixo: null, celular, email };
 }
 
+function trimOrNull(v: unknown): string | null {
+  const t = String(v ?? "").trim();
+  return t || null;
+}
+
+/** "Porto Alegre/RS" → "Porto Alegre, RS"; "Laguna SC" → "Laguna, SC". */
+function formatLocalNascimento(local: string): string {
+  const t = local.trim();
+  if (t.includes("/")) return t.replace(/\//g, ", ");
+  const m = t.match(/^(.+?)\s+([A-Za-z]{2})$/);
+  return m ? `${m[1]}, ${m[2]!.toUpperCase()}` : t;
+}
+
+function formatRgOrgao(org: string): string {
+  return org.trim().replace(/\//g, " ");
+}
+
+/** "Pai e Mãe" → "Pai / Mãe" (formato espelhado no Rastreame). */
+function formatFiliacao(filiacao: string): string {
+  return filiacao.trim().replace(/\s+\be\b\s+/gi, " / ");
+}
+
+const OBS_SEP = "------------------------------------------------------------";
+
+/** Limite do campo `observacao` no Rastreame (API rejeita acima disso). */
+export const OBSERVACAO_RASTREAME_MAX = 500;
+
+/** Corta lixo de contrato colado por engano em campos de endereço. */
+const ENDERECO_LIXO = /\.\s*As partes acima|Cláusula\s+\d|LOCATÁRIO|LOCADOR|valor de R\$/i;
+
+const UF_NOME: Record<string, string> = {
+  AC: "Acre",
+  AL: "Alagoas",
+  AP: "Amapá",
+  AM: "Amazonas",
+  BA: "Bahia",
+  CE: "Ceará",
+  DF: "Distrito Federal",
+  ES: "Espírito Santo",
+  GO: "Goiás",
+  MA: "Maranhão",
+  MT: "Mato Grosso",
+  MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais",
+  PA: "Pará",
+  PB: "Paraíba",
+  PR: "Paraná",
+  PE: "Pernambuco",
+  PI: "Piauí",
+  RJ: "Rio de Janeiro",
+  RN: "Rio Grande do Norte",
+  RS: "Rio Grande do Sul",
+  RO: "Rondônia",
+  RR: "Roraima",
+  SC: "Santa Catarina",
+  SP: "São Paulo",
+  SE: "Sergipe",
+  TO: "Tocantins",
+};
+
+function nomeEstado(end: Record<string, unknown>): string | null {
+  const estado = trimOrNull(end.estado);
+  if (estado) return estado;
+  const uf = trimOrNull(end.uf)?.toUpperCase();
+  if (!uf) return null;
+  return UF_NOME[uf] ?? uf;
+}
+
+function sanitizeEnderecoCampo(v: unknown, max = 100): string | null {
+  let t = trimOrNull(v);
+  if (!t) return null;
+  if (ENDERECO_LIXO.test(t)) {
+    const corte = t.search(ENDERECO_LIXO);
+    t = (corte > 0 ? t.slice(0, corte) : "").trim();
+  }
+  if (!t || ENDERECO_LIXO.test(t)) return null;
+  if (t.length > max) t = `${t.slice(0, max).trim()}…`;
+  return t || null;
+}
+
+/** Ex.: Rua Manoel Cruz, S/N, Centro, Jaguaruna, Santa Catarina, 88715-000. */
+function formatEnderecoObservacao(end: Record<string, unknown> | null | undefined): string | null {
+  if (!end || typeof end !== "object") return null;
+  const log = sanitizeEnderecoCampo(end.logradouro, 120);
+  const numRaw = sanitizeEnderecoCampo(end.numero, 30);
+  const num = numRaw ?? "S/N";
+  const comp = sanitizeEnderecoCampo(end.complemento, 40);
+  const bairro = sanitizeEnderecoCampo(end.bairro, 60);
+  const cidade = sanitizeEnderecoCampo(end.cidade, 60);
+  const estadoRaw = nomeEstado(end);
+  const estado =
+    estadoRaw && estadoRaw.length > 40 ? `${estadoRaw.slice(0, 40).trim()}…` : estadoRaw;
+  const cep = sanitizeEnderecoCampo(end.cep, 12);
+  const parts = [log, num, comp, bairro, cidade, estado, cep].filter(Boolean);
+  if (parts.length === 0) return null;
+  let line = `${parts.join(", ")}.`;
+  if (line.length > 200) line = `${line.slice(0, 197).trim()}…`;
+  return line;
+}
+
+function buildSecaoCnh(c: Cliente, opts?: { extras?: boolean }): string[] {
+  const incluirExtras = opts?.extras !== false;
+  const cnh = (c.cnh ?? {}) as Record<string, unknown>;
+  const lines: string[] = [];
+
+  const nasc = trimOrNull(c.dataNascimento);
+  const local = trimOrNull(c.localNascimento);
+  if (nasc && local) lines.push(`${nasc}, ${formatLocalNascimento(local)}`);
+  else if (nasc) lines.push(nasc);
+  else if (local) lines.push(formatLocalNascimento(local));
+
+  const emissao = trimOrNull(cnh.dataEmissao);
+  if (emissao) lines.push(emissao);
+
+  const rg = trimOrNull(c.rg);
+  const org = trimOrNull(c.rgOrgaoExpedidor);
+  if (rg || org) lines.push([rg, org ? formatRgOrgao(org) : null].filter(Boolean).join(" "));
+
+  const cpf = trimOrNull(c.cpf);
+  if (cpf) lines.push(cpf);
+
+  lines.push(trimOrNull(c.nacionalidade) ?? "Brasileiro(a)");
+
+  const fil = trimOrNull(c.filiacao);
+  if (fil) lines.push(formatFiliacao(fil));
+
+  if (!incluirExtras) return lines;
+
+  const primeira = trimOrNull(cnh.primeiraHabilitacao);
+  if (primeira && primeira !== emissao) lines.push(`1ª habilitação: ${primeira}`);
+
+  const espelho = trimOrNull(cnh.numeroEspelho);
+  if (espelho) lines.push(`Espelho: ${espelho}`);
+
+  const emissor = trimOrNull(cnh.orgaoEmissor);
+  const ufEm = trimOrNull(cnh.ufEmissor);
+  if (emissor || ufEm) lines.push(`Emissor: ${[emissor, ufEm].filter(Boolean).join("/")}`);
+
+  if (cnh.ear === true || cnh.ear === "true") lines.push("EAR: Sim");
+  else if (cnh.ear === false || cnh.ear === "false") lines.push("EAR: Não");
+
+  const obsCnh = trimOrNull(cnh.observacoes);
+  if (obsCnh) lines.push(`Obs CNH: ${obsCnh}`);
+
+  return lines;
+}
+
+function montarObservacao(cnhLines: string[], endereco: string | null): string | null {
+  const blocks: string[] = [];
+  if (cnhLines.length > 0) blocks.push(OBS_SEP, "CNH", OBS_SEP, ...cnhLines);
+  if (endereco) blocks.push(OBS_SEP, "ENDEREÇO", OBS_SEP, endereco);
+  if (blocks.length === 0) return null;
+  return blocks.join("\n");
+}
+
+function limitarObservacao(texto: string): string {
+  if (texto.length <= OBSERVACAO_RASTREAME_MAX) return texto;
+  return `${texto.slice(0, OBSERVACAO_RASTREAME_MAX - 1)}…`;
+}
+
 /**
- * Payload do motorista no Rastreame — APENAS campos nativos.
+ * Monta o texto de `observacao` no Rastreame com dados da CNH e endereço
+ * (campos sem equivalente nativo no site). Respeita {@link OBSERVACAO_RASTREAME_MAX}.
  *
- * O campo `observacao` NÃO é usado: dados que o Rastreame não tem nativamente
- * (endereço, RG, filiação, nascimento, espelho/órgão emissor) ficam só na
- * database cliente. Campos nulos/ausentes são omitidos para não sobrescrever
- * valores existentes no Rastreame durante o PUT.
+ * Formato:
+ *   ------------------------------------------------------------
+ *   CNH
+ *   ------------------------------------------------------------
+ *   (nascimento, emissão, RG, CPF, nacionalidade, filiação, …)
+ *   ------------------------------------------------------------
+ *   ENDEREÇO
+ *   ------------------------------------------------------------
+ *   Logradouro, Nº, Bairro, Cidade, Estado, CEP.
+ */
+export function buildMotoristaObservacao(c: Cliente): string | null {
+  const endereco = formatEnderecoObservacao(c.endereco as Record<string, unknown> | undefined);
+
+  const variantes = [
+    montarObservacao(buildSecaoCnh(c, { extras: true }), endereco),
+    montarObservacao(buildSecaoCnh(c, { extras: false }), endereco),
+    montarObservacao(buildSecaoCnh(c, { extras: false }), null),
+  ].filter((v): v is string => v != null);
+
+  for (const v of variantes) {
+    if (v.length <= OBSERVACAO_RASTREAME_MAX) return v;
+  }
+
+  const ultima = variantes[variantes.length - 1];
+  return ultima ? limitarObservacao(ultima) : null;
+}
+
+/**
+ * Payload do motorista no Rastreame — campos nativos + `observacao` com dados
+ * extras da CNH. Campos nulos/ausentes são omitidos no payload nativo para não
+ * sobrescrever valores existentes no Rastreame durante o PUT.
  */
 export function buildMotoristaPayload(c: Cliente): Record<string, unknown> {
   const cnh = (c.cnh ?? {}) as Record<string, string>;
@@ -122,6 +310,8 @@ export function buildMotoristaPayload(c: Cliente): Record<string, unknown> {
   if (venc) payload.vencimentoCnh = venc;
   const contato = buildContato(c);
   if (contato) payload.contato = contato;
+  const observacao = buildMotoristaObservacao(c);
+  if (observacao) payload.observacao = observacao;
   return payload;
 }
 
@@ -228,9 +418,68 @@ export async function putMotorista(key: string | number, body: unknown): Promise
   }
 }
 
+/** Reativa motorista inativo no Rastreame (POST sem corpo). */
+export async function ativarMotorista(key: string | number): Promise<void> {
+  const r = await fetchRastreameWith401Retry(`${MOTORISTA_BASE}/${key}`, {
+    method: "POST",
+    headers: await rastreameJsonHeaders(true),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`motorista POST (ativar) ${key} HTTP ${r.status}: ${t.slice(0, 300)}`);
+  }
+}
+
+/** Inativa motorista no Rastreame (DELETE). */
 export async function inativarMotorista(key: string | number): Promise<void> {
-  const atual = await fetchMotoristaByKey(key);
-  await putMotorista(key, { ...atual, ativo: false });
+  const r = await fetchRastreameWith401Retry(`${MOTORISTA_BASE}/${key}`, {
+    method: "DELETE",
+    headers: await rastreameJsonHeaders(true),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`motorista DELETE (inativar) ${key} HTTP ${r.status}: ${t.slice(0, 300)}`);
+  }
+}
+
+/** Vincula motorista a rastreável (POST /motorista/{motoristaKey}/{rastreavelKey}/). */
+export async function vincularMotoristaRastreavel(
+  motoristaKey: string | number,
+  rastreavelKey: string | number,
+): Promise<void> {
+  const r = await fetchRastreameWith401Retry(
+    `${MOTORISTA_BASE}/${motoristaKey}/${rastreavelKey}/`,
+    {
+      method: "POST",
+      headers: await rastreameJsonHeaders(true),
+    },
+  );
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(
+      `motorista/rastreavel POST ${motoristaKey}/${rastreavelKey} HTTP ${r.status}: ${t.slice(0, 300)}`,
+    );
+  }
+}
+
+/** Remove vínculo motorista ↔ rastreável (DELETE ?force=true). */
+export async function desvincularMotoristaRastreavel(
+  motoristaKey: string | number,
+  rastreavelKey: string | number,
+): Promise<void> {
+  const r = await fetchRastreameWith401Retry(
+    `${MOTORISTA_BASE}/${motoristaKey}/${rastreavelKey}?force=true`,
+    {
+      method: "DELETE",
+      headers: await rastreameJsonHeaders(true),
+    },
+  );
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(
+      `motorista/rastreavel DELETE ${motoristaKey}/${rastreavelKey} HTTP ${r.status}: ${t.slice(0, 300)}`,
+    );
+  }
 }
 
 export async function postMotorista(clienteJsonPath: string): Promise<void> {
@@ -238,14 +487,19 @@ export async function postMotorista(clienteJsonPath: string): Promise<void> {
     fs.readFileSync(clienteJsonPath, "utf8"),
   ) as Cliente;
   const cnh = (c.cnh ?? {}) as Record<string, string>;
+  const payload = buildMotoristaPayload(c);
   const ja = await findMotorista(cnh.numeroRegistro ?? "", String(c.nome ?? ""));
   if (ja) {
-    console.log(
-      `JA CADASTRADO no rastreame: ${ja.nome} (id ${ja.id}) — nada a fazer.`,
-    );
+    const key = String(ja.key ?? ja.id ?? "");
+    if (key) {
+      const atual = await fetchMotoristaByKey(key);
+      await putMotorista(key, { ...atual, ...payload, ativo: true });
+      console.log(`ATUALIZADO no rastreame: ${ja.nome} (key ${key})`);
+    } else {
+      console.log(`JA CADASTRADO no rastreame: ${ja.nome} (id ${ja.id}) — sem key para atualizar.`);
+    }
     return;
   }
-  const payload = buildMotoristaPayload(c);
   const created = await postMotoristaPayload(payload);
   console.log(`CADASTRADO no rastreame: ${payload.nome} (key ${created.key ?? created.id})`);
 }

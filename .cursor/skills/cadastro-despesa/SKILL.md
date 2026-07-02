@@ -10,6 +10,26 @@ description: >-
 
 Cadastra, edita e exclui **débitos do parceiro/dono** em `database/parceiro-despesas.json`.
 
+## ⚠️ Acionamento de franquia — **não** é despesa de parceiro
+
+**Acionamento de franquia** é **sempre despesa do cliente** (locatário), **nunca** entra em
+`parceiro-despesas.json` nem na tela **Manutenção** do parceiro (`sync-manutencao`).
+
+| Campo | Valor |
+|-------|--------|
+| Onde gravar | `database/cliente-despesas.json` |
+| Categoria interna | **`Manutenção`** |
+| Rastreame | **Gastos Gerais**, tipo **`ALIMENTACAO`** |
+| Skill | **`cadastro-recebimento`** → `gravar-cliente-despesa` + push |
+
+Se o operador invocar `/cadastro-despesa` com **acionamento de franquia**, **despesa cliente**
+ou texto equivalente, **redirecionar** para **`cadastro-recebimento`** — não usar
+`gravar-despesa` nesta skill.
+
+Mesma regra vale para outras **manutenções cobráveis do locatário** (lavação, troca de
+óleo/pneu, etc.) — ver de-para **ALIMENTACAO** ↔ `Manutenção` na skill
+**`cadastro-recebimento`**.
+
 ## ⚠️ Regra: gravar no database **e** enviar ao Rastreame (obrigatório)
 
 **Sempre** que o operador pedir um cadastro de despesa, o fluxo é **duas etapas, ambas obrigatórias**:
@@ -138,6 +158,7 @@ Guarda `rastreameManutencaoId` em `parceiro-despesas.json` (com id → PUT/skip;
 
 ## Skills relacionadas
 
+- **cadastro-recebimento** — **despesas do cliente** (incl. **acionamento de franquia** → `Manutenção` / ALIMENTACAO); **não** usar esta skill de parceiro para esses casos.
 - **sync-ipva-licenciamento** — IPVA e Licenciamento em lote; skill **sync-ipva-licenciamento** (tool DETRAN).
 - **sync-seguro** — seguro em lote (valor variável por veículo; **não** confundir com rastreador fixo).
 - **relatorio-prestacao-contas** — consome `parceiro-despesas.json` (rastreador fixo, fallback R$ 50 se faltar).

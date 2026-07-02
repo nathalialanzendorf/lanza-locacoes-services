@@ -532,6 +532,50 @@ export function validarContratoVigenteParaEncerramento(
   return vigente;
 }
 
+export type ModoContratoCli = "criar" | "renovar";
+
+/** Valida `criar` vs `renovar` antes de gerar Word/registro. */
+export function validarModoContrato(
+  modo: ModoContratoCli,
+  filtros: {
+    placa: string;
+    cpf?: string | null;
+    clienteId?: string | null;
+    clienteNome?: string;
+  },
+): { irmaos: ContratoRegistro[]; proximaVersao: number } {
+  const irmaos = listarContratosClienteVeiculo(filtros);
+  const ativo = irmaos.find((c) => c.status === "ativo");
+
+  if (modo === "criar") {
+    if (ativo) {
+      throw new Error(
+        `Contrato v${ativo.versao} ainda ativo para este cliente+veículo. Encerre antes ou use renovar após encerramento.`,
+      );
+    }
+    if (irmaos.length > 0) {
+      const maxV = Math.max(...irmaos.map((c) => c.versao ?? 1));
+      throw new Error(
+        `Já existem contrato(s) anteriores (até v${maxV}) para este cliente+veículo. Use: cadastro-contrato renovar …`,
+      );
+    }
+    return { irmaos, proximaVersao: 1 };
+  }
+
+  if (irmaos.length === 0) {
+    throw new Error(
+      "Nenhum contrato anterior para este cliente+veículo. Use: cadastro-contrato criar …",
+    );
+  }
+  if (ativo) {
+    throw new Error(
+      `Contrato v${ativo.versao} ainda ativo. Encerre antes de renovar (cadastro-contrato encerrar …).`,
+    );
+  }
+  const maxVersao = Math.max(...irmaos.map((c) => c.versao ?? 1));
+  return { irmaos, proximaVersao: maxVersao + 1 };
+}
+
 /** Contratos do mesmo locatário + veículo (qualquer versão), ordenados por versão. */
 export function listarContratosClienteVeiculo(filtros: {
   placa: string;

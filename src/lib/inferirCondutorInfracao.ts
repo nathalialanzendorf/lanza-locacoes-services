@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { docxPlainText } from "./docxPlain.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
+import { findReservaSubstitutaNaData } from "./locacoesDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -269,21 +270,13 @@ function listarContratosNaData(
   return out;
 }
 
-export function inferirCondutorInfracao(
+function inferirCondutorContratoPlaca(
   placa: string,
+  data: Date,
   dataAutuacaoStr: string,
-  prazoDias = 90,
+  prazoDias: number,
+  opts?: { clientePreferidoId?: string | null },
 ): CondutorSugerido {
-  const data = parseDataAutuacao(dataAutuacaoStr);
-  if (!data) {
-    return {
-      condutorId: null,
-      condutorContrato: null,
-      clienteNome: null,
-      aviso: `Data de autuação inválida: ${dataAutuacaoStr}`,
-    };
-  }
-
   const root = defaultContratosDir();
   const candidatos = listarContratosNaData(root, data, placa, prazoDias);
   if (candidatos.length === 0) {
@@ -295,7 +288,22 @@ export function inferirCondutorInfracao(
     };
   }
 
-  const escolhido = candidatos[0]!;
+  const clientes = loadClientes();
+  let escolhido = candidatos[0]!;
+  if (opts?.clientePreferidoId) {
+    const pref = candidatos.find((c) => {
+      let texto = "";
+      try {
+        texto = docxPlainText(c.docx);
+      } catch {
+        /* pasta only */
+      }
+      const cpf = extrairCpfDocx(texto);
+      return resolveClienteId(clientes, cpf, c.clienteNome) === opts.clientePreferidoId;
+    });
+    if (pref) escolhido = pref;
+  }
+
   let texto = "";
   try {
     texto = docxPlainText(escolhido.docx);
@@ -303,7 +311,6 @@ export function inferirCondutorInfracao(
     /* use pasta only */
   }
   const cpf = extrairCpfDocx(texto);
-  const clientes = loadClientes();
   const condutorId = resolveClienteId(clientes, cpf, escolhido.clienteNome);
 
   let aviso: string | null = null;
@@ -319,4 +326,60 @@ export function inferirCondutorInfracao(
     clienteNome: escolhido.clienteNome,
     aviso,
   };
+}
+
+export function inferirCondutorInfracao(
+  placa: string,
+  dataAutuacaoStr: string,
+  prazoDias = 90,
+): CondutorSugerido {
+  const data = parseDataAutuacao(dataAutuacaoStr);
+  if (!data) {
+    return {
+      condutorId: null,
+      condutorContrato: null,
+      clienteNome: null,
+      aviso: `Data de autuação inválida: ${dataAutuacaoStr}`,
+    };
+  }
+
+  const placaFmt = formatPlacaHyphen(placa);
+
+  // Carro reserva: débito na placa substituta → contrato do veículo principal (substituiPlaca).
+  const reserva = findReservaSubstitutaNaData(placaFmt, data);
+  if (reserva?.substituiPlaca) {
+    const placaPrincipal = formatPlacaHyphen(reserva.substituiPlaca);
+    const viaContrato = inferirCondutorContratoPlaca(
+      placaPrincipal,
+      data,
+      dataAutuacaoStr,
+      prazoDias,
+      { clientePreferidoId: reserva.clienteId },
+    );
+    const reservaAviso =
+      `Veículo reserva ${placaFmt} (substitui ${placaPrincipal}) — vínculo pelo contrato da placa principal`;
+    if (viaContrato.condutorId || viaContrato.condutorContrato) {
+      return {
+        ...viaContrato,
+        condutorId: viaContrato.condutorId ?? reserva.clienteId,
+        aviso: [reservaAviso, viaContrato.aviso].filter(Boolean).join("; "),
+      };
+    }
+    if (reserva.clienteId) {
+      const clientes = loadClientes();
+      const c = clientes.find((x) => x.id === reserva.clienteId);
+      return {
+        condutorId: reserva.clienteId,
+        condutorContrato: null,
+        clienteNome: c?.nome ?? reserva.condutorNome,
+        aviso: `${reservaAviso}; contrato da placa principal não encontrado — condutor da movimentação`,
+      };
+    }
+    return {
+      ...viaContrato,
+      aviso: [reservaAviso, viaContrato.aviso].filter(Boolean).join("; "),
+    };
+  }
+
+  return inferirCondutorContratoPlaca(placaFmt, data, dataAutuacaoStr, prazoDias);
 }

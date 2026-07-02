@@ -3,15 +3,17 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
-import { isCategoriaInfracao, stripAtrasado, tituloInfracaoBase } from "./infracaoTitulo.js";
+import { isCategoriaInfracao, pareceTituloMulta, stripAtrasado, tituloInfracaoBase } from "./infracaoTitulo.js";
 import {
   dataVencimentoSemanalBr,
+  formatDataBr,
   isPagamentoSemanalDescricao,
   normalizarBaixaSemanal,
   proximaParcelaSemanal,
   stripAtrasadoSemanal,
 } from "./pagamentoSemanal.js";
 import { formatPlacaHyphen } from "./placa.js";
+import { loadContratosDb } from "./contratosDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
 export const DB_CLIENTE_DESPESAS = path.join(
@@ -250,6 +252,13 @@ export type GravarClienteDespesaResult = {
   registro: ClienteDespesaRegistro;
   aviso: string | null;
   duplicado: boolean;
+  /** Próxima parcela semanal ATRASADO criada automaticamente na baixa. */
+  proximaParcela?: ClienteDespesaRegistro | null;
+};
+
+export type EditarClienteDespesaResult = {
+  registro: ClienteDespesaRegistro;
+  proximaParcela: ClienteDespesaRegistro | null;
 };
 
 export type SincronizarClienteDespesaResult = {
@@ -290,8 +299,10 @@ export type CondutorResolvido = {
 };
 
 /**
- * Resolve o condutor de uma infração/pedágio pela **vigência do contrato**:
+ * Resolve o condutor de uma infração/pedágio pela **vigência do contrato** e
+ * **`database/locacoes.json`** (reserva enquanto o principal está em manutenção):
  * - contrato + cliente encontrados → vincula e **confirma**;
+ * - débito na **placa reserva** com `substituiPlaca` → usa o contrato do veículo principal;
  * - **nenhum contrato ativo** na data → **"Não identificado"** (confirmado, sem cliente);
  * - contrato achado mas cliente fora de `clientes.json` → **pendente** (não confirma).
  *
@@ -330,11 +341,29 @@ export function resolverCondutorVigencia(
   };
 }
 
-export function gravarClienteDespesa(
+export type ClienteDespesaPersistOpts = {
+  prazoDias?: number;
+  skipInferir?: boolean;
+  fonteDetran?: string;
+  /** Default true — replica no Rastreame após gravar localmente. */
+  syncRastreame?: boolean;
+};
+
+async function pushAposPersistir(
+  regs: ClienteDespesaRegistro[],
+  opts?: ClienteDespesaPersistOpts,
+): Promise<ClienteDespesaRegistro[]> {
+  const { pushClienteDespesaRegistrosNoRastreame } = await import(
+    "./clienteDespesaRastreamePush.js"
+  );
+  return pushClienteDespesaRegistrosNoRastreame(regs, opts);
+}
+
+export async function gravarClienteDespesa(
   veiculoIdRaw: string,
   input: ClienteDespesaInput,
-  opts?: { prazoDias?: number; skipInferir?: boolean },
-): GravarClienteDespesaResult {
+  opts?: ClienteDespesaPersistOpts,
+): Promise<GravarClienteDespesaResult> {
   const db = loadClienteDespesasDb();
   const veiculoId = formatPlacaHyphen(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
@@ -421,23 +450,55 @@ export function gravarClienteDespesa(
 
   db.clienteDespesas.push(registro);
   saveClienteDespesasDb(db);
-  return { registro, aviso, duplicado: false };
+
+  let proximaParcela: ClienteDespesaRegistro | null = null;
+  if (
+    input.paga === true &&
+    registro.categoria === "Locação semanal" &&
+    isPagamentoSemanalDescricao(registro.descricao)
+  ) {
+    const venc = vencimentoSemanalParaBaixa(
+      registro.descricao,
+      veiculoId,
+      registro.pagaEm,
+      registro.rastreameDataIso,
+    );
+    if (venc) {
+      proximaParcela = criarProximaParcelaSemanalSeNecessario(
+        registro,
+        registro.descricao,
+        venc,
+      );
+    }
+  }
+
+  const synced = await pushAposPersistir(
+    proximaParcela ? [registro, proximaParcela] : [registro],
+    opts,
+  );
+
+  return {
+    registro: synced[0]!,
+    aviso,
+    duplicado: false,
+    proximaParcela: proximaParcela ? synced[1] ?? null : null,
+  };
 }
 
 /** @deprecated use gravarClienteDespesa */
 export function gravarInfracao(
   veiculoIdRaw: string,
   input: ClienteDespesaInput,
-  opts?: { prazoDias?: number; skipInferir?: boolean },
-): GravarClienteDespesaResult {
+  opts?: ClienteDespesaPersistOpts,
+): Promise<GravarClienteDespesaResult> {
   return gravarClienteDespesa(veiculoIdRaw, { ...input, categoria: input.categoria ?? "Infração" }, opts);
 }
 
-export function sincronizarClienteDespesa(
+export async function sincronizarClienteDespesa(
   veiculoIdRaw: string,
   input: ClienteDespesaInput,
-  opts?: { prazoDias?: number; fonteDetran?: string },
-): SincronizarClienteDespesaResult {
+  opts?: ClienteDespesaPersistOpts,
+): Promise<SincronizarClienteDespesaResult> {
   const db = loadClienteDespesasDb();
   const veiculoId = formatPlacaHyphen(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
@@ -447,7 +508,7 @@ export function sincronizarClienteDespesa(
   );
 
   if (idx < 0) {
-    const r = gravarClienteDespesa(veiculoId, { ...input, categoria }, { prazoDias: opts?.prazoDias });
+    const r = await gravarClienteDespesa(veiculoId, { ...input, categoria }, opts);
     return { registro: r.registro, aviso: r.aviso, acao: "novo" };
   }
 
@@ -463,10 +524,17 @@ export function sincronizarClienteDespesa(
   const desejaConfirmar = quitadaFinal && !m.condutorConfirmado;
   const flagRevisarMudou = !!m.revisarManual !== desejaRevisar;
 
-  // Título curto (Gastos Gerais) das infrações: derivado de descricao + data.
-  const descricaoFinal = String(input.descricao ?? m.descricao ?? "").trim();
+  // Título curto (Gastos Gerais) das infrações: derivado do texto DETRAN + data.
+  const descricaoDetran = String(input.descricao ?? "").trim();
+  const manterDescricaoCobranca =
+    isCategoriaInfracao(categoria) &&
+    (m.rastreameId != null ||
+      /ATRASADO/i.test(m.descricao ?? "") ||
+      pareceTituloMulta(m.descricao ?? ""));
   const desejaTitulo = isCategoriaInfracao(categoria)
-    ? input.titulo?.trim() || tituloInfracaoBase(descricaoFinal, dataFinal)
+    ? input.titulo?.trim() ||
+      m.titulo?.trim() ||
+      tituloInfracaoBase(descricaoDetran, dataFinal)
     : null;
   const tituloMudou = desejaTitulo !== null && (m.titulo ?? "") !== desejaTitulo;
 
@@ -483,7 +551,9 @@ export function sincronizarClienteDespesa(
   m.situacao = String(input.situacao).trim();
   m.valorMulta = parseValor(input.valorMulta);
   m.limiteDefesa = String(input.limiteDefesa).trim();
-  m.descricao = String(input.descricao).trim();
+  if (!manterDescricaoCobranca) {
+    m.descricao = descricaoDetran;
+  }
   if (desejaTitulo !== null) m.titulo = desejaTitulo;
   if (input.localInfracao) m.localInfracao = String(input.localInfracao).trim();
   if (input.dataAutuacao) m.dataAutuacao = String(input.dataAutuacao).trim();
@@ -520,8 +590,9 @@ export function sincronizarClienteDespesa(
 
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
+  const [synced] = await pushAposPersistir([m], opts);
   return {
-    registro: m,
+    registro: synced ?? m,
     aviso: opts?.fonteDetran ? `sync ${opts.fonteDetran}` : null,
     acao: "atualizado",
   };
@@ -531,8 +602,8 @@ export function sincronizarClienteDespesa(
 export function sincronizarInfracao(
   veiculoIdRaw: string,
   input: ClienteDespesaInput,
-  opts?: { prazoDias?: number; fonteDetran?: string },
-): SincronizarClienteDespesaResult {
+  opts?: ClienteDespesaPersistOpts,
+): Promise<SincronizarClienteDespesaResult> {
   return sincronizarClienteDespesa(
     veiculoIdRaw,
     { ...input, categoria: input.categoria ?? "Infração" },
@@ -540,10 +611,11 @@ export function sincronizarInfracao(
   );
 }
 
-export function confirmarCondutorClienteDespesa(
+export async function confirmarCondutorClienteDespesa(
   autoInfracao: string,
   condutorId?: string | null,
-): ClienteDespesaRegistro | null {
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+): Promise<ClienteDespesaRegistro | null> {
   const db = loadClienteDespesasDb();
   const key = autoInfracao.trim().toUpperCase();
   const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
@@ -555,15 +627,17 @@ export function confirmarCondutorClienteDespesa(
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
-  return m;
+  const [synced] = await pushAposPersistir([m], opts);
+  return synced ?? m;
 }
 
 /** @deprecated use confirmarCondutorClienteDespesa */
 export function confirmarCondutorInfracao(
   autoInfracao: string,
   condutorId?: string | null,
-): ClienteDespesaRegistro | null {
-  return confirmarCondutorClienteDespesa(autoInfracao, condutorId);
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+): Promise<ClienteDespesaRegistro | null> {
+  return confirmarCondutorClienteDespesa(autoInfracao, condutorId, opts);
 }
 
 export function isInfracaoTransito(r: ClienteDespesaRegistro): boolean {
@@ -634,10 +708,11 @@ export type ClienteDespesaPatch = Partial<
   >
 >;
 
-export function editarClienteDespesa(
+export async function editarClienteDespesa(
   idOrAuto: string,
   patch: ClienteDespesaPatch,
-): ClienteDespesaRegistro | null {
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+): Promise<EditarClienteDespesaResult | null> {
   const db = loadClienteDespesasDb();
   const key = idOrAuto.trim();
   const idx = db.clienteDespesas.findIndex(
@@ -697,6 +772,7 @@ export function editarClienteDespesa(
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
 
+  let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
     !eraPaga &&
     m.paga === true &&
@@ -704,10 +780,23 @@ export function editarClienteDespesa(
     m.categoria === "Locação semanal" &&
     isPagamentoSemanalDescricao(descricaoAntes)
   ) {
-    criarProximaParcelaSemanalSeNecessario(m, descricaoAntes, vencimentoAntes);
+    proximaParcela = criarProximaParcelaSemanalSeNecessario(
+      m,
+      descricaoAntes,
+      vencimentoAntes,
+      valorParcelaSemanalContrato(m.veiculoId) ?? undefined,
+    );
   }
 
-  return m;
+  const synced = await pushAposPersistir(
+    proximaParcela ? [m, proximaParcela] : [m],
+    opts,
+  );
+
+  return {
+    registro: synced[0]!,
+    proximaParcela: proximaParcela ? synced[1] ?? null : null,
+  };
 }
 
 function normDescSemanal(s: string): string {
@@ -717,10 +806,63 @@ function normDescSemanal(s: string): string {
     .toLowerCase();
 }
 
+/** Vencimento da semana quitada (parcial ou integral) ao registrar o pagamento. */
+function vencimentoSemanalParaBaixa(
+  descricao: string,
+  veiculoId: string,
+  pagaEmIso?: string | null,
+  rastreameHintIso?: string | null,
+): string | null {
+  const db = loadClienteDespesasDb();
+  const placa = formatPlacaHyphen(veiculoId);
+  const norm = normDescSemanal(descricao);
+
+  const irma = db.clienteDespesas.find(
+    (d) =>
+      d.ativo !== false &&
+      formatPlacaHyphen(d.veiculoId) === placa &&
+      d.categoria === "Locação semanal" &&
+      normDescSemanal(d.descricao) === norm,
+  );
+  if (irma) {
+    return dataVencimentoSemanalBr(irma.descricao, irma.rastreameDataIso) ?? irma.dataAutuacao;
+  }
+
+  const pay = pagaEmIso ? new Date(pagaEmIso) : null;
+  for (const hint of [pagaEmIso, rastreameHintIso]) {
+    if (!hint) continue;
+    const v = dataVencimentoSemanalBr(descricao, hint);
+    if (!v) continue;
+    if (pay && !Number.isNaN(pay.getTime())) {
+      const m = v.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m) {
+        const venc = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 12, 0, 0);
+        if (venc.getTime() > pay.getTime()) {
+          venc.setMonth(venc.getMonth() - 1);
+          return formatDataBr(venc);
+        }
+      }
+    }
+    return v;
+  }
+  return null;
+}
+
+function valorParcelaSemanalContrato(veiculoId: string): number | null {
+  const placa = formatPlacaHyphen(veiculoId);
+  const contrato = loadContratosDb().contratos.find(
+    (c) =>
+      c.status === "ativo" &&
+      formatPlacaHyphen(c.veiculoId ?? c.placa ?? "") === placa,
+  );
+  return contrato?.valorSemanal ?? null;
+}
+
 function criarProximaParcelaSemanalSeNecessario(
   pago: ClienteDespesaRegistro,
   descricaoAntes: string,
   vencimentoAntes: string,
+  valorParcela?: number,
 ): ClienteDespesaRegistro | null {
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
   if (!prox) return null;
@@ -736,17 +878,6 @@ function criarProximaParcelaSemanalSeNecessario(
   );
   if (dup) return null;
 
-  const aberto = db.clienteDespesas.find(
-    (d) =>
-      d.ativo !== false &&
-      d.paga !== true &&
-      d.veiculoId === pago.veiculoId &&
-      d.condutorId === pago.condutorId &&
-      d.categoria === "Locação semanal" &&
-      /ATRASADO/i.test(d.descricao),
-  );
-  if (aberto) return null;
-
   const ts = nowIso();
   const registro: ClienteDespesaRegistro = {
     id: crypto.randomUUID(),
@@ -756,7 +887,8 @@ function criarProximaParcelaSemanalSeNecessario(
     descricao: prox.descricao,
     localInfracao: "",
     dataAutuacao: prox.dataAutuacao,
-    valorMulta: pago.valorMulta,
+    valorMulta:
+      valorParcela ?? valorParcelaSemanalContrato(pago.veiculoId) ?? pago.valorMulta,
     situacao: "Em aberto",
     limiteDefesa: "",
     condutorId: pago.condutorId,
@@ -778,8 +910,12 @@ function criarProximaParcelaSemanalSeNecessario(
   return registro;
 }
 
-export function excluirClienteDespesa(idOrAuto: string): ClienteDespesaRegistro | null {
-  return editarClienteDespesa(idOrAuto, { ativo: false });
+export async function excluirClienteDespesa(
+  idOrAuto: string,
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+): Promise<ClienteDespesaRegistro | null> {
+  const r = await editarClienteDespesa(idOrAuto, { ativo: false }, opts);
+  return r?.registro ?? null;
 }
 
 export type UpsertRecebimentoRastreameInput = {
@@ -951,11 +1087,11 @@ export function upsertRecebimentoFromRastreame(
     return { registro: m, aviso: "local mais recente — pull ignorado", acao: "sem_alteracao" };
   }
 
-  // Infração: o Rastreame guarda o título (não o texto do DETRAN) → atualiza `titulo`,
-  // preservando a `descricao` (texto cru do DETRAN, fonte: sync-infracoes).
+  // Infração: `titulo` curto + `descricao` = info do Rastreame (com ATRASADO se em aberto).
   const tituloInput = isInfra ? input.titulo?.trim() || stripAtrasado(input.descricao) : undefined;
   const changed =
     (isInfra ? (m.titulo ?? "") !== (tituloInput ?? "") : m.descricao !== input.descricao) ||
+    (isInfra && m.descricao !== input.descricao) ||
     m.valorMulta !== input.valorMulta ||
     m.situacao !== input.situacao ||
     m.dataAutuacao !== input.dataAutuacao ||
@@ -967,7 +1103,7 @@ export function upsertRecebimentoFromRastreame(
   m.veiculoId = veiculoId;
   if (isInfra) {
     if (tituloInput) m.titulo = tituloInput;
-    if (!m.descricao?.trim()) m.descricao = input.descricao;
+    if (input.descricao?.trim()) m.descricao = input.descricao.trim();
   } else {
     m.descricao = input.descricao;
   }

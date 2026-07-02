@@ -1,15 +1,33 @@
 ---
 name: cadastro-recebimento
 description: >-
-  CRUD rental receipts on rastreame.com.br Gastos Gerais (OUTROS): weekly payments,
-  settlements, invoices. Modes: single baixa (cliente + valor + data) or batch from
-  PagBank extrato. Requires operator confirmation (Sim/Não per line) before writes.
-  Use for recebimento locação, pagamento semanal, gastos/list, baixa PagBank.
+  CRUD client debits and rental receipts on rastreame.com.br Gastos Gerais: weekly payments,
+  maintenance (franquia, lavação, óleo/pneu → Manutenção/ALIMENTACAO), settlements, invoices.
+  Modes: gravar-cliente-despesa, baixa unitária (cliente + valor + data), or PagBank batch.
+  Requires operator confirmation (Sim/Não per line) before writes. Use for despesa cliente,
+  acionamento franquia, recebimento locação, pagamento semanal, baixa PagBank.
 ---
 
 # Cadastro de recebimento (Rastreame — Gastos gerais)
 
-Skill para **cadastrar, editar e excluir** recebimentos de locação no **Rastreame** (Gastos Gerais).
+Skill para **cadastrar, editar e excluir** **despesas do cliente** e recebimentos de locação no
+**Rastreame** (Gastos Gerais).
+
+## Acionamento de franquia (sempre aqui — nunca parceiro)
+
+**Acionamento de franquia** é **sempre despesa do cliente**, categoria **`Manutenção`**, tipo
+Rastreame **`ALIMENTACAO`**. Gravar em `cliente-despesas.json` via **`gravar-cliente-despesa`**
+e espelhar em Gastos Gerais — **não** usar skill **`cadastro-despesa`** / `parceiro-despesas.json`.
+
+Exemplo de lançamento em aberto:
+
+```powershell
+# lote.json: veiculoId (placa), clienteDespesas[] com categoria Manutenção, rastreameTipo ALIMENTACAO
+npx tsx src/run.ts gravar-cliente-despesa lote.json
+npx tsx src/run.ts gravar-cliente-despesa confirmar <autoInfracao> <clienteId>
+```
+
+Descrição típica: `Acionamento Franquia` (nasce com prefixo **`ATRASADO`** se em aberto).
 
 ## Modos de entrada (como invocar)
 
@@ -27,15 +45,15 @@ npx tsx src/run.ts baixa-recebimento plano --cliente "Virginia" --valor 650 --da
 
 2. Apresentar a tabela de confirmação com **todas** as linhas do JSON (`linhas[]`): quitação da despesa em aberto **e** próxima parcela `ATRASADO` gerada automaticamente.
 3. Pedir **Sim/Não por linha** (#1, #2, …).
-4. Gravar só linhas confirmadas: `gravar-cliente-despesa editar <autoInfracao> <patch.json>` (atualizar) e push Rastreame.
-5. Se `--comprovante` foi informado, após o push fazer **PUT** no gasto Rastreame com campo `comprovante` (ver `reference.md`).
+4. Gravar só linhas confirmadas: `gravar-cliente-despesa editar <autoInfracao> <patch.json>` (atualizar) — o **push ao Rastreame é automático** após gravar localmente.
+5. Se `--comprovante` foi informado, após a gravação fazer **PUT** no gasto Rastreame com campo `comprovante` (ver `reference.md`).
 
 **Regras automáticas do plano:**
 
 | Situação | Tipo de baixa | O que o plano inclui |
 |----------|---------------|----------------------|
 | Valor pago = valor devido | **integral** | 1× atualizar (quitar) + 1× criar próxima parcela |
-| Valor pago < devido, sem desconto | **parcial** | 1× atualizar saldo em atraso + 1× criar linha do valor pago |
+| Valor pago < devido, sem desconto | **parcial** | 1× atualizar saldo em atraso + 1× criar linha do valor pago + **1× criar próxima parcela ATRASADO** |
 | Valor pago < devido + `--comprovante` ou `--desconto` | **integral_desconto** | 1× atualizar com valor ajustado + próxima parcela |
 
 ### Valor devido com atraso (pagamento não realizado)
@@ -98,8 +116,9 @@ npx tsx src/run.ts pagbank match [--inicio 2026-05-31] [--fim 2026-06-29] --json
   deixou de estar em atraso (passou a negociado); não manter as duas juntas. Ex.:
   `ATRASADO Pagamento semanal - Sábado 27` → `[NEGOCIADO 2] Pagamento semanal - Sábado 27`.
 
-> Reutilização: ao **dar baixa** num pagamento, esta skill já **cria automaticamente a
+> Reutilização: ao **dar baixa** num pagamento (**integral ou parcial**), esta skill já **cria automaticamente a
 > próxima despesa** de cliente — que nasce com `ATRASADO` por padrão, conforme a regra acima.
+> Mesmo que reste saldo em aberto na semana atual, a parcela da **semana seguinte** é lançada.
 
 ## ⚠️ Confirmação obrigatória antes de gravar (sim / não)
 
@@ -160,17 +179,20 @@ só essa linha e perguntar de novo.
 
 ## ⚠️ Regra: gravar no database **e** enviar ao Rastreame (obrigatório)
 
-**Sempre** que o operador pedir um cadastro de **despesa do cliente**, o fluxo completo é **três
-etapas** (a confirmação acima vem **antes** das duas primeiras gravações):
+**Sempre** que o operador pedir um cadastro de **despesa do cliente**, o fluxo completo é:
 
 1. **Confirmação** — tabela + seletor Sim/Não (secção anterior).
 2. **Salvar** no `database/cliente-despesas.json` — **somente após Sim**.
-3. **Enviar ao Rastreame** (push) — despesa de cliente vai para **Gastos Gerais** via
-   `sync-gastos-gerais --push-only` (ou `gravar-cliente-despesa`, que já espelha por defeito).
+3. **Push ao Rastreame** — **automático** ao concluir o passo 2 (`gravarClienteDespesa`,
+   `editarClienteDespesa`, `sincronizarClienteDespesa`, etc. disparam o sync por defeito).
+
+O módulo `clienteDespesasDb` replica no Rastreame (Gastos Gerais) **logo após** persistir
+localmente — inclui a **próxima parcela semanal** auto-criada na baixa. Opt-out só com
+`syncRastreame: false` ou `--no-sync-rastreame` na CLI.
 
 Não deixar a despesa **só local**. Se faltar token do Rastreame, **pedir as credenciais**
-(ver tool `.cursor/tools/rastreame/`) e concluir o push — o cadastro só está completo quando
-espelhado no Rastreame. Obter token **sempre** das variáveis de ambiente do utilizador
+(ver tool `.cursor/tools/rastreame/`) — o cadastro só está completo quando espelhado no
+Rastreame. Obter token **sempre** das variáveis de ambiente do utilizador
 (`RASTREAME_AUTH` ou `RASTREAME_LOGIN` + `RASTREAME_SENHA`).
 
 ## Operações
@@ -279,6 +301,7 @@ Para cada combinação a lançar:
    - **`total`** = **valor pago** (ex.: 775).
    - **`info`** = mesmo tipo de descrição **sem** a palavra **`ATRASADO`** (ex.: `Pagamento semanal - Sexta 19`).
    - **`data`** = **data e hora reais** do pagamento (ex.: 20/06 às 22:37 ⇒ refletir em ISO como no Network).
+3. **Criar (POST)** a **próxima parcela semanal** `ATRASADO` (+7 dias), com valor cheio da semana (contrato), **sempre** — igual à baixa integral.
 
 **Exemplo (resumo):** Susana; total devido **R$ 800** referente ao dia **19**; em **20/06 às 22:37** pagou **R$ 775** ⇒ atualizar o lançamento antigo para **R$ 25,00** em atraso; criar novo lançamento de **R$ 775** com data/hora do pagamento e **sem** `ATRASADO` no título.
 
@@ -313,10 +336,8 @@ Para cada combinação a lançar:
    (secção **Antes de cadastrar**).
 4. **Pré-visualização + seletor Sim/Não por linha** — tabela com **todos** os registos a
    criar/atualizar; **confirmar cada linha** antes de gravar. **Não gravar linhas com Não.**
-5. **Após Sim:** `gravar-cliente-despesa` (editar / lote) no database.
-6. **Em seguida:** espelhar no Rastreame — carregar credenciais das variáveis de ambiente do
-   utilizador (`.cursor/tools/rastreame/`) e concluir push (`gravar-cliente-despesa` com sync ou
-   `rastreame-gastos put`/`post` quando aplicável).
+5. **Após Sim:** `gravar-cliente-despesa` (editar / lote) — o sync Rastreame corre **automaticamente**.
+6. Se `--comprovante`, **PUT** adicional no gasto Rastreame (campo `comprovante`).
 7. Rotina de **segunda:** listar quem deve parcela → passos 3–6 para cada lançamento
    `ATRASADO - Pagamento semanal - …` (não duplicar se o mesmo `info` já existir).
 

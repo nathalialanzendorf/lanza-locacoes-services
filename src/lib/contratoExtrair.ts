@@ -169,7 +169,10 @@ function extrairPeriodo(
   inicioPasta: Date,
   prazoDias: number,
 ): { inicio: Date; fim: Date; extraidoDoDocx: boolean } {
-  const t = normalizeDocxMoneyText(texto.normalize("NFD").replace(/\p{M}/gu, ""));
+  const t = normalizeDocxMoneyText(texto.normalize("NFD").replace(/\p{M}/gu, "")).replace(
+    /(?<=\d)\s+(?=\d)/g,
+    "",
+  );
   const m = t.match(
     /iniciando no dia\s+(\d{2}\s*\/\s*\d{2}\s*\/\s*\d{4})[^e]+e terminando no dia\s+(\d{2}\s*\/\s*\d{2}\s*\/\s*\d{4})/i,
   );

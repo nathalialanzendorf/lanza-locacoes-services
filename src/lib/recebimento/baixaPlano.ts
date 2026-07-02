@@ -292,18 +292,6 @@ function previewProximaParcela(
   );
   if (dup) return null;
 
-  const aberto = db.clienteDespesas.some(
-    (d) =>
-      d.ativo !== false &&
-      d.paga !== true &&
-      d.veiculoId === pago.veiculoId &&
-      d.condutorId === pago.condutorId &&
-      d.categoria === "Locação semanal" &&
-      /ATRASADO/i.test(d.descricao) &&
-      d.autoInfracao !== pago.autoInfracao,
-  );
-  if (aberto) return null;
-
   return {
     num: 0,
     operacao: "criar",
@@ -314,6 +302,18 @@ function previewProximaParcela(
     motorista: "",
     tipo: tipoRastreame(pago.categoria),
     total: valorParcela,
+    patch: {
+      descricao: prox.descricao,
+      valorMulta: valorParcela,
+      dataAutuacao: prox.dataAutuacao,
+      paga: false,
+      situacao: "Em aberto",
+      categoria: pago.categoria,
+      rastreameMotoristaKey: pago.rastreameMotoristaKey,
+      rastreameRastreavelKey: pago.rastreameRastreavelKey,
+      rastreameDataIso: prox.rastreameDataIso,
+      rastreameTipo: pago.rastreameTipo ?? "OUTROS",
+    },
   };
 }
 
@@ -449,6 +449,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       comprovanteRastreame: input.comprovante ?? null,
       origemExterna: input.origemExterna,
     });
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido);
+    if (prox) {
+      prox.num = 3;
+      prox.motorista = motorista;
+      linhas.push(prox);
+    }
   } else {
     const descQuitada = stripAtrasadoSemanal(descricaoAntes);
     const patch: ClienteDespesaPatch = {
@@ -474,7 +480,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       origemExterna: input.origemExterna,
     });
 
-    const prox = previewProximaParcela(alvo, descricaoAntes, valor);
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido);
     if (prox) {
       prox.num = 2;
       prox.motorista = motorista;

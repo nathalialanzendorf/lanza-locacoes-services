@@ -3,12 +3,13 @@ import path from "node:path";
 
 import type { EncerramentoResult } from "./encerrarContrato.js";
 import {
-  RELATORIOS_QUEBRA_CONTRATO_DIR,
+  RELATORIOS_ENCERRAMENTO_CONTRATO_DIR,
   ensureRelatoriosDirs,
 } from "./relatoriosPaths.js";
 
 export {
   RELATORIOS_DIR,
+  RELATORIOS_ENCERRAMENTO_CONTRATO_DIR,
   RELATORIOS_QUEBRA_CONTRATO_DIR,
   RELATORIOS_ENCERRAMENTO_DIR,
 } from "./relatoriosPaths.js";
@@ -27,18 +28,18 @@ function dataParaArquivo(dataBr: string): string {
   return dataBr.trim().replace(/\//g, "-");
 }
 
-/** Nome base: quebra-contrato-{placa}-{cliente}-{encerramento} */
+/** Nome base: encerramento-contrato-{placa}-{cliente}-{encerramento} */
 export function nomeBaseRelatorioEncerramento(r: EncerramentoResult): string {
   const c = r.contrato;
   const placa = slugArquivo(c.placa.replace(/-/g, ""));
   const cliente = slugArquivo(c.clienteNome);
   const enc = dataParaArquivo(r.dataEncerramento);
-  return `quebra-contrato-${placa}-${cliente}-${enc}`;
+  return `encerramento-contrato-${placa}-${cliente}-${enc}`;
 }
 
 export function caminhoRelatorioEncerramentoTxt(
   r: EncerramentoResult,
-  relatoriosDir = RELATORIOS_QUEBRA_CONTRATO_DIR,
+  relatoriosDir = RELATORIOS_ENCERRAMENTO_CONTRATO_DIR,
 ): string {
   const base = nomeBaseRelatorioEncerramento(r);
   return path.join(relatoriosDir, `${base}.txt`);
@@ -59,7 +60,7 @@ export function salvarRelatorioEncerramento(
   texto: string,
   opts: SalvarRelatorioEncerramentoOpts = {},
 ): { txt: string; json?: string } {
-  const dir = opts.relatoriosDir ?? RELATORIOS_QUEBRA_CONTRATO_DIR;
+  const dir = opts.relatoriosDir ?? RELATORIOS_ENCERRAMENTO_CONTRATO_DIR;
   ensureRelatoriosDirs();
   fs.mkdirSync(dir, { recursive: true });
 

@@ -19,6 +19,7 @@ import {
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
+import { rotuloGastoClienteDespesa } from "./infracaoTitulo.js";
 import { validarContratoVigenteParaEncerramento } from "./contratosDb.js";
 import { compactPlaca } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -113,20 +114,45 @@ function brl(v: number): string {
   });
 }
 
+/** Valor da retenção por quebra (lançamento Rastreame ou cálculo proporcional). */
+export function valorQuebraContratoEncerramento(r: EncerramentoResult): number {
+  const quebraDb = r.debitosDiversos.find(
+    (m) =>
+      (m.categoria ?? "") === "Quebra contrato" ||
+      /quebra de contrato|reten[cç][aã]o cau[cç][aã]o.*quebra/i.test(m.descricao ?? ""),
+  );
+  return quebraDb?.valorMulta ?? r.retencaoCaucao;
+}
+
+export function linhaQuebraContratoEncerramento(r: EncerramentoResult): string {
+  const c = r.contrato;
+  const valor = valorQuebraContratoEncerramento(r);
+  return (
+    `Quebra de contrato (retenção R$ ${brl(valor)}) — retenção proporcional calculada com base em ` +
+    `${c.prazoDias} dias de contrato e ${r.diasLocacao} dias de locação.`
+  );
+}
+
 function normVencimento(s: string): string {
   const d = parseDataBr(s);
   return d ? fmtDataBr(d) : s.trim();
 }
 
+function cpfSoDigitos(cpf: string | null | undefined): string {
+  return String(cpf ?? "").replace(/\D/g, "");
+}
+
 function loadClienteId(cpf: string | null, condutorId?: string | null): string | null {
   if (condutorId) return condutorId;
   if (!cpf) return null;
+  const key = cpfSoDigitos(cpf);
+  if (!key) return null;
   const p = path.join(REPO_ROOT, "database", "clientes.json");
   try {
     const j = JSON.parse(fs.readFileSync(p, "utf8")) as {
       clientes?: { id?: string; cpf?: string }[];
     };
-    const c = j.clientes?.find((x) => x.cpf === cpf);
+    const c = j.clientes?.find((x) => cpfSoDigitos(x.cpf) === key);
     return c?.id ?? null;
   } catch {
     return null;
@@ -195,6 +221,116 @@ function despesaNoPeriodo(
   return da >= startOfDay(inicio) && da <= encerramento;
 }
 
+type ParcelaRenegPlano = { numero: number; total: number };
+
+/** Extrai a/b de descrições tipo "Pagamento renegociação 6x26". */
+export function parseParcelaRenegociacaoDescricao(descricao: string): ParcelaRenegPlano | null {
+  const d = String(descricao ?? "");
+  if (!/renegocia|negocia/i.test(d)) return null;
+  const m = d.match(/(\d+)\s*x\s*(\d+)/i);
+  if (!m) return null;
+  const numero = Number(m[1]);
+  const total = Number(m[2]);
+  if (
+    !Number.isFinite(numero) ||
+    !Number.isFinite(total) ||
+    numero < 1 ||
+    total < 1 ||
+    numero > total
+  ) {
+    return null;
+  }
+  return { numero, total };
+}
+
+/**
+ * Parcelas de renegociação axb ainda não lançadas no Rastreame entram no acerto
+ * (ex.: plano 26x, pagas 1–5 → faltam 6..26).
+ */
+function expandirRenegociacoesPlanoFaltante(
+  contrato: ContratoExtraido,
+  clienteId: string | null,
+  incluirTodas: boolean,
+  diversos: ClienteDespesaRegistro[],
+  db: ReturnType<typeof loadClienteDespesasDb>,
+): ClienteDespesaRegistro[] {
+  const planos = new Map<
+    number,
+    { maxPago: number; valorParcela: number; ref?: ClienteDespesaRegistro }
+  >();
+
+  for (const m of db.clienteDespesas) {
+    if (!isClienteDespesaAtiva(m)) continue;
+    if ((m.categoria ?? "") !== "Renegociação") continue;
+    if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) continue;
+    const parsed = parseParcelaRenegociacaoDescricao(m.descricao);
+    if (!parsed) continue;
+
+    const cur = planos.get(parsed.total) ?? { maxPago: 0, valorParcela: 0 };
+    if (m.paga === true) {
+      cur.maxPago = Math.max(cur.maxPago, parsed.numero);
+    }
+    if (m.valorMulta > 0 && m.rastreameTipo === "DOCUMENTACAO") {
+      cur.valorParcela = m.valorMulta;
+    } else if (m.valorMulta > 0 && cur.valorParcela <= 0) {
+      cur.valorParcela = m.valorMulta;
+    }
+    if (m.paga !== true) {
+      cur.ref = m;
+    }
+    planos.set(parsed.total, cur);
+  }
+
+  const semPlanoReneg: ClienteDespesaRegistro[] = [];
+  const planosAbertos = new Set<number>();
+
+  for (const m of diversos) {
+    if ((m.categoria ?? "") !== "Renegociação") {
+      semPlanoReneg.push(m);
+      continue;
+    }
+    const parsed = parseParcelaRenegociacaoDescricao(m.descricao);
+    if (!parsed || !planos.has(parsed.total)) {
+      semPlanoReneg.push(m);
+      continue;
+    }
+    planosAbertos.add(parsed.total);
+  }
+
+  const sinteticos: ClienteDespesaRegistro[] = [];
+  for (const total of planosAbertos) {
+    const info = planos.get(total)!;
+    const inicioFaltante = info.maxPago + 1;
+    if (inicioFaltante > total) continue;
+    const qtd = total - inicioFaltante + 1;
+    const valorParcela = info.valorParcela > 0 ? info.valorParcela : 200;
+    const valorTotal = round2(qtd * valorParcela);
+    const ref = info.ref;
+    sinteticos.push({
+      ...(ref ?? {}),
+      id: ref?.id ?? `plano-reneg-${inicioFaltante}x${total}`,
+      categoria: "Renegociação",
+      veiculoId: contrato.placa,
+      autoInfracao: ref?.autoInfracao ?? `PLANO-${inicioFaltante}x${total}`,
+      descricao: `ATRASADO Pagamento renegociação ${inicioFaltante}x${total} (${qtd} parcelas faltantes)`,
+      localInfracao: ref?.localInfracao ?? "",
+      dataAutuacao: ref?.dataAutuacao ?? fmtDataBr(new Date()),
+      valorMulta: valorTotal,
+      situacao: ref?.situacao ?? "Em aberto",
+      limiteDefesa: ref?.limiteDefesa ?? "",
+      condutorId: clienteId,
+      condutorConfirmado: ref?.condutorConfirmado ?? false,
+      condutorContrato: ref?.condutorContrato ?? null,
+      paga: false,
+      pagaEm: null,
+      origem: ref?.origem ?? "calculado",
+      ativo: true,
+    } as ClienteDespesaRegistro);
+  }
+
+  return [...semPlanoReneg, ...sinteticos];
+}
+
 function coletarDebitosAbertosDb(
   contrato: ContratoExtraido,
   encerramento: Date,
@@ -241,7 +377,15 @@ function coletarDebitosAbertosDb(
     diversos.push(m);
   }
 
-  return { parcelasSemanal, diversos, creditos };
+  const diversosExpandidos = expandirRenegociacoesPlanoFaltante(
+    contrato,
+    clienteId,
+    incluirTodas,
+    diversos,
+    db,
+  );
+
+  return { parcelasSemanal, diversos: diversosExpandidos, creditos };
 }
 
 function despesaDoContrato(
@@ -284,6 +428,28 @@ function calcularVencimentos(
   return out;
 }
 
+/** Quitações reais no Rastreame (qualquer placa do locatário no período). */
+function inferirSemanasPagasDoDb(
+  contrato: ContratoExtraido,
+  encerramento: Date,
+  clienteId: string | null,
+  vencimentos: Date[],
+): string[] {
+  if (!clienteId || vencimentos.length === 0) return [];
+  const db = loadClienteDespesasDb();
+  const limite = addDays(startOfDay(encerramento), 7);
+  const pagasNoPeriodo = db.clienteDespesas.filter((m) => {
+    if (!isClienteDespesaAtiva(m)) return false;
+    if (m.paga !== true) return false;
+    if ((m.categoria ?? "") !== "Locação semanal") return false;
+    if (m.condutorId !== clienteId) return false;
+    const da = parseDataBr(m.dataAutuacao);
+    return da != null && da >= startOfDay(contrato.inicio) && da <= limite;
+  });
+  if (pagasNoPeriodo.length < vencimentos.length) return [];
+  return vencimentos.map(fmtDataBr);
+}
+
 export function calcularEncerramentoContrato(input: EncerramentoInput): EncerramentoResult {
   const contrato = extrairContrato(input.pastaContrato, { paraEncerramento: true });
   const veicReg = findVeiculoByPlaca(contrato.placa);
@@ -321,13 +487,17 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
       `Contrato v${registroVigente.versao} (renovação); acerto referente só a este período, não a versões anteriores.`,
     );
   }
-  if (registroVigente?.prazoDias != null && registroVigente.prazoDias > 0) {
+  if (
+    registroVigente?.prazoDias != null &&
+    registroVigente.prazoDias > 0 &&
+    (contrato.versaoDocumento ?? 1) <= 1
+  ) {
     contrato.prazoDias = registroVigente.prazoDias;
   }
   const fimPrevistoDb = registroVigente?.dataFimPrevista
     ? parseDataBr(registroVigente.dataFimPrevista)
     : null;
-  if (fimPrevistoDb) {
+  if (fimPrevistoDb && (contrato.versaoDocumento ?? 1) <= 1) {
     contrato.fim = fimPrevistoDb;
   }
   const diasLocacao = daysBetween(contrato.inicio, encerramento);
@@ -335,14 +505,6 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const proporcaoRestante = contrato.prazoDias > 0 ? diasRestantes / contrato.prazoDias : 0;
   const retencaoCaucao = round2(contrato.valorCaucao * proporcaoRestante);
 
-  const pagasSet = new Set(
-    (input.semanasPagas ?? [])
-      .map(normVencimento)
-      .filter((s) => {
-        const d = parseDataBr(s);
-        return d != null && d >= startOfDay(contrato.inicio);
-      }),
-  );
   const pagasAutoSet = new Set(
     (input.infracoesPagasAuto ?? input.multasPagasAuto ?? []).map((a) =>
       a.trim().toUpperCase(),
@@ -350,12 +512,28 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   );
   const incluirTodas =
     input.incluirTodasInfracoesPlaca === true || input.incluirTodasMultasPlaca === true;
-  const fonteDebitos = input.fonteDebitos ?? "calculado";
+
+  const clienteId = loadClienteId(contrato.cpf, input.condutorId);
+  /** Com locatário cadastrado, espelhar débitos reais (Rastreame) em vez de vencimentos teóricos. */
+  const fonteDebitos =
+    input.fonteDebitos ?? (clienteId ? "abertos-db" : "calculado");
 
   const intervalo = input.diasPrimeiroVencimento ?? intervaloPagamentoDias(contrato);
   const valorParcela = valorParcelaContrato(contrato);
   const valorDiaria = valorDiariaContrato(contrato);
   const vencimentos = calcularVencimentos(contrato.inicio, encerramento, intervalo);
+
+  const semanasPagasInformadas = (input.semanasPagas ?? [])
+    .map(normVencimento)
+    .filter((s) => {
+      const d = parseDataBr(s);
+      return d != null && d >= startOfDay(contrato.inicio);
+    });
+  const semanasPagasInferidas =
+    fonteDebitos === "calculado" && semanasPagasInformadas.length === 0
+      ? inferirSemanasPagasDoDb(contrato, encerramento, clienteId, vencimentos)
+      : [];
+  const pagasSet = new Set([...semanasPagasInformadas, ...semanasPagasInferidas]);
 
   let parcelasEmAberto: ParcelaAtrasada[] = [];
   let diariasAtraso: DiariaAtraso[] = [];
@@ -367,6 +545,11 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
       "Débitos em aberto lidos de cliente-despesas.json (espelho Rastreame). Linhas CRÉDITO são valor a devolver.",
     );
   } else {
+    if (semanasPagasInferidas.length > 0) {
+      avisos.push(
+        `${semanasPagasInferidas.length} vencimento(s) semanal(is) considerado(s) quitado(s) — pagamentos confirmados no Rastreame.`,
+      );
+    }
     for (const due of vencimentos) {
       const vencStr = fmtDataBr(due);
       if (pagasSet.has(vencStr)) continue;
@@ -393,28 +576,30 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     }
   }
 
-  const clienteId = loadClienteId(contrato.cpf, input.condutorId);
-
+  const abertosDb = coletarDebitosAbertosDb(
+    contrato,
+    encerramento,
+    clienteId,
+    incluirTodas,
+    pagasAutoSet,
+  );
   if (fonteDebitos === "abertos-db") {
-    const abertos = coletarDebitosAbertosDb(
-      contrato,
-      encerramento,
-      clienteId,
-      incluirTodas,
-      pagasAutoSet,
-    );
-    parcelasEmAberto = abertos.parcelasSemanal.map((m) => ({
+    parcelasEmAberto = abertosDb.parcelasSemanal.map((m) => ({
       vencimento: m.dataAutuacao,
       valorSemanal: round2(m.valorMulta),
       placa: m.veiculoId,
       categoria: m.categoria ?? "Locação semanal",
       descricao: m.descricao,
     }));
-    debitosDiversos = abertos.diversos;
-    creditosDevolucao = abertos.creditos;
   }
-  const incluirInfracoesCliente = input.incluirInfracoesCliente === true;
+  debitosDiversos = abertosDb.diversos;
+  creditosDevolucao = abertosDb.creditos;
+  const incluirInfracoesCliente =
+    input.incluirInfracoesCliente === true ||
+    (input.incluirInfracoesCliente !== false && clienteId != null);
   const db = loadClienteDespesasDb();
+  /** Lançamentos de acerto podem ser no dia do encerramento ou poucos dias depois. */
+  const limiteDespesasEncerramento = addDays(startOfDay(encerramento), 7);
   const infracoes = dedupeInfracoesEspelho(
     db.clienteDespesas.filter((m) => {
       if (!isClienteDespesaAtiva(m)) return false;
@@ -428,7 +613,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
       }
       const da = parseDataBr(m.dataAutuacao);
       if (!da) return false;
-      return da >= startOfDay(contrato.inicio) && da <= encerramento;
+      return da >= startOfDay(contrato.inicio) && da <= limiteDespesasEncerramento;
     }),
   );
 
@@ -461,7 +646,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) return false;
     const da = parseDataBr(m.dataAutuacao);
     if (!da) return false;
-    return da >= startOfDay(contrato.inicio) && da <= encerramento;
+    return da >= startOfDay(contrato.inicio) && da <= limiteDespesasEncerramento;
   });
   if (manutencoes.some((m) => m.valorMulta <= 0)) {
     avisos.push(
@@ -484,9 +669,11 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const totalCreditosDevolucao = round2(
     creditosDevolucao.reduce((s, c) => s + c.valor, 0),
   );
-  const temQuebraRastreame =
-    fonteDebitos === "abertos-db" &&
-    debitosDiversos.some((m) => (m.categoria ?? "") === "Quebra contrato");
+  const temQuebraRastreame = debitosDiversos.some(
+    (m) =>
+      (m.categoria ?? "") === "Quebra contrato" ||
+      /quebra de contrato|reten[cç][aã]o cau[cç][aã]o.*quebra/i.test(m.descricao ?? ""),
+  );
   const retencaoNoTotal = temQuebraRastreame ? 0 : retencaoCaucao;
   if (temQuebraRastreame) {
     avisos.push(
@@ -536,9 +723,15 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   };
 }
 
-export function formatarEncerramentoTexto(r: EncerramentoResult): string {
+export function formatarEncerramentoTexto(
+  r: EncerramentoResult,
+  opts: { incluirAvisos?: boolean; limparNomeCliente?: boolean } = {},
+): string {
+  const incluirAvisos = opts.incluirAvisos ?? false;
+  const limparNomeCliente = opts.limparNomeCliente ?? false;
   const c = r.contrato;
-  const pct = (r.proporcaoRestante * 100).toFixed(1).replace(".", ",");
+  const clienteNome =
+    limparNomeCliente ? c.clienteNome.replace(/\s*\([^)]*\)\s*$/u, "").trim() : c.clienteNome;
   const placaLinha = (veiculoId: string | undefined): string =>
     veiculoId?.trim() || c.placa;
   const linhaItem = (
@@ -551,7 +744,7 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
   const lines: string[] = [
     "📄 *ENCERRAMENTO DE CONTRATO*",
     "",
-    `👤 Cliente: ${c.clienteNome}`,
+    `👤 Cliente: ${clienteNome}`,
     `🚗 Placa: ${c.placa}`,
     `🗓️ Início: ${fmtDataBr(c.inicio)} → Fim previsto: ${fmtDataBr(c.fim)} (${c.prazoDias} dias)`,
     `🏁 Encerramento: ${r.dataEncerramento} (${r.diasLocacao} dias de locação)`,
@@ -570,7 +763,7 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
     for (const m of r.infracoes) {
       lines.push(
         linhaItem(
-          m.titulo ?? m.descricao ?? m.autoInfracao,
+          rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
           m.categoria ?? "Infração",
@@ -581,16 +774,16 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
   }
   lines.push(`💰 Subtotal infrações: R$ ${brl(r.totalInfracoes)}`);
   lines.push("");
-  lines.push("🔧 *Manutenção / avarias (não pagas)*");
+  lines.push("🔧 *Manutenção / avarias (em aberto)*");
   if (r.manutencoes.length === 0) {
     lines.push("• (nenhuma)");
   } else {
     for (const m of r.manutencoes) {
       const valor =
-        m.valorMulta > 0 ? `R$ ${brl(m.valorMulta)}` : "orçamento pendente";
+        m.valorMulta > 0 ? `R$ ${brl(m.valorMulta)}` : `R$ ${brl(0)}`;
       lines.push(
         linhaItem(
-          m.descricao,
+          rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
           m.categoria ?? "Manutenção",
@@ -644,7 +837,7 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
     for (const m of r.debitosDiversos) {
       lines.push(
         linhaItem(
-          m.descricao,
+          rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
           m.categoria ?? "Outros",
@@ -671,33 +864,26 @@ export function formatarEncerramentoTexto(r: EncerramentoResult): string {
     lines.push(`💰 Subtotal créditos: R$ ${brl(r.totalCreditosDevolucao)}`);
     lines.push("");
   }
-  lines.push("📉 *Quebra de contrato (retenção caução)*");
-  const quebraRastreame = r.debitosDiversos.find(
-    (m) => (m.categoria ?? "") === "Quebra contrato",
-  );
-  if (r.fonteDebitos === "abertos-db" && quebraRastreame) {
-    lines.push(
-      `• Quebra de contrato informada no Rastreame (multa R$ ${brl(quebraRastreame.valorMulta)}) — retenção proporcional calculada com base em ${c.prazoDias} dias de contrato e ${r.diasLocacao} dias de locação.`,
-    );
-  } else {
-    lines.push(`• Dias restantes: ${r.diasRestantes} / ${c.prazoDias} (${pct}%)`);
-    lines.push(`• Retenção caução: R$ ${brl(r.retencaoCaucao)}`);
-    lines.push(`• Caução a devolver (após retenção): R$ ${brl(r.caucaoDevolver)}`);
-  }
+  lines.push(`• ${linhaQuebraContratoEncerramento(r)}`);
   lines.push("");
   lines.push("━━━━━━━━━━━━━━━━━━━━");
   lines.push("🧾 *Totais*");
-  lines.push(`• Total débitos (líquido): R$ ${brl(r.totalDebitos)}`);
+  lines.push(`• Total débitos: R$ ${brl(r.totalDebitos)}`);
   lines.push(`• Total créditos: R$ ${brl(r.totalCreditos)}`);
   lines.push(
     `${r.saldoFinal < 0 ? "🔴" : "✅"} *Saldo: R$ ${brl(r.saldoFinal)}* ${r.saldoFinal < 0 ? "(locatário deve complementar)" : "(a devolver ao locatário)"}`,
   );
 
-  if (r.avisos.length) {
+  if (incluirAvisos && r.avisos.length) {
     lines.push("");
     lines.push("⚠️ *Avisos*");
     for (const a of r.avisos) lines.push(`• ${a}`);
   }
 
   return lines.join("\n");
+}
+
+/** Texto pronto para colar no WhatsApp (sem avisos internos ao operador). */
+export function formatarEncerramentoWhatsApp(r: EncerramentoResult): string {
+  return formatarEncerramentoTexto(r, { incluirAvisos: false, limparNomeCliente: true });
 }

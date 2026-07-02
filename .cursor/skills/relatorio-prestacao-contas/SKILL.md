@@ -97,7 +97,7 @@ O `montar-relatorio` aceita, em `ganho` e `descontoManutencao`, um array **`iten
   - `7 diárias parado 01/06 até 07/06 (R$ 500,00)`
   - `1 diária parado 10/06 (R$ 71,43)`
 
-Usar o comando de **sugestão** (skill **cadastro-locacao**) para agregar a tabela no período e obter ganho/desconto/diárias por veículo; **validar com o utilizador** antes de montar o `entrada.json`:
+Usar o comando de **sugestão** (skill **cadastro-movimentacao**) para agregar a tabela no período e obter ganho/desconto/diárias por veículo; **validar com o utilizador** antes de montar o `entrada.json`:
 
 ```bash
 npx tsx src/run.ts locacoes sugerir --competencia MM/AAAA [--placa PLACA]
@@ -159,4 +159,4 @@ Além dos `.txt` por parceiro, cada execução grava um **JSON consolidado** em 
 
 ## Skills relacionadas
 
-- **sync-seguro**, **cadastro-despesa**, **cadastro-locacao** (sugestão de ganho/desconto/diárias a partir de `locacoes.json`)
+- **sync-seguro**, **cadastro-despesa**, **cadastro-movimentacao** (sugestão de ganho/desconto/diárias a partir de `locacoes.json`)

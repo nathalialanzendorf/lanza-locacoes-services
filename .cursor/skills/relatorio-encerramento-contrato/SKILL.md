@@ -39,10 +39,10 @@ Calcula o **acerto** de um contrato: multas, parcelas em aberto, diárias de atr
 npx tsx src/run.ts relatorio-encerramento-contrato "D:/Dropbox/Aluguel Carros/.../05.05.2026 - Nome" --encerramento 26/06/2026
 ```
 
-Grava automaticamente em **`relatorios/quebra-contrato/`**:
+Grava automaticamente em **`relatorios/_tmp/encerramento-contrato/`**:
 
-- `quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.txt` — documento para partilhar com o locatário (como prestação de contas com parceiros)
-- `quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.json` — **dados estruturados (sidecar) que alimentam o canvas** (mesma base do `.txt`)
+- `encerramento-contrato-{placa}-{cliente}-{DD-MM-AAAA}.txt` — **mensagem para WhatsApp** (sem avisos internos ao operador)
+- `encerramento-contrato-{placa}-{cliente}-{DD-MM-AAAA}.json` — **dados estruturados (sidecar) que alimentam o canvas**
 
 Com JSON de **entrada** (semanas pagas, etc.) — o JSON é só parâmetro, não é gerado como saída:
 
@@ -54,11 +54,13 @@ npx tsx src/run.ts relatorio-encerramento-contrato relatorios/_tmp/_encerramento
 
 ## Canvas (obrigatório junto ao TXT)
 
-**Todo relatório de encerramento gera dois entregáveis: o `.txt` (para WhatsApp) e um canvas.** Depois de rodar a CLI, **sempre** crie um canvas a partir do JSON sidecar (`relatorios/quebra-contrato/quebra-contrato-*.json`).
+**Todo relatório de encerramento gera três entregáveis: `.txt` (WhatsApp), JSON (canvas) e canvas.** Depois de rodar a CLI, **sempre** crie um canvas a partir do JSON sidecar (`relatorios/_tmp/encerramento-contrato/encerramento-contrato-*.json`).
+
+Action Cursor: **`/relatorios/encerramento-contrato`** (`.cursor/commands/relatorios-encerramento-contrato.md`).
 
 - **Local do arquivo:** `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/encerramento-{placa}-{cliente}.canvas.tsx` (kebab-case; só o IDE detecta nesse diretório).
 - **Dados:** leia o JSON sidecar e **embuta os valores inline** no `.canvas.tsx` — sem `fetch`/rede, sem imports relativos; importe **só** de `cursor/canvas`; cores via `useHostTheme()`.
-- **Conteúdo mínimo:** cabeçalho (cliente, placa, início → fim, encerramento, dias de locação); cartão de destaque com o **Saldo caução** (verde a devolver / vermelho a complementar); tabelas de **infrações**, **manutenção**, **parcelas em aberto** e **diárias de atraso** (cada uma com seu subtotal); bloco de **retenção de caução** (dias restantes, %, retenção, a devolver); e os **avisos** se houver. Omita seções vazias (ex.: sem infrações, não renderize a tabela).
+- **Conteúdo mínimo:** cabeçalho (cliente, placa, início → fim, encerramento, dias de locação); cartão de destaque com o **Saldo caução**; tabelas com subtotals (omitir vazias); linha **Quebra de contrato (retenção R$ …) — retenção proporcional…** (sem título de seção, antes dos totais); totais e avisos.
 - Sem slop (sem gradiente, emoji, sombra); rótulos claros com `R$` nos valores.
 - Ao terminar, mencione o canvas com link markdown para o caminho do `.canvas.tsx`.
 

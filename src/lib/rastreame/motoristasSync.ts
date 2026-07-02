@@ -14,10 +14,12 @@ import {
 import { motoristaToCliente } from "./mapMotoristaCliente.js";
 import { refKey } from "./placaRastreavel.js";
 import {
+  ativarMotorista,
   buildMotoristaPayload,
   fetchAllMotoristasDetailed,
   fetchMotoristaByKey,
   findMotorista,
+  inativarMotorista,
   postMotoristaPayload,
   putMotorista,
   type MotoristaRastreame,
@@ -28,6 +30,8 @@ export type SyncMotoristasOpts = {
   pull?: boolean;
   push?: boolean;
   forcePull?: boolean;
+  /** Empurra todos os clientes elegíveis, mesmo sem alteração local desde a última sync. */
+  forcePush?: boolean;
 };
 
 export type SyncMotoristasResult = {
@@ -101,29 +105,55 @@ export async function pullMotoristasFromRastreame(
   return result;
 }
 
+/** PUT no Rastreame preservando ativo/inativo conforme a database local. */
+async function aplicarPutMotorista(
+  key: string,
+  c: ClienteRegistro,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const manterAtivo = c.ativo !== false;
+
+  if (!manterAtivo) {
+    const atual = await fetchMotoristaByKey(key);
+    if (atual.ativo === false) {
+      await ativarMotorista(key);
+    }
+    const depoisAtivar = await fetchMotoristaByKey(key);
+    await putMotorista(key, { ...depoisAtivar, ...payload, ativo: true });
+    await inativarMotorista(key);
+    return;
+  }
+
+  const atual = await fetchMotoristaByKey(key);
+  await putMotorista(key, { ...atual, ...payload, ativo: true });
+}
+
 async function pushOneCliente(
   c: ClienteRegistro,
-  ctx: { dryRun: boolean },
+  ctx: { dryRun: boolean; forcePush?: boolean },
 ): Promise<"criado" | "atualizado" | "ignorado"> {
-  // Nunca enviamos inativação ao Rastreame: se está inativo no database local,
-  // não fazemos push. O pull continua atualizando o registo local a partir do
-  // Rastreame (ver regra "Inativação só local" em .cursor/rules/lanza-tools.mdc).
-  if (c.ativo === false) return "ignorado";
+  const inativo = c.ativo === false;
+
+  if (inativo && !ctx.forcePush) return "ignorado";
+  if (inativo && !c.rastreameMotoristaKey) return "ignorado";
 
   if (!isSyncRastreameEligible(c)) return "ignorado";
 
   const payload = buildMotoristaPayload(c);
 
   if (!c.rastreameMotoristaKey) {
+    if (inativo) return "ignorado";
+
     const cnh = String(c.cnh?.numero ?? "");
     const existente = await findMotorista(cnh, c.nome ?? "");
     if (existente) {
       const key = motoristaKey(existente);
       if (key) {
         if (ctx.dryRun) {
-          console.log(`[push dry-run] link ${c.nome} → key=${key} (já no Rastreame)`);
+          console.log(`[push dry-run] link+PUT ${c.nome} → key=${key} (já no Rastreame)`);
           return "criado";
         }
+        await aplicarPutMotorista(key, c, payload);
         marcarClienteRastreameSyncOk(c.id, key, existente.id);
         return "criado";
       }
@@ -140,22 +170,20 @@ async function pushOneCliente(
   }
 
   const needsPush =
+    ctx.forcePush ||
     !c.rastreameSyncEm ||
     (c.atualizadoEm != null && c.rastreameSyncEm != null && c.atualizadoEm > c.rastreameSyncEm);
 
   if (!needsPush) return "ignorado";
 
   if (ctx.dryRun) {
-    console.log(`[push dry-run] PUT key=${c.rastreameMotoristaKey} | ${c.nome}`);
+    console.log(
+      `[push dry-run] PUT key=${c.rastreameMotoristaKey} | ${c.nome} | ativo=${!inativo}`,
+    );
     return "atualizado";
   }
 
-  const atual = await fetchMotoristaByKey(c.rastreameMotoristaKey);
-  await putMotorista(c.rastreameMotoristaKey, {
-    ...atual,
-    ...payload,
-    ativo: true,
-  });
+  await aplicarPutMotorista(c.rastreameMotoristaKey, c, payload);
   marcarClienteRastreameSyncOk(c.id, c.rastreameMotoristaKey, c.rastreameMotoristaId ?? undefined);
   return "atualizado";
 }
@@ -172,12 +200,19 @@ export async function pushMotoristasToRastreame(
   };
 
   const db = loadClientesDb();
-  // Só clientes ativos entram no push; inativos nunca são enviados ao Rastreame.
-  const candidatos = db.clientes.filter((c) => c.ativo !== false && isSyncRastreameEligible(c));
+  const candidatos = db.clientes.filter((c) => {
+    if (!isSyncRastreameEligible(c)) return false;
+    if (c.ativo !== false) return true;
+    // Inativos: atualizar dados com --force-push (já vinculados ao Rastreame).
+    return Boolean(opts.forcePush && c.rastreameMotoristaKey);
+  });
 
   for (const c of candidatos) {
     try {
-      const acao = await pushOneCliente(c, { dryRun: opts.dryRun ?? false });
+      const acao = await pushOneCliente(c, {
+        dryRun: opts.dryRun ?? false,
+        forcePush: opts.forcePush,
+      });
       if (acao === "criado") result.criados++;
       else if (acao === "atualizado") result.atualizados++;
       else result.ignorados++;
@@ -206,10 +241,11 @@ export async function syncMotoristas(
 
 export async function replicarClienteNoRastreame(
   c: ClienteRegistro,
-  opts?: { dryRun?: boolean },
+  opts?: { dryRun?: boolean; forcePush?: boolean },
 ): Promise<void> {
-  if (!isSyncRastreameEligible(c) && c.ativo !== false) return;
-  const acao = await pushOneCliente(c, { dryRun: opts?.dryRun ?? false });
+  if (c.ativo === false && !opts?.forcePush) return;
+  if (!isSyncRastreameEligible(c)) return;
+  const acao = await pushOneCliente(c, { dryRun: opts?.dryRun ?? false, forcePush: opts?.forcePush });
   if (acao === "erro") {
     throw new Error(`Falha ao replicar ${c.nome} no Rastreame`);
   }

@@ -1091,7 +1091,7 @@
       "veiculoId": "BBV-6A91",
       "cliente": {
         "id": "0eafaf84-8700-4d16-8295-25619305410b",
-        "nome": "SUSANA DA SILVA",
+        "nome": "Susana da Silva",
         "cpf": "003.925.309-02",
         "rg": null,
         "telefone": "(48) 9982-5753",
@@ -1122,12 +1122,12 @@
         "fipeValor": "R$ 45.818,00"
       },
       "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - RENAULT SANDERO 2013-2014\\05.05.2026 - Susana da Silva (troca 09.05.26)",
-      "clienteNome": "SUSANA DA SILVA",
+      "clienteNome": "Susana da Silva",
       "placa": "BBV-6A91",
       "cpf": "003.925.309-02",
       "dataInicio": "05/05/2026",
       "dataFimPrevista": "03/08/2026",
-      "dataEncerramento": "09/05/2026",
+      "dataEncerramento": "26/06/2026",
       "quebraContrato": true,
       "motivoEncerramento": "devolvido",
       "status": "encerrado",
@@ -1141,7 +1141,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:47.195Z",
-      "atualizadoEm": "2026-06-28T17:20:05.676Z"
+      "atualizadoEm": "2026-07-01T23:26:25.876Z"
     },
     {
       "id": "62df3f08-5140-45c9-a48d-601cd963fc96",

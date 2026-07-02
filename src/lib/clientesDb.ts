@@ -29,12 +29,21 @@ export type AnaliseCadastroCliente = {
   avaliadoEm: string;
 };
 
+export type RastreameVinculoCliente = {
+  veiculoId: string;
+  placa?: string;
+  rastreavelKey: string | number;
+  vinculadoEm: string;
+};
+
 export type ClienteRegistro = ClienteImportado & {
   id: string;
   nome: string;
   cpf?: string;
   rastreameMotoristaKey?: string | number | null;
   rastreameMotoristaId?: string | number | null;
+  /** Vínculos motorista↔rastreável espelhados do Rastreame (contrato ativo). */
+  rastreameVinculos?: RastreameVinculoCliente[];
   rastreameSyncEm?: string | null;
   atualizadoEm?: string | null;
   ativo?: boolean;
@@ -185,6 +194,7 @@ export type ClientePatch = Partial<
     | "cnh"
     | "rastreameMotoristaKey"
     | "rastreameMotoristaId"
+    | "rastreameVinculos"
     | "ativo"
     | "origemImportacao"
     | "analiseCadastro"

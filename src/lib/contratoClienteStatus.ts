@@ -1,18 +1,13 @@
 /**
- * (Des)ativação do cliente ligada ao ciclo de vida do contrato.
+ * (Des)ativação do cliente e vínculo motorista↔rastreável ligados ao ciclo de vida do contrato.
  *
  * Regra de negócio (cadastro-contrato):
- * - Ao **gerar** um contrato: se o cliente existe e está inativo, é **reativado**
- *   no database local E no Rastreame.
- * - Ao **encerrar** um contrato: o cliente é **inativado** no database local E no
- *   Rastreame — desde que não tenha **outro contrato ativo** (ex.: 2 veículos).
+ * - Ao **gerar**: ativa cliente, persiste `rastreameMotoristaKey`, vincula em `clientes.json`
+ *   (`rastreameVinculos`) e `veiculos.json` (`clienteVinculadoId`); espelha no Rastreame.
+ * - Ao **encerrar**: remove vínculo local e remoto; inativa cliente local + Rastreame — exceto
+ *   se ainda tiver **outro contrato ativo**.
  *
- * Esta é a exceção autorizada à regra "Inativação só local" (ver
- * .cursor/rules/lanza-tools.mdc): a inativação por encerramento de contrato
- * É empurrada ao Rastreame.
- *
- * O lado Rastreame é best-effort: falha de rede/token apenas gera aviso; a
- * alteração local (fonte da verdade) é sempre aplicada.
+ * O database local é fonte da verdade; o Rastreame é best-effort (falha → `[aviso]`).
  */
 import {
   editarCliente,
@@ -21,23 +16,45 @@ import {
   normNomeKey,
   type ClienteRegistro,
 } from "./clientesDb.js";
+import {
+  desvincularClienteVeiculoLocal,
+  persistirMotoristaKeyLocal,
+  vincularClienteVeiculoLocal,
+} from "./contratoVinculoDb.js";
 import { loadContratosDb } from "./contratosDb.js";
 import { normCpfKey } from "./rastreame/mapMotoristaCliente.js";
-import { inativarMotorista } from "./rastreame/motorista.js";
+import {
+  ativarMotorista,
+  desvincularMotoristaRastreavel,
+  fetchAllMotoristas,
+  fetchMotoristaByKey,
+  findMotorista,
+  inativarMotorista,
+  vincularMotoristaRastreavel,
+} from "./rastreame/motorista.js";
 import { replicarClienteNoRastreame } from "./rastreame/motoristasSync.js";
+import {
+  findVeiculoById,
+  findVeiculoByPlaca,
+  type VeiculoRegistro,
+} from "./veiculosDb.js";
 
 export type ClienteContratoRef = {
   clienteId?: string | null;
   cpf?: string | null;
   nome?: string | null;
+  placa?: string | null;
+  veiculoId?: string | null;
 };
 
 export type StatusClienteResult = {
   cliente: ClienteRegistro | null;
-  /** Ação aplicada no database local. */
+  /** Ação aplicada no database local (ativo). */
   local: "ativado" | "inativado" | "sem_alteracao" | "nao_encontrado";
-  /** Ação no Rastreame. */
+  /** Ação no motorista Rastreame. */
   rastreame: "ativado" | "inativado" | "ignorado" | "erro";
+  /** Vínculo motorista↔rastreável (local + remoto). */
+  vinculo: "vinculado" | "desvinculado" | "ignorado" | "erro";
   aviso?: string;
 };
 
@@ -51,6 +68,21 @@ function resolverCliente(ref: ClienteContratoRef): ClienteRegistro | null {
     if (c) return c;
   }
   return null;
+}
+
+function resolverVeiculo(ref: ClienteContratoRef): VeiculoRegistro | null {
+  if (ref.veiculoId) {
+    const v = findVeiculoById(ref.veiculoId);
+    if (v) return v;
+  }
+  if (ref.placa) return findVeiculoByPlaca(ref.placa);
+  return null;
+}
+
+function resolverRastreavelKey(ref: ClienteContratoRef, veiculo?: VeiculoRegistro | null): string | null {
+  const v = veiculo ?? resolverVeiculo(ref);
+  const key = v?.rastreameRastreavelKey;
+  return key != null && key !== "" ? String(key) : null;
 }
 
 function mesmoCliente(
@@ -80,9 +112,69 @@ export function temOutroContratoAtivo(
   );
 }
 
+async function resolverMotoristaKey(cliente: ClienteRegistro): Promise<string | null> {
+  if (cliente.rastreameMotoristaKey != null && cliente.rastreameMotoristaKey !== "") {
+    return String(cliente.rastreameMotoristaKey);
+  }
+
+  const cnh = String(cliente.cnh?.numero ?? cliente.cnh?.numeroRegistro ?? "");
+  const porNomeCnh = await findMotorista(cnh, cliente.nome ?? "");
+  if (porNomeCnh) {
+    const key = String(porNomeCnh.key ?? porNomeCnh.id ?? "");
+    if (key) return key;
+  }
+
+  if (cliente.cpf) {
+    const cpfD = normCpfKey(cliente.cpf);
+    for (const m of await fetchAllMotoristas()) {
+      if (m.cpf && normCpfKey(String(m.cpf)) === cpfD) {
+        const key = String(m.key ?? m.id ?? "");
+        if (key) return key;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function garantirMotoristaNoRastreame(
+  cliente: ClienteRegistro,
+  opts: { dryRun?: boolean },
+): Promise<{ key: string | null; motoristaId?: string | number; aviso?: string }> {
+  let key = await resolverMotoristaKey(cliente);
+  let motoristaId: string | number | undefined;
+
+  if (key) {
+    if (!opts.dryRun) {
+      persistirMotoristaKeyLocal(cliente.id, key);
+    }
+    return { key };
+  }
+
+  if (opts.dryRun) {
+    return { key: null, aviso: "motorista não encontrado no Rastreame (dry-run)" };
+  }
+
+  try {
+    await replicarClienteNoRastreame({ ...cliente, ativo: true });
+    const atualizado = findClienteById(cliente.id) ?? cliente;
+    key = await resolverMotoristaKey(atualizado);
+    motoristaId = atualizado.rastreameMotoristaId ?? undefined;
+    if (key) {
+      persistirMotoristaKeyLocal(atualizado.id, key, motoristaId);
+      return { key, motoristaId };
+    }
+    return { key: null, aviso: "motorista não encontrado após replicação" };
+  } catch (e) {
+    return {
+      key: null,
+      aviso: `Rastreame não atualizado (${e instanceof Error ? e.message : String(e)})`,
+    };
+  }
+}
+
 /**
- * Reativa o cliente (local + Rastreame) ao gerar/renovar contrato.
- * Só age quando o cliente está inativo; cliente já ativo é no-op.
+ * Reativa o cliente (local + Rastreame), persiste motorista e vincula ao rastreável.
  */
 export async function ativarClienteDoContrato(
   ref: ClienteContratoRef,
@@ -90,30 +182,93 @@ export async function ativarClienteDoContrato(
 ): Promise<StatusClienteResult> {
   const cliente = resolverCliente(ref);
   if (!cliente) {
-    return { cliente: null, local: "nao_encontrado", rastreame: "ignorado" };
-  }
-  if (cliente.ativo !== false) {
-    return { cliente, local: "sem_alteracao", rastreame: "ignorado" };
-  }
-  if (opts.dryRun) {
-    return { cliente, local: "ativado", rastreame: "ativado" };
+    return { cliente: null, local: "nao_encontrado", rastreame: "ignorado", vinculo: "ignorado" };
   }
 
-  const atualizado = editarCliente(cliente.id, { ativo: true }) ?? cliente;
-  let rastreame: StatusClienteResult["rastreame"] = "ignorado";
-  let aviso: string | undefined;
-  try {
-    await replicarClienteNoRastreame({ ...atualizado, ativo: true });
-    rastreame = "ativado";
-  } catch (e) {
-    rastreame = "erro";
-    aviso = `Rastreame não atualizado (${e instanceof Error ? e.message : String(e)})`;
+  const veiculo = resolverVeiculo(ref);
+  const rastreavelKey = resolverRastreavelKey(ref, veiculo);
+
+  let local: StatusClienteResult["local"] = "sem_alteracao";
+  let atualizado = cliente;
+  if (cliente.ativo === false) {
+    if (opts.dryRun) {
+      local = "ativado";
+    } else {
+      atualizado = editarCliente(cliente.id, { ativo: true }) ?? cliente;
+      local = "ativado";
+    }
   }
-  return { cliente: atualizado, local: "ativado", rastreame, aviso };
+
+  if (opts.dryRun) {
+    return {
+      cliente: atualizado,
+      local,
+      rastreame: "ativado",
+      vinculo: veiculo && rastreavelKey ? "vinculado" : "ignorado",
+      aviso: !rastreavelKey ? "veículo sem rastreameRastreavelKey — vínculo não aplicado" : undefined,
+    };
+  }
+
+  const avisos: string[] = [];
+  let rastreame: StatusClienteResult["rastreame"] = "ignorado";
+  let vinculo: StatusClienteResult["vinculo"] = "ignorado";
+
+  const { key: motoristaKey, aviso: avisoMotorista } = await garantirMotoristaNoRastreame(
+    atualizado,
+    opts,
+  );
+  if (avisoMotorista) avisos.push(avisoMotorista);
+  atualizado = findClienteById(atualizado.id) ?? atualizado;
+
+  if (veiculo && rastreavelKey) {
+    const loc = vincularClienteVeiculoLocal(atualizado.id, veiculo, rastreavelKey);
+    atualizado = loc.cliente ?? atualizado;
+    vinculo = "vinculado";
+  } else {
+    avisos.push("veículo sem rastreameRastreavelKey — vínculo local/remoto não aplicado");
+  }
+
+  if (motoristaKey) {
+    try {
+      const remoto = await fetchMotoristaByKey(motoristaKey);
+      if (remoto.ativo === false) {
+        await ativarMotorista(motoristaKey);
+        rastreame = "ativado";
+      }
+      persistirMotoristaKeyLocal(
+        atualizado.id,
+        motoristaKey,
+        remoto.id ?? remoto.key ?? undefined,
+      );
+    } catch (e) {
+      rastreame = "erro";
+      avisos.push(`Rastreame ativar motorista: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    if (rastreavelKey && vinculo !== "ignorado") {
+      try {
+        await vincularMotoristaRastreavel(motoristaKey, rastreavelKey);
+        vinculo = "vinculado";
+      } catch (e) {
+        if (vinculo !== "vinculado") vinculo = "erro";
+        avisos.push(`Rastreame vínculo motorista/veículo: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  } else {
+    avisos.push("cliente sem rastreameMotoristaKey");
+  }
+
+  return {
+    cliente: findClienteById(atualizado.id) ?? atualizado,
+    local,
+    rastreame,
+    vinculo,
+    aviso: avisos.length ? avisos.join("; ") : undefined,
+  };
 }
 
 /**
- * Inativa o cliente (local + Rastreame) ao encerrar contrato — exceto se ainda
+ * Remove vínculo (local + Rastreame) e inativa o cliente — exceto se ainda
  * houver outro contrato ativo para o mesmo cliente.
  */
 export async function desativarClienteDoContrato(
@@ -122,37 +277,90 @@ export async function desativarClienteDoContrato(
 ): Promise<StatusClienteResult> {
   const cliente = resolverCliente(ref);
   if (!cliente) {
-    return { cliente: null, local: "nao_encontrado", rastreame: "ignorado" };
-  }
-  if (temOutroContratoAtivo(cliente, ref.contratoId)) {
-    return {
-      cliente,
-      local: "sem_alteracao",
-      rastreame: "ignorado",
-      aviso: "cliente tem outro contrato ativo — mantido ativo",
-    };
-  }
-  if (cliente.ativo === false) {
-    return { cliente, local: "sem_alteracao", rastreame: "ignorado" };
-  }
-  if (opts.dryRun) {
-    return { cliente, local: "inativado", rastreame: "inativado" };
+    return { cliente: null, local: "nao_encontrado", rastreame: "ignorado", vinculo: "ignorado" };
   }
 
-  const atualizado = editarCliente(cliente.id, { ativo: false }) ?? cliente;
-  let rastreame: StatusClienteResult["rastreame"] = "ignorado";
-  let aviso: string | undefined;
-  const key = atualizado.rastreameMotoristaKey;
-  if (key != null && key !== "") {
+  const veiculo = resolverVeiculo(ref);
+  const rastreavelKey = resolverRastreavelKey(ref, veiculo);
+  const motoristaKey = await resolverMotoristaKey(cliente);
+  const outroAtivo = temOutroContratoAtivo(cliente, ref.contratoId);
+
+  if (opts.dryRun) {
+    return {
+      cliente,
+      local: outroAtivo ? "sem_alteracao" : "inativado",
+      rastreame: outroAtivo ? "ignorado" : "inativado",
+      vinculo: veiculo ? "desvinculado" : "ignorado",
+      aviso: outroAtivo ? "cliente tem outro contrato ativo — mantido ativo" : undefined,
+    };
+  }
+
+  const avisos: string[] = [];
+  let vinculo: StatusClienteResult["vinculo"] = "ignorado";
+  let atualizado = cliente;
+
+  if (veiculo) {
+    const loc = desvincularClienteVeiculoLocal(cliente.id, veiculo.id);
+    atualizado = loc.cliente ?? cliente;
+    vinculo = "desvinculado";
+  } else {
+    avisos.push("veículo não encontrado — desvínculo local não aplicado");
+  }
+
+  if (motoristaKey && rastreavelKey) {
     try {
-      await inativarMotorista(key);
+      await desvincularMotoristaRastreavel(motoristaKey, rastreavelKey);
+      vinculo = "desvinculado";
+    } catch (e) {
+      if (vinculo !== "desvinculado") vinculo = "erro";
+      avisos.push(`Rastreame desvincular: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  } else if (!rastreavelKey) {
+    avisos.push("veículo sem rastreameRastreavelKey — desvínculo Rastreame não aplicado");
+  } else if (!motoristaKey) {
+    avisos.push("cliente sem rastreameMotoristaKey — desvínculo Rastreame não aplicado");
+  }
+
+  if (outroAtivo) {
+    return {
+      cliente: atualizado,
+      local: "sem_alteracao",
+      rastreame: "ignorado",
+      vinculo,
+      aviso: avisos.length
+        ? `cliente tem outro contrato ativo — mantido ativo; ${avisos.join("; ")}`
+        : "cliente tem outro contrato ativo — mantido ativo",
+    };
+  }
+
+  if (atualizado.ativo === false) {
+    return {
+      cliente: atualizado,
+      local: "sem_alteracao",
+      rastreame: "ignorado",
+      vinculo,
+      aviso: avisos.length ? avisos.join("; ") : undefined,
+    };
+  }
+
+  atualizado = editarCliente(atualizado.id, { ativo: false }) ?? atualizado;
+  let rastreame: StatusClienteResult["rastreame"] = "ignorado";
+
+  if (motoristaKey) {
+    try {
+      await inativarMotorista(motoristaKey);
       rastreame = "inativado";
     } catch (e) {
       rastreame = "erro";
-      aviso = `Rastreame não atualizado (${e instanceof Error ? e.message : String(e)})`;
+      avisos.push(`Rastreame inativar motorista: ${e instanceof Error ? e.message : String(e)}`);
     }
-  } else {
-    aviso = "cliente sem vínculo Rastreame (rastreameMotoristaKey)";
   }
-  return { cliente: atualizado, local: "inativado", rastreame, aviso };
+
+  return {
+    cliente: atualizado,
+    local: "inativado",
+    rastreame,
+    vinculo,
+    aviso: avisos.length ? avisos.join("; ") : undefined,
+  };
 }

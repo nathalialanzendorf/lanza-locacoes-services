@@ -7,6 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  loadClienteDespesasDb,
+  saveClienteDespesasDb,
   sincronizarClienteDespesa,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
@@ -40,13 +42,13 @@ const fmtSP = new Intl.DateTimeFormat("pt-BR", {
   hour12: false,
 });
 
-/** Devolve { br: "DD/MM/AAAA HH:mm", traco: "dd-mm-aaaa HH:mm" } a partir da passagem. */
-function formatarDatas(p: PassagemPedagio): { br: string; traco: string } | null {
+/** Devolve `DD/MM/AAAA HH:mm` a partir da passagem. */
+function formatarDataHoraBr(p: PassagemPedagio): string | null {
   const raw = p.dataHoraRaw.trim();
   const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2}))?/);
   if (m) {
     const [, dd, mm, yyyy, hh = "00", mi = "00"] = m;
-    return { br: `${dd}/${mm}/${yyyy} ${hh}:${mi}`, traco: `${dd}-${mm}-${yyyy} ${hh}:${mi}` };
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
   }
   if (p.dataHoraIso) {
     const parts = fmtSP.formatToParts(new Date(p.dataHoraIso));
@@ -56,27 +58,81 @@ function formatarDatas(p: PassagemPedagio): { br: string; traco: string } | null
     const yyyy = get("year");
     const hh = get("hour");
     const mi = get("minute");
-    return { br: `${dd}/${mm}/${yyyy} ${hh}:${mi}`, traco: `${dd}-${mm}-${yyyy} ${hh}:${mi}` };
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
   }
   return null;
+}
+
+/** Título/cobrança do pedágio — espelho do campo `info` no Rastreame. */
+export function descricaoPedagio(dataHoraBr: string, emAberto = true): string {
+  const base = `Pagamento pedágio ${dataHoraBr}`;
+  return emAberto ? `ATRASADO ${base}` : base;
+}
+
+const RE_PEDAGIO_LEGADO =
+  /^(ATRASADO\s+)?Pagamento pedágio (\d{2})-(\d{2})-(\d{4}) (\d{2}:\d{2})$/i;
+
+/** Converte título legado `dd-mm-aaaa` → `dd/mm/aaaa`. Retorna null se já está correto. */
+export function normalizarDescricaoPedagioLegado(
+  descricao: string,
+  paga?: boolean,
+): string | null {
+  const m = descricao.trim().match(RE_PEDAGIO_LEGADO);
+  if (!m) return null;
+  const [, atrasadoPrefix, dd, mm, yyyy, hm] = m;
+  const br = `${dd}/${mm}/${yyyy} ${hm}`;
+  if (paga === true) return descricaoPedagio(br, false);
+  if (atrasadoPrefix) return descricaoPedagio(br, true);
+  return descricaoPedagio(br, false);
+}
+
+export function isDescricaoPedagio(descricao: string): boolean {
+  return /Pagamento pedágio/i.test(descricao);
+}
+
+/** Normaliza títulos legados (`dd-mm-aaaa`) no database local. */
+export function normalizarTitulosPedagioNoDb(opts?: {
+  dryRun?: boolean;
+}): { atualizados: number; exemplos: string[] } {
+  const db = loadClienteDespesasDb();
+  let atualizados = 0;
+  const exemplos: string[] = [];
+
+  for (const m of db.clienteDespesas) {
+    if (m.ativo === false) continue;
+    if ((m.categoria ?? "") !== "Pedágio" && !isDescricaoPedagio(m.descricao ?? "")) continue;
+    const nova = normalizarDescricaoPedagioLegado(m.descricao ?? "", m.paga);
+    if (!nova || nova === m.descricao) continue;
+    if (exemplos.length < 3) {
+      exemplos.push(`${m.autoInfracao}: ${m.descricao} → ${nova}`);
+    }
+    if (!opts?.dryRun) {
+      m.descricao = nova;
+      m.atualizadoEm = new Date().toISOString();
+    }
+    atualizados++;
+  }
+
+  if (!opts?.dryRun && atualizados > 0) saveClienteDespesasDb(db);
+  return { atualizados, exemplos };
 }
 
 function localPassagem(p: PassagemPedagio): string {
   return [p.praca, p.rodovia].filter(Boolean).join(" - ");
 }
 
-function aplicarPassagem(
+async function aplicarPassagem(
   placa: string,
   p: PassagemPedagio,
   dryRun: boolean,
-): { result: SincronizarClienteDespesaResult | null; aviso: string | null } {
-  const datas = formatarDatas(p);
-  if (!datas) {
+): Promise<{ result: SincronizarClienteDespesaResult | null; aviso: string | null }> {
+  const dataHoraBr = formatarDataHoraBr(p);
+  if (!dataHoraBr) {
     return { result: null, aviso: `passagem ${p.id}: data inválida (${p.dataHoraRaw})` };
   }
 
   const autoInfracao = `PED-${p.id}`;
-  const descricao = `ATRASADO Pagamento pedágio ${datas.traco}`;
+  const descricao = descricaoPedagio(dataHoraBr, true);
 
   if (dryRun) {
     return {
@@ -88,7 +144,7 @@ function aplicarPassagem(
           autoInfracao,
           descricao,
           localInfracao: localPassagem(p),
-          dataAutuacao: datas.br,
+          dataAutuacao: dataHoraBr,
           valorMulta: p.valor,
           situacao: "Em aberto",
           limiteDefesa: "",
@@ -107,11 +163,11 @@ function aplicarPassagem(
     };
   }
 
-  const r = sincronizarClienteDespesa(placa, {
+  const r = await sincronizarClienteDespesa(placa, {
     autoInfracao,
     descricao,
     localInfracao: localPassagem(p),
-    dataAutuacao: datas.br,
+    dataAutuacao: dataHoraBr,
     valorMulta: p.valor,
     situacao: "Em aberto",
     limiteDefesa: "",
@@ -123,11 +179,11 @@ function aplicarPassagem(
 }
 
 /** Processa passagens já obtidas (online ou offline) gravando as em aberto. */
-export function processarPassagens(
+export async function processarPassagens(
   placa: string,
   passagens: PassagemPedagio[],
   opts?: { dryRun?: boolean },
-): SyncPedagiosResult {
+): Promise<SyncPedagiosResult> {
   const result: SyncPedagiosResult = {
     placa: formatPlacaHyphen(placa),
     novos: 0,
@@ -138,7 +194,7 @@ export function processarPassagens(
   };
 
   for (const p of filtrarStatus(passagens, "aberto")) {
-    const { result: r, aviso } = aplicarPassagem(placa, p, opts?.dryRun === true);
+    const { result: r, aviso } = await aplicarPassagem(placa, p, opts?.dryRun === true);
     if (!r) {
       result.ignorados++;
       if (aviso) result.avisos.push(aviso);
@@ -224,11 +280,11 @@ function agruparPorPlaca(
 }
 
 /** Lê um JSON capturado (DevTools) e processa UMA placa, sem chamar a API. */
-export function processarPassagensJson(
+export async function processarPassagensJson(
   placa: string,
   jsonPath: string,
   opts?: { dryRun?: boolean },
-): SyncPedagiosResult {
+): Promise<SyncPedagiosResult> {
   const raw = JSON.parse(fs.readFileSync(path.resolve(jsonPath), "utf8"));
   const alvo = compactPlaca(placa);
   const passagens = extrairPassagens(raw).filter((p) => compactPlaca(p.placa) === alvo);
@@ -239,17 +295,19 @@ export function processarPassagensJson(
  * Lê um JSON capturado (resposta de `list-logado`, com várias placas) e processa
  * todas as placas ATIVAS da frota — sem chamar a API (não depende da sessão).
  */
-export function processarPassagensJsonLote(
+export async function processarPassagensJsonLote(
   jsonPath: string,
   opts?: { dryRun?: boolean; placa?: string },
-): SyncPedagiosResult[] {
+): Promise<SyncPedagiosResult[]> {
   const raw = JSON.parse(fs.readFileSync(path.resolve(jsonPath), "utf8"));
   const placas = loadPlacasParaSync(opts?.placa);
   const porPlaca = agruparPorPlaca(extrairPassagens(raw), placas);
-  return placas.map((placa) =>
-    processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
-      dryRun: opts?.dryRun,
-    }),
+  return Promise.all(
+    placas.map((placa) =>
+      processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
+        dryRun: opts?.dryRun,
+      }),
+    ),
   );
 }
 
@@ -326,9 +384,11 @@ export async function sincronizarPedagiosFrota(opts?: {
     }));
   }
 
-  return placas.map((placa) =>
-    processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
-      dryRun: opts?.dryRun,
-    }),
+  return Promise.all(
+    placas.map((placa) =>
+      processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
+        dryRun: opts?.dryRun,
+      }),
+    ),
   );
 }

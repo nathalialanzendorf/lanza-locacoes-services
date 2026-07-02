@@ -24,7 +24,7 @@ import {
   tituloInfracaoBase,
 } from "../src/lib/infracaoTitulo.js";
 
-function main(): void {
+async function main(): Promise<void> {
   const dry = process.argv.includes("--dry-run");
   const db = loadClienteDespesasDb();
 
@@ -48,7 +48,7 @@ function main(): void {
     console.log(
       `${r.autoInfracao.padEnd(12)} | ${r.veiculoId.padEnd(9)} | "${r.titulo ?? "(vazio)"}" -> "${titulo}"`,
     );
-    if (!dry) editarClienteDespesa(r.id, { titulo });
+    if (!dry) await editarClienteDespesa(r.id, { titulo }, { syncRastreame: false });
   }
 
   console.log(
@@ -57,4 +57,7 @@ function main(): void {
   if (dry) console.log("(dry-run — nada gravado)");
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -13,7 +13,11 @@ import {
 } from "../lib/locacoesDb.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
 
-const HELP = `locacoes <add|listar|excluir> [opções]
+const HELP = `locacoes | movimentacao — skill cadastro-movimentacao (database/locacoes.json)
+
+locacoes <add|listar|excluir|sugerir> [opções]
+
+  Movimentação: locado (cliente com veículo), manutencao (sem veículo), reserva (substituto).
 
   add       Cadastra/atualiza um período de uso de um veículo.
             --placa PLACA              (obrigatório)

@@ -9,11 +9,15 @@ import {
   encerrarContratoDb,
   excluirContrato,
   registrarContrato,
+  validarModoContrato,
+  type ModoContratoCli,
   type MotivoEncerramento,
 } from "../lib/contratosDb.js";
 import { gerar, type GerarContratoDados } from "../lib/docxGerar.js";
 import { montarDadosContratoFromDb } from "../lib/montarDadosContrato.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
+
+export type AcaoContrato = "criar" | "renovar" | "encerrar";
 
 function absRepo(p: string | undefined): string | undefined {
   if (!p) return p;
@@ -163,10 +167,10 @@ function parseGerarArgs(argv: string[]): GerarFlags {
   return flags;
 }
 
-function printGerarUsage(): void {
-  console.error(`Uso — gerar Word/PDF e registrar em contratos.json:
-  cadastro-contrato gerar <dados.json>
-  cadastro-contrato gerar --placa PLACA --cpf CPF --semana VALOR --caucao VALOR [opções]
+function printGerarUsage(acao: ModoContratoCli): void {
+  console.error(`Uso — ${acao} Word/PDF e registrar em contratos.json:
+  cadastro-contrato ${acao} <dados.json>
+  cadastro-contrato ${acao} --placa PLACA --cpf CPF --semana VALOR --caucao VALOR [opções]
 
 Opções:
   --cliente "Nome"       Busca por nome (alternativa a --cpf)
@@ -188,12 +192,20 @@ function isDbMode(f: GerarFlags): boolean {
   return Boolean(f.placa || f.cpf || f.cliente || f.semana != null || f.caucao != null);
 }
 
-async function cmdGerar(argv: string[]): Promise<void> {
+function resolverModoJson(dados: GerarContratoDados): ModoContratoCli | null {
+  const raw = (dados as GerarContratoDados & { acao?: string; modo?: string }).acao
+    ?? (dados as GerarContratoDados & { acao?: string; modo?: string }).modo;
+  const t = String(raw ?? "").trim().toLowerCase();
+  if (t === "criar" || t === "renovar") return t;
+  return null;
+}
+
+async function cmdCriarOuRenovar(modo: ModoContratoCli, argv: string[]): Promise<void> {
   const f = parseGerarArgs(argv);
 
   if (f.jsonPath && isDbMode(f)) {
     console.error("[erro] Use <dados.json> OU flags --placa/--cpf, não ambos.");
-    printGerarUsage();
+    printGerarUsage(modo);
     process.exit(1);
   }
 
@@ -202,6 +214,11 @@ async function cmdGerar(argv: string[]): Promise<void> {
   if (f.jsonPath) {
     dados = JSON.parse(fs.readFileSync(f.jsonPath, "utf8")) as GerarContratoDados;
     normalizePaths(dados);
+    const modoJson = resolverModoJson(dados);
+    if (modoJson && modoJson !== modo) {
+      console.error(`[erro] JSON indica modo "${modoJson}" mas o comando é "${modo}".`);
+      process.exit(1);
+    }
   } else if (f.placa && f.semana != null && f.caucao != null && (f.cpf || f.cliente)) {
     dados = montarDadosContratoFromDb({
       placa: f.placa,
@@ -221,9 +238,24 @@ async function cmdGerar(argv: string[]): Promise<void> {
     });
     normalizePaths(dados);
   } else {
-    printGerarUsage();
+    printGerarUsage(modo);
     process.exit(1);
   }
+
+  const placa = dados.veiculo?.placa ?? f.placa;
+  const clienteNome = dados.cliente?.nome ?? f.cliente ?? "";
+  const cpf = dados.cliente?.cpf ?? f.cpf ?? null;
+
+  if (!placa) {
+    console.error("[erro] Placa do veículo não informada.");
+    process.exit(1);
+  }
+
+  const { proximaVersao } = validarModoContrato(modo, {
+    placa,
+    cpf,
+    clienteNome,
+  });
 
   if (f.outJson) {
     fs.writeFileSync(path.resolve(f.outJson), JSON.stringify(dados, null, 2), "utf8");
@@ -232,9 +264,17 @@ async function cmdGerar(argv: string[]): Promise<void> {
   }
 
   if (f.dryRun) {
-    console.log(JSON.stringify(dados, null, 2));
+    console.log(
+      JSON.stringify({ acao: modo, proximaVersao, ...dados }, null, 2),
+    );
     return;
   }
+
+  console.log(
+    modo === "renovar"
+      ? `Renovação: próxima versão v${proximaVersao}`
+      : `Novo contrato: versão v${proximaVersao}`,
+  );
 
   const r = gerar(dados);
   printGerarResult(r);
@@ -250,14 +290,18 @@ async function cmdGerar(argv: string[]): Promise<void> {
   }
 
   if (reg) {
-    // Cliente com contrato novo deve estar ativo (local + Rastreame): reativa se estava inativo.
     const res = await ativarClienteDoContrato({
       clienteId: reg.clienteId,
       cpf: reg.cpf,
       nome: reg.clienteNome,
+      placa: reg.placa,
+      veiculoId: reg.veiculoId,
     });
     if (res.local === "ativado") {
       console.log(`Cliente reativado: ${reg.clienteNome} | local + Rastreame (${res.rastreame})`);
+    }
+    if (res.vinculo === "vinculado") {
+      console.log(`Vínculo Rastreame: motorista ↔ veículo ${reg.placa}`);
     }
     if (res.aviso) console.error(`[aviso] ${res.aviso}`);
   }
@@ -323,7 +367,6 @@ Efetiva encerramento em database/contratos.json (use relatorio-encerramento-cont
     process.exit(1);
   }
 
-  // "troca" não é quebra por padrão (novo contrato com outro veículo); demais motivos: quebra.
   const quebraFinal = quebra ?? (motivo === "troca" ? false : true);
 
   const r = encerrarContratoDb(pasta, {
@@ -335,19 +378,25 @@ Efetiva encerramento em database/contratos.json (use relatorio-encerramento-cont
   console.log(`  Data: ${r.dataEncerramento} | Motivo: ${r.motivoEncerramento} | Quebra: ${r.quebraContrato ? "sim" : "não"}`);
   console.log(`  id: ${r.id}`);
 
-  // Ao encerrar, inativa o cliente (local + Rastreame) — exceto se tiver outro contrato ativo.
   const res = await desativarClienteDoContrato({
     clienteId: r.clienteId,
     cpf: r.cpf,
     nome: r.clienteNome,
+    placa: r.placa,
+    veiculoId: r.veiculoId,
     contratoId: r.id,
   });
+  if (res.vinculo === "desvinculado") {
+    console.log(`Vínculo Rastreame removido: motorista ↔ veículo ${r.placa}`);
+  }
   if (res.local === "inativado") {
     console.log(`Cliente inativado: ${r.clienteNome} | local + Rastreame (${res.rastreame})`);
   } else if (res.aviso) {
     console.log(`Cliente mantido ativo: ${res.aviso}`);
   }
-  if (res.aviso && res.rastreame === "erro") console.error(`[aviso] ${res.aviso}`);
+  if (res.aviso && (res.rastreame === "erro" || res.vinculo === "erro")) {
+    console.error(`[aviso] ${res.aviso}`);
+  }
 }
 
 function cmdExcluir(argv: string[]): void {
@@ -372,52 +421,80 @@ Remove o registro de database/contratos.json (não apaga a pasta Word).
   console.log(`Excluído: ${r.clienteNome} | ${r.placa} | v${r.versao} | id ${r.id}`);
 }
 
-function printUsage(): void {
-  console.error(`Uso: cadastro-contrato <subcomando> [args...]
+function normalizeAcao(raw: string | null): AcaoContrato | "sincronizar" | "excluir" | "help" | null {
+  if (!raw) return null;
+  const t = raw.toLowerCase();
+  if (t === "gerar") return "criar";
+  if (t === "criar" || t === "renovar" || t === "encerrar") return t;
+  if (t === "sincronizar" || t === "excluir") return t;
+  if (t === "help" || t === "-h" || t === "--help") return "help";
+  return null;
+}
 
-Subcomandos:
-  gerar          Gera .docx/.pdf e registra contrato (padrão se omitido)
-  sincronizar    Importa/atualiza contratos.json a partir da pasta
+function printUsage(): void {
+  console.error(`Uso: cadastro-contrato <acao> [args...]
+
+Ações principais (obrigatório informar uma):
+  criar          Primeiro contrato do par cliente + veículo (v1)
+  renovar        Nova versão após encerramento anterior (v2, v3…)
   encerrar       Efetiva encerramento (data, motivo, quebra)
+
+Auxiliares:
+  sincronizar    Re-lê pasta Word → contratos.json
   excluir        Remove registro de contratos.json
 
-Aliases legados: gerar-contrato, registrar-contrato, registrar-encerramento-contrato
+Aliases: gerar → criar | registrar-contrato → sincronizar
 `);
 }
 
 export async function main(argv: string[]): Promise<void> {
-  const sub = argv[0] && !argv[0].startsWith("-") ? argv[0].toLowerCase() : null;
-  const rest = sub ? argv.slice(1) : argv;
+  let acaoRaw = argv[0] && !argv[0].startsWith("-") ? argv[0] : null;
+  let rest = acaoRaw ? argv.slice(1) : argv;
 
-  switch (sub) {
-    case "gerar":
-      await cmdGerar(rest);
+  if (!acaoRaw && rest[0]?.endsWith(".json")) {
+    console.error(
+      "[erro] Informe a ação: cadastro-contrato criar|renovar|encerrar …\n" +
+        "  Ex.: cadastro-contrato criar relatorios/_dados_contrato_tmp.json",
+    );
+    printUsage();
+    process.exit(1);
+  }
+
+  if (!acaoRaw && rest[0]?.startsWith("--")) {
+    console.error("[erro] Informe a ação antes das flags: cadastro-contrato criar --placa …");
+    printUsage();
+    process.exit(1);
+  }
+
+  const acao = normalizeAcao(acaoRaw);
+
+  switch (acao) {
+    case "criar":
+      await cmdCriarOuRenovar("criar", rest);
       break;
-    case "sincronizar":
-      cmdSincronizar(rest);
+    case "renovar":
+      await cmdCriarOuRenovar("renovar", rest);
       break;
     case "encerrar":
       await cmdEncerrar(rest);
+      break;
+    case "sincronizar":
+      cmdSincronizar(rest);
       break;
     case "excluir":
       cmdExcluir(rest);
       break;
     case "help":
-    case "-h":
-    case "--help":
       printUsage();
-      printGerarUsage();
+      printGerarUsage("criar");
       break;
     case null:
-      await cmdGerar(argv);
+      printUsage();
+      process.exit(1);
       break;
     default:
-      if (sub.endsWith(".json") || sub.startsWith("--")) {
-        await cmdGerar(argv);
-      } else {
-        console.error(`Subcomando desconhecido: ${sub}`);
-        printUsage();
-        process.exit(1);
-      }
+      console.error(`Ação desconhecida: ${acaoRaw}. Use criar, renovar ou encerrar.`);
+      printUsage();
+      process.exit(1);
   }
 }

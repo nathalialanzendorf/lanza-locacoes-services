@@ -1,7 +1,9 @@
 /**
  * Converte motorista Rastreame → registro de database/clientes.json.
  *
- * REGRA: o campo `observacao` do Rastreame NÃO é usado (nem lido nem escrito).
+ * REGRA: o campo `observacao` do Rastreame NÃO é lido no pull — a database local
+ * é fonte da verdade dos dados extras da CNH. No push, `observacao` é escrita
+ * (ver `buildMotoristaObservacao` em motorista.ts).
  * Só são importados os campos NATIVOS do motorista:
  *   - nome, cpf, cnh (número), categoriaCnh.key, vencimentoCnh (ISO),
  *     contato.{celular,fixo,email}

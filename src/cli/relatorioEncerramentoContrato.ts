@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   calcularEncerramentoContrato,
   formatarEncerramentoTexto,
+  formatarEncerramentoWhatsApp,
   type EncerramentoInput,
 } from "../lib/encerrarContrato.js";
 import { salvarRelatorioEncerramento } from "../lib/relatorioEncerramentoArquivo.js";
@@ -57,15 +58,17 @@ export function main(argv: string[]): void {
       pastaContrato: pasta,
       dataEncerramento: encerramento,
       incluirTodasMultasPlaca: incluirTodasMultas,
+      fonteDebitos: "abertos-db",
+      incluirInfracoesCliente: true,
     };
   } else {
     console.error(`Uso:
   relatorio-encerramento-contrato <pasta-contrato> --encerramento DD/MM/AAAA [opções]
   relatorio-encerramento-contrato <entrada.json> [opções]
 
-Grava automaticamente em relatorios/_tmp/quebra-contrato/:
-  quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.txt   (documento p/ WhatsApp)
-  quebra-contrato-{placa}-{cliente}-{DD-MM-AAAA}.json  (dados p/ canvas)
+Grava automaticamente em relatorios/_tmp/encerramento-contrato/:
+  encerramento-contrato-{placa}-{cliente}-{DD-MM-AAAA}.txt   (WhatsApp p/ locatário)
+  encerramento-contrato-{placa}-{cliente}-{DD-MM-AAAA}.json  (dados p/ canvas)
 
 Opções:
   --incluir-todas-infracoes-placa
@@ -79,11 +82,16 @@ Apenas calcula o acerto. Para efetivar: cadastro-contrato encerrar ...
   }
 
   const result = calcularEncerramentoContrato(input);
-  const texto = formatarEncerramentoTexto(result);
-  console.log(texto);
+  const textoWhatsApp = formatarEncerramentoWhatsApp(result);
+  console.log(textoWhatsApp);
+  if (result.avisos.length) {
+    console.log("");
+    console.log("⚠️ *Avisos (operador — não enviar ao locatário)*");
+    for (const a of result.avisos) console.log(`• ${a}`);
+  }
 
   if (!noSalvar) {
-    const saved = salvarRelatorioEncerramento(result, texto, {
+    const saved = salvarRelatorioEncerramento(result, textoWhatsApp, {
       outJson: outJson ?? undefined,
       outTxt: outTxt ?? undefined,
     });

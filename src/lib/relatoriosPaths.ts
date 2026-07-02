@@ -12,11 +12,17 @@ export const RELATORIOS_DIR = path.join(REPO_ROOT, "relatorios");
  */
 export const RELATORIOS_TMP_DIR = path.join(RELATORIOS_DIR, "_tmp");
 
-/** Quebra / acerto de encerramento de contrato (`quebra-contrato-*.txt`). */
-export const RELATORIOS_QUEBRA_CONTRATO_DIR = path.join(RELATORIOS_TMP_DIR, "quebra-contrato");
+/** Acerto de encerramento — `encerramento-contrato-*.txt` (WhatsApp) + `.json` (canvas). */
+export const RELATORIOS_ENCERRAMENTO_CONTRATO_DIR = path.join(
+  RELATORIOS_TMP_DIR,
+  "encerramento-contrato",
+);
 
-/** @deprecated use RELATORIOS_QUEBRA_CONTRATO_DIR */
-export const RELATORIOS_ENCERRAMENTO_DIR = RELATORIOS_QUEBRA_CONTRATO_DIR;
+/** @deprecated use RELATORIOS_ENCERRAMENTO_CONTRATO_DIR */
+export const RELATORIOS_QUEBRA_CONTRATO_DIR = RELATORIOS_ENCERRAMENTO_CONTRATO_DIR;
+
+/** @deprecated use RELATORIOS_ENCERRAMENTO_CONTRATO_DIR */
+export const RELATORIOS_ENCERRAMENTO_DIR = RELATORIOS_ENCERRAMENTO_CONTRATO_DIR;
 
 /** Saídas de sync DETRAN e rotinas em lote. */
 export const RELATORIOS_SYNC_DIR = path.join(RELATORIOS_TMP_DIR, "sync");
@@ -37,7 +43,7 @@ export function ensureRelatoriosDirs(): void {
   for (const dir of [
     RELATORIOS_DIR,
     RELATORIOS_TMP_DIR,
-    RELATORIOS_QUEBRA_CONTRATO_DIR,
+    RELATORIOS_ENCERRAMENTO_CONTRATO_DIR,
     RELATORIOS_SYNC_DIR,
     RELATORIOS_PRESTACAO_CONTAS_DIR,
     RELATORIOS_COBRANCAS_DIR,
