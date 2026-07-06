@@ -150,13 +150,20 @@ export async function fetchAllGastos(size = 100): Promise<GastoRecord[]> {
   return [...porId.values(), ...semId];
 }
 
-/** Exclusão lógica no Rastreame (ativo=false). */
-export async function inativarGasto(id: string | number): Promise<void> {
-  const g = await fetchGastoById(id);
-  const body = { ...g, ativo: false };
-  const r = await putGasto(id, body);
+/** Remove gasto no Rastreame (DELETE permanente). 404 = já removido. */
+export async function excluirGasto(id: string | number): Promise<void> {
+  const r = await fetchRastreameWith401Retry(`${GASTO_ROOT}/${id}`, {
+    method: "DELETE",
+    headers: await rastreameJsonHeaders(false),
+  });
+  if (r.status === 404 || r.status === 204) return;
   if (!r.ok) {
     const t = await r.text();
-    throw new Error(`gasto inativar ${id} HTTP ${r.status}: ${t.slice(0, 300)}`);
+    throw new Error(`gasto excluir ${id} HTTP ${r.status}: ${t.slice(0, 300)}`);
   }
+}
+
+/** @deprecated Preferir `excluirGasto` — exclusão local deve remover no Rastreame, não inativar. */
+export async function inativarGasto(id: string | number): Promise<void> {
+  return excluirGasto(id);
 }

@@ -131,7 +131,7 @@ function unwrapPayload(raw: unknown): DetranScConsultaVeiculo {
   return o as DetranScConsultaVeiculo;
 }
 
-/** Extrai IPVA e Licenciamento de `debitos` (despesas do parceiro/dono). */
+/** Extrai IPVA e Licenciamento de `debitos` → parceiro-despesas.json (nunca cliente-despesas). */
 export function extrairDespesasDetranSc(
   placa: string,
   raw: unknown,

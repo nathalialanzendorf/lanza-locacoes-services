@@ -4,13 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "lanza": "tsx src/run.ts",
-    "run": "tsx src/run.ts",
+    "lanza": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lanza.ps1",
+    "run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lanza.ps1",
     "typecheck": "tsc --noEmit",
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
   "devDependencies": {
+    "@types/pg": "^8.11.11",
     "@types/node": "^22.10.0",
     "@types/ws": "^8.18.1",
     "playwright-core": "^1.61.1",
@@ -19,8 +20,11 @@
     "ws": "^8.21.0"
   },
   "dependencies": {
+    "@aws-sdk/credential-providers": "^3.758.0",
+    "@aws-sdk/rds-signer": "^3.758.0",
     "@xmldom/xmldom": "^0.8.10",
     "pdf-parse": "^1.1.1",
+    "pg": "^8.14.1",
     "pizzip": "^3.1.7"
   }
 }

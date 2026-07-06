@@ -4,7 +4,7 @@ import { reconciliarCondutores } from "../lib/atribuirCondutores.js";
  * Concilia o condutor das infrações/pedágios pendentes pela vigência do contrato.
  * Uso: atribuir-condutores [--placa PLACA] [--dry-run] [--prazo-dias N]
  */
-export function main(argv: string[]): void {
+export async function main(argv: string[]): Promise<void> {
   const dryRun = argv.includes("--dry-run");
   const incluirPedagios = argv.includes("--incluir-pedagios");
   const placaIdx = argv.indexOf("--placa");
@@ -12,12 +12,13 @@ export function main(argv: string[]): void {
   const prazoIdx = argv.indexOf("--prazo-dias");
   const prazoDias = prazoIdx >= 0 ? Number(argv[prazoIdx + 1]) : undefined;
 
-  const r = reconciliarCondutores({ dryRun, placa, prazoDias, incluirPedagios });
+  const r = await reconciliarCondutores({ dryRun, placa, prazoDias, incluirPedagios });
 
   console.log(
     `Conciliação de condutores${dryRun ? " (DRY-RUN)" : ""}: ${r.total} pendentes` +
       ` | vinculados: ${r.vinculados} | não identificados: ${r.naoIdentificados}` +
-      ` | cliente faltando: ${r.clienteFaltando} | sem data: ${r.semData}`,
+      ` | cliente faltando: ${r.clienteFaltando} | sem data: ${r.semData}` +
+      ` | parceiro-despesas: ${r.parceiroEspelhados}`,
   );
 
   const ordem: Record<string, number> = {

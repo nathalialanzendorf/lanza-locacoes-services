@@ -430,3 +430,15 @@ export function marcarParceiroDespesaRastreameSync(
   reg.rastreameSyncEm = new Date().toISOString();
   saveParceiroDespesasDb(db);
 }
+
+/** Remove espelho parceiro (ex.: multa promovida a cliente-despesas após identificar locatário). */
+export function removerParceiroDespesaPorOrigem(origem: string): boolean {
+  const key = String(origem).trim();
+  if (!key) return false;
+  const db = loadParceiroDespesasDb();
+  const antes = db.parceiroDespesas.length;
+  db.parceiroDespesas = db.parceiroDespesas.filter((d) => d.origem !== key);
+  if (db.parceiroDespesas.length === antes) return false;
+  saveParceiroDespesasDb(db);
+  return true;
+}

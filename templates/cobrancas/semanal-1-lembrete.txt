@@ -1,7 +1,6 @@
 🔔 *Lembrete de pagamento* — {PLACA}
 
 Olá, {NOME}! Tudo bem? 😊
-
 Passando para lembrar que a *parcela semanal* da locação do seu {MARCA_MODELO} está disponível para pagamento.
 
 💳 *Formas de pagamento*
@@ -15,4 +14,4 @@ Banco: Caixa Econômica Federal
 Agência: 0410 • Operação: 1292
 Conta: 576661724-7
 
-Se você já efetuou o pagamento, é só desconsiderar esta mensagem. 🙌
+Se você já efetuou o pagamento, é só desconsiderar esta mensagem.

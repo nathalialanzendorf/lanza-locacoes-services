@@ -485,8 +485,8 @@ async function main(): Promise<void> {
     console.log("Chrome aberto. Login AUTOMÁTICO (experimental) em andamento...");
   } else {
     console.log("Chrome aberto. Na janela: basta fazer o LOGIN gov.br (o certificado A1");
-    console.log("é apresentado sozinho pela política). O Chrome fecha ao capturar o token.");
-    console.log("A frota é consultada depois via API (sem browser).");
+    console.log("é apresentado sozinho pela política). Depois o solver consulta a frota");
+    console.log("automaticamente (captcha Turnstile por placa) e fecha o navegador.");
   }
   console.log("Aguardando login (JWT) (timeout 8 min)...\n");
 
@@ -601,6 +601,7 @@ async function main(): Promise<void> {
     const token = await cdp.evaluate<string>(
       `window.__lanzaMint(${JSON.stringify(sitekey)}, ${JSON.stringify(DETRAN_SC_ACTION)})`,
       sid!,
+      45_000,
     );
     console.log(`TOKEN_OK len=${token.length}`);
     console.log('Use: npx tsx src/run.ts sync-infracoes --captcha "<TOKEN>" --placa <PLACA>');
@@ -611,11 +612,16 @@ async function main(): Promise<void> {
     return;
   }
 
-  await fecharNavegador();
-  fecharChrome = null;
-  console.log("Navegador fechado. Consultando frota via API…\n");
+  const resolvedSitekey =
+    process.env.DETRAN_SC_TURNSTILE_SITEKEY?.trim() || sitekey || sitekeyNet || DETRAN_SC_SITEKEY;
+  if (!sid) sid = sessaoPortal();
+  if (!sid) {
+    throw new Error("✗ Não encontrei aba do portal DETRAN SC para minerar captcha.");
+  }
 
-  // 3) Loop da frota (API Node — JWT já no env; captcha não exigido).
+  console.log("Consultando frota (captcha Turnstile fresco por placa)…\n");
+
+  // 3) Loop da frota — browser aberto; um token Turnstile por consulta.
   const veiculos = loadVeiculosParaSync(placaFiltro);
   console.log(
     `Frota SC ativa: ${veiculos.length} veículo(s)${placaFiltro ? ` (filtro ${placaFiltro})` : ""}${dryRun ? " | DRY-RUN" : ""}\n`,
@@ -628,7 +634,32 @@ async function main(): Promise<void> {
     const renavam = String(v.renavam).replace(/\D/g, "");
     const placaApi = compactPlaca(v.placa);
     try {
-      const payload = await consultarVeiculoDetranSc(v.placa, renavam);
+      await cdp.evaluate(DETRAN_BROWSER_HOOK, sid).catch(() => {});
+
+      const browserRes = await cdp.evaluate<{
+        status: string;
+        payload?: unknown;
+        message?: string;
+      }>(
+        `(async () => {
+          const captcha = await window.__lanzaMint(${JSON.stringify(resolvedSitekey)}, ${JSON.stringify(DETRAN_SC_ACTION)});
+          return await window.__lanzaConsulta({
+            placa: ${JSON.stringify(placaApi)},
+            renavam: ${JSON.stringify(renavam)},
+            captcha,
+            auth: ${JSON.stringify(cred.auth)},
+            empresa: ${JSON.stringify(cred.empresa ?? "")},
+            appVersion: ${JSON.stringify(cred.appVersion ?? "")},
+          });
+        })()`,
+        sid,
+        90_000,
+      );
+
+      if (browserRes?.status !== "ok" || !browserRes.payload) {
+        throw new Error(browserRes?.message ?? "consulta no browser falhou");
+      }
+      const payload = browserRes.payload;
 
       if (DEBUG) console.error(`[debug] ${v.placa} →`, JSON.stringify(payload).slice(0, 300));
 
@@ -638,12 +669,14 @@ async function main(): Promise<void> {
         "utf8",
       );
 
-      const inf = processarRespostaDetranSc(v.placa, payload, { dryRun, prazoDias: 90 });
-      const desp = processarDespesasDetranSc(v.placa, payload, { dryRun });
+      const inf = await processarRespostaDetranSc(v.placa, payload, { dryRun, prazoDias: 90, renavam });
+      const desp = await processarDespesasDetranSc(v.placa, payload, { dryRun });
       ok++;
       console.log(
-        `✓ ${v.placa} | INFRAÇÕES novos:${inf.novos} atu:${inf.atualizados} hist:${inf.historico}` +
+        `✓ ${v.placa} | INFRAÇÕES novos:${inf.infracoesNovos} atu:${inf.infracoesAtualizados} hist:${inf.historico}` +
           (inf.revisarManual ? ` revisar:${inf.revisarManual}` : "") +
+          ` | cliente novos:${inf.novos} atu:${inf.atualizados}` +
+          (inf.pdfsGravados ? ` | PDFs:${inf.pdfsGravados}` : "") +
           ` | IPVA/LIC novos:${desp.novos} atu:${desp.atualizados} ign:${desp.ignorados}`,
       );
       for (const a of inf.avisos) console.log(`    inf: ${a}`);
@@ -655,6 +688,8 @@ async function main(): Promise<void> {
     if (i < veiculos.length - 1) await sleep(1500);
   }
 
+  await fecharNavegador();
+  fecharChrome = null;
   console.log(`\nConcluído: ${ok} OK, ${falhas} falha(s). Payloads em ${OUT_DIR}`);
   } finally {
     if (fecharChrome) {

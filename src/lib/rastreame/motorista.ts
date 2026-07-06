@@ -277,19 +277,31 @@ function limitarObservacao(texto: string): string {
  */
 export function buildMotoristaObservacao(c: Cliente): string | null {
   const endereco = formatEnderecoObservacao(c.endereco as Record<string, unknown> | undefined);
+  const cnhFull = buildSecaoCnh(c, { extras: true });
+  const cnhBase = buildSecaoCnh(c, { extras: false });
 
   const variantes = [
-    montarObservacao(buildSecaoCnh(c, { extras: true }), endereco),
-    montarObservacao(buildSecaoCnh(c, { extras: false }), endereco),
-    montarObservacao(buildSecaoCnh(c, { extras: false }), null),
+    montarObservacao(cnhFull, endereco),
+    montarObservacao(cnhBase, endereco),
   ].filter((v): v is string => v != null);
 
   for (const v of variantes) {
     if (v.length <= OBSERVACAO_RASTREAME_MAX) return v;
   }
 
-  const ultima = variantes[variantes.length - 1];
-  return ultima ? limitarObservacao(ultima) : null;
+  // Prioriza ENDEREÇO: reduz linhas da CNH até caber (nunca descarta endereço por limite).
+  if (endereco) {
+    for (let n = cnhBase.length; n >= 0; n--) {
+      const v = montarObservacao(cnhBase.slice(0, n), endereco);
+      if (v && v.length <= OBSERVACAO_RASTREAME_MAX) return v;
+    }
+    const soEndereco = montarObservacao([], endereco);
+    if (soEndereco && soEndereco.length <= OBSERVACAO_RASTREAME_MAX) return soEndereco;
+  }
+
+  const soCnh = montarObservacao(cnhBase, null);
+  if (soCnh && soCnh.length <= OBSERVACAO_RASTREAME_MAX) return soCnh;
+  return soCnh ? limitarObservacao(soCnh) : null;
 }
 
 /**

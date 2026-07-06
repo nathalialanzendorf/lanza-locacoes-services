@@ -26,7 +26,9 @@ function printResumoRs(r: SyncDetranRsResult): void {
 
 function printResumo(r: SyncVeiculoResult): void {
   console.log(
-    `${r.placa} | novos: ${r.novos} | atualizados: ${r.atualizados} | sem alteração: ${r.semAlteracao} | histórico DETRAN: ${r.historico} | débitos parceiro ignorados: ${r.debitosIgnoradosProprietario}` +
+    `${r.placa} | infracoes novos:${r.infracoesNovos} atu:${r.infracoesAtualizados} | cliente novos:${r.novos} atu:${r.atualizados} | parceiro (sem locatário) novos:${r.parceiroNovos} atu:${r.parceiroAtualizados} | sem alteração: ${r.semAlteracao} | histórico DETRAN: ${r.historico} | ignorados (quitada sem data): ${r.ignorados} | IPVA/lic. (sync próprio): ${r.debitosIgnoradosProprietario}` +
+      (r.pdfsGravados ? ` | PDFs: ${r.pdfsGravados}` : "") +
+      (r.pdfsFalha ? ` | PDFs falha: ${r.pdfsFalha}` : "") +
       (r.revisarManual ? ` | ⚠ revisar manual: ${r.revisarManual}` : ""),
   );
   for (const a of r.avisos) console.log(`  aviso: ${a}`);
@@ -95,7 +97,13 @@ TLS interceptado nesta rede: defina DETRAN_SC_TLS_INSECURE=1 (ou RASTREAME_TLS_I
       process.exit(1);
     }
     const raw = JSON.parse(fs.readFileSync(path.resolve(jsonIn), "utf8"));
-    const r = processarRespostaDetranSc(placa, raw, { dryRun, prazoDias });
+    const veiculos = loadVeiculosParaSync(placa);
+    const v = veiculos[0]!;
+    const r = await processarRespostaDetranSc(placa, raw, {
+      dryRun,
+      prazoDias,
+      renavam: v.renavam,
+    });
     printResumo(r);
     printAuditoriaInfracoes(auditarInfracoesSemCondutor(placa));
     return;
@@ -111,6 +119,7 @@ TLS interceptado nesta rede: defina DETRAN_SC_TLS_INSECURE=1 (ou RASTREAME_TLS_I
     const r = await sincronizarMultasPorTicketDetranSc(v.placa, ticket, {
       dryRun,
       prazoDias,
+      renavam: v.renavam,
     });
     printResumo(r);
     printAuditoriaInfracoes(auditarInfracoesSemCondutor(v.placa));

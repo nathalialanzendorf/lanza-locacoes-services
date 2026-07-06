@@ -1,9 +1,6 @@
-import {
-  isClienteDespesaAtiva,
-  isInfracaoTransito,
-  loadClienteDespesasDb,
-} from "./clienteDespesasDb.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
+import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
+import { loadInfracoesDb } from "./infracoesDb.js";
 import { loadInicioLocacoesMap } from "./inicioLocacoes.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 
@@ -18,9 +15,9 @@ export type InfracaoSemCondutor = {
 };
 
 export type AuditoriaInfracoes = {
-  /** Infrações sem condutor, na vigência da locação (precisam de atribuição). */
+  /** Infrações sem locatário na autuação (espelho em parceiro-despesas). */
   semCondutor: InfracaoSemCondutor[];
-  /** Sem condutor e sem data de autuação (revisão manual). */
+  /** Sem data de autuação (revisão manual; espelho parceiro se cobrável). */
   semData: InfracaoSemCondutor[];
   /** Ignoradas por serem anteriores ao início das locações do veículo. */
   anterioresLocacao: number;
@@ -29,12 +26,12 @@ export type AuditoriaInfracoes = {
 };
 
 /**
- * Varre cliente-despesas.json e lista as infrações de trânsito SEM condutor.
- * Desconsidera as anteriores ao início das locações do veículo (campo
- * inicioLocacoes em veiculos.json).
+ * Varre infracoes.json (fonte canônica DETRAN) e lista infrações sem locatário
+ * na data da autuação. Desconsidera as anteriores ao início das locações do
+ * veículo (campo inicioLocacoes em veiculos.json).
  */
 export function auditarInfracoesSemCondutor(placaFiltro?: string): AuditoriaInfracoes {
-  const db = loadClienteDespesasDb();
+  const db = loadInfracoesDb();
   const inicioMap = loadInicioLocacoesMap();
   const filtro = placaFiltro ? compactPlaca(placaFiltro) : null;
 
@@ -43,16 +40,16 @@ export function auditarInfracoesSemCondutor(placaFiltro?: string): AuditoriaInfr
   let anterioresLocacao = 0;
   const placasSemInicio = new Set<string>();
 
-  for (const r of db.clienteDespesas ?? []) {
-    if (!isInfracaoTransito(r) || !isClienteDespesaAtiva(r)) continue;
+  for (const r of db.infracoes ?? []) {
+    if (r.ativo === false) continue;
+    if (infracaoNaoCobravelDetran(r)) continue;
     if (r.condutorId) continue;
-    // Quitadas no DETRAN não são cobráveis e confirmadas não precisam atribuição.
-    if (r.quitadaDetran === true || r.condutorConfirmado === true) continue;
+    if (!r.condutorNaoIdentificado && r.condutorConfirmado && r.condutorContrato) continue;
     const placaNorm = compactPlaca(r.veiculoId);
     if (filtro && placaNorm !== filtro) continue;
 
     const base: InfracaoSemCondutor = {
-      autoInfracao: r.autoInfracao,
+      autoInfracao: r.numeroAuto,
       veiculoId: formatPlacaHyphen(r.veiculoId),
       dataAutuacao: r.dataAutuacao || "(sem data)",
       valorMulta: Number(r.valorMulta) || 0,
@@ -61,20 +58,20 @@ export function auditarInfracoesSemCondutor(placaFiltro?: string): AuditoriaInfr
       motivo: "sem-condutor",
     };
 
-    const data = parseDataAutuacao(r.dataAutuacao);
-    if (!data) {
+    if (r.revisarManual || !parseDataAutuacao(r.dataAutuacao)) {
       semData.push({ ...base, motivo: "sem-data" });
       continue;
     }
 
+    const data = parseDataAutuacao(r.dataAutuacao)!;
     const inicio = inicioMap.get(placaNorm);
     if (inicio && data < inicio) {
       anterioresLocacao++;
-      continue; // anterior ao início das locações → não é do locatário
+      continue;
     }
     if (!inicio) placasSemInicio.add(formatPlacaHyphen(r.veiculoId));
 
-    semCondutor.push(base);
+    if (r.condutorNaoIdentificado) semCondutor.push(base);
   }
 
   semCondutor.sort(
@@ -96,8 +93,8 @@ export function auditarInfracoesSemCondutor(placaFiltro?: string): AuditoriaInfr
 export function printAuditoriaInfracoes(a: AuditoriaInfracoes): void {
   const total = a.semCondutor.reduce((s, x) => s + x.valorMulta, 0);
   console.log(
-    `\n── Varredura: infrações SEM condutor ──` +
-      `\n  a atribuir: ${a.semCondutor.length} (R$ ${total.toFixed(2)})` +
+    `\n── Varredura: infrações SEM locatário (parceiro-despesas) ──` +
+      `\n  sem contrato na autuação: ${a.semCondutor.length} (R$ ${total.toFixed(2)})` +
       ` | sem data (revisar): ${a.semData.length}` +
       ` | ignoradas (antes da locação): ${a.anterioresLocacao}`,
   );

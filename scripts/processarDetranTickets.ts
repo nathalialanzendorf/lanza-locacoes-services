@@ -67,6 +67,14 @@ function carregarMapaFrota(): Map<string, string> {
   return map;
 }
 
+function renavamDaPlaca(placa: string): string {
+  const raw = JSON.parse(fs.readFileSync(path.resolve("database/veiculos.json"), "utf8"));
+  const arr: any[] = Array.isArray(raw) ? raw : raw.veiculos ?? Object.values(raw);
+  const key = compactPlaca(placa);
+  const v = arr.find((x) => x?.placa && compactPlaca(x.placa) === key);
+  return v?.renavam ? String(v.renavam) : "";
+}
+
 function processarDespesasSalvas(): void {
   const frota = carregarMapaFrota();
   if (!fs.existsSync(OUT_DIR)) {
@@ -95,7 +103,7 @@ function extrairPayloads(raw: unknown): unknown[] {
   return arr.map((x) => (x && typeof x === "object" && "payload" in x ? (x as any).payload : x));
 }
 
-function processarDataFile(file: string): void {
+async function processarDataFile(file: string): Promise<void> {
   const raw = JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
   const payloads = extrairPayloads(raw);
   const frota = carregarMapaFrota();
@@ -111,7 +119,11 @@ function processarDataFile(file: string): void {
       continue;
     }
     fs.writeFileSync(path.join(OUT_DIR, `${compactPlaca(placaFrota)}.json`), JSON.stringify(payload, null, 2), "utf8");
-    const inf = processarRespostaDetranSc(placaFrota, payload, { dryRun, prazoDias: 90 });
+    const inf = await processarRespostaDetranSc(placaFrota, payload, {
+      dryRun,
+      prazoDias: 90,
+      renavam: renavamDaPlaca(placaFrota),
+    });
     const desp = processarDespesasDetranSc(placaFrota, payload, { dryRun });
     ok++;
     console.log(
@@ -131,7 +143,7 @@ async function main(): Promise<void> {
 
   const dataIdx = args.indexOf("--data");
   if (dataIdx >= 0 && args[dataIdx + 1]) {
-    processarDataFile(path.resolve(args[dataIdx + 1]!));
+    await processarDataFile(path.resolve(args[dataIdx + 1]!));
     return;
   }
 
@@ -165,7 +177,11 @@ async function main(): Promise<void> {
     const arq = path.join(OUT_DIR, `${compactPlaca(placaFrota)}.json`);
     fs.writeFileSync(arq, JSON.stringify(payload, null, 2), "utf8");
 
-    const inf = processarRespostaDetranSc(placaFrota, payload, { dryRun, prazoDias: 90 });
+    const inf = await processarRespostaDetranSc(placaFrota, payload, {
+      dryRun,
+      prazoDias: 90,
+      renavam: renavamDaPlaca(placaFrota),
+    });
     const desp = processarDespesasDetranSc(placaFrota, payload, { dryRun });
     okCount++;
     console.log(

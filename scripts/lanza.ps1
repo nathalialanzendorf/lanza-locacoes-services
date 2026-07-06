@@ -1,5 +1,7 @@
 # Wrapper da CLI Lanza — usa tsx local (mais rápido e estável que npx no Windows/Dropbox).
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'sync-user-env.ps1')
+Sync-UserEnvToProcess
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 $tsx = Join-Path $repoRoot 'node_modules\.bin\tsx.cmd'

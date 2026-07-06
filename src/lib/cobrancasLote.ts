@@ -27,6 +27,7 @@ import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import {
   calcularCobrancaSemanalAtraso,
   calcularResumoCobrancaSemanal,
+  filtrarVencimentosSemanalCobranca,
   formatCobrancaSemanalAtrasoMarkdown,
   inferirDiaEscalonamento,
   resolverDiaEscalonamentoSemanal,
@@ -37,12 +38,7 @@ import { compactPlaca } from "./placa.js";
 export type LoteCobrancaItem = {
   alvo: AlvoCobranca;
   resultados: ResultadoCobranca[];
-  semanalAtraso?: {
-    markdown: string;
-    payload: Record<string, unknown>;
-    totalGeral: number;
-    resumo?: ResumoCobrancaSemanal;
-  };
+  semanalAtraso?: SemanalAtrasoPacote;
   diaEscalonamento?: number | null;
   arquivos: string[];
   aviso?: string;
@@ -107,7 +103,7 @@ function tipoCobrancaWhatsApp(tipo: TipoCobrancaAction): TipoCobranca {
 
 function gerarWhatsAppAlvo(
   alvo: AlvoCobranca,
-  opts?: { dia?: number; nome?: string },
+  opts?: { dia?: number; nome?: string; valor?: number },
 ): ResultadoCobranca[] {
   const nome = opts?.nome ?? alvo.clienteNome ?? undefined;
   switch (alvo.tipo) {
@@ -116,7 +112,7 @@ function gerarWhatsAppAlvo(
       if (dia == null) {
         throw new Error("Dia de escalonamento não informado para pagamento semanal.");
       }
-      return [gerarSemanal(alvo.placa, dia, { nome })];
+      return [gerarSemanal(alvo.placa, dia, { nome, valor: opts?.valor })];
     }
     case "renegociacao":
       return [
@@ -138,15 +134,25 @@ function gerarWhatsAppAlvo(
   }
 }
 
+export type SemanalAtrasoPacote = {
+  markdown: string;
+  payload: Record<string, unknown>;
+  totalGeral: number;
+  resumo?: ResumoCobrancaSemanal;
+};
+
 function buildSemanalAtrasoAlvo(
   alvo: AlvoCobranca,
   dataPagamentoBr: string,
   diaEscalonamento?: number,
-): { markdown: string; payload: Record<string, unknown>; totalGeral: number; resumo?: ResumoCobrancaSemanal } | null {
+): SemanalAtrasoPacote | null {
   const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
   const valorSemanal = contrato?.valorSemanal ?? null;
   const valorDiaria = contrato?.valorDiaria ?? null;
-  const vencimentos = alvo.vencimentosBr ?? [];
+  const vencimentos = filtrarVencimentosSemanalCobranca(
+    alvo.vencimentosBr ?? [],
+    dataPagamentoBr,
+  );
 
   if (valorSemanal == null || valorDiaria == null || vencimentos.length === 0) {
     return null;
@@ -192,6 +198,35 @@ function buildSemanalAtrasoAlvo(
   };
 }
 
+/** Monta tabela semanal-atraso a partir de vencimentos (sidecar / escopo único). */
+export function buildSemanalAtrasoParaEscopo(
+  placa: string,
+  clienteId: string | null,
+  clienteNome: string | null,
+  vencimentosBr: string[],
+  dataPagamentoBr: string,
+  diaOverride?: number,
+): SemanalAtrasoPacote | null {
+  if (vencimentosBr.length === 0) return null;
+  const dia = resolverDiaEscalonamentoSemanal(
+    vencimentosBr,
+    dataPagamentoBr,
+    diaOverride,
+  );
+  return buildSemanalAtrasoAlvo(
+    {
+      tipo: "pagamento-semanal",
+      placa,
+      clienteId,
+      clienteNome,
+      despesas: [],
+      vencimentosBr,
+    },
+    dataPagamentoBr,
+    dia ?? undefined,
+  );
+}
+
 /** Lista alvos sem gerar arquivos. */
 export function listarResumoAlvos(
   tipo: TipoCobrancaAction,
@@ -228,7 +263,10 @@ export function executarLoteCobranca(
     };
 
     if (tipo === "pagamento-semanal") {
-      const vencimentos = alvo.vencimentosBr ?? [];
+      const vencimentos = filtrarVencimentosSemanalCobranca(
+        alvo.vencimentosBr ?? [],
+        dataPagamentoBr,
+      );
       const dia = resolverDiaEscalonamentoSemanal(
         vencimentos,
         dataPagamentoBr,
@@ -236,10 +274,25 @@ export function executarLoteCobranca(
       );
       item.diaEscalonamento = dia;
 
-      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr, dia ?? undefined);
+      const semanal = buildSemanalAtrasoAlvo(
+        { ...alvo, vencimentosBr: vencimentos },
+        dataPagamentoBr,
+        dia ?? undefined,
+      );
       if (!semanal) {
-        item.aviso =
-          "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de atraso.";
+        const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
+        if (
+          contrato?.valorSemanal == null ||
+          contrato?.valorDiaria == null
+        ) {
+          item.aviso =
+            "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de atraso.";
+        } else if (vencimentos.length === 0) {
+          item.aviso =
+            "Nenhuma parcela semanal vencida (D+1+) — sem cobrança.";
+        } else {
+          item.aviso = "Sem tabela de atraso.";
+        }
         ignorados++;
       } else {
         item.semanalAtraso = semanal;
@@ -255,7 +308,10 @@ export function executarLoteCobranca(
         if (item.diaEscalonamento == null) {
           item.resultados = [];
         } else {
-          item.resultados = gerarWhatsAppAlvo(alvo, { dia: item.diaEscalonamento });
+          item.resultados = gerarWhatsAppAlvo(alvo, {
+            dia: item.diaEscalonamento,
+            valor: item.semanalAtraso?.resumo?.totalReceber,
+          });
           mensagens += item.resultados.length;
         }
       } else {

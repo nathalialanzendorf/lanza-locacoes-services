@@ -1,0 +1,8 @@
+📋 *Despesas em aberto* — {PLACA}
+
+Olá, {NOME}!
+Segue a listagem das despesas referente à locação do seu {MARCA_MODELO} que segue em aberto:
+
+{LISTA}
+
+*Total em aberto: R$ {VALOR}*

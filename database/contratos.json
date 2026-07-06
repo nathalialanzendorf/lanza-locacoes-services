@@ -1,6 +1,6 @@
 {
   "descricao": "Contratos de locação (ativos e encerrados). id = uuid.",
-  "atualizadoEm": "2026-07-01",
+  "atualizadoEm": "2026-07-05",
   "schemaContrato": {
     "id": "uuid",
     "versao": "Número sequencial por par cliente + veículo (1, 2, 3 … — renovações)",
@@ -360,10 +360,10 @@
       "diaPagamentoTexto": "sextas -feiras",
       "valorSemanal": 800,
       "valorMensal": null,
-      "valorDiaria": 120,
+      "valorDiaria": 150,
       "valorCaucao": 1800,
       "cadastradoEm": "2026-06-28T16:58:46.967Z",
-      "atualizadoEm": "2026-06-28T17:20:05.243Z"
+      "atualizadoEm": "2026-07-05T19:27:00.000Z"
     },
     {
       "id": "cc2e7efc-bc51-4234-9f7e-f4dfa429b89a",
@@ -373,14 +373,14 @@
       "veiculoId": "RLA-1G81",
       "cliente": {
         "id": "30f48e6a-0213-4d33-9f39-3e84c4b4c747",
-        "nome": "CERES BEATRIZ GONZAGA PEREIRA",
+        "nome": "Ceres Beatriz Gonzaga Pereira",
         "cpf": "654.003.800-34",
         "rg": "1051879193",
         "telefone": null,
         "email": null,
         "cnh": {
           "categoria": "B",
-          "validade": "23/02/2030"
+          "validade": "23/02/3020"
         },
         "endereco": {
           "cep": "88715-000",
@@ -404,7 +404,7 @@
         "fipeValor": "R$ 63.644,00"
       },
       "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Baiano - PEUGEOT 2008 2020-2021\\20.06.2026 - Ceres Beatriz Gonzaga Pereira",
-      "clienteNome": "CERES BEATRIZ GONZAGA PEREIRA",
+      "clienteNome": "Ceres Beatriz Gonzaga Pereira",
       "placa": "RLA-1G81",
       "cpf": "654.003.800-34",
       "dataInicio": "20/06/2026",
@@ -423,7 +423,7 @@
       "valorDiaria": 170,
       "valorCaucao": 2000,
       "cadastradoEm": "2026-06-28T16:58:46.983Z",
-      "atualizadoEm": "2026-06-28T17:20:05.266Z"
+      "atualizadoEm": "2026-07-05T17:04:14.197Z"
     },
     {
       "id": "1abd1be1-9906-4adf-9175-6e333e03b663",
@@ -3948,66 +3948,6 @@
       "atualizadoEm": "2026-06-28T17:00:02.659Z"
     },
     {
-      "id": "f772286d-7f2d-416e-abdc-131e99b8d449",
-      "versao": 1,
-      "contratoAnteriorId": null,
-      "clienteId": "a56a4d8e-03d0-4600-b06e-31fab673299a",
-      "veiculoId": "IVP-8D76",
-      "cliente": {
-        "id": "a56a4d8e-03d0-4600-b06e-31fab673299a",
-        "nome": "Juliano Foizer Silveira",
-        "cpf": "120.357.249-29",
-        "rg": null,
-        "telefone": "(48) 99246-2259",
-        "email": null,
-        "cnh": {
-          "categoria": null,
-          "validade": "29/06/2031"
-        },
-        "endereco": {
-          "cep": "88820-092",
-          "logradouro": "Rua 15 de Novembro",
-          "numero": "398",
-          "complemento": "Ed. das Alamedas - Apto 103",
-          "bairro": "Centro",
-          "cidade": "Içara",
-          "uf": "SC"
-        }
-      },
-      "veiculo": {
-        "id": "e2af98ed-402d-4fa0-b8ec-31d4a10b4c26",
-        "placa": "IVP-8D76",
-        "marcaModelo": "HB20",
-        "fipeModelo": "HB20 Comfort Style 1.0 TB Flex 12V Mec.",
-        "anoModelo": "2014/2014",
-        "chassi": "9BHBG51CAEP279912",
-        "renavam": "01010485501",
-        "cor": "BRANCO",
-        "fipeValor": "R$ 47.483,00"
-      },
-      "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Z - Antigas locações\\Z Luiz - HYUNDAI HB20 2014-2014\\15.12.2025 - Juliano Foizer Silveira",
-      "clienteNome": "Juliano Foizer Silveira",
-      "placa": "IVP-8D76",
-      "cpf": "120.357.249-29",
-      "dataInicio": "15/12/2025",
-      "dataFimPrevista": "15/03/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
-      "prazoDias": 90,
-      "tipoContrato": "semanal",
-      "diaPagamentoSemana": "segunda",
-      "diaPagamentoMes": null,
-      "diaPagamentoTexto": "segundas -feiras",
-      "valorSemanal": 650,
-      "valorMensal": null,
-      "valorDiaria": 120,
-      "valorCaucao": 1500,
-      "cadastradoEm": "2026-06-28T16:58:48.140Z",
-      "atualizadoEm": "2026-06-28T17:00:02.688Z"
-    },
-    {
       "id": "fe39d49a-b699-46d3-987e-78fdcac594ad",
       "versao": 1,
       "contratoAnteriorId": null,
@@ -4926,10 +4866,130 @@
       "diaPagamentoTexto": "sábados",
       "valorSemanal": 800,
       "valorMensal": null,
-      "valorDiaria": 120,
+      "valorDiaria": 150,
       "valorCaucao": 1800,
       "cadastradoEm": "2026-06-28T17:05:00.793Z",
-      "atualizadoEm": "2026-06-28T17:20:05.444Z"
+      "atualizadoEm": "2026-07-05T18:26:00.000Z"
+    },
+    {
+      "id": "ab0269e0-b133-4cb6-bab6-de9ef36c48b9",
+      "versao": 1,
+      "contratoAnteriorId": null,
+      "clienteId": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
+      "veiculoId": "IWP-5G63",
+      "cliente": {
+        "id": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
+        "nome": "Waldemir Pereira de Oliveira Filho",
+        "cpf": "570.533.161-49",
+        "rg": "7007931",
+        "telefone": null,
+        "email": null,
+        "cnh": {
+          "categoria": "B",
+          "validade": "16/07/2030"
+        },
+        "endereco": {
+          "cep": "88735-000",
+          "logradouro": "Rodovia SC 370",
+          "numero": "S/N",
+          "complemento": "KM 197 - Edificio Gomes - Apto 202",
+          "bairro": "Termas do Gravatal",
+          "cidade": "Gravatal",
+          "uf": "SC"
+        }
+      },
+      "veiculo": {
+        "id": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+        "placa": "IWP-5G63",
+        "marcaModelo": "RENAULT/SANDERO 1.6 Flex",
+        "fipeModelo": "SANDERO Expression Hi-Power 1.6 8V 5p",
+        "anoModelo": "2015/2015",
+        "chassi": "93Y5SRD64FJ791444",
+        "renavam": "01052869600",
+        "cor": "BRANCO",
+        "fipeValor": "R$ 38.639,00"
+      },
+      "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2015-2015\\03.07.2026 - Waldemir Pereira De Oliveira Filho",
+      "clienteNome": "Waldemir Pereira de Oliveira Filho",
+      "placa": "IWP-5G63",
+      "cpf": "570.533.161-49",
+      "dataInicio": "03/07/2026",
+      "dataFimPrevista": "01/10/2026",
+      "dataEncerramento": "03/07/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
+      "prazoDias": 90,
+      "tipoContrato": "semanal",
+      "diaPagamentoSemana": "sabado",
+      "diaPagamentoMes": null,
+      "diaPagamentoTexto": "sábados",
+      "valorSemanal": 650,
+      "valorMensal": null,
+      "valorDiaria": 120,
+      "valorCaucao": 1500,
+      "cadastradoEm": "2026-07-03T21:30:02.899Z",
+      "atualizadoEm": "2026-07-03T21:34:56.933Z"
+    },
+    {
+      "id": "35d9dcd8-f4bb-4d5e-9b3e-3f68b57d8b5e",
+      "versao": 1,
+      "contratoAnteriorId": null,
+      "clienteId": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
+      "veiculoId": "MLW-7I09",
+      "cliente": {
+        "id": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
+        "nome": "Waldemir Pereira de Oliveira Filho",
+        "cpf": "570.533.161-49",
+        "rg": "7007931",
+        "telefone": null,
+        "email": null,
+        "cnh": {
+          "categoria": "B",
+          "validade": "16/07/2030"
+        },
+        "endereco": {
+          "cep": "88735-000",
+          "logradouro": "Rodovia SC 370",
+          "numero": "S/N",
+          "complemento": "KM 197 - Edificio Gomes - Apto 202",
+          "bairro": "Termas do Gravatal",
+          "cidade": "Gravatal",
+          "uf": "SC"
+        }
+      },
+      "veiculo": {
+        "id": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
+        "placa": "MLW-7I09",
+        "marcaModelo": "HYUNDAI/HB20 1.0M COMFOR",
+        "fipeModelo": "HB20 Comf./C.Plus/C.Style 1.0 Flex 12V",
+        "anoModelo": "2014/2015",
+        "chassi": "9BHBG51CAFP366988",
+        "renavam": "01029186780",
+        "cor": "BRANCO",
+        "fipeValor": "R$ 44.531,00"
+      },
+      "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\03.07.2026 - Waldemir Pereira De Oliveira Filho",
+      "clienteNome": "Waldemir Pereira de Oliveira Filho",
+      "placa": "MLW-7I09",
+      "cpf": "570.533.161-49",
+      "dataInicio": "03/07/2026",
+      "dataFimPrevista": "01/10/2026",
+      "dataEncerramento": null,
+      "quebraContrato": false,
+      "motivoEncerramento": null,
+      "status": "ativo",
+      "prazoDias": 90,
+      "tipoContrato": "semanal",
+      "diaPagamentoSemana": "sabado",
+      "diaPagamentoMes": null,
+      "diaPagamentoTexto": "sábados",
+      "valorSemanal": 650,
+      "valorMensal": null,
+      "valorDiaria": 120,
+      "valorCaucao": 1500,
+      "cadastradoEm": "2026-07-03T21:36:13.467Z",
+      "atualizadoEm": "2026-07-03T21:38:51.103Z"
     }
   ]
 }

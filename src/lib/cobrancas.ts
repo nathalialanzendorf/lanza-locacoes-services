@@ -4,13 +4,18 @@ import path from "node:path";
 import { REPO_ROOT } from "./repoRoot.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import {
+  isInfracaoSemDataAutuacao,
   loadClienteDespesasDb,
-  isInfracaoTransito,
-  isClienteDespesaAtiva,
-  parseRastreameIdFromAuto,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
+import { compararDataBrAsc } from "./contratoExtrair.js";
+import {
+  infracaoIncluirListagemRelatorio,
+  rotuloInfracaoCobranca,
+  stripAtrasado,
+  tituloInfracaoBase,
+} from "./infracaoTitulo.js";
 import { RELATORIOS_COBRANCAS_DIR } from "./relatoriosPaths.js";
 
 /** Pasta com os modelos de mensagem (um arquivo .txt por cobrança). */
@@ -40,6 +45,8 @@ const TEMPLATE_PEDAGIO = "pedagio.txt";
 const TEMPLATE_MULTA = "multa.txt";
 const TEMPLATE_RENEGOCIACAO = "renegociacao.txt";
 const TEMPLATE_MANUTENCAO = "manutencao.txt";
+const TEMPLATE_DESPESAS_ABERTO = "despesas-em-aberto.txt";
+const TEMPLATE_SEMANAL_RESUMO_ATRASO_INTRO = "semanal-resumo-atraso-intro.txt";
 
 /** Dados estruturados da cobrança (alimenta o JSON sidecar e o canvas). */
 export type CobrancaDados = {
@@ -232,7 +239,7 @@ function slug(s: string): string {
 export function gerarSemanal(
   placaRaw: string,
   dia: number,
-  opts?: { nome?: string },
+  opts?: { nome?: string; valor?: number },
 ): ResultadoCobranca {
   const placa = formatPlacaHyphen(placaRaw);
   const v = buscarVeiculo(placa);
@@ -240,16 +247,27 @@ export function gerarSemanal(
   const nome = opts?.nome ? primeiroNome(opts.nome) : nomePorPlaca(placa);
   const nomeTpl = TEMPLATE_SEMANAL[dia] ?? TEMPLATE_SEMANAL[1]!;
   const tpl = lerTemplate(nomeTpl);
-  const texto = montarTexto(tpl, {
+  const vars: Record<string, string> = {
     PLACA: placa,
     NOME: nome,
     MARCA_MODELO: marcaModeloDe(v),
-  });
+  };
+  if (opts?.valor != null) {
+    vars.VALOR = brl(opts.valor);
+  }
+  const texto = montarTexto(tpl, vars);
   return {
     titulo: texto.split("\n")[0] ?? "",
     texto,
     nomeArquivo: `cobranca-semanal-dia${dia}-${slug(placa)}-${dataArquivo()}.txt`,
-    dados: { tipo: "semanal", placa, marcaModelo: marcaModeloDe(v), nome, dia },
+    dados: {
+      tipo: "semanal",
+      placa,
+      marcaModelo: marcaModeloDe(v),
+      nome,
+      dia,
+      valorTotal: opts?.valor,
+    },
   };
 }
 
@@ -351,7 +369,68 @@ export function gerarManutencao(
   );
 }
 
-function infracoesEmAberto(
+export type LinhaDespesaEmAbertoWhatsApp = {
+  rastreavel: string;
+  data: string;
+  descricao: string;
+  total: number;
+};
+
+/** Intro do bloco «Resumo do atraso» na mensagem pagamento-semanal (sem rodapé). */
+export function formatIntroResumoAtrasoSemanal(
+  placaRaw: string,
+  opts?: { nome?: string },
+): string {
+  const placa = formatPlacaHyphen(placaRaw);
+  const v = buscarVeiculo(placa);
+  const nome = opts?.nome ? primeiroNome(opts.nome) : nomePorPlaca(placa);
+  const tpl = lerTemplate(TEMPLATE_SEMANAL_RESUMO_ATRASO_INTRO);
+  return preencher(tpl, {
+    NOME: nome,
+    MARCA_MODELO: marcaModeloDe(v),
+  })
+    .replace(/Olá,\s*!/g, "Olá!")
+    .trimEnd();
+}
+
+/** Mensagem WhatsApp com todas as despesas em aberto do escopo. */
+export function gerarDespesasEmAberto(
+  placaRaw: string,
+  linhas: LinhaDespesaEmAbertoWhatsApp[],
+  opts?: { nome?: string; total?: number },
+): { titulo: string; texto: string } {
+  const placa = formatPlacaHyphen(placaRaw);
+  const nome = opts?.nome ? primeiroNome(opts.nome) : nomePorPlaca(placa);
+  const lista = linhas
+    .map((l) => {
+      const curto = l.rastreavel.split(" - ")[0]?.trim() ?? l.rastreavel;
+      const valor = Number(l.total).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+      return `• ${curto} · ${l.data} · ${l.descricao} · ${valor}`;
+    })
+    .join("\n");
+  const total =
+    typeof opts?.total === "number"
+      ? opts.total
+      : Math.round(linhas.reduce((s, l) => s + l.total, 0) * 100) / 100;
+  const v = buscarVeiculo(placa);
+  const tpl = lerTemplate(TEMPLATE_DESPESAS_ABERTO);
+  const texto = montarTexto(tpl, {
+    PLACA: placa,
+    NOME: nome,
+    MARCA_MODELO: marcaModeloDe(v),
+    LISTA: lista,
+    VALOR: brl(total),
+  });
+  return {
+    titulo: texto.split("\n")[0] ?? "",
+    texto,
+  };
+}
+
+function infracoesRelatorio(
   placa: string,
   filtroAuto?: string,
 ): ClienteDespesaRegistro[] {
@@ -359,15 +438,10 @@ function infracoesEmAberto(
   const alvo = compactPlaca(placa);
   const autoKey = filtroAuto?.trim().toUpperCase();
   return db.clienteDespesas.filter((d) => {
-    if (!isClienteDespesaAtiva(d)) return false;
-    if (!isInfracaoTransito(d)) return false;
-    if (d.paga === true) return false;
-    if (d.quitadaDetran === true) return false;
+    if (!infracaoIncluirListagemRelatorio(d)) return false;
+    if (isInfracaoSemDataAutuacao(d) && !d.condutorId) return false;
+    if (d.condutorNaoIdentificado === true) return false;
     if (compactPlaca(d.veiculoId) !== alvo) return false;
-    // Ignora lançamentos espelhados do Rastreame (cobrança em Gastos Gerais),
-    // que duplicam a multa do DETRAN sem local/hora.
-    if (d.origem === "rastreame") return false;
-    if (parseRastreameIdFromAuto(d.autoInfracao)) return false;
     if (autoKey && d.autoInfracao.trim().toUpperCase() !== autoKey) return false;
     return true;
   });
@@ -382,24 +456,29 @@ export function gerarMultas(
   const v = buscarVeiculo(placa);
   assertVeiculoLocacao(placa, v);
   const tpl = lerTemplate(TEMPLATE_MULTA);
-  let infracoes = infracoesEmAberto(placa, opts?.auto);
+  let infracoes = infracoesRelatorio(placa, opts?.auto);
   if (opts?.autos?.length) {
     const autos = new Set(opts.autos.map((a) => a.trim().toUpperCase()));
     infracoes = infracoes.filter((d) =>
       autos.has(d.autoInfracao.trim().toUpperCase()),
     );
   }
+  infracoes.sort((a, b) => compararDataBrAsc(a.dataAutuacao, b.dataAutuacao));
 
   return infracoes.map((d) => {
     const { data, hora } = splitDataHora(d.dataAutuacao);
     const nome = opts?.nome ? primeiroNome(opts.nome) : nomePorMulta(d);
     const local = extrairCidadeUf(d.localInfracao || "");
     const valor = Number(d.valorMulta) || 0;
+    const descricaoInfracao =
+      d.titulo?.trim() ||
+      tituloInfracaoBase(d.descricao ?? "", d.dataAutuacao ?? "") ||
+      "";
     const texto = montarTexto(tpl, {
       PLACA: placa,
       NOME: nome,
       MODELO_COR: modeloCorDe(v),
-      DESCRICAO: d.descricao || "",
+      DESCRICAO: stripAtrasado(descricaoInfracao),
       DATA: data,
       HORA: hora,
       LOCAL: local,

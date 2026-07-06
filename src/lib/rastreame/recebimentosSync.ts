@@ -20,7 +20,7 @@ import { REPO_ROOT } from "../repoRoot.js";
 import {
   fetchAllGastos,
   fetchGastoById,
-  inativarGasto,
+  excluirGasto,
   postGasto,
   putGasto,
   type GastoRecord,
@@ -115,8 +115,8 @@ export function categoriaFromInfo(info: string): string {
   if (/pagamento semanal|semanal/.test(t)) return "Locação semanal";
   if (/quebra|encerramento|rescis/.test(t)) return "Quebra contrato";
   if (/cau[cç][aã]o/.test(t)) return "Caução";
-  if (/manuten|avaria|porta|parachoque|reparo|[óo]leo|troca de [óo]leo/.test(t)) return "Manutenção";
-  if (/lava/.test(t)) return "Lavação";
+  if (/manuten|avaria|porta|parachoque|reparo|[óo]leo|troca de [óo]leo|pneu|franquia|lava/.test(t))
+    return "Manutenção";
   if (/estacion/.test(t)) return "Estacionamento";
   if (/ped[aá]gio/.test(t)) return "Pedágio";
   if (/negocia/.test(t)) return "Renegociação";
@@ -142,6 +142,8 @@ export function categoriaFromGasto(tipo: string | null, info: string): string {
     }
     case "PEDAGIO":
       return "Pedágio";
+    case "ALIMENTACAO":
+      return "Manutenção";
     case "OUTROS":
     default:
       return categoriaFromInfo(info);
@@ -365,7 +367,7 @@ async function pushOneRegistro(
     gastos: GastoRecord[];
     dryRun: boolean;
   },
-): Promise<"criado" | "atualizado" | "inativado" | "ignorado" | "erro"> {
+): Promise<"criado" | "atualizado" | "excluido" | "ignorado" | "erro"> {
   const motoristaKey = resolveMotoristaKey(reg, ctx.clientes, ctx.motoristas);
   const rastreavelKey =
     reg.rastreameRastreavelKey ?? resolveRastreavelKey(reg.veiculoId, ctx.rastreaveis);
@@ -373,13 +375,13 @@ async function pushOneRegistro(
   if (reg.ativo === false) {
     if (!reg.rastreameId) return "ignorado";
     if (ctx.dryRun) {
-      console.log(`[push dry-run] inativar Rastreame id=${reg.rastreameId} (${reg.autoInfracao})`);
-      return "inativado";
+      console.log(`[push dry-run] excluir Rastreame id=${reg.rastreameId} (${reg.autoInfracao})`);
+      return "excluido";
     }
     try {
-      await inativarGasto(reg.rastreameId);
+      await excluirGasto(reg.rastreameId);
       marcarRastreameSyncOk(reg.id);
-      return "inativado";
+      return "excluido";
     } catch {
       return "erro";
     }
@@ -516,10 +518,10 @@ export async function pushRecebimentosToRastreame(
       });
       if (acao === "criado") result.criados++;
       else if (acao === "atualizado") result.atualizados++;
-      else if (acao === "inativado") result.inativados++;
+      else if (acao === "excluido") result.inativados++;
       else if (acao === "ignorado") result.ignorados++;
       else if (acao === "erro") {
-        result.erros.push(`${reg.autoInfracao}: falha ao inativar no Rastreame`);
+        result.erros.push(`${reg.autoInfracao}: falha ao excluir no Rastreame`);
       }
     } catch (e) {
       result.erros.push(`${reg.autoInfracao}: ${e instanceof Error ? e.message : String(e)}`);

@@ -3,6 +3,7 @@ import type {
   DetranScDebito,
   DetranScInfracao,
   DetranScMultaNormalizada,
+  StatusInfracaoDetran,
 } from "./types.js";
 
 function pickStr(obj: Record<string, unknown>, keys: string[]): string {
@@ -34,6 +35,15 @@ function formatDataHora(data: string, hora?: string): string {
   return h ? `${d} ${h}` : d;
 }
 
+/** Converte ISO (YYYY-MM-DD) ou mantém DD/MM/AAAA. */
+export function paraDataBr(s: string): string {
+  const t = String(s ?? "").trim();
+  if (!t) return "";
+  const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return t;
+}
+
 function extrairAuto(item: DetranScInfracao | DetranScDebito): string {
   return pickStr(item as Record<string, unknown>, [
     "numeroAuto",
@@ -44,10 +54,69 @@ function extrairAuto(item: DetranScInfracao | DetranScDebito): string {
   ]);
 }
 
+function parseDataBrToDate(dataBr: string): Date | null {
+  const m = String(dataBr ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!m) return null;
+  const dt = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 23, 59, 59);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+/** Prazo de defesa vencido → infração convertida em débito no DETRAN. */
+export function defesaVencida(dataLimiteDefesa: string, refDate = new Date()): boolean {
+  const dt = parseDataBrToDate(paraDataBr(dataLimiteDefesa));
+  if (!dt) return false;
+  return refDate > dt;
+}
+
+/**
+ * Classifica o status bruto do DETRAN nos valores do portal e nas regras Lanza.
+ */
+export function normalizarStatusInfracao(
+  situacaoRaw: string,
+  statusPortalRaw: string,
+  quitadaDetranBase: boolean,
+  fonte: DetranScMultaNormalizada["fonte"],
+): {
+  statusInfracao: StatusInfracaoDetran;
+  statusDetran?: string;
+  quitadaDetran: boolean;
+} {
+  // O portal usa `status` (Advertida/Paga/Justificada) distinto de `situacao`
+  // (ex.: "Penalidade notificada" no histórico). `status` prevalece.
+  const portal = statusPortalRaw.trim().toLowerCase();
+  if (portal === "advertida" || portal === "advertido") {
+    return { statusInfracao: "Advertida", statusDetran: "advertida", quitadaDetran: false };
+  }
+  if (portal === "paga") {
+    return { statusInfracao: "Paga", statusDetran: "paga", quitadaDetran: true };
+  }
+  if (portal === "justificada") {
+    return { statusInfracao: "Justificada", statusDetran: "justificada", quitadaDetran: false };
+  }
+
+  const s = situacaoRaw.trim().toLowerCase();
+  if (s === "advertida" || s === "advertido") {
+    return { statusInfracao: "Advertida", statusDetran: "advertida", quitadaDetran: false };
+  }
+  if (s === "paga") {
+    return { statusInfracao: "Paga", statusDetran: "paga", quitadaDetran: true };
+  }
+  if (s === "justificada") {
+    return { statusInfracao: "Justificada", statusDetran: "justificada", quitadaDetran: false };
+  }
+  if (s === "notificada") {
+    return { statusInfracao: "Notificada", quitadaDetran: quitadaDetranBase };
+  }
+  if (quitadaDetranBase || fonte === "historicoInfracoes") {
+    return { statusInfracao: "Paga", statusDetran: "paga", quitadaDetran: true };
+  }
+  return { statusInfracao: "Notificada", quitadaDetran: quitadaDetranBase };
+}
+
 function normalizarInfracao(
   item: DetranScInfracao,
   fonte: DetranScMultaNormalizada["fonte"],
-  quitadaDetran: boolean,
+  quitadaDetranBase: boolean,
 ): DetranScMultaNormalizada | null {
   const autoInfracao = extrairAuto(item);
   if (!autoInfracao) return null;
@@ -75,26 +144,45 @@ function normalizarInfracao(
     "local",
   ]);
 
-  const situacao = pickStr(item as Record<string, unknown>, ["situacao", "status"]);
-  const limiteDefesa = pickStr(item as Record<string, unknown>, [
-    "limiteDefesa",
-    "dataLimiteDefesa",
-    "prazoDefesa",
-  ]);
+  const situacaoRaw = pickStr(item as Record<string, unknown>, ["situacao"]);
+  const statusPortalRaw = pickStr(item as Record<string, unknown>, ["status"]);
+  const dataLimiteDefesa = paraDataBr(
+    pickStr(item as Record<string, unknown>, [
+      "dataLimiteDefesa",
+      "limiteDefesa",
+      "prazoDefesa",
+    ]),
+  );
 
   const valorMulta = parseValor(
     item.valorMulta ?? item.valor ?? (item as Record<string, unknown>).valorAtual,
   );
 
+  const { statusInfracao, statusDetran, quitadaDetran } = normalizarStatusInfracao(
+    situacaoRaw,
+    statusPortalRaw,
+    quitadaDetranBase,
+    fonte,
+  );
+
+  const convertidaEmDebito =
+    statusInfracao === "Notificada" && defesaVencida(dataLimiteDefesa);
+
   return {
     autoInfracao,
+    numeroAuto: autoInfracao,
     descricao: descricao || "(sem descrição)",
     localInfracao,
     dataAutuacao,
     valorMulta,
-    situacao: situacao || (quitadaDetran ? "QUITADA DETRAN" : "NOTIFICADA"),
-    limiteDefesa,
+    situacao: situacaoRaw || statusInfracao,
+    limiteDefesa: dataLimiteDefesa,
+    dataLimiteDefesa,
+    dataVencimentoOriginal: "",
+    convertidaEmDebito,
     quitadaDetran,
+    statusInfracao,
+    statusDetran,
     fonte,
   };
 }
@@ -147,19 +235,67 @@ function normalizarDebitoMulta(d: DetranScDebito): DetranScMultaNormalizada | nu
     "Multa (débito DETRAN)";
 
   const valorMulta = parseValor(d.valorAtual ?? d.valor);
-  const vencimento = pickStr(d as Record<string, unknown>, ["vencimento"]);
+  const dataVencimentoOriginal = paraDataBr(
+    pickStr(d as Record<string, unknown>, [
+      "dataVencimentoOriginal",
+      "vencimento",
+      "dataVencimento",
+    ]),
+  );
+
+  const resolvedAuto =
+    autoInfracao || `DETRAN-${pickStr(d as Record<string, unknown>, ["numeroDetranNET"])}`;
 
   return {
-    autoInfracao: autoInfracao || `DETRAN-${pickStr(d as Record<string, unknown>, ["numeroDetranNET"])}`,
+    autoInfracao: resolvedAuto,
+    numeroAuto: autoInfracao || resolvedAuto,
     descricao,
     localInfracao: "",
     dataAutuacao: "",
     valorMulta,
     situacao: "BOLETO EM ABERTO",
-    limiteDefesa: vencimento,
+    limiteDefesa: dataVencimentoOriginal,
+    dataLimiteDefesa: "",
+    dataVencimentoOriginal,
+    convertidaEmDebito: true,
     quitadaDetran: false,
+    statusInfracao: "Notificada",
     fonte: "debitos",
   };
+}
+
+/** Mescla autuação (`infracoes`) com débito (`debitos`) do mesmo `numeroAuto`. */
+export function mesclarMultaDetran(
+  base: DetranScMultaNormalizada,
+  extra: DetranScMultaNormalizada,
+): DetranScMultaNormalizada {
+  const merged: DetranScMultaNormalizada = { ...base };
+
+  if (extra.fonte === "debitos") {
+    merged.convertidaEmDebito = true;
+    if (extra.dataVencimentoOriginal) {
+      merged.dataVencimentoOriginal = extra.dataVencimentoOriginal;
+      merged.limiteDefesa = extra.dataVencimentoOriginal;
+    }
+    if (extra.valorMulta > 0) merged.valorMulta = extra.valorMulta;
+    if (extra.situacao) merged.situacao = extra.situacao;
+  }
+
+  if (!merged.dataLimiteDefesa && extra.dataLimiteDefesa) {
+    merged.dataLimiteDefesa = extra.dataLimiteDefesa;
+    if (!merged.limiteDefesa) merged.limiteDefesa = extra.dataLimiteDefesa;
+  }
+
+  if (
+    merged.statusInfracao === "Notificada" &&
+    defesaVencida(merged.dataLimiteDefesa) &&
+    !merged.dataVencimentoOriginal &&
+    extra.dataVencimentoOriginal
+  ) {
+    merged.convertidaEmDebito = true;
+  }
+
+  return merged;
 }
 
 function unwrapPayload(raw: unknown): DetranScConsultaVeiculo {
@@ -179,8 +315,9 @@ function unwrapPayload(raw: unknown): DetranScConsultaVeiculo {
 /**
  * Extrai multas cobráveis e histórico conforme regras Lanza:
  * - infracoes: autuações notificadas sem boleto (cobrável locatário)
- * - debitos: só multas em aberto; ignora licenciamento/IPVA (parceiro)
+ * - debitos: multas em aberto → infracoes.json; IPVA/licenciamento → parceiro-despesas (syncDespesasVeiculo)
  * - historicoInfracoes: quitadas no DETRAN (não cobrar locatário)
+ * - mesmo numeroAuto em infracoes + debitos → registro único mesclado
  */
 export function extrairMultasDetranSc(raw: unknown): {
   cobraveis: DetranScMultaNormalizada[];
@@ -188,25 +325,30 @@ export function extrairMultasDetranSc(raw: unknown): {
   debitosIgnoradosProprietario: number;
 } {
   const payload = unwrapPayload(raw);
-  const cobraveis: DetranScMultaNormalizada[] = [];
-  const historico: DetranScMultaNormalizada[] = [];
+  const cobraveisMap = new Map<string, DetranScMultaNormalizada>();
+  const historicoMap = new Map<string, DetranScMultaNormalizada>();
   let debitosIgnoradosProprietario = 0;
 
-  const seen = new Set<string>();
-
-  function push(
-    list: DetranScMultaNormalizada[],
+  function pushMap(
+    map: Map<string, DetranScMultaNormalizada>,
     item: DetranScMultaNormalizada | null,
   ): void {
     if (!item) return;
     const key = item.autoInfracao.trim().toUpperCase();
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    list.push(item);
+    if (!key) return;
+    const existing = map.get(key);
+    map.set(key, existing ? mesclarMultaDetran(existing, item) : item);
   }
 
   for (const inf of payload.infracoes ?? []) {
-    push(cobraveis, normalizarInfracao(inf, "infracoes", false));
+    const situacaoInf = pickStr(inf as Record<string, unknown>, ["situacao", "status"])
+      .trim()
+      .toLowerCase();
+    const isPaga = situacaoInf === "paga";
+    pushMap(
+      isPaga ? historicoMap : cobraveisMap,
+      normalizarInfracao(inf, "infracoes", isPaga),
+    );
   }
 
   for (const d of payload.debitos ?? []) {
@@ -215,13 +357,24 @@ export function extrairMultasDetranSc(raw: unknown): {
       continue;
     }
     if (isDebitoMulta(d)) {
-      push(cobraveis, normalizarDebitoMulta(d));
+      const norm = normalizarDebitoMulta(d);
+      if (!norm) continue;
+      const key = norm.autoInfracao.trim().toUpperCase();
+      if (cobraveisMap.has(key)) {
+        pushMap(cobraveisMap, norm);
+      } else {
+        pushMap(cobraveisMap, norm);
+      }
     }
   }
 
   for (const inf of payload.historicoInfracoes ?? []) {
-    push(historico, normalizarInfracao(inf, "historicoInfracoes", true));
+    pushMap(historicoMap, normalizarInfracao(inf, "historicoInfracoes", true));
   }
 
-  return { cobraveis, historico, debitosIgnoradosProprietario };
+  return {
+    cobraveis: [...cobraveisMap.values()],
+    historico: [...historicoMap.values()],
+    debitosIgnoradosProprietario,
+  };
 }

@@ -5,7 +5,13 @@ import { fmtDataBr } from "./contratoExtrair.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
 import { formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
-import type { GerarContratoDados } from "./docxGerar.js";
+import type {
+  CaucaoParcelas,
+  CaucaoSemanalParcelado,
+  GerarContratoDados,
+  SemanaParcelas,
+} from "./docxGerar.js";
+import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
 
 const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
 const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
@@ -67,6 +73,23 @@ export type MontarContratoDbInput = {
   diaria?: number;
   template?: string;
   contratosDir?: string;
+  /** Saldo de caução em aberto (cláusula 3.3 — modo com datas). */
+  caucaoSaldoAberto?: number;
+  /** Número de parcelas de caução (--caucao-parcelas). */
+  caucaoParcelasN?: number;
+  /** Valor de cada parcela de caução (--caucao-valor-parcela). */
+  caucaoValorParcela?: number;
+  /** Datas das parcelas de caução, separadas por vírgula (DD/MM/AAAA). */
+  caucaoDatas?: string;
+  caucaoParcelas?: CaucaoParcelas;
+  caucaoSemanalParcelado?: CaucaoSemanalParcelado;
+  /** Entrada da 1ª semana na retirada (cláusula 3.2). */
+  semanaEntrada?: number;
+  /** Semanas restantes do parcelamento semanal (cláusula 3.2). */
+  semanaParcelasN?: number;
+  /** Valor adicional por semana no parcelamento (cláusula 3.2). */
+  semanaValorParcela?: number;
+  semanaParcelas?: SemanaParcelas;
   assinatura?: { cidade?: string; estado?: string; data?: string };
 };
 
@@ -215,6 +238,127 @@ function mapVeiculo(v: VeiculoDb): Record<string, string> {
   };
 }
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function parseDatasLista(raw: string): string[] {
+  return raw
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function validarDataBr(s: string): void {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    throw new Error(`Data inválida "${s}" — use DD/MM/AAAA.`);
+  }
+}
+
+/** Resolve flags/JSON de parcelamento para cláusulas 3.2 e 3.3. */
+export function resolverParcelamentoContrato(input: MontarContratoDbInput): {
+  caucaoParcelas?: CaucaoParcelas;
+  caucaoSemanalParcelado?: CaucaoSemanalParcelado;
+  semanaParcelas?: SemanaParcelas;
+} {
+  const out: {
+    caucaoParcelas?: CaucaoParcelas;
+    caucaoSemanalParcelado?: CaucaoSemanalParcelado;
+    semanaParcelas?: SemanaParcelas;
+  } = {};
+
+  if (input.caucaoParcelas) {
+    out.caucaoParcelas = input.caucaoParcelas;
+  } else if (input.caucaoSemanalParcelado) {
+    out.caucaoSemanalParcelado = input.caucaoSemanalParcelado;
+  } else if (
+    input.caucaoParcelasN != null ||
+    input.caucaoValorParcela != null ||
+    input.caucaoSaldoAberto != null ||
+    input.caucaoDatas
+  ) {
+    if (input.caucaoParcelasN == null || input.caucaoValorParcela == null) {
+      throw new Error(
+        "Parcelamento de caução requer --caucao-parcelas e --caucao-valor-parcela.",
+      );
+    }
+    const parcelas = input.caucaoParcelasN;
+    const valorParcela = input.caucaoValorParcela;
+    const totalParc = round2(parcelas * valorParcela);
+
+    if (input.caucaoSaldoAberto != null || input.caucaoDatas) {
+      if (input.caucaoSaldoAberto == null) {
+        throw new Error(
+          "Saldo de caução em aberto requer --caucao-saldo-aberto.",
+        );
+      }
+      const datas = input.caucaoDatas
+        ? parseDatasLista(input.caucaoDatas)
+        : gerarDatasParcelasCaucao(
+            input.inicio?.trim() || fmtDataBr(new Date()),
+            parcelas,
+            input.diaPagamento,
+          );
+      if (datas.length !== parcelas) {
+        throw new Error(
+          `--caucao-datas (${datas.length}) deve ter ${parcelas} data(s), igual a --caucao-parcelas.`,
+        );
+      }
+      for (const d of datas) validarDataBr(d);
+      if (Math.abs(input.caucaoSaldoAberto - totalParc) > 0.01) {
+        throw new Error(
+          `--caucao-saldo-aberto (${input.caucaoSaldoAberto}) difere de parcelas × valor (${totalParc}).`,
+        );
+      }
+      out.caucaoParcelas = {
+        aberto: input.caucaoSaldoAberto,
+        parcelas,
+        valorParcela,
+        datas,
+      };
+    } else {
+      if (Math.abs(input.caucao - totalParc) > 0.01) {
+        throw new Error(
+          `--caucao (${input.caucao}) difere de parcelas × valor (${totalParc}) — confira o parcelamento semanal da caução.`,
+        );
+      }
+      out.caucaoSemanalParcelado = { parcelas, valorParcela };
+    }
+  }
+
+  if (input.semanaParcelas) {
+    out.semanaParcelas = input.semanaParcelas;
+  } else if (
+    input.semanaEntrada != null ||
+    input.semanaParcelasN != null ||
+    input.semanaValorParcela != null
+  ) {
+    if (
+      input.semanaEntrada == null ||
+      input.semanaParcelasN == null ||
+      input.semanaValorParcela == null
+    ) {
+      throw new Error(
+        "Parcelamento da semana requer --semana-entrada, --semana-parcelas e --semana-valor-parcela.",
+      );
+    }
+    const restante = round2(input.semanaParcelasN * input.semanaValorParcela);
+    const total = round2(input.semanaEntrada + restante);
+    if (Math.abs(total - input.semana) > 0.01) {
+      throw new Error(
+        `Parcelamento semanal: entrada + parcelas (${total}) difere de --semana (${input.semana}).`,
+      );
+    }
+    out.semanaParcelas = {
+      valorEntrada: input.semanaEntrada,
+      parcelas: input.semanaParcelasN,
+      valorParcela: input.semanaValorParcela,
+    };
+  }
+
+  return out;
+}
+
 export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarContratoDados {
   const cliente = findClienteDb(input.cpf, input.clienteNome);
   validarEnderecoCliente(cliente);
@@ -223,6 +367,7 @@ export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarCo
   const end = cliente.endereco ?? {};
   const inicio = input.inicio?.trim() || fmtDataBr(new Date());
   const dias = periodoParaDias(input.periodo, input.dias);
+  const parcelamento = resolverParcelamentoContrato(input);
 
   return {
     template: input.template ?? DEFAULT_TEMPLATE,
@@ -254,6 +399,7 @@ export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarCo
       diaria: input.diaria ?? 120,
     },
     cnhCategoria: strField(cliente.cnh?.categoria) || "B",
+    ...parcelamento,
     assinatura: input.assinatura ?? {
       cidade: "Tubarão",
       estado: "Santa Catarina",

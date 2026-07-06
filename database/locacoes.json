@@ -1,6 +1,6 @@
 {
   "descricao": "Linha do tempo de uso de cada veículo: períodos de locação, reserva e manutenção. id = uuid. veiculoId -> veiculos.json; clienteId -> clientes.json; contratoId -> contratos.json. Consumido por relatorio-prestacao-contas (ganho de locado, desconto de diárias em manutenção, pagamento de diárias de veículo reserva e taxa de controle semanal).",
-  "atualizadoEm": "2026-07-01",
+  "atualizadoEm": "2026-07-05",
   "schemaLocacao": {
     "id": "uuid",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -134,6 +134,25 @@
       "substituiPlaca": "BBV-6A91",
       "observacao": "Reserva Sandero Felipe — manutenção no GOL",
       "atualizadoEm": "2026-07-01T23:27:43.032Z"
+    },
+    {
+      "id": "5ff5ac8e-18be-4f66-8e7e-10309ac977c8",
+      "cadastradoEm": "2026-07-05T21:35:40.967Z",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "clienteId": "3b0778b6-9d31-4d45-a9d5-691b27ca62dc",
+      "condutorNome": "Laryssa (Gustavo) Costa de Quadros",
+      "contratoId": "149fb2a5-02f6-484a-8657-be631025d4c6",
+      "situacao": "manutencao",
+      "inicio": "09/05/2026",
+      "fim": "09/05/2026",
+      "tipoLocacao": null,
+      "valorCobrado": null,
+      "valorPago": null,
+      "substituiVeiculoId": null,
+      "substituiPlaca": null,
+      "observacao": "Laryssa sem veículo — manutenção Focus (Felipe)",
+      "atualizadoEm": "2026-07-05T21:35:40.967Z"
     }
   ]
 }

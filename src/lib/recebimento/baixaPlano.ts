@@ -11,6 +11,7 @@ import {
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
 import { findClienteByCpf, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
+import { compararDataBrAsc } from "../contratoExtrair.js";
 import {
   dataBrComHora,
   dataVencimentoSemanalBr,
@@ -184,11 +185,7 @@ function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: 
         (d.situacao === "Em aberto" || !d.paga) &&
         !excluir.has(d.categoria ?? ""),
     )
-    .sort((a, b) => {
-      const da = a.dataAutuacao.split("/").reverse().join("");
-      const dbd = b.dataAutuacao.split("/").reverse().join("");
-      return da.localeCompare(dbd);
-    });
+    .sort((a, b) => compararDataBrAsc(a.dataAutuacao, b.dataAutuacao));
 }
 
 function parseDataBrToMs(dataBr: string): number | null {

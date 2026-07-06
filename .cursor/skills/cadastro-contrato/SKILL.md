@@ -3,8 +3,10 @@ name: cadastro-contrato
 description: >-
   CRUD de contratos de locação Lanza com ação obrigatória criar | renovar | encerrar:
   gerar Word/PDF, sincronizar database/contratos.json, efetivar encerramento e vínculo
-  cliente↔veículo (local + Rastreame). Use when the user asks contrato, locação,
-  gerar contrato, renovação, encerrar contrato (efetivar), ou database/contratos.json.
+  cliente↔veículo (local + Rastreame). Antes de gerar, confirmar com o operador como
+  será pago o caução e a 1ª semana (integral ou parcelado). Use when the user asks
+  contrato, locação, gerar contrato, renovação, encerrar contrato (efetivar), ou
+  database/contratos.json.
 ---
 
 # Cadastro de contrato de locação
@@ -112,6 +114,59 @@ Implementação local: `src/lib/contratoVinculoDb.ts`.
 - O database local é **fonte da verdade**; o Rastreame é **best-effort** (falha → `[aviso]`).
 - Implementação: `src/lib/contratoClienteStatus.ts`, `src/lib/contratoVinculoDb.ts`, `src/lib/rastreame/motorista.ts`.
 
+## ⚠️ Confirmação obrigatória — caução e pagamento semanal
+
+**Antes de executar `criar` ou `renovar`**, o agente **sempre** confirma com o operador os dois
+blocos abaixo. **Não** assuma pagamento integral nem omita parcelamento — pergunte
+explicitamente, mesmo que o operador já tenha informado só `--semana` e `--caucao`.
+
+### 1. Caução (cláusula 3.3)
+
+Perguntar e registrar:
+
+1. **Valor total da caução** (`--caucao`) — ex.: R$ 1.800,00
+2. **Como será pago?**
+   - **Integral na retirada** → só `--caucao` (padrão)
+   - **Parte na retirada + saldo parcelado** → recolher:
+     - Quanto **já foi pago** na retirada (ou quanto **ficou em aberto**)
+     - **Quantas parcelas** do remanescente
+     - **Valor de cada parcela** de caução
+     - **Datas** de vencimento (DD/MM/AAAA), uma por parcela
+     - Confirmar: `saldo em aberto = parcelas × valor parcela`
+   - **Caução inteira diluída nas semanas** (sem entrada na retirada) → recolher:
+     - **Quantas semanas** / parcelas
+     - **Valor por semana** junto com o pagamento semanal
+     - Confirmar: `parcelas × valor = --caucao`
+
+**Resumo para o operador** (obrigatório repetir antes de gerar):
+
+> Caução total R$ X. Pago na retirada: R$ Y. Remanescente R$ Z em N parcelas de R$ W
+> (datas: …) **ou** diluído em N semanas de R$ W **ou** integral na retirada.
+
+### 2. Pagamento semanal / 1ª semana (cláusula 3.2)
+
+Perguntar e registrar:
+
+1. **Valor semanal total** (`--semana`) — ex.: R$ 650,00
+2. **A 1ª semana será paga integralmente na retirada?**
+   - **Sim** → padrão (sem flags extras)
+   - **Não, parcelada** → recolher:
+     - **Quanto paga na retirada** (`--semana-entrada`)
+     - **Em quantas semanas** quita o restante (`--semana-parcelas`)
+     - **Quanto paga a mais por semana** até quitar (`--semana-valor-parcela`)
+     - Confirmar: `entrada + parcelas × valor parcela = --semana`
+
+**Resumo para o operador** (obrigatório repetir antes de gerar):
+
+> Semanal R$ X. Na retirada: R$ Y. Restante R$ Z em N semanas de R$ W **ou** integral na retirada.
+
+### 3. Conferência cruzada
+
+Se **caução parcelada com datas** e **semanal definida**, informar o **total por dia de pagamento**
+(semanal + parcela de caução), ex.: R$ 800 + R$ 150 = **R$ 950,00** nos dias acordados.
+
+Só **depois** da confirmação explícita do operador (Sim / correto), montar as flags e executar a CLI.
+
 ## Fluxo do agente — `criar`
 
 1. **Identificar** placa e cliente (nome ou CPF).
@@ -119,24 +174,31 @@ Implementação local: `src/lib/contratoVinculoDb.ts`.
 3. **Se não existir:** skills **cadastro-veiculo** / **cadastro-cliente**.
 4. **Conferir `pastaVeiculo`** do veículo (ver ⚠️ acima).
 5. **Confirmar** que é **primeiro contrato** do par (v1) — senão usar **`renovar`**.
-6. **Perguntar** período, valor semanal, caução, início, dia de pagamento.
-7. **Executar:**
+6. **Perguntar** período, início, hora, dia de pagamento.
+7. **Confirmação obrigatória** — caução e pagamento semanal (secção acima):
+   - valor total da caução + forma de pagamento (integral / saldo parcelado / diluída);
+   - valor semanal total + 1ª semana integral ou parcelada.
+   - Repetir resumo e aguardar **Sim** do operador.
+8. **Executar:**
 
 ```bash
 npx tsx src/run.ts cadastro-contrato criar --placa PLACA --cpf CPF --semana VALOR --caucao VALOR [opções]
 ```
 
-8. Confirmar pasta dentro da pasta do veículo.
+9. Confirmar pasta dentro da pasta do veículo.
 
 ## Fluxo do agente — `renovar`
 
 1. Mesmos passos de onboarding (placa, cliente, `pastaVeiculo`).
 2. **Confirmar** que o contrato **anterior está encerrado** (`contratos.json`).
-3. **Executar:**
+3. **Confirmação obrigatória** — caução e pagamento semanal (mesma secção de `criar`).
+4. **Executar:**
 
 ```bash
 npx tsx src/run.ts cadastro-contrato renovar --placa PLACA --cpf CPF --semana VALOR --caucao VALOR [opções]
 ```
+
+5. Confirmar pasta dentro da pasta do veículo.
 
 ## Fluxo encerramento — `encerrar` (duas etapas)
 
@@ -176,6 +238,55 @@ npx tsx src/run.ts importar-contratos
 | `--cnh-arquivo` | não | Copia como `CNH.pdf` |
 | `--contratos-dir` | não | Pasta do veículo (sobrepõe `pastaVeiculo`) |
 
+### Parcelamento — cláusula 3.3 (caução)
+
+Três cenários possíveis na geração do Word:
+
+| Cenário | Quando usar | Flags |
+|---------|-------------|-------|
+| **Padrão** | Caução integral na retirada | só `--caucao` |
+| **Saldo em aberto** | Parte já paga; restante parcelado com datas | `--caucao-saldo-aberto`, `--caucao-parcelas`, `--caucao-valor-parcela` e opcionalmente `--caucao-datas` |
+
+**Datas das parcelas (`--caucao-datas`):** opcional. Se omitido, o sistema calcula automaticamente a partir de `--inicio` + `--dia-pagamento`: a **1.ª parcela cai na semana seguinte** ao 1.º dia de pagamento após a retirada (ex.: retirada 03/07, sábados → 11/07, 18/07, …). Helper: `gerarDatasParcelasCaucao()` em `src/lib/caucaoParcelas.ts`. Ao cadastrar despesas, usar as **mesmas datas** — skill **`cadastro-recebimento`**.
+| **Caução semanal** | Caução inteira diluída em N semanas | `--caucao-parcelas`, `--caucao-valor-parcela` (sem saldo/datas; `parcelas × valor` = `--caucao`) |
+
+**Exemplo — saldo em aberto** (cláusula 3.3 com datas e total semanal):
+
+Caução R$ 1.800; R$ 300 em aberto em 2× R$ 150, junto com semanal R$ 800 → total R$ 950 nos dias 22/06 e 29/06:
+
+```bash
+npx tsx src/run.ts cadastro-contrato criar --placa PLACA --cpf CPF \
+  --semana 800 --caucao 1800 \
+  --caucao-saldo-aberto 300 --caucao-parcelas 2 --caucao-valor-parcela 150 \
+  --caucao-datas 22/06/2026,29/06/2026
+```
+
+Texto gerado na 3.3 (após "entre outras despesas"):
+
+> Onde ficou em aberto R$300,00 (trezentos reais) e será pago em 2 (duas) parcelas no valor de R$150,00 (cento e cinquenta reais) juntamente com valor semanal totalizando R$950,00 nos dias 22/06/2026 e 29/06/2026.
+
+**Exemplo — caução parcelada em todas as semanas** (R$ 1.500 em 15× R$ 100):
+
+```bash
+npx tsx src/run.ts cadastro-contrato criar --placa PLACA --cpf CPF \
+  --semana 650 --caucao 1500 \
+  --caucao-parcelas 15 --caucao-valor-parcela 100
+```
+
+### Parcelamento — cláusula 3.2 (primeira semana)
+
+Quando a 1ª semana não é paga integralmente na retirada — entrada parcial + restante nas próximas semanas:
+
+```bash
+npx tsx src/run.ts cadastro-contrato criar --placa PLACA --cpf CPF \
+  --semana 650 --caucao 1500 \
+  --semana-entrada 150 --semana-parcelas 4 --semana-valor-parcela 125
+```
+
+Validação: `entrada + parcelas × valor` deve fechar com `--semana` (ex.: 150 + 4×125 = 650).
+
+Via JSON (`dados.json`), use os objetos `caucaoParcelas`, `caucaoSemanalParcelado` ou `semanaParcelas` em `GerarContratoDados` (ver `src/lib/docxGerar.ts`).
+
 Modo JSON legado (inclua `"acao": "criar"` ou `"renovar"` no JSON):
 
 ```bash
@@ -199,7 +310,7 @@ npx tsx src/run.ts cadastro-contrato criar "relatorios/_dados_contrato_tmp.json"
 - **cadastro-cliente**, **cadastro-veiculo** — onboarding antes de `criar`/`renovar`.
 - **cadastro-movimentacao** — após contrato: períodos `locado`/`manutencao`/`reserva` (troca, parada, reserva).
 - **relatorio-encerramento-contrato** — acerto financeiro antes de `encerrar`.
-- **cadastro-recebimento** — parcelas pagas (input do relatório).
+- **cadastro-recebimento** — cadastrar despesas iniciais (semanal, caução, parcelas). Descrição das parcelas de caução: **`{n}x{N}`** (parcela × total) — ver secção **Formato das descrições — caução** nessa skill.
 
 ## Privacidade
 

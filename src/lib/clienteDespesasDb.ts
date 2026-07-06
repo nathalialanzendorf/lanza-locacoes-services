@@ -3,7 +3,12 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
-import { isCategoriaInfracao, pareceTituloMulta, stripAtrasado, tituloInfracaoBase } from "./infracaoTitulo.js";
+import {
+  isCategoriaInfracao,
+  pareceTituloMulta,
+  stripAtrasado,
+  tituloInfracaoBase,
+} from "./infracaoTitulo.js";
 import {
   dataVencimentoSemanalBr,
   formatDataBr,
@@ -12,8 +17,10 @@ import {
   proximaParcelaSemanal,
   stripAtrasadoSemanal,
 } from "./pagamentoSemanal.js";
-import { formatPlacaHyphen } from "./placa.js";
+import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadContratosDb } from "./contratosDb.js";
+import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
+import { espelharClienteDespesaSemLocatario } from "./espelharSemLocatarioParceiro.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
 export const DB_CLIENTE_DESPESAS = path.join(
@@ -29,7 +36,6 @@ export const CATEGORIAS_SYNC_RASTREAME = new Set([
   "Locação semanal",
   "Outros",
   "Caução",
-  "Lavação",
   "Estacionamento",
   "Pedágio",
   "Manutenção",
@@ -45,6 +51,12 @@ export function categoriaInfereCondutor(categoria: string | undefined | null): b
   return c === "Infração" || c === "Pedágio";
 }
 
+/** Manutenção cobrável do locatário (lavação entra aqui; categoria legada "Lavação" ainda aceita). */
+export function isCategoriaManutencao(categoria: string | undefined | null): boolean {
+  const c = (categoria ?? "").trim();
+  return c === "Manutenção" || c === "Lavação";
+}
+
 export type ClienteDespesaRegistro = {
   id: string;
   categoria?: string;
@@ -52,17 +64,26 @@ export type ClienteDespesaRegistro = {
   autoInfracao: string;
   /** Texto cru do DETRAN (ex.: "TRANSITAR EM VEL SUPERIOR À MÁXIMA…"). */
   descricao: string;
-  /** Rótulo curto do Gastos Gerais (ex.: "Multa velocidade - 30/03/2026 09:40"). Só infrações. */
+  /** Rótulo curto do Gastos Gerais (ex.: "Multa velocidade P0cc2001pu - 30/03/2026 09:40"). Só infrações. */
   titulo?: string;
+  /** Número do auto DETRAN — igual a `autoInfracao`; vínculo autuação ↔ débito. */
+  numeroAuto?: string;
   localInfracao: string;
   dataAutuacao: string;
   valorMulta: number;
   situacao: string;
+  /** Espelho legado: autuação → dataLimiteDefesa; débito → dataVencimentoOriginal. */
   limiteDefesa: string;
+  /** Prazo de defesa da autuação (DD/MM/AAAA), bloco `infracoes` do DETRAN. */
+  dataLimiteDefesa?: string;
+  /** Vencimento original do boleto (DD/MM/AAAA) — base de juros/multa após conversão. */
+  dataVencimentoOriginal?: string;
+  /** true quando a infração virou débito (bloco `debitos` ou defesa vencida). */
+  convertidaEmDebito?: boolean;
   condutorId: string | null;
   condutorConfirmado: boolean;
   condutorContrato: string | null;
-  /** true = sem contrato ativo na data (locação não identificada) — não cobrável a cliente. */
+  /** true = sem contrato/locatário na data da autuação — débito vai a parceiro-despesas, não cliente. */
   condutorNaoIdentificado?: boolean;
   /** true = precisa revisão manual (ex.: infração sem data de autuação no DETRAN). */
   revisarManual?: boolean;
@@ -71,6 +92,13 @@ export type ClienteDespesaRegistro = {
   paga?: boolean;
   pagaEm?: string | null;
   quitadaDetran?: boolean;
+  /** Status bruto do DETRAN: Advertida | Paga | Notificada | Justificada. */
+  statusInfracao?: string;
+  /**
+   * Status semântico (minúsculas) para regras de cobrança: advertida | paga | justificada.
+   * Ausente em Notificada (cobrável).
+   */
+  statusDetran?: string;
   /** ID do gasto em rastreame.com.br (Gastos Gerais). */
   rastreameId?: string | number | null;
   rastreameMotoristaKey?: string | null;
@@ -86,6 +114,8 @@ export type ClienteDespesaRegistro = {
    * Ex.: RAST-408 → J008087450.
    */
   detranAutoInfracao?: string | null;
+  /** Caminho do PDF da notificação/auto (absoluto ou relativo a documentosRaiz). */
+  pdfArquivo?: string | null;
   /** false = excluído (soft delete); não entra em acertos. */
   ativo?: boolean;
   cadastradoEm: string;
@@ -103,9 +133,20 @@ export type ClienteDespesaInput = {
   valorMulta: number | string;
   situacao: string;
   limiteDefesa: string;
+  dataLimiteDefesa?: string;
+  dataVencimentoOriginal?: string;
+  convertidaEmDebito?: boolean;
+  numeroAuto?: string;
   categoria?: string;
   origem?: string;
   quitadaDetran?: boolean;
+  /** Status bruto do DETRAN: Advertida | Paga | Notificada | Justificada. */
+  statusInfracao?: string;
+  /**
+   * Status semântico (minúsculas) para regras de cobrança: advertida | paga | justificada.
+   * Ausente em Notificada (cobrável).
+   */
+  statusDetran?: string;
   paga?: boolean;
   pagaEm?: string | null;
   rastreameId?: string | number | null;
@@ -131,12 +172,12 @@ type ClienteDespesasDb = {
 };
 
 const DEFAULT_DESCRICAO =
-  "Débitos a cobrar dos locatários/clientes: infrações, locação, caução, manutenção, lavação, quebra de contrato, estacionamento, pedágio, etc.";
+  "Débitos a cobrar dos locatários/clientes: infrações, locação, caução, manutenção (incl. lavação), quebra de contrato, estacionamento, pedágio, etc.";
 
 const DEFAULT_SCHEMA: Record<string, string> = {
   id: "uuid",
   categoria:
-    "Infração | Locação semanal | Caução | Manutenção | Lavação | Quebra contrato | Renegociação | Estacionamento | Pedágio | Outros",
+    "Infração | Locação semanal | Caução | Manutenção | Quebra contrato | Renegociação | Estacionamento | Pedágio | Outros",
   veiculoId: "Placa do veículo (ABC-1D23)",
   autoInfracao: "Chave natural (auto DETRAN ou id interno)",
   descricao: "Descrição do débito",
@@ -144,16 +185,22 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   dataAutuacao: "DD/MM/AAAA HH:mm ou data do débito",
   valorMulta: "Valor em reais",
   situacao: "Situação (DETRAN ou controle interno)",
-  limiteDefesa: "DD/MM/AAAA (infrações) ou vencimento",
+  limiteDefesa: "Espelho legado — autuação: dataLimiteDefesa; débito: dataVencimentoOriginal",
+  dataLimiteDefesa: "Prazo de defesa da autuação (DD/MM/AAAA) — bloco infracoes",
+  dataVencimentoOriginal: "Vencimento original do boleto (DD/MM/AAAA) — juros/multa após esta data",
+  convertidaEmDebito: "boolean — infração convertida em débito (debitos[] ou defesa vencida)",
+  numeroAuto: "Número do auto DETRAN (= autoInfracao) — vínculo com infracoes.json",
   condutorId: "uuid -> clientes.json (null se não identificado)",
   condutorConfirmado: "false no cadastro; true após confirmação do usuário ou inferência por vigência",
   condutorContrato: "Pasta do contrato usado na sugestão de condutor",
-  condutorNaoIdentificado: "boolean — true se não há contrato ativo na data (não cobrável a cliente)",
+  condutorNaoIdentificado: "boolean — sem locatário na autuação (espelho em parceiro-despesas, não cliente)",
   revisarManual: "boolean — true se precisa revisão manual (ex.: infração sem data de autuação)",
   revisarMotivo: "Motivo curto da revisão manual",
   paga: "boolean — quitada pelo locatário (default false)",
   pagaEm: "DD/MM/AAAA — quando foi paga (opcional)",
   quitadaDetran: "boolean — quitada no DETRAN (só infrações); não cobrar locatário",
+  statusInfracao: "string — status DETRAN: Advertida | Paga | Notificada | Justificada",
+  statusDetran: "string — status semântico: advertida | paga | justificada | (ausente em Notificada)",
   cadastradoEm: "ISO 8601",
   atualizadoEm: "ISO 8601",
   origem: "manual | portal | detran-sc | rastreame | ...",
@@ -164,6 +211,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   rastreameTipo: "tipo do gasto no Rastreame (OUTROS, DOCUMENTACAO, ...)",
   rastreameSyncEm: "ISO 8601 — última sync com Rastreame",
   detranAutoInfracao: "Auto DETRAN (campo comprovante do Rastreame; ex. J008087450)",
+  pdfArquivo: "Caminho do PDF da infração (pasta Débitos do contrato ou veículo)",
   ativo: "boolean — false = excluído (default true)",
 };
 
@@ -175,6 +223,77 @@ function parseValor(v: number | string): number {
     : parseFloat(s);
   if (!Number.isFinite(n)) throw new Error(`Valor inválido: ${v}`);
   return Math.round(n * 100) / 100;
+}
+
+function parseValorSafe(v: unknown): number {
+  if (v == null || v === "") return 0;
+  try {
+    return parseValor(v as number | string);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Histórico DETRAN quitado sem data — não cadastrar local/Rastreame;
+ * se o auto já existir, só marcar quitadaDetran (baixa) preservando campos preenchidos.
+ * Valor irrelevante (com ou sem valor no payload DETRAN).
+ */
+export function isQuitadaDetranSemData(input: {
+  quitadaDetran?: boolean;
+  dataAutuacao?: string | null;
+}): boolean {
+  if (input.quitadaDetran !== true) return false;
+  const data = String(input.dataAutuacao ?? "").trim();
+  return !data || !parseDataAutuacao(data);
+}
+
+/** @deprecated use isQuitadaDetranSemData */
+export function isQuitadaDetranSemDados(input: {
+  quitadaDetran?: boolean;
+  dataAutuacao?: string | null;
+  valorMulta?: unknown;
+}): boolean {
+  return isQuitadaDetranSemData(input);
+}
+
+/** Baixa quitada DETRAN em registro existente — não sobrescreve valor, data, descrição etc. */
+export function aplicarBaixaQuitadaDetranSomente(
+  m: ClienteDespesaRegistro,
+  input?: Pick<ClienteDespesaInput, "situacao">,
+): boolean {
+  let mudou = false;
+  if (m.quitadaDetran !== true) {
+    m.quitadaDetran = true;
+    mudou = true;
+  }
+  if (!m.condutorConfirmado) {
+    m.condutorConfirmado = true;
+    mudou = true;
+  }
+  if (m.condutorId) {
+    if (m.condutorNaoIdentificado) {
+      m.condutorNaoIdentificado = false;
+      mudou = true;
+    }
+  } else if (!m.condutorNaoIdentificado) {
+    m.condutorNaoIdentificado = true;
+    mudou = true;
+  }
+  if (m.revisarManual) {
+    m.revisarManual = false;
+    m.revisarMotivo = null;
+    mudou = true;
+  }
+  const sitIn = String(input?.situacao ?? "").trim();
+  if (sitIn && m.situacao !== sitIn) {
+    m.situacao = sitIn;
+    mudou = true;
+  } else if (!String(m.situacao ?? "").trim()) {
+    m.situacao = "QUITADA DETRAN";
+    mudou = true;
+  }
+  return mudou;
 }
 
 function nowIso(): string {
@@ -206,11 +325,26 @@ function migrateLegacyFile(from: string, remove: string): void {
   fs.unlinkSync(remove);
 }
 
+function isNewInfracoesDbFormat(raw: Record<string, unknown>): boolean {
+  const schema = raw.schemaInfracao as Record<string, string> | undefined;
+  if (schema?.numeroAuto?.toLowerCase().includes("chave natural")) return true;
+  const list = (raw.infracoes ?? []) as Record<string, unknown>[];
+  if (list.length === 0) return !!schema?.numeroAuto;
+  const first = list[0];
+  return !first?.categoria && !!first?.numeroAuto;
+}
+
 function migrateLegacyIfNeeded(): void {
   if (!fs.existsSync(DB_CLIENTE_DESPESAS)) {
     if (fs.existsSync(DB_INFRACOES_LEGACY)) {
-      migrateLegacyFile(DB_INFRACOES_LEGACY, DB_INFRACOES_LEGACY);
-      return;
+      const raw = JSON.parse(fs.readFileSync(DB_INFRACOES_LEGACY, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      if (!isNewInfracoesDbFormat(raw)) {
+        migrateLegacyFile(DB_INFRACOES_LEGACY, DB_INFRACOES_LEGACY);
+        return;
+      }
     }
     if (fs.existsSync(DB_MULTAS_LEGACY)) {
       migrateLegacyFile(DB_MULTAS_LEGACY, DB_MULTAS_LEGACY);
@@ -238,8 +372,8 @@ export function saveClienteDespesasDb(db: ClienteDespesasDb): void {
   fs.writeFileSync(DB_CLIENTE_DESPESAS, JSON.stringify(db, null, 2), "utf8");
 }
 
-/** @deprecated use loadClienteDespesasDb */
-export function loadInfracoesDb(): ClienteDespesasDb {
+/** @deprecated use loadInfracoesDb from ./infracoesDb.js (tabela dedicada) */
+export function loadInfracoesDbLegacy(): ClienteDespesasDb {
   return loadClienteDespesasDb();
 }
 
@@ -264,7 +398,7 @@ export type EditarClienteDespesaResult = {
 export type SincronizarClienteDespesaResult = {
   registro: ClienteDespesaRegistro;
   aviso: string | null;
-  acao: "novo" | "atualizado" | "sem_alteracao";
+  acao: "novo" | "atualizado" | "sem_alteracao" | "ignorado";
 };
 
 /** @deprecated */
@@ -281,11 +415,19 @@ function registroChanged(
     a.situacao !== String(input.situacao).trim() ||
     a.valorMulta !== parseValor(input.valorMulta) ||
     a.limiteDefesa !== String(input.limiteDefesa).trim() ||
+    (input.dataLimiteDefesa !== undefined &&
+      (a.dataLimiteDefesa ?? "") !== String(input.dataLimiteDefesa).trim()) ||
+    (input.dataVencimentoOriginal !== undefined &&
+      (a.dataVencimentoOriginal ?? "") !== String(input.dataVencimentoOriginal).trim()) ||
+    (input.convertidaEmDebito !== undefined &&
+      !!a.convertidaEmDebito !== !!input.convertidaEmDebito) ||
+    (input.statusInfracao !== undefined && a.statusInfracao !== input.statusInfracao) ||
     a.descricao !== String(input.descricao).trim() ||
     a.localInfracao !== String(input.localInfracao).trim() ||
     (input.dataAutuacao ? a.dataAutuacao !== String(input.dataAutuacao).trim() : false) ||
     (input.quitadaDetran === true && a.quitadaDetran !== true) ||
     (input.quitadaDetran === false && a.quitadaDetran === true) ||
+    (input.statusDetran !== undefined && a.statusDetran !== input.statusDetran) ||
     (input.categoria ? a.categoria !== input.categoria : false)
   );
 }
@@ -376,6 +518,12 @@ export async function gravarClienteDespesa(
     return { registro: dup, aviso: "Auto já cadastrado", duplicado: true };
   }
 
+  if (isQuitadaDetranSemData(input)) {
+    throw new Error(
+      `Auto ${input.autoInfracao}: quitada DETRAN sem data — não cadastrar (use sincronizarClienteDespesa)`,
+    );
+  }
+
   // Quitada no DETRAN não é cobrável do locatário: não inferimos condutor,
   // não marcamos revisão e damos condutorConfirmado=true (nada a vincular).
   const quitada = input.quitadaDetran === true;
@@ -423,8 +571,11 @@ export async function gravarClienteDespesa(
   };
 
   if (isCategoriaInfracao(categoria)) {
+    const auto = String(input.numeroAuto ?? input.autoInfracao).trim();
+    registro.numeroAuto = auto || undefined;
     registro.titulo =
-      input.titulo?.trim() || tituloInfracaoBase(registro.descricao, registro.dataAutuacao);
+      input.titulo?.trim() ||
+      tituloInfracaoBase(registro.descricao, registro.dataAutuacao, auto);
   } else if (input.titulo?.trim()) {
     registro.titulo = input.titulo.trim();
   }
@@ -435,6 +586,16 @@ export async function gravarClienteDespesa(
   }
   if (naoIdentificado) registro.condutorNaoIdentificado = true;
   if (input.quitadaDetran === true) registro.quitadaDetran = true;
+  if (input.statusInfracao !== undefined) registro.statusInfracao = input.statusInfracao;
+  if (input.statusDetran !== undefined) registro.statusDetran = input.statusDetran;
+  if (input.dataLimiteDefesa !== undefined) {
+    registro.dataLimiteDefesa = String(input.dataLimiteDefesa).trim();
+  }
+  if (input.dataVencimentoOriginal !== undefined) {
+    registro.dataVencimentoOriginal = String(input.dataVencimentoOriginal).trim();
+  }
+  if (input.convertidaEmDebito === true) registro.convertidaEmDebito = true;
+  if (input.convertidaEmDebito === false) registro.convertidaEmDebito = false;
   if (input.paga === true) registro.paga = true;
   if (input.paga === false) registro.paga = false;
   if (input.pagaEm !== undefined) registro.pagaEm = input.pagaEm;
@@ -450,6 +611,15 @@ export async function gravarClienteDespesa(
 
   db.clienteDespesas.push(registro);
   saveClienteDespesasDb(db);
+
+  if (registro.condutorNaoIdentificado && categoriaInfereCondutor(categoria)) {
+    espelharClienteDespesaSemLocatario(registro);
+    return {
+      registro,
+      aviso: aviso ?? "Sem locatário — espelhado em parceiro-despesas",
+      duplicado: false,
+    };
+  }
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
@@ -507,12 +677,87 @@ export async function sincronizarClienteDespesa(
     (m) => m.autoInfracao.trim().toUpperCase() === autoKey,
   );
 
+  const quitadaSemData = isQuitadaDetranSemData({
+    quitadaDetran: input.quitadaDetran,
+    dataAutuacao: input.dataAutuacao,
+  });
+
   if (idx < 0) {
+    if (quitadaSemData) {
+      return {
+        registro: {
+          id: "",
+          categoria,
+          veiculoId,
+          autoInfracao: String(input.autoInfracao).trim(),
+          descricao: String(input.descricao ?? "").trim(),
+          localInfracao: "",
+          dataAutuacao: "",
+          valorMulta: parseValorSafe(input.valorMulta),
+          situacao: String(input.situacao ?? "").trim(),
+          limiteDefesa: "",
+          condutorId: null,
+          condutorConfirmado: true,
+          condutorContrato: null,
+          quitadaDetran: true,
+          cadastradoEm: "",
+          atualizadoEm: "",
+          origem: input.origem ?? "detran-sc",
+        },
+        aviso: "Quitada DETRAN sem data — auto ausente; não cadastrado",
+        acao: "ignorado",
+      };
+    }
+    const dataNova = String(input.dataAutuacao ?? "").trim();
+    if (
+      isCategoriaInfracao(categoria) &&
+      input.quitadaDetran !== true &&
+      (!dataNova || !parseDataAutuacao(dataNova))
+    ) {
+      return {
+        registro: {
+          id: "",
+          categoria,
+          veiculoId,
+          autoInfracao: String(input.autoInfracao).trim(),
+          descricao: String(input.descricao ?? "").trim(),
+          localInfracao: "",
+          dataAutuacao: dataNova,
+          valorMulta: parseValorSafe(input.valorMulta),
+          situacao: String(input.situacao ?? "").trim(),
+          limiteDefesa: "",
+          condutorId: null,
+          condutorConfirmado: false,
+          condutorContrato: null,
+          cadastradoEm: "",
+          atualizadoEm: "",
+          origem: input.origem ?? "detran-sc",
+        },
+        aviso: "Sem data de autuação — espelhar em parceiro-despesas (não cliente)",
+        acao: "ignorado",
+      };
+    }
     const r = await gravarClienteDespesa(veiculoId, { ...input, categoria }, opts);
     return { registro: r.registro, aviso: r.aviso, acao: "novo" };
   }
 
   const m = db.clienteDespesas[idx]!;
+
+  if (quitadaSemData) {
+    const mudou = aplicarBaixaQuitadaDetranSomente(m, input);
+    if (!mudou) {
+      return { registro: m, aviso: null, acao: "sem_alteracao" };
+    }
+    m.atualizadoEm = nowIso();
+    db.clienteDespesas[idx] = m;
+    saveClienteDespesasDb(db);
+    const [synced] = await pushAposPersistir([m], opts);
+    return {
+      registro: synced ?? m,
+      aviso: "Quitada DETRAN — baixa aplicada (campos existentes preservados)",
+      acao: "atualizado",
+    };
+  }
   // Estado desejado da marca de revisão (categorias que inferem condutor sem data).
   const inferCond = categoriaInfereCondutor(categoria);
   const dataFinal = String((input.dataAutuacao || m.dataAutuacao) || "").trim();
@@ -520,7 +765,8 @@ export async function sincronizarClienteDespesa(
     input.quitadaDetran === true ||
     (input.quitadaDetran !== false && m.quitadaDetran === true);
   // Quitada no DETRAN não é cobrável → não precisa data, condutor nem revisão.
-  const desejaRevisar = inferCond && !dataFinal && !quitadaFinal;
+  const dataValida = !!dataFinal && !!parseDataAutuacao(dataFinal);
+  const desejaRevisar = inferCond && !dataValida && !quitadaFinal;
   const desejaConfirmar = quitadaFinal && !m.condutorConfirmado;
   const flagRevisarMudou = !!m.revisarManual !== desejaRevisar;
 
@@ -534,7 +780,11 @@ export async function sincronizarClienteDespesa(
   const desejaTitulo = isCategoriaInfracao(categoria)
     ? input.titulo?.trim() ||
       m.titulo?.trim() ||
-      tituloInfracaoBase(descricaoDetran, dataFinal)
+      tituloInfracaoBase(
+        descricaoDetran,
+        dataFinal,
+        input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao,
+      )
     : null;
   const tituloMudou = desejaTitulo !== null && (m.titulo ?? "") !== desejaTitulo;
 
@@ -548,17 +798,43 @@ export async function sincronizarClienteDespesa(
   }
 
   m.categoria = categoria;
-  m.situacao = String(input.situacao).trim();
-  m.valorMulta = parseValor(input.valorMulta);
-  m.limiteDefesa = String(input.limiteDefesa).trim();
+  const sitIn = String(input.situacao ?? "").trim();
+  if (sitIn) m.situacao = sitIn;
+  const valorIn = parseValorSafe(input.valorMulta);
+  if (valorIn > 0) {
+    m.valorMulta = valorIn;
+  } else if (!(quitadaFinal && m.valorMulta > 0)) {
+    m.valorMulta = valorIn;
+  }
+  const limIn = String(input.limiteDefesa ?? "").trim();
+  if (limIn) m.limiteDefesa = limIn;
+  if (input.dataLimiteDefesa !== undefined) {
+    m.dataLimiteDefesa = String(input.dataLimiteDefesa).trim();
+  }
+  if (input.dataVencimentoOriginal !== undefined) {
+    m.dataVencimentoOriginal = String(input.dataVencimentoOriginal).trim();
+  }
+  if (input.convertidaEmDebito === true) m.convertidaEmDebito = true;
+  if (input.convertidaEmDebito === false) m.convertidaEmDebito = false;
+  if (input.numeroAuto !== undefined) {
+    m.numeroAuto = String(input.numeroAuto).trim() || undefined;
+  } else if (isCategoriaInfracao(categoria) && !m.numeroAuto?.trim()) {
+    m.numeroAuto = m.autoInfracao;
+  }
   if (!manterDescricaoCobranca) {
-    m.descricao = descricaoDetran;
+    if (descricaoDetran && descricaoDetran !== "(sem descrição)") {
+      m.descricao = descricaoDetran;
+    } else if (!quitadaFinal) {
+      m.descricao = descricaoDetran;
+    }
   }
   if (desejaTitulo !== null) m.titulo = desejaTitulo;
   if (input.localInfracao) m.localInfracao = String(input.localInfracao).trim();
   if (input.dataAutuacao) m.dataAutuacao = String(input.dataAutuacao).trim();
   if (input.quitadaDetran === true) m.quitadaDetran = true;
   if (input.quitadaDetran === false) m.quitadaDetran = false;
+  if (input.statusInfracao !== undefined) m.statusInfracao = input.statusInfracao;
+  if (input.statusDetran !== undefined) m.statusDetran = input.statusDetran;
   m.origem = input.origem ?? m.origem;
   m.atualizadoEm = nowIso();
 
@@ -576,12 +852,13 @@ export async function sincronizarClienteDespesa(
     }
   }
 
-  // Sem data de autuação (categoria que infere condutor) → revisar manualmente;
-  // se a data passou a existir, limpa a marca.
+  // Sem data válida → marca revisão; não altera vínculo já existente.
   if (inferCond) {
     if (desejaRevisar) {
       m.revisarManual = true;
       m.revisarMotivo = "Sem data de autuação no DETRAN — revisar manualmente";
+      m.condutorNaoIdentificado = true;
+      m.condutorConfirmado = true;
     } else if (m.revisarManual) {
       m.revisarManual = false;
       m.revisarMotivo = null;
@@ -590,6 +867,18 @@ export async function sincronizarClienteDespesa(
 
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
+
+  if (m.condutorNaoIdentificado && categoriaInfereCondutor(categoria)) {
+    espelharClienteDespesaSemLocatario(m);
+    return {
+      registro: m,
+      aviso: opts?.fonteDetran
+        ? `sync ${opts.fonteDetran} — parceiro-despesas`
+        : "Espelhado em parceiro-despesas",
+      acao: "atualizado",
+    };
+  }
+
   const [synced] = await pushAposPersistir([m], opts);
   return {
     registro: synced ?? m,
@@ -609,6 +898,25 @@ export function sincronizarInfracao(
     { ...input, categoria: input.categoria ?? "Infração" },
     opts,
   );
+}
+
+/** Grava/atualiza o caminho do PDF da infração em infracoes.json e cliente-despesas.json. */
+export function atualizarPdfArquivoInfracao(
+  autoInfracao: string,
+  pdfArquivo: string,
+): ClienteDespesaRegistro | null {
+  atualizarPdfArquivoInfracaoDb(autoInfracao, pdfArquivo);
+  const db = loadClienteDespesasDb();
+  const key = autoInfracao.trim().toUpperCase();
+  const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
+  if (idx < 0) return null;
+  const m = db.clienteDespesas[idx]!;
+  if (m.pdfArquivo === pdfArquivo) return m;
+  m.pdfArquivo = pdfArquivo;
+  m.atualizadoEm = nowIso();
+  db.clienteDespesas[idx] = m;
+  saveClienteDespesasDb(db);
+  return m;
 }
 
 export async function confirmarCondutorClienteDespesa(
@@ -644,6 +952,66 @@ export function isInfracaoTransito(r: ClienteDespesaRegistro): boolean {
   return (r.categoria ?? "Infração") === "Infração";
 }
 
+/** Infração sem data de autuação válida — nova não vincula locatário (vai a parceiro). */
+export function isInfracaoSemDataAutuacao(r: ClienteDespesaRegistro): boolean {
+  if (!isInfracaoTransito(r)) return false;
+  const data = String(r.dataAutuacao ?? "").trim();
+  return !data || !parseDataAutuacao(data);
+}
+
+/** Pedágio e estacionamento — locatário na data do evento, não o contrato ativo hoje. */
+export function categoriaAtribuiPorDataEvento(categoria: string | undefined | null): boolean {
+  const c = (categoria ?? "").trim();
+  return c === "Pedágio" || c === "Estacionamento";
+}
+
+function contratoAtivoPorPlacaDb(placa: string) {
+  const p = compactPlaca(placa);
+  const list = loadContratosDb().contratos.filter(
+    (c) => c.status === "ativo" && compactPlaca(c.placa ?? c.veiculoId) === p,
+  );
+  if (list.length === 0) return undefined;
+  return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
+}
+
+/** Condutor/locatário na data da despesa (placa + dataAutuacao). */
+export function inferirCondutorIdDespesaPorData(
+  d: ClienteDespesaRegistro,
+  prazoDias = 90,
+): string | null {
+  if (d.condutorId) return d.condutorId;
+  if (d.condutorNaoIdentificado === true && d.condutorConfirmado === true) return null;
+  const data = String(d.dataAutuacao ?? "").trim();
+  if (!data || !parseDataAutuacao(data)) return null;
+  return (
+    inferirCondutorInfracao(formatPlacaHyphen(d.veiculoId), d.dataAutuacao, prazoDias).condutorId ??
+    null
+  );
+}
+
+/**
+ * Débito pertence ao cliente no escopo de cobrança/relatório.
+ * Infração, pedágio e estacionamento usam vigência na data do evento — não o locatário atual da placa.
+ */
+export function despesaAtribuidaACliente(
+  d: ClienteDespesaRegistro,
+  clienteId: string,
+  prazoDias = 90,
+): boolean {
+  if (d.condutorId === clienteId) return true;
+  if (d.condutorId && d.condutorId !== clienteId) return false;
+
+  if (isInfracaoTransito(d) || categoriaAtribuiPorDataEvento(d.categoria)) {
+    if (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) return false;
+    const inferido = inferirCondutorIdDespesaPorData(d, prazoDias);
+    if (inferido) return inferido === clienteId;
+    return false;
+  }
+
+  const vigente = contratoAtivoPorPlacaDb(d.veiculoId);
+  return vigente?.clienteId === clienteId;
+}
+
 export function autoInfracaoRastreame(rastreameId: string | number): string {
   return `RAST-${rastreameId}`;
 }
@@ -655,6 +1023,26 @@ export function parseRastreameIdFromAuto(autoInfracao: string): string | null {
 
 export function isClienteDespesaAtiva(r: ClienteDespesaRegistro): boolean {
   return r.ativo !== false;
+}
+
+/**
+ * Inativa espelho cliente de infração (ex.: débito passou a parceiro-despesas
+ * por ausência de locatário na data da autuação).
+ */
+export function inativarEspelhoClienteInfracao(numeroAuto: string): boolean {
+  const db = loadClienteDespesasDb();
+  const key = String(numeroAuto).trim().toUpperCase();
+  const idx = db.clienteDespesas.findIndex(
+    (m) => m.autoInfracao.trim().toUpperCase() === key,
+  );
+  if (idx < 0) return false;
+  const m = db.clienteDespesas[idx]!;
+  if (m.ativo === false) return false;
+  m.ativo = false;
+  m.atualizadoEm = nowIso();
+  db.clienteDespesas[idx] = m;
+  saveClienteDespesasDb(db);
+  return true;
 }
 
 /** Débito espelhado ou elegível para Gastos Gerais no Rastreame. */
@@ -990,6 +1378,22 @@ export function vincularInfracaoDetranComRastreame(
     }
     if (!rast.limiteDefesa?.trim() && detran.limiteDefesa?.trim()) {
       rast.limiteDefesa = detran.limiteDefesa;
+    }
+    if (!rast.numeroAuto?.trim() && detran.numeroAuto?.trim()) {
+      rast.numeroAuto = detran.numeroAuto;
+    }
+    if (!rast.dataLimiteDefesa?.trim() && detran.dataLimiteDefesa?.trim()) {
+      rast.dataLimiteDefesa = detran.dataLimiteDefesa;
+    }
+    if (!rast.dataVencimentoOriginal?.trim() && detran.dataVencimentoOriginal?.trim()) {
+      rast.dataVencimentoOriginal = detran.dataVencimentoOriginal;
+    }
+    if (detran.convertidaEmDebito === true) rast.convertidaEmDebito = true;
+    if (!rast.statusInfracao?.trim() && detran.statusInfracao?.trim()) {
+      rast.statusInfracao = detran.statusInfracao;
+    }
+    if (!rast.statusDetran?.trim() && detran.statusDetran?.trim()) {
+      rast.statusDetran = detran.statusDetran;
     }
     if (detran.condutorConfirmado && !rast.condutorConfirmado) {
       rast.condutorId = detran.condutorId;

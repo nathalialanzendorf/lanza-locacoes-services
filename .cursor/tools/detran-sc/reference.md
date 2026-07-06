@@ -121,6 +121,9 @@ Defina **`DETRAN_SC_TLS_INSECURE=1`** (a tool também aceita `RASTREAME_TLS_INSE
 | `src/lib/detranSc/consulta.ts` | POST + poll |
 | `src/lib/detranSc/mapInfracoes.ts` | Infrações |
 | `src/lib/detranSc/mapDebitosProprietario.ts` | IPVA/licenciamento |
+| `src/lib/detranSc/pdfInfracao.ts` | PDF da notificação/auto |
+| `src/lib/detranSc/indexRawInfracoes.ts` | Índice raw por auto |
+| `src/lib/infracaoPdfStorage.ts` | Pastas `Débitos/` (contrato + veículo) |
 | `src/lib/detranSc/syncVeiculo.ts` | Orquestra infrações |
 | `src/lib/detranSc/syncDespesasVeiculo.ts` | Orquestra parceiro |
 | `src/cli/syncInfracoes.ts` | CLI infrações |
@@ -136,3 +139,19 @@ Defina **`DETRAN_SC_TLS_INSECURE=1`** (a tool também aceita `RASTREAME_TLS_INSE
 3. Consultar veículo → copiar `Authorization` (JWT) e `X-Empresa`.
 
 Debug offline: `--json relatorios/_tmp/_detran_resposta.json`.
+
+## PDF da notificação (por infração)
+
+Após cada multa sincronizada, o sync tenta baixar o PDF e gravar em `{pastaContrato}/Débitos/`
+e, sem `condutorId`, também em `{pastaVeiculo}/Débitos/`. Campo `pdfArquivo` em
+`cliente-despesas.json`.
+
+Endpoints tentados (primeiro que devolver `%PDF`):
+
+- `GET /infracao/notificacao/imprimir?numeroAuto=&placa=&renavam=`
+- Outras variantes em `src/lib/detranSc/pdfInfracao.ts`
+
+Override: `DETRAN_SC_INFRACAO_PDF_PATH=/infracao/...?numeroAuto={auto}&placa={placa}&renavam={renavam}`
+
+> Confirmar o path no DevTools ao imprimir a notificação no portal — o endpoint não é
+> documentado publicamente e pode mudar entre versões do Detran Digital.

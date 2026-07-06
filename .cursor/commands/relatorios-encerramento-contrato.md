@@ -30,7 +30,7 @@ Gravado em `relatorios/_tmp/encerramento-contrato/`:
 1. Localizar pasta do contrato vigente (`contratos.json` + Dropbox).
 2. Rodar CLI com JSON de entrada (`fonteDebitos: abertos-db`, `incluirInfracoesCliente: true`) quando houver débitos no Rastreame.
 3. Validar totais com o operador.
-4. **Sempre** criar canvas a partir do JSON sidecar.
+4. **Sempre** criar canvas com `node scripts/gen-encerramento-canvas.mjs` a partir do JSON sidecar (layout em `templates/canvas/encerramento.layout.tsx`).
 5. Enviar o `.txt` ao locatário; avisos do terminal **não** vão no WhatsApp.
 
 ```bash

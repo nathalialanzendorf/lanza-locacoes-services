@@ -14,12 +14,19 @@ import {
   type ContratoExtraido,
 } from "./contratoExtrair.js";
 import {
+  despesaAtribuidaACliente,
+  isInfracaoSemDataAutuacao,
+  isCategoriaManutencao,
   isClienteDespesaAtiva,
   isInfracaoTransito,
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
-import { rotuloGastoClienteDespesa } from "./infracaoTitulo.js";
+import {
+  infracaoCobravelRelatorio,
+  infracaoIncluirListagemRelatorio,
+  rotuloGastoClienteDespesa,
+} from "./infracaoTitulo.js";
 import { validarContratoVigenteParaEncerramento } from "./contratosDb.js";
 import { compactPlaca } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -159,10 +166,18 @@ function loadClienteId(cpf: string | null, condutorId?: string | null): string |
   }
 }
 
-function infracaoPaga(m: ClienteDespesaRegistro, pagasAuto: Set<string>): boolean {
-  if (pagasAuto.has(m.autoInfracao.trim().toUpperCase())) return true;
-  if (m.quitadaDetran === true) return true;
-  return m.paga === true;
+function infracaoExcluidaAcerto(m: ClienteDespesaRegistro, pagasAuto: Set<string>): boolean {
+  return !infracaoCobravelRelatorio(m, pagasAuto);
+}
+
+function infracaoNoPeriodoEncerramento(
+  m: ClienteDespesaRegistro,
+  inicio: Date,
+  limite: Date,
+): boolean {
+  const da = parseDataBr(m.dataAutuacao);
+  if (!da) return true;
+  return da >= startOfDay(inicio) && da <= limite;
 }
 
 /** Crédito a devolver ao locatário (descrição começa com CRÉDITO ou legado DÉBITO). */
@@ -352,7 +367,7 @@ function coletarDebitosAbertosDb(
   for (const m of db.clienteDespesas) {
     if (!isClienteDespesaAtiva(m)) continue;
     if (m.paga === true) continue;
-    if (infracaoPaga(m, pagasAutoSet)) continue;
+    if (isInfracaoTransito(m) && infracaoExcluidaAcerto(m, pagasAutoSet)) continue;
     if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) continue;
     const da = parseDataBr(m.dataAutuacao);
     if (da && (da < startOfDay(contrato.inicio) || da > limite)) continue;
@@ -367,7 +382,7 @@ function coletarDebitosAbertosDb(
     }
 
     if (isInfracaoTransito(m)) continue;
-    if ((m.categoria ?? "") === "Manutenção") continue;
+    if (isCategoriaManutencao(m.categoria)) continue;
 
     if ((m.categoria ?? "") === "Locação semanal") {
       parcelasSemanal.push(m);
@@ -602,18 +617,23 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const limiteDespesasEncerramento = addDays(startOfDay(encerramento), 7);
   const infracoes = dedupeInfracoesEspelho(
     db.clienteDespesas.filter((m) => {
-      if (!isClienteDespesaAtiva(m)) return false;
-      if (!isInfracaoTransito(m)) return false;
-      if (infracaoPaga(m, pagasAutoSet)) return false;
-      if (incluirInfracoesCliente && clienteId && m.condutorId === clienteId) {
-        return true;
+      if (!infracaoIncluirListagemRelatorio(m)) return false;
+      if (isInfracaoSemDataAutuacao(m) && !m.condutorId) return false;
+      if (incluirInfracoesCliente && clienteId && despesaAtribuidaACliente(m, clienteId)) {
+        return infracaoNoPeriodoEncerramento(
+          m,
+          contrato.inicio,
+          limiteDespesasEncerramento,
+        );
       }
       if (!infracaoDoContrato(m, contrato, clienteId, incluirTodas)) {
         return false;
       }
-      const da = parseDataBr(m.dataAutuacao);
-      if (!da) return false;
-      return da >= startOfDay(contrato.inicio) && da <= limiteDespesasEncerramento;
+      return infracaoNoPeriodoEncerramento(
+        m,
+        contrato.inicio,
+        limiteDespesasEncerramento,
+      );
     }),
   );
 
@@ -634,12 +654,17 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     );
   }
 
-  const totalInfracoes = round2(infracoes.reduce((s, m) => s + m.valorMulta, 0));
+  const totalInfracoes = round2(
+    infracoes
+      .filter((m) => !infracaoExcluidaAcerto(m, pagasAutoSet))
+      .reduce((s, m) => s + m.valorMulta, 0),
+  );
 
   const manutencoes = db.clienteDespesas.filter((m) => {
     if (!isClienteDespesaAtiva(m)) return false;
-    if ((m.categoria ?? "") !== "Manutenção") return false;
-    if (infracaoPaga(m, pagasAutoSet)) return false;
+    if (!isCategoriaManutencao(m.categoria)) return false;
+    if (m.paga === true) return false;
+    if (pagasAutoSet.has(m.autoInfracao.trim().toUpperCase())) return false;
     if (incluirInfracoesCliente && clienteId && m.condutorId === clienteId) {
       return true;
     }
@@ -754,7 +779,7 @@ export function formatarEncerramentoTexto(
     `• Diária (atraso): R$ ${brl(valorDiariaContrato(c))}`,
     `• Caução: R$ ${brl(c.valorCaucao)}`,
     "",
-    "🚦 *Infrações (em aberto)*",
+    "🚦 *Infrações*",
   ];
 
   if (r.infracoes.length === 0) {

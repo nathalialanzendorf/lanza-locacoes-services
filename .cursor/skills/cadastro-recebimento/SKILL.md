@@ -29,6 +29,59 @@ npx tsx src/run.ts gravar-cliente-despesa confirmar <autoInfracao> <clienteId>
 
 Descrição típica: `Acionamento Franquia` (nasce com prefixo **`ATRASADO`** se em aberto).
 
+## Formato das descrições — caução (parcelamento)
+
+> **Fonte única** desta regra para lançamentos de caução em `cliente-despesas.json` / Gastos Gerais.
+> A skill **`cadastro-contrato`** define datas e valores no Word; ao **cadastrar as despesas**,
+> seguir **sempre** este formato aqui.
+
+### Entrada na retirada (sem sufixo)
+
+Quando o locatário paga parte ou total da caução **na retirada**, sem número de parcela:
+
+| Situação | Descrição | Tipo Rastreame |
+|----------|-----------|----------------|
+| Pago | `Pagamento caução` | **OUTROS** |
+| Em aberto (raro) | `ATRASADO Pagamento caução` | **OUTROS** |
+
+### Parcelas de caução (saldo em aberto ou diluído)
+
+O sufixo numérico segue **`{parcelaAtual}x{totalParcelas}`** — igual à renegociação
+(`Pagamento negociação - 4x26`). O **segundo número é o total de parcelas**, **não** o dia do mês.
+
+| Situação | Descrição | Exemplo (7 parcelas) |
+|----------|-----------|----------------------|
+| Em aberto | `ATRASADO Pagamento caução - {n}x{N}` | `ATRASADO Pagamento caução - 1x7` |
+| Quitada | `Pagamento caução - {n}x{N}` | `Pagamento caução - 3x7` |
+
+**Exemplo completo** — caução R$ 1.500, R$ 450 na retirada (03/07), saldo 7× R$ 150, pagamento **sábados**:
+
+1. `Pagamento caução` · R$ 450 · **03/07/2026** · **pago** (retirada)
+2. `Pagamento semanal - Sábado 04` · R$ 650 · **03/07/2026** · **pago** (1.ª semana na retirada — data real do pagamento, não o sábado da descrição)
+3. `ATRASADO Pagamento semanal - Sábado 11` · R$ 650 · 11/07/2026 (próxima semana em aberto)
+4. `ATRASADO Pagamento caução - 1x7` · R$ 150 · **11/07/2026** ← **1.ª parcela de caução**
+5. `ATRASADO Pagamento caução - 2x7` · R$ 150 · 18/07/2026
+6. … até `ATRASADO Pagamento caução - 7x7` · R$ 150 · 22/08/2026
+
+### Calendário — parcelamento **inicia na semana seguinte**
+
+A **1.ª parcela de caução em aberto** vence sempre na **semana seguinte** ao início do contrato / retirada — **não** no mesmo dia da retirada nem no 1.º sábado imediato se a retirada for antes dele com semanal já paga.
+
+| Evento | Quando cadastrar |
+|--------|------------------|
+| Entrada de caução paga | Data da **retirada** |
+| 1.ª semana paga na retirada | Data **real** do pagamento (retirada) |
+| **1.ª parcela de caução (`1xN`)** | **1.º dia de pagamento da semana seguinte** (ex.: 1.º sábado após retirada → 11/07 se retirada 03/07) |
+| Parcelas seguintes (`2xN` …) | Mesmo dia da semana, +7 dias cada |
+
+**Proibido** antecipar a 1.ª parcela de caução para a mesma data da 1.ª semanal ou da retirada.
+
+**Proibido** usar o dia do mês no sufixo (ex.: `1x04`, `2x11`) — isso **não** é o padrão Lanza.
+
+Helper TypeScript: `infoParcelaCaucao(n, total, { atrasado })` e `gerarDatasParcelasCaucao(inicio, parcelas, diaPagamento)` em `src/lib/caucaoParcelas.ts`.
+
+Ao dar baixa numa parcela, **remover `ATRASADO`** (mesma regra do pagamento semanal).
+
 ## Modos de entrada (como invocar)
 
 A skill tem **dois modos**. Em ambos, a **confirmação Sim/Não por linha** antes de gravar é **obrigatória** (ver secção seguinte).

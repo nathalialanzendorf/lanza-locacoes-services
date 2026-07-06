@@ -14,7 +14,7 @@ Gera o **texto da cobrança** pronto para colar no WhatsApp. Skill **só leitura
 
 > **Veículos particulares** (`"particular": true` em `veiculos.json`) **não geram cobrança** — não são de locação (sem locatário). O CLI recusa a placa com erro claro.
 
-Cada mensagem tem um **modelo próprio** em `templates/cobrancas/`. O CLI lê o template, troca os campos `{...}` por dados do veículo/despesa e salva em `relatorios/cobrancas/`.
+Cada mensagem tem um **modelo próprio** em `templates/cobrancas/`. O CLI lê o template, troca os campos `{...}` por dados do veículo/despesa e salva em `relatorios/_tmp/cobrancas/`.
 
 ## Tipos de cobrança
 
@@ -26,6 +26,7 @@ Cada mensagem tem um **modelo próprio** em `templates/cobrancas/`. O CLI lê o 
 | 🚦 **multa** | `multa.txt` | infrações em aberto (`cliente-despesas.json`) |
 | 🤝 **renegociacao** | `renegociacao.txt` | soma das parcelas em aberto |
 | 🔧 **manutencao** | `manutencao.txt` | soma das manutenções em aberto |
+| 📋 **despesas em aberto** | `despesas-em-aberto.txt` | todas as despesas em aberto do escopo (mensagem dedicada) |
 
 ## Action `/relatorio-cobrancas`
 
@@ -72,7 +73,11 @@ npx tsx src/run.ts relatorio-cobrancas --placa RAH-4F54
 
 **pagamento-semanal** gera, por alvo: tabela **semanal-atraso** (padrão obrigatório) + WhatsApp (dia **automático** por vencimento + hoje). Demais tipos: uma mensagem por placa (infrações: uma por multa).
 
-Grava `.txt`, sidecars JSON e `dados-lote-{tipo}-{data}.json` em `relatorios/_tmp/cobrancas/`.
+Grava `.txt`, sidecars JSON por tipo (`dados-lote-*.json`) e, quando o escopo é **um cliente ou uma placa**, um **JSON consolidado para canvas** no formato do encerramento de contrato:
+
+- `cobranca-{placa}-{cliente}-{DD-MM-AAAA}.json` em `relatorios/_tmp/cobrancas/`
+
+Implementação sidecar: `src/lib/cobrancasRelatorioSidecar.ts`.
 
 ## Escalonamento do pagamento semanal
 
@@ -132,25 +137,33 @@ Uma **tabela por vencimento** não pago, em ordem cronológica:
 
 ### Resumo da cobrança WhatsApp (pagamento-semanal)
 
-Bloco obrigatório antes da mensagem e da tabela dia a dia (CLI e resposta do agente):
+Bloco obrigatório antes da tabela e da mensagem (CLI, canvas e mensagem semanal enriquecida):
 
 ```
-Pagamento semanal (dia N — {título})
-Vencimento em aberto: DD/MM/AAAA
-Data bloqueio: DD/MM/AAAA
-Total a receber: R$ X (N dias atrasados + N em dia)
-Juros e multa acumulados: R$ X
+Data bloqueio: 30/06/2026
+Base de cálculo: 04/07/2026
+
+Vencimento em aberto: 27/06/2026
+Juros e multa: R$ 189,98 (7 diárias)
+Total semana: R$ 840,00
+
+Vencimento em aberto: 04/07/2026
+Juros e multa: R$ 27,14 (1 diária)
+Valor semana: R$ 770,02
+
+Total a devido : R$ 1.610,02 (8 dias em atraso)
 ```
 
 | Campo | Regra |
 |---|---|
-| **dia N — título** | Inferido: D+1 lembrete · D+2 aviso · D+3 bloqueio (`--dia` força) |
-| **Vencimento em aberto** | vencimento(s) das parcelas ATRASADO em aberto |
+| **Escalonamento (dia N)** | No template bloqueio/lembrete — **fora** do bloco resumo |
+| **Base de cálculo** | `--data-pagamento` ou hoje |
 | **Data bloqueio** | 1º vencimento em aberto + **3 dias** |
-| **Total a receber** | soma dos dias até **hoje** (`--data-pagamento`) |
-| **Juros e multa acumulados** | soma dos juros/multa nos dias **Atrasado** incluídos no total a receber |
+| **Juros e multa (por semana)** | Soma dos dias **Atrasado** até a base de cálculo |
+| **Total semana / Valor semana** | Total da tabela semanal (1ª: «Total semana», 2ª+: «Valor semana») |
+| **Total a devido** | Soma dos totais semanais (`totalGeral`) · N dias em atraso |
 
-Implementação: `calcularResumoCobrancaSemanal()` · `formatResumoCobrancaSemanal()` em `pagamentoSemanalCobranca.ts`.
+Implementação: `calcularResumoCobrancaSemanal()` · `formatResumoCobrancaSemanal()` · `formatResumoPorSemana()` em `pagamentoSemanalCobranca.ts`.
 
 ### CLI
 
@@ -162,7 +175,7 @@ npx tsx src/run.ts relatorio-cobrancas semanal-atraso --placa RAH-4F54 --vencime
 Sem `--vencimento`, lê despesas **ATRASADO** em aberto do cliente. Valores do contrato ativo
 (`contratos.json`); override com `--valor-semanal` / `--valor-diaria`.
 
-Grava `relatorios/cobrancas/semanal-atraso-*.md` e `dados-semanal-atraso-*.json`.
+Grava `relatorios/_tmp/cobrancas/semanal-atraso-*.md` e `dados-semanal-atraso-*.json`.
 
 **Canvas:** ao calcular cobrança semanal em atraso, criar canvas a partir do JSON (mesmo padrão
 da secção Canvas abaixo).
@@ -178,19 +191,93 @@ npx tsx src/run.ts relatorio-cobrancas pedagio --placa AVU-6740
 npx tsx src/run.ts relatorio-cobrancas multa --placa QJB-0I83 [--auto P07MQ009QP]
 ```
 
-Opções: `--no-salvar` (só imprime), `--out DIR` (padrão `relatorios/cobrancas/`), `--nome NOME` (saudação personalizada).
+Opções: `--no-salvar` (só imprime), `--out DIR` (padrão `relatorios/_tmp/cobrancas/`), `--nome NOME` (saudação personalizada).
 
-Além dos `.txt`, cada execução grava um **JSON consolidado** `dados-{tipo}-{placa}-{data}.json` no diretório de saída — é o **sidecar que alimenta o canvas**.
+Além dos `.txt`, cada tipo grava `dados-lote-{tipo}-{data}.json`. Com **`--cliente`** ou **`--placa`**, grava também o sidecar **`cobranca-{placa}-{cliente}-{data}.json`** para o canvas.
+
+## Saída obrigatória no fim do relatório
+
+**Todo** relatório de cobrança com escopo **cliente** ou **placa** termina com, **nesta ordem**:
+
+1. **Resumo** da cobrança semanal (`formatResumoCobrancaSemanal`) — quando em atraso (D+1+), com **juros por semana** e **Total a devido**
+2. **Uma tabela semanal-atraso por semana em aberto** — colunas fixas: Data | Dia | Situação | Juros e multa | Total/dia; subtotais por tabela + **Total geral**
+3. **Mensagens WhatsApp separadas** (`mensagensWhatsApp[]`) — **entregáveis para envio**:
+   - **pagamento semanal** (template bloqueio/lembrete + resumo do atraso com juros por semana)
+   - **despesas em aberto** (mensagem unificada com todas as pendências — manutenção, parcelas nominais, pedágio, etc.)
+   - demais tipos dedicados (infrações, pedágio, …) **somente** quando não há mensagem unificada de despesas em aberto no escopo
+
+**Manutenção:** quando o escopo gera a mensagem **despesas em aberto** (ex.: `--cliente` com todos os tipos), **não** enviar WhatsApp separado de manutenção — os itens já aparecem na lista unificada. Com **`--tipo manutencao`** isolado, mantém a mensagem dedicada (`manutencao.txt`).
+
+As despesas em aberto aparecem **no início** do relatório/canvas (infrações, manutenção, parcelas, outros) — **não** há tabela consolidada no fim.
+
+Vale para **pagamento-semanal** isolado, **todos os tipos** (`--cliente` / `--placa` sem `--tipo`) ou combinação de tipos: se existir parcela semanal ATRASADO, incluir as tabelas mesmo que o filtro não seja só pagamento-semanal.
+
+### Formato WhatsApp — despesas em aberto
+
+Mensagem **separada** em `mensagensWhatsApp[]` (tipo `despesas-em-aberto`):
+
+```
+📋 *Despesas em aberto* — RAH-4F54
+
+Olá, Daniel!
+Segue a listagem das despesas referente à locação do seu FIAT/MOBI LIKE que segue em aberto:
+
+• MLX-2H34 · Troca de Pneu · R$ 320,00
+• RAH-4F54 · Pagamento semanal - Sábado 27 · R$ 400,00
+
+*Total em aberto: R$ 1.370,00*
+```
+
+O **total em aberto** reflete os valores nominais das despesas; o bloco semanal (na mensagem de pagamento semanal) distingue **total devido com juros/multa**.
+
+Implementação: `gerarDespesasEmAberto()` em `cobrancas.ts` · `montarMensagensWhatsAppEscopo()` em `cobrancasRelatorioSidecar.ts`; bloco final na CLI (`relatorioCobrancasLote.ts`); sidecar grava um `.txt` por mensagem (`cobranca-*-whatsapp-{tipo}.txt`); canvas `cobranca.layout.tsx` (secções **Pagamento semanal em atraso** → **Mensagens WhatsApp**).
 
 ## Canvas (obrigatório junto ao TXT)
 
-**Toda cobrança gera dois entregáveis: o(s) `.txt` (para WhatsApp) e um canvas.** Depois de rodar a CLI, **sempre** crie um canvas a partir do JSON consolidado (`relatorios/cobrancas/dados-*.json`).
+**Toda cobrança com escopo de cliente ou placa gera três entregáveis: `.txt` (WhatsApp), JSON sidecar e canvas.** Depois de rodar a CLI, **sempre** crie um canvas a partir do JSON `cobranca-*.json` (não use `dados-lote-*.json` para o canvas). O gerador **copia automaticamente** o `.canvas.tsx` para `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/` — é desse caminho que o Cursor abre o canvas.
 
-- **Local do arquivo:** `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/cobranca-{tipo}-{placa}.canvas.tsx` (kebab-case; só o IDE detecta nesse diretório).
-- **Dados:** leia o JSON e **embuta inline**; importe **só** de `cursor/canvas`; sem rede/imports relativos; cores via `useHostTheme()`.
-- **Conteúdo:** cabeçalho (tipo da cobrança, placa, marca/modelo, nome do condutor). Para **multa**: uma tabela com uma linha por infração (auto, data/hora, local, descrição, **valor R$**) e o total. Para **semanal/estacionamento/pedágio**: cartão com o resumo e o **texto da mensagem** (pré-visualização do que vai pro WhatsApp). Omita campos vazios.
-- Sem slop (sem gradiente, emoji como ícone, sombra); rótulos claros com `R$` nos valores monetários.
-- Ao terminar, mencione o canvas com link markdown para o caminho do `.canvas.tsx`.
+### Layout — um ficheiro por relatório (independentes)
+
+Cada relatório tem **o seu próprio layout** em `templates/canvas/`:
+
+| Relatório | Layout | Gerador |
+|---|---|---|
+| Encerramento | `encerramento.layout.tsx` | `node scripts/gen-encerramento-canvas.mjs …` |
+| Cobrança | `cobranca.layout.tsx` | `node scripts/gen-cobranca-canvas.mjs …` |
+
+O layout de **cobrança** foi **copiado** do de encerramento (tabelas, cartão, stats, divisor). Depois da cópia, **evoluem em paralelo** — alterar um **não** altera o outro.
+
+Detalhes: `templates/canvas/README.md`.
+
+**Todas as despesas em aberto** do escopo entram no relatório (`cliente-despesas.json`, `paga !== true`, ativas). Exclui **quebra de contrato** e **CRÉDITO** (devolução).
+
+**Adaptações do layout de cobrança** (face ao encerramento):
+
+| Secção encerramento | Cobranças |
+|---|---|
+| **Encerramento de contrato** | **Relatório de cobranças** |
+| Vigência + encerramento | `{dataInicio} → {dataFim} ({qtdDiasContrato} dias de contrato) · Gerado em {dataAtual} ({qtdDiasLocado} dias de locação)` |
+| Cartão **Saldo caução** | Cartão **Total a cobrar** (`totalDebitos`, cor laranja) |
+| Stats: semanal · caução · retenção | Stats: **Locação semanal** · **Diária atraso** (2 colunas) |
+| Infrações / Manutenção / Parcelas / Outros | Igual — infrações usam **`titulo`** |
+| Créditos a devolver | **Omitir** |
+| Callout quebra de contrato | **Omitir** |
+| Totais débitos · créditos · Saldo | Apenas **Total a cobrar** |
+| Avisos (operador) | Igual |
+| — | **Pagamento semanal em atraso** — resumo + **uma tabela por semana** (`pagamentoSemanal.tabelas`) + total geral |
+| — | **Mensagens WhatsApp** (`mensagensWhatsApp[]`) — **última secção** antes do divisor de totais (pagamento semanal + despesas em aberto; sem card duplicado de manutenção quando a unificada existe) |
+
+### Arquivos
+
+- **Sidecar JSON:** `relatorios/_tmp/cobrancas/cobranca-{placa}-{cliente}-{DD-MM-AAAA}.json`
+- **Canvas (repo):** `canvases/cobranca-{placa}-{cliente}.canvas.tsx`
+- **Canvas (Cursor IDE):** `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/cobranca-{placa}-{cliente}.canvas.tsx` — **cópia obrigatória**; só o IDE abre daqui
+- **Layout:** `templates/canvas/cobranca.layout.tsx` (cópia independente do encerramento)
+- Gerador: `node scripts/gen-cobranca-canvas.mjs relatorios/_tmp/cobrancas/cobranca-….json canvases/cobranca-….canvas.tsx` — grava no repo **e copia** automaticamente para o diretório do Cursor
+- Dados embutidos inline; importe **só** de `cursor/canvas`; cores via `useHostTheme()`
+- Sem slop; link markdown para o `.canvas.tsx` **no diretório do Cursor** ao terminar
+
+Detalhes dos campos JSON: `reference.md` nesta pasta.
 
 **Saudação com nome:** os textos usam "Olá, {NOME}!". O nome (primeiro nome) é resolvido automaticamente — multa pelo `condutorId` da despesa (ou inferido pela data via contrato); semanal/estacionamento/pedágio pelo **contrato ativo hoje** da placa. Sem contrato/condutor, vira "Olá!". Use `--nome` para forçar.
 
@@ -211,7 +298,7 @@ Sempre que questionar/listar um veículo, informar **placa + marca/modelo + ano*
 ## Editar/adicionar modelos
 
 Cada arquivo em `templates/cobrancas/` é o texto literal enviado (com formatação WhatsApp: `*negrito*`). Campos disponíveis:
-`{PLACA}`, `{NOME}`, `{MARCA_MODELO}`, `{MODELO_COR}`, `{DESCRICAO}`, `{DATA}`, `{HORA}`, `{LOCAL}`, `{VALOR}`.
+`{PLACA}`, `{NOME}`, `{MARCA_MODELO}`, `{MODELO_COR}`, `{DESCRICAO}`, `{DATA}`, `{HORA}`, `{LOCAL}`, `{VALOR}`, `{LISTA}` (despesas em aberto).
 Para mudar o texto de uma cobrança, edite o `.txt` — não é preciso mexer no código. A saudação "Olá, {NOME}!" colapsa para "Olá!" quando não há nome.
 
 Todas as mensagens recebem automaticamente um **rodapé em itálico** indicando envio automático pelo sistema "Gerenciador de Locações Veiculares" (constante `RODAPE_AUTOMATICO` em `src/lib/cobrancas.ts` — alterar lá).

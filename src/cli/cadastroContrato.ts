@@ -56,6 +56,13 @@ type GerarFlags = {
   diaria: number | null;
   template: string | null;
   contratosDir: string | null;
+  caucaoSaldoAberto: number | null;
+  caucaoParcelas: number | null;
+  caucaoValorParcela: number | null;
+  caucaoDatas: string | null;
+  semanaEntrada: number | null;
+  semanaParcelas: number | null;
+  semanaValorParcela: number | null;
   outJson: string | null;
   dryRun: boolean;
 };
@@ -86,6 +93,13 @@ function parseGerarArgs(argv: string[]): GerarFlags {
     diaria: null,
     template: null,
     contratosDir: null,
+    caucaoSaldoAberto: null,
+    caucaoParcelas: null,
+    caucaoValorParcela: null,
+    caucaoDatas: null,
+    semanaEntrada: null,
+    semanaParcelas: null,
+    semanaValorParcela: null,
     outJson: null,
     dryRun: false,
   };
@@ -150,6 +164,34 @@ function parseGerarArgs(argv: string[]): GerarFlags {
         flags.contratosDir = next ?? null;
         i++;
         break;
+      case "--caucao-saldo-aberto":
+        flags.caucaoSaldoAberto = next ? parseNum(next, "--caucao-saldo-aberto") : null;
+        i++;
+        break;
+      case "--caucao-parcelas":
+        flags.caucaoParcelas = next ? parseInt(next, 10) : null;
+        i++;
+        break;
+      case "--caucao-valor-parcela":
+        flags.caucaoValorParcela = next ? parseNum(next, "--caucao-valor-parcela") : null;
+        i++;
+        break;
+      case "--caucao-datas":
+        flags.caucaoDatas = next ?? null;
+        i++;
+        break;
+      case "--semana-entrada":
+        flags.semanaEntrada = next ? parseNum(next, "--semana-entrada") : null;
+        i++;
+        break;
+      case "--semana-parcelas":
+        flags.semanaParcelas = next ? parseInt(next, 10) : null;
+        i++;
+        break;
+      case "--semana-valor-parcela":
+        flags.semanaValorParcela = next ? parseNum(next, "--semana-valor-parcela") : null;
+        i++;
+        break;
       case "--out":
         flags.outJson = next ?? null;
         i++;
@@ -185,6 +227,20 @@ Opções:
   --contratos-dir DIR    config/lanza_paths.json
   --out dados.json       Grava JSON montado (sem gerar .docx)
   --dry-run              Mostra JSON montado
+
+Parcelamento — cláusula 3.3 (caução):
+  --caucao-saldo-aberto VALOR   Saldo em aberto após entrada parcial
+  --caucao-parcelas N           Número de parcelas
+  --caucao-valor-parcela VALOR  Valor de cada parcela de caução
+  --caucao-datas D1,D2,...      Datas DD/MM/AAAA (obrigatório com saldo aberto)
+  Sem --caucao-saldo-aberto/--caucao-datas: caução integral parcelada nas semanas
+  (parcelas × valor deve fechar com --caucao).
+
+Parcelamento — cláusula 3.2 (primeira semana):
+  --semana-entrada VALOR        Valor pago na retirada do veículo
+  --semana-parcelas N             Semanas restantes do parcelamento
+  --semana-valor-parcela VALOR  Valor adicional por semana
+  (entrada + parcelas × valor deve fechar com --semana).
 `);
 }
 
@@ -235,6 +291,13 @@ async function cmdCriarOuRenovar(modo: ModoContratoCli, argv: string[]): Promise
       diaria: f.diaria ?? undefined,
       template: f.template ?? undefined,
       contratosDir: f.contratosDir ?? undefined,
+      caucaoSaldoAberto: f.caucaoSaldoAberto ?? undefined,
+      caucaoParcelasN: f.caucaoParcelas ?? undefined,
+      caucaoValorParcela: f.caucaoValorParcela ?? undefined,
+      caucaoDatas: f.caucaoDatas ?? undefined,
+      semanaEntrada: f.semanaEntrada ?? undefined,
+      semanaParcelasN: f.semanaParcelas ?? undefined,
+      semanaValorParcela: f.semanaValorParcela ?? undefined,
     });
     normalizePaths(dados);
   } else {

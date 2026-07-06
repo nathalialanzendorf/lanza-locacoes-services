@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { docxPlainText } from "./docxPlain.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
-import { findReservaSubstitutaNaData } from "./locacoesDb.js";
+import { findManutencaoNaData, findReservaSubstitutaNaData } from "./locacoesDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -72,8 +72,8 @@ function parseDataBr(s: string): Date | null {
 
 function extrairPlacaDocx(texto: string): string | null {
   const t = texto.normalize("NFD").replace(/\p{M}/gu, "");
-  const m = t.match(/placa:\s*([A-Z0-9-]+)/i);
-  return m ? formatPlacaHyphen(m[1]!) : null;
+  const m = t.match(/placa:\s*([A-Z]{3})\s*-?\s*([A-Z0-9]{4})/i);
+  return m ? formatPlacaHyphen(`${m[1]!}${m[2]!}`) : null;
 }
 
 function extrairCpfDocx(texto: string): string | null {
@@ -344,6 +344,23 @@ export function inferirCondutorInfracao(
   }
 
   const placaFmt = formatPlacaHyphen(placa);
+
+  // Veículo em manutenção na data: locatário não estava com o carro → débito do parceiro.
+  const manutencao = findManutencaoNaData(placaFmt, data);
+  if (manutencao) {
+    const obs = manutencao.observacao?.trim();
+    return {
+      condutorId: null,
+      condutorContrato: null,
+      clienteNome: null,
+      aviso: [
+        `Veículo ${placaFmt} em manutenção (${manutencao.inicio}${manutencao.fim ? ` a ${manutencao.fim}` : ""}) — locatário não identificado`,
+        obs,
+      ]
+        .filter(Boolean)
+        .join("; "),
+    };
+  }
 
   // Carro reserva: débito na placa substituta → contrato do veículo principal (substituiPlaca).
   const reserva = findReservaSubstitutaNaData(placaFmt, data);

@@ -65,6 +65,18 @@ export function parseDataBr(s: string): Date | null {
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
+/** Ordenação cronológica crescente (mais antigo primeiro). Aceita DD/MM/AAAA e DD/MM/AAAA HH:mm. */
+export function compararDataBrAsc(a: string, b: string): number {
+  const da = parseDataBr(a);
+  const db = parseDataBr(b);
+  if (da && db) {
+    const cmp = da.getTime() - db.getTime();
+    if (cmp !== 0) return cmp;
+  } else if (da && !db) return -1;
+  else if (!da && db) return 1;
+  return a.localeCompare(b, "pt-BR");
+}
+
 function parseDataPasta(nomePasta: string): Date | null {
   const m4 = nomePasta.match(/^(\d{2})\.(\d{2})\.(\d{4})\s*-\s*/);
   if (m4) {

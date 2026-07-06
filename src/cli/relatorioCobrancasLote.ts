@@ -5,7 +5,14 @@ import {
   executarLoteCobranca,
   listarResumoAlvos,
   salvarLoteConsolidado,
+  type LoteCobrancaItem,
+  type LoteCobrancaResult,
 } from "../lib/cobrancasLote.js";
+import { gerarCobrancaCanvasDeSidecar } from "../lib/gerarCobrancaCanvas.js";
+import {
+  montarCobrancaSidecar,
+  salvarCobrancasSidecar,
+} from "../lib/cobrancasRelatorioSidecar.js";
 import {
   normalizarTipoCobrancaAction,
   TIPOS_COBRANCA_ACTION,
@@ -14,8 +21,14 @@ import {
 } from "../lib/cobrancasAlvos.js";
 import { COBRANCAS_OUT_DIR } from "../lib/cobrancas.js";
 import { loadClientesDb } from "../lib/clientesDb.js";
-import { formatResumoCobrancaSemanal, inferirDiaEscalonamento } from "../lib/pagamentoSemanalCobranca.js";
+import {
+  formatCobrancaSemanalAtrasoMarkdown,
+  resolverDiaEscalonamentoSemanal,
+  type ResumoCobrancaSemanal,
+  type TabelaCobrancaSemanal,
+} from "../lib/pagamentoSemanalCobranca.js";
 import { resolverCliente } from "../lib/recebimento/baixaPlano.js";
+import { compactPlaca } from "../lib/placa.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
   const i = argv.indexOf(nome);
@@ -71,9 +84,8 @@ function hojeBr(): string {
 }
 
 function rotuloDiaSemanal(vencimentosBr: string[] | undefined, refHoje: string): string {
-  const venc = vencimentosBr?.[0];
-  if (!venc) return "";
-  const dia = inferirDiaEscalonamento(venc, refHoje);
+  if (!vencimentosBr?.length) return "";
+  const dia = resolverDiaEscalonamentoSemanal(vencimentosBr, refHoje);
   if (dia == null) return " · em prazo";
   const titulos = ["", "lembrete", "aviso", "bloqueio"];
   return ` · dia ${dia} (${titulos[dia] ?? "?"})`;
@@ -150,6 +162,89 @@ function imprimirListagem(tipo: TipoCobrancaAction, filtro: FiltroAlvosCobranca)
   }
 }
 
+function imprimirBlocoFinalRelatorio(
+  items: LoteCobrancaItem[],
+  opts?: {
+    pagamentoSemanal?: Record<string, unknown> | null;
+    resumoSemanal?: Record<string, unknown> | null;
+    mensagensWhatsApp?: Array<{ tipo: string; placa: string; titulo: string; texto: string }>;
+  },
+): void {
+  const semanalVistos = new Set<string>();
+  const blocosSemanal: string[] = [];
+
+  for (const item of items) {
+    if (item.semanalAtraso) {
+      const chave = `${item.alvo.placa}|${item.alvo.clienteId ?? ""}`;
+      if (!semanalVistos.has(chave)) {
+        semanalVistos.add(chave);
+        blocosSemanal.push(item.semanalAtraso.markdown);
+      }
+    }
+  }
+
+  if (
+    blocosSemanal.length === 0 &&
+    opts?.pagamentoSemanal &&
+    opts?.resumoSemanal
+  ) {
+    const p = opts.pagamentoSemanal;
+    const input = {
+      valorSemanal: Number(p.valorSemanal),
+      valorDiaria: Number(p.valorDiaria),
+      vencimentosBr: (p.vencimentosBr as string[]) ?? [],
+      dataPagamentoBr: String(p.dataPagamentoBr ?? hojeBr()),
+      clienteNome: String((p.cliente as { nome?: string } | undefined)?.nome ?? ""),
+      placa: String(p.placa ?? ""),
+    };
+    blocosSemanal.push(
+      formatCobrancaSemanalAtrasoMarkdown(
+        input,
+        {
+          tabelas: (p.tabelas as TabelaCobrancaSemanal[]) ?? [],
+          totalGeral: Number(p.totalGeral) || 0,
+        },
+        opts.resumoSemanal as ResumoCobrancaSemanal,
+      ),
+    );
+  }
+
+  const mensagens = opts?.mensagensWhatsApp ?? [];
+
+  if (blocosSemanal.length === 0 && mensagens.length === 0) {
+    return;
+  }
+
+  console.log("\n" + "═".repeat(48));
+  if (blocosSemanal.length > 0) {
+    console.log("\n## Cobrança semanal em atraso (diária)\n");
+    for (const bloco of blocosSemanal) console.log(bloco + "\n");
+  }
+  if (mensagens.length > 0) {
+    console.log("\n## Mensagens WhatsApp (enviar separadamente)\n");
+    for (let i = 0; i < mensagens.length; i++) {
+      const m = mensagens[i]!;
+      console.log(`── ${i + 1}. ${m.titulo.replace(/\r/g, "").trim()} (${m.tipo}) ──\n`);
+      console.log(m.texto + "\n");
+    }
+  }
+}
+
+function itemsDoEscopo(
+  results: LoteCobrancaResult[],
+  filtro: FiltroAlvosCobranca,
+): LoteCobrancaItem[] {
+  const items: LoteCobrancaItem[] = [];
+  for (const result of results) {
+    for (const item of result.items) {
+      if (filtro.placa && compactPlaca(item.alvo.placa) !== compactPlaca(filtro.placa)) continue;
+      if (filtro.clienteId && item.alvo.clienteId !== filtro.clienteId) continue;
+      items.push(item);
+    }
+  }
+  return items;
+}
+
 export function mainLote(argv: string[]): void {
   if (argv.includes("-h") || argv.includes("--help")) {
     uso();
@@ -192,6 +287,7 @@ export function mainLote(argv: string[]): void {
   let totalAlvos = 0;
   let totalMensagens = 0;
   let totalIgnorados = 0;
+  const resultadosLote: LoteCobrancaResult[] = [];
 
   for (const tipo of tipos) {
     const result = executarLoteCobranca(tipo, {
@@ -205,6 +301,7 @@ export function mainLote(argv: string[]): void {
     totalAlvos += result.resumo.alvos;
     totalMensagens += result.resumo.mensagens;
     totalIgnorados += result.resumo.ignorados;
+    resultadosLote.push(result);
 
     if (tipos.length > 1) {
       console.log(`\n── ${tipo} ──`);
@@ -227,18 +324,6 @@ export function mainLote(argv: string[]): void {
       const a = item.alvo;
       console.log(`${a.placa} · ${a.clienteNome ?? "(sem cliente)"}`);
       if (item.aviso) console.log(`  ⚠ ${item.aviso}`);
-      if (item.semanalAtraso?.resumo) {
-        if (!salvar) {
-          console.log("\n" + item.semanalAtraso.markdown);
-        } else {
-          console.log("\n" + formatResumoCobrancaSemanal(item.semanalAtraso.resumo));
-        }
-      } else if (item.semanalAtraso && !salvar) {
-        console.log("\n" + item.semanalAtraso.markdown);
-      }
-      for (const r of item.resultados) {
-        console.log("\n" + r.texto);
-      }
       if (item.arquivos.length) {
         console.log("\n  [arquivos]");
         for (const f of item.arquivos) console.log(`    ${f}`);
@@ -255,6 +340,48 @@ export function mainLote(argv: string[]): void {
     console.log(
       `\n[total] Alvos: ${totalAlvos} · Mensagens: ${totalMensagens} · Ignorados: ${totalIgnorados}`,
     );
+  }
+
+  const escopoUnico = filtro.clienteId != null || filtro.placa != null;
+  const dataRef = dataPagamento ?? hojeBr();
+
+  if (escopoUnico) {
+    const itemsEscopo = itemsDoEscopo(resultadosLote, filtro);
+    const sidecar = montarCobrancaSidecar(filtro, itemsEscopo, dataRef, tipos);
+    imprimirBlocoFinalRelatorio(itemsEscopo, {
+      pagamentoSemanal: sidecar?.pagamentoSemanal ?? null,
+      resumoSemanal: sidecar?.resumoSemanal ?? null,
+      mensagensWhatsApp: sidecar?.mensagensWhatsApp ?? [],
+    });
+  } else {
+    imprimirBlocoFinalRelatorio(
+      resultadosLote.flatMap((r) => r.items),
+      undefined,
+    );
+  }
+
+  if (salvar && escopoUnico) {
+    const sidecars = salvarCobrancasSidecar(resultadosLote, dataRef, {
+      outDir,
+      filtro,
+      tiposSolicitados: tipos,
+    });
+    if (sidecars.length) {
+      console.log("\n[sidecar canvas]");
+      for (const p of sidecars) console.log(`  ${p}`);
+
+      console.log("\n[canvas]");
+      for (const p of sidecars.filter((f) => f.endsWith(".json"))) {
+        try {
+          const { repoPath, cursorPath } = gerarCobrancaCanvasDeSidecar(p);
+          console.log(`  ${repoPath}`);
+          if (cursorPath) console.log(`  ${cursorPath}`);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn(`  AVISO: falha ao gerar canvas: ${msg}`);
+        }
+      }
+    }
   }
 
   if (totalAlvos === 0) {

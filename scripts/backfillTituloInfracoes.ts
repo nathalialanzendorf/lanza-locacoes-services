@@ -3,7 +3,7 @@
  *
  * Convenção (28/06/2026):
  * - `descricao` = texto cru do DETRAN.
- * - `titulo`    = "Multa {tipo} - {dataAutuacao}" (a tag ATRASADO é aplicada no push ao Rastreame).
+ * - `titulo`    = "Multa {tipo} {numeroAuto} - {dataAutuacao}" (a tag ATRASADO é aplicada no push ao Rastreame).
  *
  * Para registros cuja `descricao` ainda guarda o título antigo (origem Rastreame, ex.:
  * "ATRASADO Multa velocidade - …"), o título é extraído dela; a `descricao` real do
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     const desc = String(r.descricao ?? "");
     const titulo = pareceTituloMulta(desc)
       ? normalizarTituloMulta(desc)
-      : tituloInfracaoBase(desc, r.dataAutuacao);
+      : tituloInfracaoBase(desc, r.dataAutuacao, r.numeroAuto ?? r.autoInfracao);
 
     if (!r.dataAutuacao?.trim()) semData++;
 

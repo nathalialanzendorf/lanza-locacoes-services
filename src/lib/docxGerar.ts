@@ -168,6 +168,83 @@ function boldSubstring(
   return out;
 }
 
+type RichSeg = [string, boolean];
+
+function mergeRichSegments(...parts: RichSeg[][]): RichSeg[] {
+  return parts.flat();
+}
+
+/** Valores monetários do template padrão — não negritar se iguais. */
+const TEMPLATE_MONEY_REFS = [650.0, 120.0, 1500.0, 360.0];
+
+function boldAllPatternMatches(
+  segs: RichSeg[],
+  text: string,
+  pattern: RegExp,
+): RichSeg[] {
+  const re = new RegExp(
+    pattern.source,
+    pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g",
+  );
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (!seen.has(m[0])) {
+      seen.add(m[0]);
+      segs = boldSubstring(segs, m[0]);
+    }
+  }
+  return segs;
+}
+
+/** Negrito em todo o sufixo customizado da cláusula 3.3 (valores, datas, parcelas). */
+function richBoldSuffixClausula33(suffix: string): RichSeg[] {
+  let segs: RichSeg[] = [N(suffix)];
+  segs = boldAllPatternMatches(segs, suffix, /R\$\s*[\d.]+,\d{2}\s*\([^)]+\)/g);
+  segs = boldAllPatternMatches(segs, suffix, /\d{2}\/\d{2}\/\d{4}/g);
+  segs = boldAllPatternMatches(
+    segs,
+    suffix,
+    /\d+\s*\([A-Za-záéíóúâêôãçÁÉÍÓÚÂÊÔÃÇ\s]+\)/g,
+  );
+  return segs;
+}
+
+/** Negrito em valores monetários da base que diferem do template padrão. */
+function richBaseMoneyNotTemplate(text: string, templateRefs: number[]): RichSeg[] {
+  let segs: RichSeg[] = [N(text)];
+  const moneyRe = /R\$\s*([\d.]+,\d{2})\s*\([^)]+\)/g;
+  const re = new RegExp(moneyRe.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const num = parseFloat(m[1]!.replace(/\./g, "").replace(",", "."));
+    const isTemplate = templateRefs.some((ref) => Math.abs(num - ref) < 0.005);
+    if (!isTemplate) {
+      segs = boldSubstring(segs, m[0]);
+    }
+  }
+  return segs;
+}
+
+function richParagraphSuffix(
+  fullText: string,
+  suffix: string,
+  templateRefs: number[],
+  extraBold?: string[],
+): RichSeg[] {
+  const idx = fullText.lastIndexOf(suffix);
+  const basePart = idx >= 0 ? fullText.slice(0, idx) : fullText;
+  const suffPart = idx >= 0 ? fullText.slice(idx) : "";
+  let segs = mergeRichSegments(
+    richBaseMoneyNotTemplate(basePart, templateRefs),
+    suffPart ? richBoldSuffixClausula33(suffPart) : [],
+  );
+  for (const sub of extraBold ?? []) {
+    if (sub) segs = boldSubstring(segs, sub);
+  }
+  return segs;
+}
+
 function richFromPattern(
   text: string,
   pat: RegExp,
@@ -185,6 +262,51 @@ function richFromPattern(
   }
   if (last < text.length) segs.push(N(text.slice(last)));
   return segs;
+}
+
+function formatNomeTitulo(nome: string): string {
+  return nome
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Nome do locatário no corpo do contrato e assinatura — sempre maiúsculas. */
+function formatNomeLocatarioContrato(nome: string): string {
+  return nome.replace(/\s+/g, " ").trim().toLocaleUpperCase("pt-BR");
+}
+
+/** Nomes placeholder do template v3 — bloco de assinatura final. */
+const ASSINATURA_LOCATARIO_TEMPLATE = "RAFAEL MOREIRA PONTEL";
+const ASSINATURA_LOCADOR_TEMPLATE = "JOSE FELIPE BARRETO RODRIGUES";
+
+function aplicarNomesAssinaturaFinal(
+  dom: Document,
+  body: Element,
+  nomeCliente: string,
+): void {
+  const locNome = formatNomeLocatarioContrato(nomeCliente);
+  for (const p of bodyParagraphs(body)) {
+    const full = getPText(p);
+    const up = full.toUpperCase();
+    if (
+      !up.includes(ASSINATURA_LOCATARIO_TEMPLATE) ||
+      !up.includes(ASSINATURA_LOCADOR_TEMPLATE)
+    ) {
+      continue;
+    }
+    const idxLoc = up.indexOf(ASSINATURA_LOCATARIO_TEMPLATE);
+    const idxLand = up.indexOf(ASSINATURA_LOCADOR_TEMPLATE);
+    if (idxLoc < 0 || idxLand < idxLoc) continue;
+
+    const mid = full.slice(idxLoc + ASSINATURA_LOCATARIO_TEMPLATE.length, idxLand);
+    setParagraphRich(dom, p, [
+      B(locNome),
+      N(mid),
+      B(ASSINATURA_LOCADOR_TEMPLATE),
+    ]);
+    return;
+  }
 }
 
 function bodyParagraphs(body: Element): Element[] {
@@ -224,6 +346,30 @@ function exportDocxToPdfWin(absDocx: string, absPdf: string): boolean {
   }
 }
 
+export type CaucaoParcelas = {
+  /** Saldo de caução em aberto após entrada. */
+  aberto: number;
+  /** Quantidade de parcelas semanais. */
+  parcelas: number;
+  /** Valor de cada parcela de caução. */
+  valorParcela: number;
+  /** Datas de vencimento (DD/MM/AAAA). */
+  datas: string[];
+};
+
+/** Caução integral parcelada junto com cada pagamento semanal (sem saldo em aberto). */
+export type CaucaoSemanalParcelado = {
+  parcelas: number;
+  valorParcela: number;
+};
+
+/** Primeira semana parcial na retirada; restante diluído nas próximas semanas (cláusula 3.2). */
+export type SemanaParcelas = {
+  valorEntrada: number;
+  parcelas: number;
+  valorParcela: number;
+};
+
 export type GerarContratoDados = {
   template: string;
   contratosDir?: string;
@@ -238,8 +384,108 @@ export type GerarContratoDados = {
   valores: { semana: number; caucao: number; diaria?: number };
   cnhCategoria?: string;
   diaPagamento?: string;
+  /** Texto extra na cláusula 3.3 — saldo de caução em aberto com datas. */
+  caucaoParcelas?: CaucaoParcelas;
+  /** Texto extra na cláusula 3.3 — caução integral parcelada nas semanas. */
+  caucaoSemanalParcelado?: CaucaoSemanalParcelado;
+  /** Ajuste na cláusula 3.2 — parcelamento da primeira semana. */
+  semanaParcelas?: SemanaParcelas;
   assinatura?: { data?: string; cidade?: string; estado?: string };
 };
+
+const PARCELAS_FEM: Record<number, string> = {
+  1: "uma",
+  2: "duas",
+  3: "três",
+  4: "quatro",
+  5: "cinco",
+  6: "seis",
+  7: "sete",
+  8: "oito",
+  9: "nove",
+  10: "dez",
+  11: "onze",
+  12: "doze",
+};
+
+function parcelasExtensoFem(n: number): string {
+  return PARCELAS_FEM[n] ?? String(n);
+}
+
+function formatDatasLista(datas: string[]): string {
+  if (datas.length === 0) return "";
+  if (datas.length === 1) return datas[0]!;
+  if (datas.length === 2) return `${datas[0]} e ${datas[1]}`;
+  return `${datas.slice(0, -1).join(", ")} e ${datas[datas.length - 1]}`;
+}
+
+function buildCaucaoParcelasText(cp: CaucaoParcelas, semana: number): string {
+  const totalSemanal = semana + cp.valorParcela;
+  return (
+    ` Onde ficou em aberto R$${brl(cp.aberto)} (${cap(valorExtenso(cp.aberto))}) e será pago em ${cp.parcelas} (${parcelasExtensoFem(cp.parcelas)}) parcelas no valor de R$${brl(cp.valorParcela)} (${cap(valorExtenso(cp.valorParcela))}) juntamente com valor semanal totalizando R$${brl(totalSemanal)} nos dias ${formatDatasLista(cp.datas)}.`
+  );
+}
+
+function buildCaucaoSemanalParceladoText(cp: CaucaoSemanalParcelado): string {
+  return (
+    ` Onde o pagamento deverá ser efetuado juntamente com o pagamento semanal parcelado em ${cp.parcelas} (${parcelasExtensoFem(cp.parcelas)}) vezes, totalizando R$${brl(cp.valorParcela)} (${cap(valorExtenso(cp.valorParcela))}) por semana.`
+  );
+}
+
+function buildSemanaParcelasText(sp: SemanaParcelas): string {
+  const restante = Math.round(sp.parcelas * sp.valorParcela * 100) / 100;
+  return (
+    ` no valor de R$${brl(sp.valorEntrada)} (${cap(valorExtenso(sp.valorEntrada))}) e o restante deverá ser pago juntamente com as próximas ${sp.parcelas} (${parcelasExtensoFem(sp.parcelas)}) semanas no valor de R$${brl(sp.valorParcela)} (${cap(valorExtenso(sp.valorParcela))}), totalizando R$${brl(restante)} (${cap(valorExtenso(restante))}).`
+  );
+}
+
+function aplicarSuffixClausula33(dom: Document, body: Element, suffix: string): void {
+  const anchorMesmoParagrafo = /(entre outras despesas)\.?(\s*3\.4)/i;
+  const anchorFimParagrafo = /(entre outras despesas)\.?\s*$/i;
+  for (const p of bodyParagraphs(body)) {
+    const orig = getPText(p);
+    if (!orig.trim().startsWith("3.3")) continue;
+    let novo: string | null = null;
+    if (anchorMesmoParagrafo.test(orig)) {
+      novo = orig.replace(anchorMesmoParagrafo, (_m, g1, g2) => `${g1}.${suffix}${g2}`);
+    } else if (anchorFimParagrafo.test(orig.trim())) {
+      novo = orig.trim().replace(anchorFimParagrafo, (_m, g1) => `${g1}.${suffix}`);
+    }
+    if (novo) {
+      setParagraphRich(dom, p, richParagraphSuffix(novo, suffix, TEMPLATE_MONEY_REFS));
+      return;
+    }
+  }
+}
+
+function aplicarSemanaParcelasClausula32(
+  dom: Document,
+  body: Element,
+  sp: SemanaParcelas,
+  diaPag?: string,
+): void {
+  const suffix = buildSemanaParcelasText(sp);
+  const anchorMesmoParagrafo = /(pelo LOCATÁRIO)\.(\s*3\.3)/i;
+  const anchorFimParagrafo = /(pelo LOCATÁRIO)\.(\s*)$/i;
+  for (const p of bodyParagraphs(body)) {
+    const orig = getPText(p);
+    if (!orig.trim().startsWith("3.2 O pagamento")) continue;
+    let novo: string | null = null;
+    if (anchorMesmoParagrafo.test(orig)) {
+      novo = orig.replace(anchorMesmoParagrafo, `$1${suffix}$2`);
+    } else if (anchorFimParagrafo.test(orig.trim())) {
+      novo = orig.trim().replace(anchorFimParagrafo, `$1${suffix}`);
+    }
+    if (novo) {
+      setParagraphRich(
+        dom,
+        p,
+        richParagraphSuffix(novo, suffix, TEMPLATE_MONEY_REFS, diaPag ? [diaPag] : undefined),
+      );
+      return;
+    }
+  }
+}
 
 export function gerar(dados: GerarContratoDados): {
   pasta: string;
@@ -261,6 +507,7 @@ export function gerar(dados: GerarContratoDados): {
   const paragraphs = bodyParagraphs(body);
 
   const cli = dados.cliente;
+  const nomeLocatario = formatNomeLocatarioContrato(cli.nome);
   const end = cli.endereco ?? {};
   const veic = dados.veiculo;
   const prazo = dados.prazo;
@@ -295,7 +542,7 @@ export function gerar(dados: GerarContratoDados): {
     if (t.startsWith("LOCAT") && getPText(p).includes("CPF")) {
       setParagraphRich(dom, p, [
         N("LOCATÁRIO(a): "),
-        B(cli.nome),
+        B(nomeLocatario),
         N(", inscrito no CPF sob o n° "),
         B(cli.cpf),
         N(", residente e domiciliado na "),
@@ -427,6 +674,20 @@ export function gerar(dados: GerarContratoDados): {
     }
   }
 
+  if (dados.semanaParcelas) {
+    aplicarSemanaParcelasClausula32(dom, body, dados.semanaParcelas, diaPag);
+  }
+
+  if (dados.caucaoParcelas) {
+    aplicarSuffixClausula33(dom, body, buildCaucaoParcelasText(dados.caucaoParcelas, semana));
+  } else if (dados.caucaoSemanalParcelado) {
+    aplicarSuffixClausula33(
+      dom,
+      body,
+      buildCaucaoSemanalParceladoText(dados.caucaoSemanalParcelado),
+    );
+  }
+
   const assin = dados.assinatura ?? {};
   let dataAssin = assin.data ?? "auto";
   if (dataAssin === "auto") {
@@ -447,21 +708,9 @@ export function gerar(dados: GerarContratoDados): {
     }
   }
 
-  for (const p of bodyParagraphs(body)) {
-    const full = getPText(p);
-    if (full.toUpperCase().includes("JOSE FELIPE BARRETO") && !full.toUpperCase().includes("LOCAT")) {
-      const m = /(\t+|\s{2,})(JOSE FELIPE BARRETO RODRIGUES)/i.exec(full);
-      if (m) {
-        setParagraphRich(dom, p, [B(cli.nome), N(full.slice(m.index))]);
-      }
-      break;
-    }
-  }
+  aplicarNomesAssinaturaFinal(dom, body, cli.nome);
 
-  const nomeCli = cli.nome
-    .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+  const nomeCli = formatNomeTitulo(cli.nome);
   const baseDir = dados.contratosDir ?? defaultContratosDir();
   const pasta = path.join(
     baseDir,

@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { compararDataBrAsc } from "../lib/contratoExtrair.js";
 import { loadClienteDespesasDb } from "../lib/clienteDespesasDb.js";
 import { loadContratosDb } from "../lib/contratosDb.js";
 import { dataVencimentoSemanalBr } from "../lib/pagamentoSemanal.js";
@@ -59,11 +60,7 @@ function parseVencimentos(argv: string[]): string[] {
       if (t) out.push(parseDataBr(t));
     }
   }
-  return out.sort((a, b) => {
-    const pa = a.split("/").reverse().join("");
-    const pb = b.split("/").reverse().join("");
-    return pa.localeCompare(pb);
-  });
+  return out.sort(compararDataBrAsc);
 }
 
 function normPlaca(p: string): string {
@@ -94,11 +91,7 @@ function vencimentosAbertosCliente(clienteId: string, placa?: string): string[] 
     .map((d) => dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao)
     .filter(Boolean) as string[];
 
-  return [...new Set(vencs)].sort((a, b) => {
-    const pa = a.split("/").reverse().join("");
-    const pb = b.split("/").reverse().join("");
-    return pa.localeCompare(pb);
-  });
+  return [...new Set(vencs)].sort(compararDataBrAsc);
 }
 
 function hojeBr(): string {

@@ -59,9 +59,13 @@ npx tsx src/run.ts relatorio-encerramento-contrato relatorios/_tmp/_encerramento
 Action Cursor: **`/relatorios/encerramento-contrato`** (`.cursor/commands/relatorios-encerramento-contrato.md`).
 
 - **Local do arquivo:** `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/encerramento-{placa}-{cliente}.canvas.tsx` (kebab-case; só o IDE detecta nesse diretório).
+- **Layout:** `templates/canvas/encerramento.layout.tsx` — editar **só** este ficheiro para mudar o visual do encerramento.
+- **Gerador:** `node scripts/gen-encerramento-canvas.mjs relatorios/_tmp/encerramento-contrato/encerramento-….json canvases/encerramento-….canvas.tsx`
 - **Dados:** leia o JSON sidecar e **embuta os valores inline** no `.canvas.tsx` — sem `fetch`/rede, sem imports relativos; importe **só** de `cursor/canvas`; cores via `useHostTheme()`.
-- **Conteúdo mínimo:** cabeçalho (cliente, placa, início → fim, encerramento, dias de locação); cartão de destaque com o **Saldo caução**; tabelas com subtotals (omitir vazias); linha **Quebra de contrato (retenção R$ …) — retenção proporcional…** (sem título de seção, antes dos totais); totais e avisos.
+- **Conteúdo mínimo:** cabeçalho (cliente, placa, início → fim, encerramento, dias de locação); cartão de destaque com o **Saldo caução**; tabelas com subtotals (omitir vazias); linha **Quebra de contrato (retenção R$ …) — retenção proporcional…** (sem título de secção, antes dos totais); totais e avisos.
+- O layout de **cobrança** (`templates/canvas/cobranca.layout.tsx`) foi copiado deste e é **independente** — alterações num não afetam o outro.
 - Sem slop (sem gradiente, emoji, sombra); rótulos claros com `R$` nos valores.
+- **Sem legenda de fonte** no canvas (não incluir linha tipo “Fonte: cliente-despesas.json …”).
 - Ao terminar, mencione o canvas com link markdown para o caminho do `.canvas.tsx`.
 
 Exemplo `entrada.json`:

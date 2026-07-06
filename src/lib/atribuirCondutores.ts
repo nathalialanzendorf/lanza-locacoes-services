@@ -5,9 +5,25 @@ import {
   loadClienteDespesasDb,
   resolverCondutorVigencia,
   saveClienteDespesasDb,
+  sincronizarClienteDespesa,
 } from "./clienteDespesasDb.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
+import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
+import {
+  clienteDespesaInputFromInfracao,
+  loadInfracoesDb,
+  origemParceiroInfracaoSemLocatario,
+  saveInfracoesDb,
+  vincularClienteDespesaInfracao,
+  type InfracaoRegistro,
+} from "./infracoesDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
+import {
+  espelharClienteDespesaSemLocatario,
+  espelharInfracaoParceiro,
+  reconciliarEspelhosParceiro,
+} from "./espelharSemLocatarioParceiro.js";
 
 export type ReconAcao =
   | "vinculado"
@@ -30,41 +46,125 @@ export type ReconResult = {
   naoIdentificados: number;
   clienteFaltando: number;
   semData: number;
+  parceiroEspelhados: number;
   itens: ReconItem[];
 };
+
+function elegivelReconciliarInfracao(r: InfracaoRegistro): boolean {
+  if (r.ativo === false) return false;
+  if (infracaoNaoCobravelDetran(r)) return false;
+  if (r.condutorId && r.condutorConfirmado && !r.condutorNaoIdentificado) return false;
+  return true;
+}
+
+async function promoverInfracaoParaCliente(
+  reg: InfracaoRegistro,
+  condutorId: string,
+  condutorContrato: string | null,
+): Promise<void> {
+  reg.condutorId = condutorId;
+  reg.condutorContrato = condutorContrato;
+  reg.condutorConfirmado = true;
+  reg.condutorNaoIdentificado = false;
+  reg.revisarManual = false;
+  reg.revisarMotivo = null;
+  reg.atualizadoEm = new Date().toISOString();
+
+  const r = await sincronizarClienteDespesa(reg.veiculoId, clienteDespesaInputFromInfracao(reg));
+  if (r.registro.id && r.acao !== "ignorado") {
+    vincularClienteDespesaInfracao(reg.numeroAuto, r.registro.id);
+  }
+  removerParceiroDespesaPorOrigem(
+    origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto),
+  );
+}
 
 /**
  * Concilia o condutor das infrações/pedágios **pendentes** (sem condutor e não
  * confirmadas) pela vigência do contrato:
- * - contrato + cliente → vincula e confirma;
- * - sem contrato ativo na data → "Não identificado" (confirmado, sem cliente);
+ * - contrato + cliente → vincula e confirma (cliente-despesas; remove espelho parceiro);
+ * - sem contrato ativo na data → permanece em parceiro-despesas (`condutorNaoIdentificado`);
  * - contrato achado mas cliente fora de clientes.json → fica pendente (reporta);
  * - sem data de autuação → fica para revisão manual (reporta).
  *
+ * Infrações: lê `infracoes.json` (fonte canônica). Pedágios: `cliente-despesas.json`.
  * Idempotente: só mexe em registros pendentes. Quitadas são ignoradas.
  */
-export function reconciliarCondutores(opts?: {
+export async function reconciliarCondutores(opts?: {
   dryRun?: boolean;
   placa?: string;
   prazoDias?: number;
   incluirPedagios?: boolean;
-}): ReconResult {
-  const db = loadClienteDespesasDb();
+}): Promise<ReconResult> {
   const filtro = opts?.placa ? compactPlaca(opts.placa) : null;
   const prazoDias = opts?.prazoDias ?? 90;
 
   const itens: ReconItem[] = [];
-  let mutou = false;
+  let mutouInfracoes = false;
+  let mutouCliente = false;
 
+  const infracoesDb = loadInfracoesDb();
+  const promocoes: Promise<void>[] = [];
+
+  for (const r of infracoesDb.infracoes ?? []) {
+    if (!elegivelReconciliarInfracao(r)) continue;
+    if (filtro && compactPlaca(r.veiculoId) !== filtro) continue;
+
+    const base = {
+      autoInfracao: r.numeroAuto,
+      veiculoId: formatPlacaHyphen(r.veiculoId),
+      dataAutuacao: r.dataAutuacao || "(sem data)",
+      valorMulta: Number(r.valorMulta) || 0,
+    };
+
+    if (!parseDataAutuacao(r.dataAutuacao)) {
+      itens.push({ ...base, acao: "sem-data" });
+      continue;
+    }
+
+    const res = resolverCondutorVigencia(r.veiculoId, r.dataAutuacao, prazoDias);
+    if (res.condutorId) {
+      if (!opts?.dryRun) {
+        promocoes.push(promoverInfracaoParaCliente(r, res.condutorId, res.condutorContrato));
+        mutouInfracoes = true;
+      }
+      itens.push({ ...base, acao: "vinculado", cliente: res.condutorContrato });
+    } else if (res.naoIdentificado) {
+      if (!opts?.dryRun) {
+        r.condutorConfirmado = true;
+        r.condutorNaoIdentificado = true;
+        r.condutorId = null;
+        r.condutorContrato = null;
+        r.atualizadoEm = new Date().toISOString();
+        espelharInfracaoParceiro(r);
+        mutouInfracoes = true;
+      }
+      itens.push({ ...base, acao: "nao-identificado" });
+    } else {
+      if (!opts?.dryRun) {
+        r.condutorNaoIdentificado = true;
+        r.condutorConfirmado = true;
+        r.condutorId = null;
+        r.atualizadoEm = new Date().toISOString();
+        espelharInfracaoParceiro(r);
+        mutouInfracoes = true;
+      }
+      itens.push({ ...base, acao: "cliente-faltando", cliente: res.condutorContrato });
+    }
+  }
+
+  const db = loadClienteDespesasDb();
   for (const r of db.clienteDespesas ?? []) {
     if (!isClienteDespesaAtiva(r)) continue;
-    // Por padrão só infrações de trânsito; pedágios só com incluirPedagios.
     const elegivel = opts?.incluirPedagios
       ? categoriaInfereCondutor(r.categoria)
       : isInfracaoTransito(r);
     if (!elegivel) continue;
-    if (r.quitadaDetran === true) continue;
-    if (r.condutorConfirmado === true || r.condutorId) continue;
+    if (isInfracaoTransito(r)) continue;
+    if (infracaoNaoCobravelDetran(r)) continue;
+    if (r.condutorConfirmado === true && r.condutorId && !r.condutorNaoIdentificado) {
+      continue;
+    }
     if (filtro && compactPlaca(r.veiculoId) !== filtro) continue;
 
     const base = {
@@ -87,31 +187,37 @@ export function reconciliarCondutores(opts?: {
         r.condutorConfirmado = true;
         r.condutorNaoIdentificado = false;
         r.atualizadoEm = new Date().toISOString();
-        mutou = true;
+        mutouCliente = true;
       }
-      itens.push({ ...base, acao: "vinculado", cliente: res.aviso ? `${res.aviso}` : null });
-      // cliente nome não vem do resolver; guardamos contrato p/ referência
-      itens[itens.length - 1]!.cliente = res.condutorContrato;
+      itens.push({ ...base, acao: "vinculado", cliente: res.condutorContrato });
     } else if (res.naoIdentificado) {
       if (!opts?.dryRun) {
         r.condutorConfirmado = true;
         r.condutorNaoIdentificado = true;
         r.atualizadoEm = new Date().toISOString();
-        mutou = true;
+        espelharClienteDespesaSemLocatario(r);
+        mutouCliente = true;
       }
       itens.push({ ...base, acao: "nao-identificado" });
     } else {
-      // contrato achado, cliente fora de clientes.json → pendente
       if (!opts?.dryRun && r.condutorContrato !== res.condutorContrato) {
         r.condutorContrato = res.condutorContrato;
         r.atualizadoEm = new Date().toISOString();
-        mutou = true;
+        mutouCliente = true;
       }
       itens.push({ ...base, acao: "cliente-faltando", cliente: res.condutorContrato });
     }
   }
 
-  if (mutou && !opts?.dryRun) saveClienteDespesasDb(db);
+  if (promocoes.length) await Promise.all(promocoes);
+  if (mutouInfracoes && !opts?.dryRun) saveInfracoesDb(infracoesDb);
+  if (mutouCliente && !opts?.dryRun) saveClienteDespesasDb(db);
+
+  const parceiro = reconciliarEspelhosParceiro({
+    dryRun: opts?.dryRun,
+    placa: opts?.placa,
+    prazoDias,
+  });
 
   return {
     total: itens.length,
@@ -120,5 +226,6 @@ export function reconciliarCondutores(opts?: {
     clienteFaltando: itens.filter((i) => i.acao === "cliente-faltando").length,
     semData: itens.filter((i) => i.acao === "sem-data").length,
     itens,
+    parceiroEspelhados: parceiro.espelhados,
   };
 }

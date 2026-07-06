@@ -38,7 +38,7 @@ Comandos:
   relatorio-encerramento-contrato <pasta> --encerramento DD/MM/AAAA | <entrada.json>
   relatorio-cobrancas [tipo-lote|tipo-placa] [--placa PLACA] [--tipo TIPO] [--listar] …
   gravar-cliente-despesa <lote.json> | gravar-cliente-despesa confirmar <autoInfracao> [condutorId]
-  atribuir-condutores [--placa PLACA] [--dry-run] [--prazo-dias N] [--incluir-pedagios]  (concilia condutor por vigência; sem contrato → Não identificado)
+  atribuir-condutores [--placa PLACA] [--dry-run] [--prazo-dias N] [--incluir-pedagios]  (concilia condutor por vigência; infrações sem locatário → parceiro-despesas)
   sync-detran-sc [--placa PLACA] [--dry-run] [--ticket UUID] [--json resposta.json]  (Infrações, IPVA e Licenciamento DETRAN SC, ufRegistro="SC")
   detran-sc-solver [--placa PLACA] [--dry-run] [--so-token]  (login + solver de captcha Turnstile em Chrome real; varre a frota SC)
   sync-detran-rs [--placa PLACA] [--dry-run] [--json resposta.json]  (Infrações, IPVA e Licenciamento DETRAN RS, ufRegistro="RS")
@@ -57,6 +57,7 @@ Comandos:
   renegociar-debitos <entrada.json> [--execute]
   relatorio-analise-cadastro --cpf CPF --nome "NOME" --nascimento DD/MM/AAAA --base-legal "TEXTO" [--bnmp|--pf|--tjsc] [--aprovar|--reprovar] [--cliente id|cpf] [--timeout-min N] [--sem-browser] [--out] [--json]  (antecedentes/processos em Chrome real; exige base legal LGPD; grava em database/analise-cadastro.json e espelha no cliente)
   relatorio-analise-cadastro --listar [--cpf CPF] [--com-alerta] [--json]  (histórico de análises de cadastro gravadas)
+  postgres check [--json] | postgres migrate [--import-json] [--dry-run]  (RDS PostgreSQL — ver postgres --help)
 `);
     process.exit(cmd ? 0 : 1);
   }
@@ -163,7 +164,7 @@ Comandos:
       await (await import("./cli/syncInfracoes.js")).main(rest);
       break;
     case "atribuir-condutores":
-      (await import("./cli/atribuirCondutores.js")).main(rest);
+      await (await import("./cli/atribuirCondutores.js")).main(rest);
       break;
     case "inicio-locacoes":
       await (await import("./cli/inicioLocacoes.js")).main(rest);
@@ -220,6 +221,9 @@ Comandos:
       break;
     case "relatorio-analise-cadastro":
       await (await import("./cli/relatorioAnaliseCadastro.js")).main(rest);
+      break;
+    case "postgres":
+      await (await import("./cli/postgres.js")).main(rest);
       break;
     default:
       console.error("Comando desconhecido:", cmd);

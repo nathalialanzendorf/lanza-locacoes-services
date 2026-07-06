@@ -14,6 +14,17 @@ Regra de negócio na skill (`SKILL.md`, secção **Confirmação obrigatória**)
 
 Não executar CLI de gravação nem `POST`/`PUT` na API antes da confirmação.
 
+## Descrição — parcelas de caução
+
+Sufixo **`{parcelaAtual}x{totalParcelas}`** (total de parcelas, **não** dia do mês):
+
+- Em aberto: `ATRASADO Pagamento caução - 1x7`
+- Quitada: `Pagamento caução - 1x7`
+- Entrada na retirada: `Pagamento caução` (sem sufixo)
+- **1.ª parcela (`1xN`):** vencimento na **semana seguinte** à retirada (não no mesmo dia da 1.ª semanal)
+
+Ver secção **Formato das descrições — caução** em `SKILL.md`. Helper: `src/lib/caucaoParcelas.ts`.
+
 ## CLI `baixa-recebimento` (plano de baixa)
 
 Monta o plano **sem gravar** — o agente usa a saída JSON para a tabela de confirmação:

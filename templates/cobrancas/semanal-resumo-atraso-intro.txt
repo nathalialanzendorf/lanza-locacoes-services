@@ -1,0 +1,2 @@
+Olá, {NOME}!
+Segue cálculo do atraso das despesas referente à locação do seu {MARCA_MODELO} que segue em aberto:

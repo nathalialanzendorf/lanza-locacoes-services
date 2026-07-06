@@ -1,14 +1,15 @@
 ---
 name: sync-infracoes
 description: >-
-  Syncs traffic fines and infractions from DETRAN SC into database/cliente-despesas.json
-  for tenant billing and contract closure. Uses tool .cursor/tools/detran-sc/.
-  Use when syncing multas, infrações, DETRAN SC, cliente-despesas, or before relatorio-encerramento-contrato.
+  Syncs traffic fines and infractions from DETRAN SC into database/infracoes.json
+  (fonte da verdade DETRAN) and espelha débitos cobráveis em database/cliente-despesas.json.
+  Uses tool .cursor/tools/detran-sc/.
+  Use when syncing multas, infrações, DETRAN SC, infracoes.json, cliente-despesas, or before relatorio-encerramento-contrato.
 ---
 
-# Sync infrações — DETRAN SC → cliente-despesas.json
+# Sync infrações — DETRAN SC → infracoes.json + cliente-despesas.json
 
-Skill de **negócio**: trazer multas e infrações do **DETRAN SC** para `database/cliente-despesas.json` (categoria `Infração`), para cobrança do locatário e **relatorio-encerramento-contrato**.
+Skill de **negócio**: trazer multas e infrações do **DETRAN SC** para **`database/infracoes.json`** (dados completos do portal) e **espelhar** débitos cobráveis em **`database/cliente-despesas.json`** (categoria `Infração`) para cobrança do locatário, Rastreame e **relatorio-encerramento-contrato**.
 
 > **Tipo no Rastreame:** categoria `Infração` → `MULTA` (ver de-para canônico em [`.cursor/tools/rastreame/README.md`](../../tools/rastreame/README.md)).
 
@@ -33,9 +34,16 @@ O CLI `sync-infracoes` faz o roteamento sozinho: `--placa` de veículo RS é del
 
 | Origem DETRAN | Gravação |
 |---------------|----------|
-| `infracoes` (autuação) | Cobrável; `quitadaDetran: false` |
-| `debitos` (multas) | Importar **só multas** (ignorar IPVA/licenciamento) |
+| `infracoes` (autuação) | Cobrável; `quitadaDetran: false`; `dataLimiteDefesa` |
+| `debitos` (multas) | Mesmo `numeroAuto` — mescla autuação + `dataVencimentoOriginal` |
 | `historicoInfracoes` | `quitadaDetran: true` — não cobrar no encerramento |
+
+**Status DETRAN** (`statusInfracao`): `Advertida`, `Paga`, `Notificada`, `Justificada`.
+Advertida e Justificada **não são cobráveis**; Paga → histórico; Notificada → cobrável.
+
+**Conversão autuação → débito:** após vencer `dataLimiteDefesa`, o DETRAN gera boleto em
+`debitos[]` (mesmo `numeroAuto`). O sync **mescla** os dois blocos num único registro com
+`convertidaEmDebito: true` e `dataVencimentoOriginal` — base para juros/multa após o vencimento.
 
 `paga` = locatário pagou à Lanza (independente de `quitadaDetran`).
 
@@ -159,18 +167,89 @@ npx tsx src/run.ts sync-infracoes --dry-run --placa QJB-0I83 --ticket <t>
 
 Debug offline (resposta já capturada): `--json relatorios/_tmp/_detran_resposta.json` ou `--ticket <t>` — ver tool.
 
-## Destino
+## Destino (duas tabelas)
 
-- **Ficheiro:** `database/cliente-despesas.json`
-- **Chave:** `autoInfracao`
+| Ficheiro | Papel | Chave |
+|----------|-------|-------|
+| **`database/infracoes.json`** | Fonte da verdade DETRAN — payload completo, condutor, PDF, status | `numeroAuto` (case-insensitive) |
+| **`database/cliente-despesas.json`** | Débito cobrável / espelho Rastreame / encerramento | `autoInfracao` = `numeroAuto` |
+
+**Vínculo:** `infracoes.clienteDespesaId` → `cliente-despesas.id`; ambos partilham `numeroAuto`.
+
+O sync grava **primeiro** em `infracoes.json` e **depois** espelha em `cliente-despesas.json` (mesma lógica de cobrança de antes — encerramento e cobrança continuam a ler `cliente-despesas` por enquanto).
+
+### Campos DETRAN em infracoes.json (exemplo payload)
+
+| Campo DETRAN | Campo Lanza |
+|--------------|-------------|
+| `idAutoInfracao` | `idAutoInfracao` |
+| `numeroAuto` | `numeroAuto` (chave) |
+| `descricao` | `descricao` |
+| `dataHoraAutuacao` | `dataHoraAutuacao` + `dataAutuacao` (DD/MM/AAAA HH:mm) |
+| `localInfracao` | `localInfracao` |
+| `valor` | `valor` / `valorMulta` |
+| `situacao` / `status` | `situacao` / `status` |
+| `protocolo` | `protocolo` |
+| `dataLimiteDefesa` | `dataLimiteDefesa` |
+| `prazoDefesaExpirado` | `prazoDefesaExpirado` |
+| bloco `debitos` | `dataVencimentoOriginal`, `convertidaEmDebito` |
+| (objeto inteiro) | `detranRaw` |
+
+Módulo: `src/lib/infracoesDb.ts` (`sincronizarInfracao`, `vincularClienteDespesaInfracao`).
+
+**Backfill** de registos antigos só em cliente-despesas:
+
+```bash
+npx tsx scripts/backfillInfracoesFromClienteDespesas.ts --dry-run
+npx tsx scripts/backfillInfracoesFromClienteDespesas.ts
+```
+
+## Destino (legado — cliente-despesas)
+
+- **Ficheiro espelho:** `database/cliente-despesas.json`
+- **Chave:** `autoInfracao` (= `numeroAuto`)
 - **Campos:** `origem: detran-sc`, `categoria: Infração`
 
-### Título vs descrição (convenção 28/06/2026)
+### PDF da infração (pasta Débitos)
+
+Em **todo** sync DETRAN SC, o agente tenta **baixar o PDF** de cada infração
+(cobrável ou histórico) e gravar em disco:
+
+| Situação de vínculo | Pasta destino |
+|---------------------|---------------|
+| Contrato vigente (`condutorContrato`) | `{pasta do contrato}/Débitos/` |
+| Cliente **não** vinculado (`condutorId` ausente — pendente, não identificado, sem data) | **Também** `{pastaVeiculo}/Débitos/` |
+
+- **Nome do ficheiro:** `{autoInfracao} - {placa}.pdf` (ex.: `J002969750 - MLW7I09.pdf`)
+- **`pastaVeiculo`:** campo em `database/veiculos.json`; fallback = raiz `documentosRaiz` / `contratosDir` de `config/lanza_paths.json`
+- **Campo no banco:** `pdfArquivo` — caminho relativo a `documentosRaiz` ou absoluto
+- **Idempotente:** se o PDF já existir com o mesmo tamanho, não regrava
+- **`--dry-run`:** mostra destinos previstos sem gravar ficheiro nem `pdfArquivo`
+- **Falha de download:** aviso no relatório (`pdfsFalha`); sync de dados continua normalmente
+
+Endpoint configurável (se o portal mudar): `DETRAN_SC_INFRACAO_PDF_PATH` — template com
+`{auto}`, `{placa}`, `{renavam}` (ex.: `/infracao/notificacao/imprimir?numeroAuto={auto}&placa={placa}`).
+
+Detalhes técnicos: [reference.md](reference.md) e `.cursor/tools/detran-sc/reference.md`.
+
+### Título vs descrição (convenção 28/06/2026, atualizado 04/07/2026)
 
 Cada infração tem **dois** textos distintos:
 
 - **`descricao`** = **texto cru do DETRAN** (ex.: `TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%`). É o detalhe/justificativa da multa.
-- **`titulo`** = **rótulo curto** do Gastos Gerais do Rastreame: `Multa {tipo} - {dataAutuacao}` (ex.: `Multa velocidade - 12/05/2026 17:39`). O `{tipo}` é inferido do texto do DETRAN (velocidade, estacionamento, parada, cinto, farol, celular, sinal, conversão, acostamento, alcoolemia… fallback `trânsito`) por `src/lib/infracaoTitulo.ts`.
+- **`titulo`** = **rótulo curto** do Gastos Gerais do Rastreame: `Multa {tipo} {numeroAuto} - {dataAutuacao}` (ex.: `Multa velocidade P0cc2001pu - 12/05/2026 17:39`). O `{numeroAuto}` é o vínculo autuação ↔ débito (sempre presente em infrações de locatário; **não** se aplica a IPVA/Licenciamento em `parceiro-despesas.json`). O `{tipo}` é inferido do texto do DETRAN por `src/lib/infracaoTitulo.ts`.
+
+### Campos de status e datas (04/07/2026)
+
+| Campo | Origem | Uso |
+|-------|--------|-----|
+| `numeroAuto` | DETRAN `numeroAuto` (= `autoInfracao`) | Vínculo autuação ↔ débito; entra no `titulo` |
+| `statusInfracao` | DETRAN `situacao`/`status` | Advertida \| Paga \| Notificada \| Justificada |
+| `statusDetran` | derivado | `advertida` \| `paga` \| `justificada` — regras de cobrança |
+| `dataLimiteDefesa` | bloco `infracoes` | Prazo de defesa; após vencer → conversão em débito |
+| `dataVencimentoOriginal` | bloco `debitos` | Vencimento do boleto; juros/multa após esta data |
+| `convertidaEmDebito` | sync | `true` quando em `debitos[]` ou defesa vencida |
+| `limiteDefesa` | espelho legado | autuação → `dataLimiteDefesa`; débito → `dataVencimentoOriginal` |
 
 No **push** ao Rastreame (`sync-gastos-gerais`) o `info` do gasto é montado a partir do **`titulo`** com a tag `ATRASADO` quando em aberto → `ATRASADO Multa velocidade - 12/05/2026 17:39` (a tag `ATRASADO` é regra única da skill `cadastro-recebimento`). No **pull**, o `titulo` é atualizado a partir do `info`, **sem** sobrescrever a `descricao` do DETRAN.
 
@@ -187,8 +266,8 @@ npx tsx scripts/dedupInfracoesRast.ts --apply   # aplica
 
 ## Idempotência
 
-- **Chave:** `autoInfracao` (case-insensitive) via `sincronizarClienteDespesa`.
-- Reexecutar sync frota/placa **atualiza** multas existentes; **não duplica**.
+- **Chave:** `numeroAuto` / `autoInfracao` (case-insensitive).
+- Reexecutar sync frota/placa **atualiza** multas existentes em **ambos** os ficheiros; **não duplica**.
 - `--dry-run` não grava; produção é segura para repetir após falha parcial.
 - Ver [`_idempotencia.md`](../_idempotencia.md).
 
