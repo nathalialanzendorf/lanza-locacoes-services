@@ -60,7 +60,54 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Ceres Beatriz Gonzaga Pereira",
+  "placa": "RLA-1G81",
+  "modeloVeiculo": "PEUGEOT/2008 ALLURE EAT6",
+  "anoModelo": "2020/2021",
+  "dataInicio": "20/06/2026",
+  "dataFim": "18/09/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "06/07/2026",
+  "qtdDiasLocado": 16,
+  "valorSemanal": 1000,
+  "valorDiaria": 200,
+  "totalDebitos": 1142.86,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 06",
+      "placa": "RLA-1G81",
+      "data": "06/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 1000
+    }
+  ],
+  "totalParcelasEmAberto": 1000,
+  "debitosDiversos": [
+    {
+      "descricao": "ATRASADO Pagamento troca data - Segunda 29",
+      "placa": "RLA-1G81",
+      "data": "29/06/2026",
+      "categoria": "Outros",
+      "valor": 142.86
+    }
+  ],
+  "totalDebitosDiversos": 142.86,
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — RLA-1G81",
+      "texto": "📋 *Despesas em aberto* — RLA-1G81\n\nOlá, Ceres!\nSegue a listagem das despesas referente à locação do seu PEUGEOT/2008 ALLURE EAT6 que segue em aberto:\n\n• RLA-1G81 · 29/06/2026 · ATRASADO Pagamento troca data - Segunda 29 · R$ 142,86\n• RLA-1G81 · 06/07/2026 · ATRASADO Pagamento semanal - Segunda 06 · R$ 1.000,00\n\n*Total em aberto: R$ 1.142,86*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +117,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +436,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaRla1g81CeresBeatrizGonzagaPereira() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +451,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

@@ -60,7 +60,47 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Weslley Dias Correa",
+  "placa": "MLW-7I09",
+  "modeloVeiculo": "HYUNDAI/HB20 1.0M COMFOR",
+  "anoModelo": "2014/2015",
+  "dataInicio": "10/09/2025",
+  "dataFim": "07/11/2025",
+  "qtdDiasContrato": 58,
+  "dataAtual": "07/07/2026",
+  "qtdDiasLocado": 123,
+  "linhaEncerramento": "Encerrado em 11/01/2026 — Devolvido",
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 1379,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [],
+  "totalParcelasEmAberto": 0,
+  "debitosDiversos": [
+    {
+      "descricao": "ATRASADO Pagamento renegociação",
+      "placa": "MLW-7I09",
+      "data": "06/07/2026",
+      "categoria": "Renegociação",
+      "valor": 1379
+    }
+  ],
+  "totalDebitosDiversos": 1379,
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — MLW-7I09",
+      "texto": "📋 *Despesas em aberto* — MLW-7I09\n\nOlá, Weslley!\nSegue a listagem das despesas referente à locação do seu HYUNDAI/HB20 1.0M COMFOR que segue em aberto:\n\n• MLW-7I09 · 06/07/2026 · ATRASADO Pagamento renegociação · R$ 1.379,00\n\n*Total em aberto: R$ 1.379,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -390,7 +430,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaMlw7i09WeslleyDiasCorrea() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 

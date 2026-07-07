@@ -60,7 +60,32 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Ronald Viana Junior",
+  "placa": "AVU-6740",
+  "modeloVeiculo": "VW/GOL 1.0",
+  "anoModelo": "2012/2013",
+  "dataInicio": "24/05/2026",
+  "dataFim": "22/08/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "05/07/2026",
+  "qtdDiasLocado": 42,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 0,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [],
+  "totalParcelasEmAberto": 0,
+  "debitosDiversos": [],
+  "totalDebitosDiversos": 0,
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +95,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +414,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaAvu6740RonaldVianaJunior() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +429,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

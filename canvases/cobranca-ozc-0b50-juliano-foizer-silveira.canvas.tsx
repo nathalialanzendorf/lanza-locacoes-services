@@ -60,7 +60,259 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Juliano Foizer Silveira",
+  "placa": "OZC-0B50",
+  "modeloVeiculo": "FORD/FOCUS SE 1.6 SEDAN GNV",
+  "anoModelo": "2013/2014",
+  "dataInicio": "27/06/2026",
+  "dataFim": "25/09/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "06/07/2026",
+  "qtdDiasLocado": 9,
+  "valorSemanal": 800,
+  "valorDiaria": 150,
+  "totalDebitos": 1921.49,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [
+    {
+      "descricao": "ATRASADO Acionamento franquia Sandero 2015",
+      "placa": "IWP-5G63",
+      "data": "26/06/2026",
+      "categoria": "Manutenção",
+      "valor": 796.49
+    },
+    {
+      "descricao": "ATRASADO  Lavação Sandero 2015",
+      "placa": "IWP-5G63",
+      "data": "26/06/2026",
+      "categoria": "Manutenção",
+      "valor": 80
+    }
+  ],
+  "totalManutencoes": 876.49,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 20",
+      "placa": "IWP-5G63",
+      "data": "20/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 2
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 27",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 40
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 04",
+      "placa": "OZC-0B50",
+      "data": "04/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 100
+    }
+  ],
+  "totalParcelasEmAberto": 142,
+  "debitosDiversos": [
+    {
+      "descricao": "ATRASADO Pagamento pedágio 29/05/2026 18:45",
+      "placa": "IWP-5G63",
+      "data": "29/05/2026 18:45",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO  Negociação 3x4",
+      "placa": "OZC-0B50",
+      "data": "20/06/2026",
+      "categoria": "Renegociação",
+      "valor": 350
+    },
+    {
+      "descricao": "ATRASADO  Negociação 4x4",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Renegociação",
+      "valor": 250
+    },
+    {
+      "descricao": "ATRASADO  Pagamento caução",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Caução",
+      "valor": 300
+    }
+  ],
+  "totalDebitosDiversos": 903,
+  "resumoSemanal": {
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
+    "vencimentosEmAbertoBr": [
+      "27/06/2026",
+      "04/07/2026"
+    ],
+    "dataBloqueioBr": "30/06/2026",
+    "totalReceber": 1500,
+    "diasAtrasados": 10,
+    "diasEmDia": 0,
+    "jurosMultaAcumulados": 357.1
+  },
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "27/06/2026",
+        "periodoInicioBr": "27/06/2026",
+        "periodoFimBr": "03/07/2026",
+        "linhas": [
+          {
+            "dataBr": "27/06/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "28/06/2026",
+            "diaSemana": "Dom",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "29/06/2026",
+            "diaSemana": "Seg",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "30/06/2026",
+            "diaSemana": "Ter",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "01/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "02/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "03/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          }
+        ],
+        "subtotalJurosMulta": 249.97,
+        "total": 1050
+      },
+      {
+        "vencimentoBr": "04/07/2026",
+        "periodoInicioBr": "04/07/2026",
+        "periodoFimBr": "11/07/2026",
+        "linhas": [
+          {
+            "dataBr": "04/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "05/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "06/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
+          },
+          {
+            "dataBr": "07/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          }
+        ],
+        "subtotalJurosMulta": 107.13,
+        "total": 1021.45
+      }
+    ],
+    "totalGeral": 2071.45,
+    "dataPagamentoBr": "06/07/2026"
+  },
+  "mensagensWhatsApp": [
+    {
+      "tipo": "pagamento-semanal",
+      "titulo": "🚨 Bloqueio programado — OZC-0B50",
+      "texto": "🚨 *Bloqueio programado* — OZC-0B50\n\nOlá, Juliano!\nA *parcela semanal* da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nℹ️ A liberação do veículo está condicionada à quitação integral dos valores em atraso.\n\n📊 *Resumo do atraso*\nOlá, Juliano!\nSegue cálculo do atraso das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\nData bloqueio: 30/06/2026\nBase de cálculo: 06/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 1.050,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 1.021,45*\n\n*Total a devido : R$ 2.071,45 (10 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "renegociacao",
+      "titulo": "Renegociação em aberto — OZC-0B50",
+      "texto": "Renegociação em aberto — OZC-0B50\n\nOlá, Juliano! Identificamos parcela(s) de *renegociação de débitos* em aberto referente ao veículo locado.\n\nValor total pendente: *R$ 600,00*\n\nRegularize o pagamento conforme combinado. Em caso de dúvida, responda neste canal.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "pedagio",
+      "titulo": "🛣️ Pedágio em aberto — IWP-5G63",
+      "texto": "🛣️ *Pedágio em aberto* — IWP-5G63\n\nOlá, Juliano! Identificamos uma pendência junto à *CCR Via Costeira* referente ao veículo locado.\n\nO não pagamento do pedágio caracteriza infração grave, sujeita a:\n🚫 Multa de *R$ 195,23*\n⚠️ *5 pontos* na CNH\n\nEvite transtornos e regularize de forma rápida pelo WhatsApp 👉 *+55 48 3211-3130*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — OZC-0B50",
+      "texto": "📋 *Despesas em aberto* — OZC-0B50\n\nOlá, Juliano!\nSegue a listagem das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\n• IWP-5G63 · 29/05/2026 18:45 · ATRASADO Pagamento pedágio 29/05/2026 18:45 · R$ 3,00\n• IWP-5G63 · 20/06/2026 · ATRASADO Pagamento semanal - Sábado 20 · R$ 2,00\n• OZC-0B50 · 20/06/2026 · ATRASADO  Negociação 3x4 · R$ 350,00\n• IWP-5G63 · 26/06/2026 · ATRASADO Acionamento franquia Sandero 2015 · R$ 796,49\n• IWP-5G63 · 26/06/2026 · ATRASADO  Lavação Sandero 2015 · R$ 80,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Negociação 4x4 · R$ 250,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Pagamento caução · R$ 300,00\n• OZC-0B50 · 27/06/2026 · ATRASADO Pagamento semanal - Sábado 27 · R$ 40,00\n• OZC-0B50 · 04/07/2026 · ATRASADO Pagamento semanal - Sábado 04 · R$ 100,00\n\n*Total em aberto: R$ 1.921,49*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +322,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +641,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaOzc0b50JulianoFoizerSilveira() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +656,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

@@ -1,0 +1,61 @@
+{
+  "sincronizadoEm": "2026-07-06T15:44:18.320Z",
+  "frotaSc": {
+    "veiculos": 17,
+    "consultados": 17,
+    "falhas": []
+  },
+  "frotaRs": {
+    "veiculos": 1,
+    "consultados": 0,
+    "erro": "HTTP 401 — DETRAN_RS_AUTH expirado"
+  },
+  "ipvaLicPorPlaca": {
+    "AVU-6740": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1004.65
+    },
+    "IYR-8F19": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 2906.21
+    },
+    "MKV-6268": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1304.5700000000002
+    },
+    "MLN-0B87": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1229.33
+    },
+    "OWN-3C59": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1333.0500000000002
+    },
+    "OZC-0B50": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1617.25
+    },
+    "RYC-7C32": {
+      "IPVA": 1,
+      "Lic": 0,
+      "valor": 2931.17
+    },
+    "MLW-7I09": {
+      "IPVA": 4,
+      "Lic": 1,
+      "valor": 1519.13
+    },
+    "PWH-3A45": {
+      "IPVA": 1,
+      "Lic": 1,
+      "valor": 1943.6699999999998
+    }
+  },
+  "totalRegistros": 38
+}

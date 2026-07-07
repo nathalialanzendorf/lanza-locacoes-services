@@ -60,7 +60,266 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Juliano Foizer Silveira",
+  "placa": "IVP-8D76",
+  "modeloVeiculo": "HB20",
+  "anoModelo": "2014/2014",
+  "dataInicio": "—",
+  "dataFim": "—",
+  "qtdDiasContrato": 90,
+  "dataAtual": "02/07/2026",
+  "qtdDiasLocado": 0,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 6936.91,
+  "infracoes": [
+    {
+      "descricao": "TRANS. VEIC. FAIXA OU VIA EXCL. VEIC. TRANSP. COLETIVO PASS.",
+      "placa": "OZC-0B50",
+      "data": "—",
+      "categoria": "Infração",
+      "valor": 293.47
+    },
+    {
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "placa": "OZC-0B50",
+      "data": "—",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - ESTACIONAMENTO ROTATIVO",
+      "placa": "OZC-0B50",
+      "data": "—",
+      "categoria": "Infração",
+      "valor": 195.23
+    },
+    {
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - ESTACIONAMENTO ROTATIVO",
+      "placa": "OZC-0B50",
+      "data": "03/11/2025 09:29",
+      "categoria": "Infração",
+      "valor": 195.23
+    },
+    {
+      "descricao": "ESTAC EM DESACOR C/ REGULAMENTAÇÃO - ESTACIONAMENTO ROTATIVO",
+      "placa": "OZC-0B50",
+      "data": "31/10/2025 10:10",
+      "categoria": "Infração",
+      "valor": 195.23
+    },
+    {
+      "descricao": "ESTAC EM LOCAL/HORÁRIO PROIBIDO ESPECIFICAMENTE PELA SINALIZ",
+      "placa": "OZC-0B50",
+      "data": "06/11/2025 11:19",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ",
+      "placa": "OZC-0B50",
+      "data": "09/06/2026 10:57",
+      "categoria": "Infração",
+      "valor": 195.23
+    },
+    {
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "placa": "OZC-0B50",
+      "data": "02/03/2026 20:54",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:33",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:43",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "TRANS EM VELOC SUP À MÁX PERMITIDA EM MAIS DE 20% ATE 50%",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:47",
+      "categoria": "Infração",
+      "valor": 195.23
+    }
+  ],
+  "totalInfracoes": 1920.42,
+  "manutencoes": [
+    {
+      "descricao": "ATRASADO Acionamento franquia Sandero 2015",
+      "placa": "OZC-0B50",
+      "data": "26/06/2026",
+      "categoria": "Manutenção",
+      "valor": 796.49
+    }
+  ],
+  "totalManutencoes": 796.49,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO - Pagamento semanal -  Segunda 05",
+      "placa": "IVP-8D76",
+      "data": "05/01/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 15",
+      "placa": "OZC-0B50",
+      "data": "15/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 20",
+      "placa": "OZC-0B50",
+      "data": "20/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO  Pagamento semanal - Sábado 27",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO  Pagamento semanal - Sábado 27",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 250
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 27",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 190
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 04",
+      "placa": "OZC-0B50",
+      "data": "04/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 800
+    }
+  ],
+  "totalParcelasEmAberto": 3840,
+  "debitosDiversos": [
+    {
+      "descricao": "ATRASADO  Lavação Sandero 2015",
+      "placa": "OZC-0B50",
+      "data": "26/06/2026",
+      "categoria": "Lavação",
+      "valor": 80
+    },
+    {
+      "descricao": "ATRASADO  Pagamento caução",
+      "placa": "OZC-0B50",
+      "data": "27/06/2026",
+      "categoria": "Caução",
+      "valor": 300
+    }
+  ],
+  "totalDebitosDiversos": 380,
+  "resumoSemanal": null,
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "04/07/2026",
+        "periodoInicioBr": "04/07/2026",
+        "periodoFimBr": "11/07/2026",
+        "linhas": [
+          {
+            "dataBr": "04/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "05/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "06/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "07/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
+          }
+        ],
+        "subtotalJurosMulta": 0,
+        "total": 914.32
+      }
+    ],
+    "totalGeral": 914.32,
+    "dataPagamentoBr": "02/07/2026"
+  },
+  "mensagensWhatsApp": [
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — OZC-0B50",
+      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Juliano! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ\n🗓️ *Data/hora:* 09/06/2026 às 10:57\n📍 *Local:* CRICIUMA/SC\n💰 *Valor:* R$ 195,23\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "manutencao",
+      "titulo": "Manutenção em aberto — OZC-0B50",
+      "texto": "Manutenção em aberto — OZC-0B50\n\nOlá, Juliano! Há pendência de *manutenção* (responsabilidade do locatário) referente ao veículo locado.\n\nValor total pendente: *R$ 796,49*\n\nRegularize para evitar acúmulo no acerto. Responda neste canal se precisar de detalhes.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": [
+    "Ainda no prazo de pagamento (vencimento 04/07/2026) — sem mensagem WhatsApp."
+  ]
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +329,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +648,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaIvp8d76JulianoFoizerSilveira() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +663,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

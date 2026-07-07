@@ -60,7 +60,67 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Milton Luis Muther",
+  "placa": "FHG-0B73",
+  "modeloVeiculo": "FORD/FIESTA SEDAN 1.6 GNV",
+  "anoModelo": "2012/2013",
+  "dataInicio": "07/01/2026",
+  "dataFim": "07/03/2026",
+  "qtdDiasContrato": 59,
+  "dataAtual": "05/07/2026",
+  "qtdDiasLocado": 179,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 2400,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 25",
+      "placa": "FHG-0B73",
+      "data": "25/05/2026",
+      "categoria": "Locação semanal",
+      "valor": 450
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 01",
+      "placa": "FHG-0B73",
+      "data": "01/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 08",
+      "placa": "FHG-0B73",
+      "data": "08/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 15",
+      "placa": "FHG-0B73",
+      "data": "15/06/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    }
+  ],
+  "totalParcelasEmAberto": 2400,
+  "debitosDiversos": [],
+  "totalDebitosDiversos": 0,
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — FHG-0B73",
+      "texto": "📋 *Despesas em aberto* — FHG-0B73\n\nOlá, Milton!\nSegue a listagem das despesas referente à locação do seu FORD/FIESTA SEDAN 1.6 GNV que segue em aberto:\n\n• FHG-0B73 · 25/05/2026 · ATRASADO Pagamento semanal - Segunda 25 · R$ 450,00\n• FHG-0B73 · 01/06/2026 · ATRASADO Pagamento semanal - Segunda 01 · R$ 650,00\n• FHG-0B73 · 08/06/2026 · ATRASADO Pagamento semanal - Segunda 08 · R$ 650,00\n• FHG-0B73 · 15/06/2026 · ATRASADO Pagamento semanal - Segunda 15 · R$ 650,00\n\n*Total em aberto: R$ 2.400,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +130,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +449,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaFhg0b73MiltonLuisMuther() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +464,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

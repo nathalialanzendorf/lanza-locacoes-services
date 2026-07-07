@@ -20,7 +20,7 @@ import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import { infracaoIncluirListagemRelatorio } from "./infracaoTitulo.js";
 import { despesaCobravelLocatario } from "./espelharSemLocatarioParceiro.js";
 import { dataVencimentoSemanalBr } from "./pagamentoSemanal.js";
-import { despesaSemanalElegivelRelatorio } from "./pagamentoSemanalCobranca.js";
+import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadVeiculosDb } from "./veiculosDb.js";
 
@@ -317,7 +317,14 @@ function filtrarPagamentoSemanal(
     if (!despesaAberta(d)) continue;
     if (d.categoria !== "Locação semanal") continue;
     if (!/ATRASADO/i.test(d.descricao)) continue;
-    if (!despesaSemanalElegivelRelatorio(d, dataReferencia)) continue;
+    const vencSemanal =
+      dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao ?? "";
+    if (
+      vencSemanal &&
+      !vencimentoSemanalElegivelCobranca(vencSemanal, dataReferencia)
+    ) {
+      continue;
+    }
     if (!placaElegivel(d.veiculoId, veiculos)) continue;
     if (!clienteElegivel(d.condutorId, clientes)) continue;
     if (alvoPlaca && compactPlaca(d.veiculoId) !== alvoPlaca) continue;

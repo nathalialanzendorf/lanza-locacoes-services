@@ -12,6 +12,7 @@ import { gerarCobrancaCanvasDeSidecar } from "../lib/gerarCobrancaCanvas.js";
 import {
   montarCobrancaSidecar,
   salvarCobrancasSidecar,
+  type CobrancaRelatorioSidecar,
 } from "../lib/cobrancasRelatorioSidecar.js";
 import {
   normalizarTipoCobrancaAction,
@@ -159,6 +160,16 @@ function imprimirListagem(tipo: TipoCobrancaAction, filtro: FiltroAlvosCobranca)
           ? ` · ${brl(a.despesas.reduce((s, d) => s + (Number(d.valorMulta) || 0), 0))}`
           : "";
     console.log(`  ${a.placa} · ${nome} · ${qtd} despesa(s)${extra}`);
+  }
+}
+
+function imprimirCabecalhoContrato(sidecar: CobrancaRelatorioSidecar | null): void {
+  if (!sidecar || sidecar.dataInicio === "—") return;
+  console.log(
+    `\nContrato: ${sidecar.placa} · ${sidecar.cliente} · ${sidecar.dataInicio} → ${sidecar.dataFim} (${sidecar.qtdDiasContrato} dias)`,
+  );
+  if (sidecar.linhaEncerramento) {
+    console.log(sidecar.linhaEncerramento);
   }
 }
 
@@ -348,6 +359,7 @@ export function mainLote(argv: string[]): void {
   if (escopoUnico) {
     const itemsEscopo = itemsDoEscopo(resultadosLote, filtro);
     const sidecar = montarCobrancaSidecar(filtro, itemsEscopo, dataRef, tipos);
+    imprimirCabecalhoContrato(sidecar);
     imprimirBlocoFinalRelatorio(itemsEscopo, {
       pagamentoSemanal: sidecar?.pagamentoSemanal ?? null,
       resumoSemanal: sidecar?.resumoSemanal ?? null,

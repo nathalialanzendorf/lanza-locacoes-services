@@ -1,6 +1,6 @@
 {
   "descricao": "Linha do tempo de uso de cada veículo: períodos de locação, reserva e manutenção. id = uuid. veiculoId -> veiculos.json; clienteId -> clientes.json; contratoId -> contratos.json. Consumido por relatorio-prestacao-contas (ganho de locado, desconto de diárias em manutenção, pagamento de diárias de veículo reserva e taxa de controle semanal).",
-  "atualizadoEm": "2026-07-05",
+  "atualizadoEm": "2026-07-06",
   "schemaLocacao": {
     "id": "uuid",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -153,6 +153,63 @@
       "substituiPlaca": null,
       "observacao": "Laryssa sem veículo — manutenção Focus (Felipe)",
       "atualizadoEm": "2026-07-05T21:35:40.967Z"
+    },
+    {
+      "id": "475d2900-78b3-4e7e-967d-e050c23b3882",
+      "cadastradoEm": "2026-07-06T16:17:19.552Z",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "clienteId": "a56a4d8e-03d0-4600-b06e-31fab673299a",
+      "condutorNome": "Juliano Foizer Silveira",
+      "contratoId": "521a9031-c5c8-4c4a-98d6-61d2939f060d",
+      "situacao": "locado",
+      "inicio": "29/05/2026",
+      "fim": "08/06/2026",
+      "tipoLocacao": "semanal",
+      "valorCobrado": 650,
+      "valorPago": 500,
+      "substituiVeiculoId": null,
+      "substituiPlaca": null,
+      "observacao": "Contrato Sandero Juliano",
+      "atualizadoEm": "2026-07-06T16:17:19.552Z"
+    },
+    {
+      "id": "ec60a4c7-043b-4307-8114-d4cba0083e68",
+      "cadastradoEm": "2026-07-06T16:17:25.311Z",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "clienteId": null,
+      "condutorNome": null,
+      "contratoId": null,
+      "situacao": "manutencao",
+      "inicio": "09/06/2026",
+      "fim": "09/06/2026",
+      "tipoLocacao": null,
+      "valorCobrado": null,
+      "valorPago": null,
+      "substituiVeiculoId": null,
+      "substituiPlaca": null,
+      "observacao": "Juliano sem veiculo — manutencao Sandero",
+      "atualizadoEm": "2026-07-06T16:17:25.311Z"
+    },
+    {
+      "id": "42e91717-6ca7-4999-83d7-d2b63aecfa22",
+      "cadastradoEm": "2026-07-06T16:17:30.762Z",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "clienteId": "a56a4d8e-03d0-4600-b06e-31fab673299a",
+      "condutorNome": "Juliano Foizer Silveira",
+      "contratoId": "521a9031-c5c8-4c4a-98d6-61d2939f060d",
+      "situacao": "locado",
+      "inicio": "10/06/2026",
+      "fim": "27/06/2026",
+      "tipoLocacao": "semanal",
+      "valorCobrado": 650,
+      "valorPago": 500,
+      "substituiVeiculoId": null,
+      "substituiPlaca": null,
+      "observacao": null,
+      "atualizadoEm": "2026-07-06T16:17:30.762Z"
     }
   ]
 }

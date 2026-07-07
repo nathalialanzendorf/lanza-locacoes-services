@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-07-05",
+  "atualizadoEm": "2026-07-06",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -5396,6 +5396,17 @@
       "valor": 293.47,
       "competencia": "08/2026",
       "origem": "detran-sc/infracao-sem-locatario/RYC7C32/N005452049"
+    },
+    {
+      "id": "9a9d830f-13bc-4c10-a86a-4c47e21bf863",
+      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
+      "placa": "IWP-5G63",
+      "categoria": "Outros",
+      "descricao": "Multa sem locatário — EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ (P0drq000lm)",
+      "data": "14/08/2026",
+      "valor": 195.23,
+      "competencia": "08/2026",
+      "origem": "detran-sc/infracao-sem-locatario/IWP5G63/P0DRQ000LM"
     }
   ]
 }

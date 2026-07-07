@@ -1,6 +1,6 @@
 {
   "descricao": "Infrações de trânsito sincronizadas do DETRAN SC. Chave natural: numeroAuto (case-insensitive). Débitos cobráveis espelhados em cliente-despesas.json via numeroAuto.",
-  "atualizadoEm": "2026-07-05",
+  "atualizadoEm": "2026-07-06",
   "schemaInfracao": {
     "id": "uuid",
     "numeroAuto": "Número do auto DETRAN — chave natural (case-insensitive)",
@@ -1970,7 +1970,7 @@
       "origem": "detran-sc",
       "syncEm": "2026-07-05T23:02:48.239Z",
       "cadastradoEm": "2026-06-26T16:36:29.466Z",
-      "atualizadoEm": "2026-07-05T23:06:45.561Z",
+      "atualizadoEm": "2026-07-06T16:19:19.328Z",
       "ativo": true,
       "convertidaEmDebito": true,
       "idAutoInfracao": 71124596,
@@ -2042,7 +2042,7 @@
     {
       "id": "85779940-ada8-4bd5-ac2e-6bc50a54df8e",
       "numeroAuto": "P0drq000lm",
-      "veiculoId": "OZC-0B50",
+      "veiculoId": "IWP-5G63",
       "descricao": "EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ",
       "dataAutuacao": "09/06/2026 10:57:32",
       "localInfracao": "RUA NIBELE UGGIONI, VILA FLORESTA I - CRICIUMA - SANTA CATARINA, 88818-500, BR - CRICIUMA/SC",
@@ -2052,15 +2052,15 @@
       "dataLimiteDefesa": "14/08/2026",
       "limiteDefesa": "14/08/2026",
       "quitadaDetran": false,
-      "condutorId": "a56a4d8e-03d0-4600-b06e-31fab673299a",
+      "condutorId": null,
       "condutorConfirmado": true,
-      "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FOCUS 2013-2014\\27.06.2026 - Juliano Foizer Silveira",
+      "condutorContrato": null,
       "pdfArquivo": null,
       "clienteDespesaId": "a611cbcc-e374-4168-87e2-c8e9d92c4c9c",
       "origem": "detran-sc",
       "syncEm": "2026-07-05T23:02:51.408Z",
       "cadastradoEm": "2026-06-26T16:36:30.383Z",
-      "atualizadoEm": "2026-07-05T23:02:51.408Z",
+      "atualizadoEm": "2026-07-06T16:19:19.344Z",
       "ativo": true,
       "convertidaEmDebito": false,
       "idAutoInfracao": 75577140,
@@ -2083,7 +2083,8 @@
         "protocolo": "8787.6041.P0drq000lm",
         "dataLimiteDefesa": "2026-08-14",
         "prazoDefesaExpirado": false
-      }
+      },
+      "condutorNaoIdentificado": true
     },
     {
       "id": "12631903-eb56-4db7-8506-dd8f43fbb082",

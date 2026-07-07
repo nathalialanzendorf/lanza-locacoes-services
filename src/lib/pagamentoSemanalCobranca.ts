@@ -197,6 +197,23 @@ export function vencimentoSemanalElegivelCobranca(
   return inferirDiaEscalonamento(vencimentoBr, hojeBr) != null;
 }
 
+/** Dias corridos desde o vencimento (negativo = futuro). */
+function diasDesdeVencimento(vencimentoBr: string, hojeBr: string): number {
+  const vencimento = parseDataBrOrThrow(vencimentoBr);
+  const hoje = parseDataBrOrThrow(hojeBr);
+  return Math.round(
+    (startOfDay(hoje).getTime() - startOfDay(vencimento).getTime()) / 86_400_000,
+  );
+}
+
+/** Vencimento hoje (D0) ou em atraso — entra na listagem do relatório; futuro fica de fora. */
+export function vencimentoSemanalElegivelListagemRelatorio(
+  vencimentoBr: string,
+  hojeBr: string,
+): boolean {
+  return diasDesdeVencimento(vencimentoBr, hojeBr) >= 0;
+}
+
 export function filtrarVencimentosSemanalCobranca(
   vencimentosBr: string[],
   hojeBr: string,
@@ -204,7 +221,7 @@ export function filtrarVencimentosSemanalCobranca(
   return vencimentosBr.filter((v) => vencimentoSemanalElegivelCobranca(v, hojeBr));
 }
 
-/** Parcela semanal com vencimento D0 ou futuro — omitir do relatório de cobrança. */
+/** Parcela semanal futura — omitir da listagem do relatório; D0 e atrasadas entram. */
 export function despesaSemanalElegivelRelatorio(
   d: {
     categoria?: string;
@@ -220,7 +237,7 @@ export function despesaSemanalElegivelRelatorio(
     d.dataAutuacao ??
     "";
   if (!venc) return true;
-  return vencimentoSemanalElegivelCobranca(venc, hojeBr);
+  return vencimentoSemanalElegivelListagemRelatorio(venc, hojeBr);
 }
 
 /** Primeiro vencimento já vencido (D+1+); `--dia` sobrescreve quando informado. */

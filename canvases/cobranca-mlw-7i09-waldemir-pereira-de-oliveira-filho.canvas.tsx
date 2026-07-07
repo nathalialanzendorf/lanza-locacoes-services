@@ -60,7 +60,168 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Waldemir Pereira de Oliveira Filho",
+  "placa": "MLW-7I09",
+  "modeloVeiculo": "HYUNDAI/HB20 1.0M COMFOR",
+  "anoModelo": "2014/2015",
+  "dataInicio": "03/07/2026",
+  "dataFim": "01/10/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "04/07/2026",
+  "qtdDiasLocado": 1,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 1700,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 11",
+      "placa": "MLW-7I09",
+      "data": "11/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    }
+  ],
+  "totalParcelasEmAberto": 650,
+  "debitosDiversos": [
+    {
+      "descricao": "ATRASADO Pagamento caução - 1x7",
+      "placa": "MLW-7I09",
+      "data": "11/07/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 2x7",
+      "placa": "MLW-7I09",
+      "data": "18/07/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 3x7",
+      "placa": "MLW-7I09",
+      "data": "25/07/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 4x7",
+      "placa": "MLW-7I09",
+      "data": "01/08/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 5x7",
+      "placa": "MLW-7I09",
+      "data": "08/08/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 6x7",
+      "placa": "MLW-7I09",
+      "data": "15/08/2026",
+      "categoria": "Caução",
+      "valor": 150
+    },
+    {
+      "descricao": "ATRASADO Pagamento caução - 7x7",
+      "placa": "MLW-7I09",
+      "data": "22/08/2026",
+      "categoria": "Caução",
+      "valor": 150
+    }
+  ],
+  "totalDebitosDiversos": 1050,
+  "resumoSemanal": null,
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "11/07/2026",
+        "periodoInicioBr": "11/07/2026",
+        "periodoFimBr": "18/07/2026",
+        "linhas": [
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "12/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "13/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "14/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "15/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "16/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "17/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "18/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          }
+        ],
+        "subtotalJurosMulta": 0,
+        "total": 742.88
+      }
+    ],
+    "totalGeral": 742.88,
+    "dataPagamentoBr": "04/07/2026"
+  },
+  "mensagensWhatsApp": [
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — MLW-7I09",
+      "texto": "📋 *Despesas em aberto* — MLW-7I09\n\nOlá, Waldemir!\nSegue a listagem das despesas referente à locação do seu HYUNDAI/HB20 1.0M COMFOR que segue em aberto:\n\n• MLW-7I09 · 11/07/2026 · ATRASADO Pagamento semanal - Sábado 11 · R$ 650,00\n• MLW-7I09 · 11/07/2026 · ATRASADO Pagamento caução - 1x7 · R$ 150,00\n• MLW-7I09 · 18/07/2026 · ATRASADO Pagamento caução - 2x7 · R$ 150,00\n• MLW-7I09 · 25/07/2026 · ATRASADO Pagamento caução - 3x7 · R$ 150,00\n• MLW-7I09 · 01/08/2026 · ATRASADO Pagamento caução - 4x7 · R$ 150,00\n• MLW-7I09 · 08/08/2026 · ATRASADO Pagamento caução - 5x7 · R$ 150,00\n• MLW-7I09 · 15/08/2026 · ATRASADO Pagamento caução - 6x7 · R$ 150,00\n• MLW-7I09 · 22/08/2026 · ATRASADO Pagamento caução - 7x7 · R$ 150,00\n\n*Total em aberto: R$ 1.700,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": [
+    "Ainda no prazo de pagamento (vencimento 11/07/2026) — sem mensagem WhatsApp."
+  ]
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +231,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +550,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaMlw7i09WaldemirPereiraDeOliveiraFilho() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +565,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

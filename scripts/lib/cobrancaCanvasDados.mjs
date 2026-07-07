@@ -12,6 +12,7 @@ export function cobrancaCanvasDados(j) {
     qtdDiasContrato: j.qtdDiasContrato ?? j.contrato?.prazoDias ?? 0,
     dataAtual: j.dataAtual ?? j.geradoEmBr ?? j.dataReferencia,
     qtdDiasLocado: j.qtdDiasLocado ?? 0,
+    linhaEncerramento: j.linhaEncerramento ?? null,
     valorSemanal: j.contrato?.valorSemanal ?? 0,
     valorDiaria: j.contrato?.valorDiaria ?? 0,
     totalDebitos: j.totalDebitos,

@@ -30,7 +30,12 @@ import {
 import type { LoteCobrancaItem, LoteCobrancaResult } from "./cobrancasLote.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
 import type { FiltroAlvosCobranca, TipoCobrancaAction } from "./cobrancasAlvos.js";
-import { contratoMaisRecentePar, loadContratosDb } from "./contratosDb.js";
+import {
+  contratoMaisRecentePar,
+  loadContratosDb,
+  type ContratoRegistro,
+  type MotivoEncerramento,
+} from "./contratosDb.js";
 import { compararDataBrAsc, daysBetween, parseDataBr } from "./contratoExtrair.js";
 import { isCreditoDevolucaoLocatario } from "./encerrarContrato.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
@@ -78,12 +83,17 @@ export type CobrancaRelatorioSidecar = {
   placa: string;
   modeloVeiculo: string;
   anoModelo: string;
+  /** Presente quando o contrato de referência está encerrado (ex.: "Encerrado em 11/01/2026 — Devolvido"). */
+  linhaEncerramento: string | null;
   contrato: {
     inicio: string | null;
     fimPrevisto: string | null;
     prazoDias: number | null;
     valorSemanal: number | null;
     valorDiaria: number | null;
+    status: string | null;
+    dataEncerramento: string | null;
+    motivoEncerramento: string | null;
   };
   infracoes: LinhaRelatorioCobranca[];
   totalInfracoes: number;
@@ -204,25 +214,84 @@ function veiculoInfo(placa: string): { modelo: string; ano: string } {
   };
 }
 
-function contratoAtivoPorPlaca(placa: string) {
-  const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
-  );
-  if (list.length === 0) return undefined;
-  return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
+function ordenarContratosRecentes(a: ContratoRegistro, b: ContratoRegistro): number {
+  const byVersao = (b.versao ?? 0) - (a.versao ?? 0);
+  if (byVersao !== 0) return byVersao;
+  return compararDataBrAsc(b.dataInicio ?? "", a.dataInicio ?? "");
 }
 
-function contratoVigente(placa: string, clienteId: string | null) {
-  return (
-    (clienteId
-      ? contratoMaisRecentePar({ placa, clienteId })
-      : contratoAtivoPorPlaca(placa)) ?? null
+function contratoAtivoPar(
+  placa: string,
+  clienteId?: string | null,
+): ContratoRegistro | undefined {
+  const p = compactPlaca(placa);
+  const list = loadContratosDb().contratos.filter(
+    (c) =>
+      c.status === "ativo" &&
+      compactPlaca(c.placa ?? "") === p &&
+      (!clienteId || c.clienteId === clienteId),
   );
+  if (list.length === 0) return undefined;
+  return list.sort(ordenarContratosRecentes)[0];
+}
+
+/** Contrato ativo do par; se não houver, o mais recente (inclui encerrado). */
+function contratoReferenciaCobranca(
+  placa: string,
+  clienteId?: string | null,
+): ContratoRegistro | undefined {
+  if (!placa || placa === "—") {
+    return clienteId ? ultimoContratoPorCliente(clienteId) : undefined;
+  }
+
+  const ativo = contratoAtivoPar(placa, clienteId);
+  if (ativo) return ativo;
+
+  if (clienteId) {
+    return contratoMaisRecentePar({ placa, clienteId });
+  }
+
+  const p = compactPlaca(placa);
+  const list = loadContratosDb().contratos.filter(
+    (c) => compactPlaca(c.placa ?? "") === p,
+  );
+  if (list.length === 0) return undefined;
+  return list.sort(ordenarContratosRecentes)[0];
+}
+
+function ultimoContratoPorCliente(clienteId: string): ContratoRegistro | undefined {
+  const ativos = loadContratosDb().contratos.filter(
+    (c) => c.status === "ativo" && c.clienteId === clienteId,
+  );
+  if (ativos.length > 0) {
+    return ativos.sort(ordenarContratosRecentes)[0];
+  }
+
+  const todos = loadContratosDb().contratos.filter((c) => c.clienteId === clienteId);
+  if (todos.length === 0) return undefined;
+  return todos.sort(ordenarContratosRecentes)[0];
+}
+
+function rotuloMotivoEncerramento(motivo?: MotivoEncerramento | null): string {
+  switch (motivo) {
+    case "devolvido":
+      return "Devolvido";
+    case "recuperado":
+      return "Recuperado";
+    case "troca":
+      return "Troca de veículo";
+    default:
+      return motivo ? String(motivo) : "—";
+  }
+}
+
+function linhaEncerramentoContrato(c: ContratoRegistro | undefined): string | null {
+  if (!c || c.status !== "encerrado" || !c.dataEncerramento?.trim()) return null;
+  return `Encerrado em ${c.dataEncerramento.trim()} — ${rotuloMotivoEncerramento(c.motivoEncerramento)}`;
 }
 
 function contratoInfo(placa: string, clienteId: string | null, dataAtualBr: string) {
-  const c = contratoVigente(placa, clienteId);
+  const c = contratoReferenciaCobranca(placa, clienteId);
   const dataInicio = c?.dataInicio ?? null;
   const dataFim = c?.dataFimPrevista ?? null;
   const qtdDiasContrato = c?.prazoDias ?? null;
@@ -230,8 +299,11 @@ function contratoInfo(placa: string, clienteId: string | null, dataAtualBr: stri
   let qtdDiasLocado: number | null = null;
   if (dataInicio) {
     const inicio = parseDataBr(dataInicio);
-    const hoje = parseDataBr(dataAtualBr) ?? new Date();
-    if (inicio) qtdDiasLocado = daysBetween(inicio, hoje);
+    const fimRef =
+      c?.status === "encerrado" && c.dataEncerramento
+        ? parseDataBr(c.dataEncerramento)
+        : parseDataBr(dataAtualBr);
+    if (inicio && fimRef) qtdDiasLocado = daysBetween(inicio, fimRef);
   }
 
   return {
@@ -240,6 +312,10 @@ function contratoInfo(placa: string, clienteId: string | null, dataAtualBr: stri
     prazoDias: qtdDiasContrato,
     valorSemanal: c?.valorSemanal ?? null,
     valorDiaria: c?.valorDiaria ?? null,
+    status: c?.status ?? null,
+    dataEncerramento: c?.dataEncerramento ?? null,
+    motivoEncerramento: c?.motivoEncerramento ?? null,
+    linhaEncerramento: linhaEncerramentoContrato(c),
     dataInicio: dataInicio ?? "—",
     dataFim: dataFim ?? "—",
     qtdDiasContrato: qtdDiasContrato ?? 0,
@@ -302,7 +378,7 @@ function resolverMotoristaDespesa(
     const c = loadClientesDb().clientes.find((x) => x.id === d.condutorId);
     if (c?.nome) return c.nome;
   }
-  const contrato = contratoAtivoPorPlaca(d.veiculoId);
+  const contrato = contratoReferenciaCobranca(d.veiculoId);
   if (contrato?.clienteNome) return contrato.clienteNome;
   return fallbackMotorista || "—";
 }
@@ -553,22 +629,15 @@ function resolverPlacaPrincipal(
   if (placasLote.length === 1) return placasLote[0]!;
   if (placasLote.length > 1) {
     const comContrato = placasLote.filter((p) => {
-      const c = contratoAtivoPorPlaca(p);
+      const c = contratoReferenciaCobranca(p, filtro.clienteId);
       return c?.clienteId === filtro.clienteId;
     });
     if (comContrato.length === 1) return comContrato[0]!;
   }
 
   if (filtro.clienteId) {
-    const contratos = loadContratosDb().contratos.filter(
-      (c) => c.status === "ativo" && c.clienteId === filtro.clienteId,
-    );
-    contratos.sort((a, b) => {
-      const byVersao = (b.versao ?? 0) - (a.versao ?? 0);
-      if (byVersao !== 0) return byVersao;
-      return String(b.inicio ?? "").localeCompare(String(a.inicio ?? ""));
-    });
-    if (contratos[0]?.placa) return formatPlacaHyphen(contratos[0].placa);
+    const ultimo = ultimoContratoPorCliente(filtro.clienteId);
+    if (ultimo?.placa) return formatPlacaHyphen(ultimo.placa);
   }
 
   const contagem = new Map<string, number>();
@@ -592,7 +661,7 @@ function resolverNomeCliente(filtro: FiltroAlvosCobranca, placa: string): string
     const c = loadClientesDb().clientes.find((x) => x.id === filtro.clienteId);
     if (c?.nome) return c.nome;
   }
-  const vigente = contratoAtivoPorPlaca(placa);
+  const vigente = contratoReferenciaCobranca(placa, filtro.clienteId);
   if (vigente?.clienteNome) return vigente.clienteNome;
   return "(sem cliente)";
 }
@@ -714,7 +783,8 @@ export function montarCobrancaSidecar(
 
   const placa = resolverPlacaPrincipal(filtro, [...despesas, ...infracoesDb], itemsLote);
   const cliente = resolverNomeCliente(filtro, placa);
-  const clienteId = filtro.clienteId ?? contratoAtivoPorPlaca(placa)?.clienteId ?? null;
+  const clienteId =
+    filtro.clienteId ?? contratoReferenciaCobranca(placa)?.clienteId ?? null;
 
   const secoes = classificarDespesasEmSecoes(despesas, infracoesDb);
   const totalInfracoes = round2(
@@ -806,7 +876,11 @@ export function montarCobrancaSidecar(
       prazoDias: vigencia.prazoDias,
       valorSemanal: vigencia.valorSemanal,
       valorDiaria: vigencia.valorDiaria,
+      status: vigencia.status,
+      dataEncerramento: vigencia.dataEncerramento,
+      motivoEncerramento: vigencia.motivoEncerramento,
     },
+    linhaEncerramento: vigencia.linhaEncerramento,
     infracoes: secoes.infracoes,
     totalInfracoes,
     manutencoes: secoes.manutencoes,

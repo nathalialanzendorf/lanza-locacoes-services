@@ -60,7 +60,82 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Tiago Augusto da Silva Piareti",
+  "placa": "IXT-7I93",
+  "modeloVeiculo": "RENAULT/SANDERO 1.0 Flex",
+  "anoModelo": "2017/2017",
+  "dataInicio": "24/03/2026",
+  "dataFim": "22/06/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "06/07/2026",
+  "qtdDiasLocado": 104,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 717.1,
+  "infracoes": [
+    {
+      "descricao": "Multa parada - 02/04/2026 14:30 (Advertida)",
+      "placa": "IXT-7I93",
+      "data": "02/04/2026 14:30:03",
+      "categoria": "Infração",
+      "valor": 88.38
+    },
+    {
+      "descricao": "ATRASADO Multa parada - 16/04/2026",
+      "placa": "IXT-7I93",
+      "data": "16/04/2026 07:57:46",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "ATRASADO Multa celular - 27/05/2026 08:09",
+      "placa": "IXT-7I93",
+      "data": "27/05/2026 08:09:55",
+      "categoria": "Infração",
+      "valor": 293.47
+    },
+    {
+      "descricao": "ATRASADO Multa celular - 27/05/2026 08:30",
+      "placa": "IXT-7I93",
+      "data": "27/05/2026 08:30:11",
+      "categoria": "Infração",
+      "valor": 293.47
+    }
+  ],
+  "totalInfracoes": 717.1,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [],
+  "totalParcelasEmAberto": 0,
+  "debitosDiversos": [],
+  "totalDebitosDiversos": 0,
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — IXT-7I93",
+      "texto": "🚦 *Notificação de infração* — IXT-7I93\n\nOlá, Tiago! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.0 Flex - Preto:\n\n🚨 *Infração:* Multa parada - 16/04/2026\n🗓️ *Data/hora:* 16/04/2026 às 07:57:46\n📍 *Local:* TUBARAO/SC\n💰 *Valor:* R$ 130,16\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — IXT-7I93",
+      "texto": "🚦 *Notificação de infração* — IXT-7I93\n\nOlá, Tiago! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.0 Flex - Preto:\n\n🚨 *Infração:* Multa celular - 27/05/2026 08:09\n🗓️ *Data/hora:* 27/05/2026 às 08:09:55\n📍 *Local:* TUBARAO/SC\n💰 *Valor:* R$ 293,47\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — IXT-7I93",
+      "texto": "🚦 *Notificação de infração* — IXT-7I93\n\nOlá, Tiago! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.0 Flex - Preto:\n\n🚨 *Infração:* Multa celular - 27/05/2026 08:30\n🗓️ *Data/hora:* 27/05/2026 às 08:30:11\n📍 *Local:* TUBARAO/SC\n💰 *Valor:* R$ 293,47\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — IXT-7I93",
+      "texto": "📋 *Despesas em aberto* — IXT-7I93\n\nOlá, Tiago!\nSegue a listagem das despesas referente à locação do seu RENAULT/SANDERO 1.0 Flex que segue em aberto:\n\n• IXT-7I93 · 02/04/2026 14:30:03 · Multa parada - 02/04/2026 14:30 (Advertida) · R$ 88,38\n• IXT-7I93 · 16/04/2026 07:57:46 · ATRASADO Multa parada - 16/04/2026 · R$ 130,16\n• IXT-7I93 · 27/05/2026 08:09:55 · ATRASADO Multa celular - 27/05/2026 08:09 · R$ 293,47\n• IXT-7I93 · 27/05/2026 08:30:11 · ATRASADO Multa celular - 27/05/2026 08:30 · R$ 293,47\n\n*Total em aberto: R$ 717,10*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": []
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +145,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +464,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaIxt7i93TiagoAugustoDaSilvaPiareti() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +479,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

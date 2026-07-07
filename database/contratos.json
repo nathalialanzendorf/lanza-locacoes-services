@@ -415,15 +415,15 @@
       "status": "ativo",
       "prazoDias": 90,
       "tipoContrato": "semanal",
-      "diaPagamentoSemana": "sabado",
+      "diaPagamentoSemana": "segunda",
       "diaPagamentoMes": null,
-      "diaPagamentoTexto": "sábados",
+      "diaPagamentoTexto": "segundas-feiras",
       "valorSemanal": 1000,
       "valorMensal": null,
-      "valorDiaria": 170,
-      "valorCaucao": 2000,
+      "valorDiaria": 200,
+      "valorCaucao": 1800,
       "cadastradoEm": "2026-06-28T16:58:46.983Z",
-      "atualizadoEm": "2026-07-05T17:04:14.197Z"
+      "atualizadoEm": "2026-07-06T20:30:00.000Z"
     },
     {
       "id": "1abd1be1-9906-4adf-9175-6e333e03b663",

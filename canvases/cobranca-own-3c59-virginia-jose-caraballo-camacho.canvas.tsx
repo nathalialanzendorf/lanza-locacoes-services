@@ -60,7 +60,118 @@ type ResumoSemanalCanvas = {
   jurosMultaAcumulados: number;
 };
 
-const dados = __DADOS__ as {
+const dados = {
+  "cliente": "Virginia Jose Caraballo Camacho",
+  "placa": "OWN-3C59",
+  "modeloVeiculo": "RENAULT/SANDERO 1.0 Flex",
+  "anoModelo": "2013/2014",
+  "dataInicio": "12/05/2026",
+  "dataFim": "10/08/2026",
+  "qtdDiasContrato": 90,
+  "dataAtual": "04/07/2026",
+  "qtdDiasLocado": 53,
+  "valorSemanal": 650,
+  "valorDiaria": 120,
+  "totalDebitos": 650,
+  "infracoes": [],
+  "totalInfracoes": 0,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Pagamento semanal - Quarta 8",
+      "placa": "OWN-3C59",
+      "data": "08/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
+    }
+  ],
+  "totalParcelasEmAberto": 650,
+  "debitosDiversos": [],
+  "totalDebitosDiversos": 0,
+  "resumoSemanal": null,
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "08/07/2026",
+        "periodoInicioBr": "08/07/2026",
+        "periodoFimBr": "15/07/2026",
+        "linhas": [
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "12/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "13/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "14/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "15/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          }
+        ],
+        "subtotalJurosMulta": 0,
+        "total": 742.88
+      }
+    ],
+    "totalGeral": 742.88,
+    "dataPagamentoBr": "04/07/2026"
+  },
+  "mensagensWhatsApp": [
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — OWN-3C59",
+      "texto": "📋 *Despesas em aberto* — OWN-3C59\n\nOlá, Virginia!\nSegue a listagem das despesas referente à locação do seu RENAULT/SANDERO 1.0 Flex que segue em aberto:\n\n• OWN-3C59 · 08/07/2026 · ATRASADO Pagamento semanal - Quarta 8 · R$ 650,00\n\n*Total em aberto: R$ 650,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
+  "avisos": [
+    "Ainda no prazo de pagamento (vencimento 08/07/2026) — sem mensagem WhatsApp."
+  ]
+} as {
   cliente: string;
   placa: string;
   modeloVeiculo: string;
@@ -70,7 +181,6 @@ const dados = __DADOS__ as {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
-  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -390,7 +500,7 @@ function mensagensWhatsAppVisiveis(
   return mensagens.filter((m) => m.tipo !== "manutencao");
 }
 
-export default function __COMPONENT_NAME__() {
+export default function CobrancaOwn3c59VirginiaJoseCaraballoCamacho() {
   const theme = useHostTheme();
   const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
 
@@ -405,11 +515,6 @@ export default function __COMPONENT_NAME__() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
-        {dados.linhaEncerramento ? (
-          <Text tone="secondary" style={{ textAlign: "center" }}>
-            {dados.linhaEncerramento}
-          </Text>
-        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
