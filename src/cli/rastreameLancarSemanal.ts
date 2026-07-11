@@ -208,49 +208,77 @@ function parseArgs(argv: string[]): {
   return { inicio, fim, prazoDias, execute, info, dataIso };
 }
 
-export async function main(argv: string[]): Promise<void> {
-  const { inicio, fim, prazoDias, execute, info, dataIso } = parseArgs(argv);
+export type LancarSemanalRastreameOpts = {
+  inicio: string;
+  fim: string;
+  prazoDias?: number;
+  execute?: boolean;
+  info?: string;
+  dataIso?: string;
+};
+
+export type LancarSemanalItem = {
+  cliente: string;
+  placa?: string;
+  valor?: number;
+  acao: "criado" | "duplicado" | "sem-dados" | "preview" | "erro";
+  detalhe?: string;
+};
+
+export type LancarSemanalRastreameResult = {
+  contratosDir: string;
+  candidatos: number;
+  criados: number;
+  duplicados: number;
+  semDados: number;
+  execute: boolean;
+  info: string;
+  dataIso: string;
+  itens: LancarSemanalItem[];
+};
+
+export async function lancarSemanalRastreame(
+  opts: LancarSemanalRastreameOpts,
+): Promise<LancarSemanalRastreameResult> {
+  const inicio = new Date(opts.inicio + "T12:00:00");
+  const fim = new Date(opts.fim + "T12:00:00");
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
+    throw new Error("Datas inválidas (use YYYY-MM-DD)");
+  }
+  const prazoDias = opts.prazoDias ?? 90;
+  const execute = opts.execute ?? false;
+  const derived = infoEDataPadraoParaSemana(inicio);
+  const info = opts.info ?? derived.info;
+  const dataIso = opts.dataIso ?? derived.dataIso;
+
   const root = defaultContratosDir();
   const candidatos = listarContratosAtivosNaSemana(root, inicio, fim, prazoDias);
   const veiculos = loadVeiculos();
-
-  console.log(`contratosDir: ${root}`);
-  console.log(
-    `Semana ${inicio.toISOString().slice(0, 10)}–${fim.toISOString().slice(0, 10)} | prazo ${prazoDias}d | candidatos: ${candidatos.length}`,
-  );
-  console.log(`info: "${info}" | data: ${dataIso}`);
-  console.log(execute ? "MODO: EXECUTAR POST" : "MODO: dry-run (use --execute)");
 
   let gastos: GastoRow[] = [];
   let motoristas: Motorista[] = [];
   let rastreaveis: Rastreavel[] = [];
 
-  try {
-    motoristas = await listMotoristas();
-    rastreaveis = await listRastreaveis();
-    gastos = await fetchAllGastosPages();
-    console.log(
-      `API: ${motoristas.length} motoristas, ${rastreaveis.length} rastreáveis, ${gastos.length} gastos (páginas).`,
-    );
-  } catch (e) {
-    console.error(
-      "Falha ao falar com a API Rastreame. Defina RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA.",
-    );
-    console.error(e);
-    process.exit(2);
-  }
+  motoristas = await listMotoristas();
+  rastreaveis = await listRastreaveis();
+  gastos = await fetchAllGastosPages();
 
-  let ok = 0;
-  let skipDup = 0;
-  let skipDados = 0;
+  let criados = 0;
+  let duplicados = 0;
+  let semDados = 0;
+  const itens: LancarSemanalItem[] = [];
 
   for (const c of candidatos) {
     let texto = "";
     try {
       texto = docxPlainText(c.docx);
     } catch (e) {
-      console.error(`[erro docx] ${c.docx}`, e);
-      skipDados++;
+      semDados++;
+      itens.push({
+        cliente: c.clienteNome,
+        acao: "erro",
+        detalhe: e instanceof Error ? e.message : String(e),
+      });
       continue;
     }
     const valor = extrairValorSemanalReais(texto);
@@ -264,18 +292,24 @@ export async function main(argv: string[]): Promise<void> {
     const rastreavelKey = rk !== undefined && rk !== null ? String(rk) : "";
 
     if (!valor || !motoristaKey || !rastreavelKey) {
-      console.log(
-        `[SKIP dados] ${c.clienteNome} | veículo pasta: ${c.pastaVeiculo} | valor=${valor ?? "?"} | motoristaKey=${motoristaKey || "?"} | rastreavelKey=${rastreavelKey || "?"} | placa?=${v?.placa ?? "?"}`,
-      );
-      skipDados++;
+      semDados++;
+      itens.push({
+        cliente: c.clienteNome,
+        placa: v?.placa,
+        valor: valor ?? undefined,
+        acao: "sem-dados",
+      });
       continue;
     }
 
     if (jaExisteDuplicado(gastos, motoristaKey, rastreavelKey, info)) {
-      console.log(
-        `[SKIP duplicado] ${c.clienteNome} + ${v!.placa} | já existe gasto com mesmo info/keys.`,
-      );
-      skipDup++;
+      duplicados++;
+      itens.push({
+        cliente: c.clienteNome,
+        placa: v!.placa,
+        valor,
+        acao: "duplicado",
+      });
       continue;
     }
 
@@ -288,28 +322,93 @@ export async function main(argv: string[]): Promise<void> {
       data: dataIso,
     };
 
-    console.log(
-      `[POST?] ${c.clienteNome} | ${v!.placa} | R$ ${valor} | motorista=${motoristaKey} rastreavel=${rastreavelKey}`,
-    );
-
     if (execute) {
       const res = await postGasto(body);
       const t = await res.text();
       if (!res.ok) {
-        console.error(`ERRO HTTP ${res.status}:`, t.slice(0, 400));
-        skipDados++;
+        semDados++;
+        itens.push({
+          cliente: c.clienteNome,
+          placa: v!.placa,
+          valor,
+          acao: "erro",
+          detalhe: `HTTP ${res.status}: ${t.slice(0, 200)}`,
+        });
       } else {
-        ok++;
+        criados++;
         gastos.push({
           info,
           motorista: { key: motoristaKey },
           rastreavel: { key: rastreavelKey },
         });
+        itens.push({
+          cliente: c.clienteNome,
+          placa: v!.placa,
+          valor,
+          acao: "criado",
+        });
       }
+    } else {
+      itens.push({
+        cliente: c.clienteNome,
+        placa: v!.placa,
+        valor,
+        acao: "preview",
+      });
     }
   }
 
+  return {
+    contratosDir: root,
+    candidatos: candidatos.length,
+    criados,
+    duplicados,
+    semDados,
+    execute,
+    info,
+    dataIso,
+    itens,
+  };
+}
+
+export async function main(argv: string[]): Promise<void> {
+  const { inicio, fim, prazoDias, execute, info, dataIso } = parseArgs(argv);
+  const root = defaultContratosDir();
+
+  console.log(`contratosDir: ${root}`);
   console.log(
-    `\nResumo: criados=${ok} | duplicados=${skipDup} | falta dados/erro=${skipDados} | dry-run=${!execute}`,
+    `Semana ${inicio.toISOString().slice(0, 10)}–${fim.toISOString().slice(0, 10)} | prazo ${prazoDias}d`,
+  );
+  console.log(`info: "${info}" | data: ${dataIso}`);
+  console.log(execute ? "MODO: EXECUTAR POST" : "MODO: dry-run (use --execute)");
+
+  let r: LancarSemanalRastreameResult;
+  try {
+    r = await lancarSemanalRastreame({
+      inicio: inicio.toISOString().slice(0, 10),
+      fim: fim.toISOString().slice(0, 10),
+      prazoDias,
+      execute,
+      info,
+      dataIso,
+    });
+  } catch (e) {
+    console.error(
+      "Falha ao falar com a API Rastreame. Defina RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA.",
+    );
+    console.error(e);
+    process.exit(2);
+  }
+
+  console.log(`candidatos: ${r.candidatos}`);
+  for (const item of r.itens) {
+    if (item.acao === "preview") {
+      console.log(
+        `[POST?] ${item.cliente} | ${item.placa} | R$ ${item.valor}`,
+      );
+    }
+  }
+  console.log(
+    `\nResumo: criados=${r.criados} | duplicados=${r.duplicados} | falta dados/erro=${r.semDados} | dry-run=${!execute}`,
   );
 }

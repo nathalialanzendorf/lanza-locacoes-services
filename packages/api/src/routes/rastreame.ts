@@ -1,6 +1,7 @@
 import {
   badRequest,
   compileRoute,
+  handleServiceError,
   json,
   readJsonBody,
   routeAsync,
@@ -118,6 +119,39 @@ export function registerRastreameRoutes(routes: RouteDef[]): void {
       const body = await readJsonBody<unknown>(ctx.req);
       const data = await rastreameService.atualizarGastoRastreame(ctx.params.id, body);
       json(ctx.res, 200, data);
+    }),
+  });
+
+  const lancarSemanal = compileRoute("/api/rastreame/lancar-semanal");
+  routes.push({
+    method: "POST",
+    pattern: lancarSemanal.regex,
+    paramNames: lancarSemanal.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          inicio?: string;
+          fim?: string;
+          prazoDias?: number;
+          execute?: boolean;
+          info?: string;
+          dataIso?: string;
+        }>(ctx.req);
+        if (!body.inicio || !body.fim) {
+          return badRequest(ctx, 'Campos "inicio" e "fim" (YYYY-MM-DD) são obrigatórios');
+        }
+        const data = await rastreameService.lancarPagamentosSemanais({
+          inicio: body.inicio,
+          fim: body.fim,
+          prazoDias: body.prazoDias,
+          execute: body.execute,
+          info: body.info,
+          dataIso: body.dataIso,
+        });
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     }),
   });
 }

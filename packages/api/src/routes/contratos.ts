@@ -1,6 +1,7 @@
-import { badRequest, compileRoute, json, notFound, readJsonBody, routeAsync, type RouteDef } from "../http.js";
+import { badRequest, compileRoute, handleServiceError, json, notFound, readJsonBody, routeAsync, type RouteDef } from "../http.js";
 import * as contratosService from "../services/contratos.js";
 import * as contratosWrite from "../services/contratosWrite.js";
+import * as contratosImportService from "../services/importacoes/contratos.js";
 import type { MotivoEncerramento } from "../lib-imports.js";
 
 const STATUS_VALIDOS = new Set(["ativo", "encerrado"]);
@@ -79,6 +80,22 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const sincronizar = compileRoute("/api/contratos/sincronizar");
+  routes.push({
+    method: "POST",
+    pattern: sincronizar.regex,
+    paramNames: sincronizar.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{ raiz?: string; dryRun?: boolean }>(ctx.req).catch(() => ({}));
+        const data = await contratosImportService.executarImportacaoContratos(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
   const one = compileRoute("/api/contratos/:id");
   routes.push({
     method: "GET",
@@ -88,6 +105,20 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
       const item = contratosService.obterContrato(ctx.params.id);
       if (!item) return notFound(ctx, "Contrato");
       json(ctx.res, 200, { data: item });
+    },
+  });
+
+  routes.push({
+    method: "DELETE",
+    pattern: one.regex,
+    paramNames: one.paramNames,
+    handler: (ctx) => {
+      try {
+        const data = contratosWrite.removerContrato(ctx.params.id);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     },
   });
 }

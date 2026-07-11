@@ -1,6 +1,7 @@
 import {
   badRequest,
   compileRoute,
+  handleServiceError,
   json,
   notFound,
   parseAtivoQuery,
@@ -73,6 +74,27 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
         body.clienteDespesaId,
       );
       json(ctx.res, 200, { data });
+    }),
+  });
+
+  const atribuir = compileRoute("/api/infracoes/atribuir-condutores");
+  routes.push({
+    method: "POST",
+    pattern: atribuir.regex,
+    paramNames: atribuir.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          dryRun?: boolean;
+          placa?: string;
+          prazoDias?: number;
+          incluirPedagios?: boolean;
+        }>(ctx.req).catch(() => ({}));
+        const data = await infracoesService.atribuirCondutoresInfracoes(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     }),
   });
 }

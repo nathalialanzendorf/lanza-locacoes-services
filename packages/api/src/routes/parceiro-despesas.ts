@@ -92,4 +92,18 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
       json(ctx.res, 200, { data });
     },
   });
+
+  const rastreador = compileRoute("/api/parceiro-despesas/rastreador");
+  routes.push({
+    method: "POST",
+    pattern: rastreador.regex,
+    paramNames: rastreador.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<{ desde?: string; ate?: string; dryRun?: boolean }>(ctx.req).catch(
+        () => ({}),
+      );
+      const data = parceiroDespService.lancarRastreador(body);
+      json(ctx.res, 200, { data });
+    }),
+  });
 }

@@ -112,32 +112,32 @@ function acharPastasContrato(root: string): string[] {
   return out;
 }
 
-export async function main(argv: string[]): Promise<void> {
-  let root: string | null = null;
-  let dryRun = false;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === "--dry-run") dryRun = true;
-    else if (a === "-h" || a === "--help") {
-      console.log(`importar-contratos [RAIZ] [--dry-run]
+export type ImportarContratosOpts = {
+  raiz?: string;
+  dryRun?: boolean;
+};
 
-Varre RAIZ (padrão: contratosDir de config/lanza_paths.json) procurando pastas
-"DD.MM.AAAA - Nome" com Contrato*.docx e registra/atualiza database/contratos.json.
-Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
-      return;
-    } else if (!a.startsWith("-") && !root) root = path.resolve(a);
-  }
+export type ImportarContratosResult = {
+  raiz: string;
+  totalPastas: number;
+  novos: number;
+  atualizados: number;
+  encerrados: number;
+  reconciliados: number;
+  erros: { pasta: string; motivo: string }[];
+};
 
-  const raiz = root ?? defaultContratosDir();
+export async function importarContratos(
+  opts: ImportarContratosOpts = {},
+): Promise<ImportarContratosResult> {
+  const raiz = opts.raiz ? path.resolve(opts.raiz) : defaultContratosDir();
+  const dryRun = opts.dryRun ?? false;
+
   if (!fs.existsSync(raiz)) {
-    console.error(`Raiz não encontrada: ${raiz}`);
-    process.exit(1);
+    throw new Error(`Raiz não encontrada: ${raiz}`);
   }
 
   const pastas = acharPastasContrato(raiz);
-  console.log(`Raiz: ${raiz}`);
-  console.log(`Pastas de contrato encontradas: ${pastas.length}\n`);
-
   const existentes = new Set(
     loadContratosDb().contratos.map((c) => path.normalize(c.pastaContrato).toLowerCase()),
   );
@@ -152,7 +152,7 @@ Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
     try {
       const ext = extrairContrato(pasta);
       const enc = inferirEncerramento(path.basename(pasta), ext.inicio, ext.fim);
-      const opts: RegistrarContratoOpts = enc
+      const regOpts: RegistrarContratoOpts = enc
         ? {
             dataEncerramento: enc.dataEncerramento,
             motivoEncerramento: enc.motivoEncerramento,
@@ -160,17 +160,9 @@ Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
             status: "encerrado",
           }
         : {};
-      const statusPrev = enc ? "encerrado" : "ativo";
 
-      if (dryRun) {
-        console.log(
-          `[${eraExistente ? "atualizaria" : "novo"}] ${ext.clienteNome} | ${ext.placa} | ${ext.tipoContrato} | ${statusPrev}${enc?.dataEncerramento ? ` ${enc.dataEncerramento}` : ""}${enc ? ` (${enc.motivoEncerramento}${enc.quebraContrato ? ", quebra" : ""})` : ""}`,
-        );
-      } else {
-        const r = registrarContrato(pasta, opts);
-        console.log(
-          `[${eraExistente ? "atualizado" : "novo"}] ${r.clienteNome} | ${r.placa} | v${r.versao} | ${r.status}${r.dataEncerramento ? ` ${r.dataEncerramento}` : ""} | ${r.tipoContrato}`,
-        );
+      if (!dryRun) {
+        registrarContrato(pasta, regOpts);
       }
       if (enc) encerrados++;
       if (eraExistente) atualizados++;
@@ -178,12 +170,9 @@ Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
     } catch (e) {
       const motivo = e instanceof Error ? e.message : String(e);
       erros.push({ pasta, motivo });
-      console.log(`[ERRO] ${path.basename(pasta)} :: ${motivo}`);
     }
   }
 
-  // Reconciliação: aplica encerramento pelo NOME já gravado em contratos.json
-  // (cobre pastas que não foram re-varridas, ex.: arquivadas/online-only no Dropbox).
   let reconc = 0;
   if (!dryRun) {
     const db = loadContratosDb();
@@ -206,11 +195,41 @@ Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
     saveContratosDb(db);
   }
 
+  return {
+    raiz,
+    totalPastas: pastas.length,
+    novos,
+    atualizados,
+    encerrados,
+    reconciliados: reconc,
+    erros,
+  };
+}
+
+export async function main(argv: string[]): Promise<void> {
+  let root: string | null = null;
+  let dryRun = false;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === "--dry-run") dryRun = true;
+    else if (a === "-h" || a === "--help") {
+      console.log(`importar-contratos [RAIZ] [--dry-run]
+
+Varre RAIZ (padrão: contratosDir de config/lanza_paths.json) procurando pastas
+"DD.MM.AAAA - Nome" com Contrato*.docx e registra/atualiza database/contratos.json.
+Idempotente por pastaContrato. --dry-run mostra sem gravar.`);
+      return;
+    } else if (!a.startsWith("-") && !root) root = path.resolve(a);
+  }
+
+  const r = await importarContratos({ raiz: root ?? undefined, dryRun });
+  console.log(`Raiz: ${r.raiz}`);
+  console.log(`Pastas de contrato encontradas: ${r.totalPastas}\n`);
   console.log(
-    `\n${dryRun ? "[dry-run] " : ""}Total: ${pastas.length} | novos: ${novos} | atualizados: ${atualizados} | encerrados: ${encerrados} | reconciliados: ${reconc} | erros: ${erros.length}`,
+    `\n${dryRun ? "[dry-run] " : ""}Total: ${r.totalPastas} | novos: ${r.novos} | atualizados: ${r.atualizados} | encerrados: ${r.encerrados} | reconciliados: ${r.reconciliados} | erros: ${r.erros.length}`,
   );
-  if (erros.length) {
+  if (r.erros.length) {
     console.log(`\nPastas com erro (revisar manualmente):`);
-    for (const e of erros) console.log(`  • ${e.pasta}\n      ${e.motivo}`);
+    for (const e of r.erros) console.log(`  • ${e.pasta}\n      ${e.motivo}`);
   }
 }

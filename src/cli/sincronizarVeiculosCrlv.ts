@@ -223,13 +223,26 @@ function parseArgs(argv: string[]): { dryRun: boolean; placa: string | null } {
   return { dryRun, placa };
 }
 
-export async function main(argv: string[]): Promise<void> {
-  const { dryRun, placa: filtroRaw } = parseArgs(argv);
-  const filtro = filtroRaw ? compactPlaca(filtroRaw) : null;
+export type SincronizarVeiculosCrlvOpts = {
+  dryRun?: boolean;
+  placa?: string;
+};
+
+export type SincronizarVeiculosCrlvResult = {
+  alterados: number;
+  naoEncontrados: string[];
+  gravado: boolean;
+  erros: { placa: string; motivo: string }[];
+};
+
+export async function sincronizarVeiculosCrlv(
+  opts: SincronizarVeiculosCrlvOpts = {},
+): Promise<SincronizarVeiculosCrlvResult> {
+  const dryRun = opts.dryRun ?? false;
+  const filtro = opts.placa ? compactPlaca(opts.placa) : null;
 
   if (!fs.existsSync(DBV)) {
-    console.error("Não encontrado:", DBV);
-    process.exit(1);
+    throw new Error(`Não encontrado: ${DBV}`);
   }
 
   const data = JSON.parse(fs.readFileSync(DBV, "utf8")) as {
@@ -244,18 +257,17 @@ export async function main(argv: string[]): Promise<void> {
   if (fs.existsSync(VEIC_DIR)) roots.push(VEIC_DIR);
 
   if (!roots.length) {
-    console.error("Nenhuma pasta (documentosRaiz ou veiculos/).");
-    process.exit(1);
+    throw new Error("Nenhuma pasta (documentosRaiz ou veiculos/).");
   }
 
   const index = collectCrlvIndex(roots);
   if (!Object.keys(index).length) {
-    console.error("Nenhum PDF de CRLV indexado.");
-    process.exit(1);
+    throw new Error("Nenhum PDF de CRLV indexado.");
   }
 
   let totalChanges = 0;
   const notFound: string[] = [];
+  const erros: { placa: string; motivo: string }[] = [];
 
   for (const v of veiculos) {
     const placa = String(v.placa ?? "");
@@ -270,45 +282,58 @@ export async function main(argv: string[]): Promise<void> {
     try {
       text = await extractPdfText(pdf);
     } catch (e) {
-      console.error(
-        `[erro] ${placa} <- ${pdf}:`,
-        e instanceof Error ? e.message : e,
-      );
+      erros.push({
+        placa,
+        motivo: e instanceof Error ? e.message : String(e),
+      });
       continue;
     }
     const parsed = parseCrlv(text);
     if (!Object.keys(parsed).length) {
-      console.error(
-        `[aviso] ${placa}: nenhum campo extraído de ${path.basename(pdf)}`,
-      );
+      erros.push({ placa, motivo: `nenhum campo extraído de ${path.basename(pdf)}` });
       continue;
     }
     const ch = mergeIntoVeiculo(v, parsed);
     if (Object.keys(ch).length) {
       totalChanges++;
-      console.log(`${placa} <- ${pdf}`);
-      for (const [k, [o, n]] of Object.entries(ch)) {
-        console.log(`  ${k}: ${JSON.stringify(o)} -> ${JSON.stringify(n)}`);
-      }
     }
   }
 
-  if (notFound.length && !filtro) {
-    console.log("\nSem PDF indexado para:", notFound.join(", "));
-  } else if (notFound.length && filtro) {
-    console.error("Sem PDF para placa", filtro);
-    process.exit(1);
+  if (filtro && notFound.length) {
+    throw new Error(`Sem PDF para placa ${filtro}`);
   }
 
+  let gravado = false;
+  if (!dryRun && totalChanges) {
+    data.atualizadoEm = new Date().toISOString().slice(0, 10);
+    fs.writeFileSync(DBV, JSON.stringify(data, null, 2) + "\n", "utf8");
+    gravado = true;
+  }
+
+  return { alterados: totalChanges, naoEncontrados: notFound, gravado, erros };
+}
+
+export async function main(argv: string[]): Promise<void> {
+  const { dryRun, placa: filtroRaw } = parseArgs(argv);
+  const r = await sincronizarVeiculosCrlv({
+    dryRun,
+    placa: filtroRaw ?? undefined,
+  });
+
+  if (r.erros.length) {
+    for (const e of r.erros) {
+      console.error(`[erro] ${e.placa}: ${e.motivo}`);
+    }
+  }
+  if (r.naoEncontrados.length && !filtroRaw) {
+    console.log("\nSem PDF indexado para:", r.naoEncontrados.join(", "));
+  }
   if (dryRun) {
     console.log("\n[dry-run] não gravado (nenhuma alteração persistida).");
     return;
   }
-
-  if (totalChanges) {
-    data.atualizadoEm = new Date().toISOString().slice(0, 10);
-    fs.writeFileSync(DBV, JSON.stringify(data, null, 2) + "\n", "utf8");
-    console.log(`\nGravado: ${DBV} (${totalChanges} veículo(s) alterados)`);
+  if (r.gravado) {
+    console.log(`\nGravado: ${DBV} (${r.alterados} veículo(s) alterados)`);
   } else {
     console.log("Nenhuma alteração aplicada.");
   }

@@ -3,16 +3,21 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { API_VERSION, apiKey, corsOrigin } from "./config.js";
 import { json, matchRoute, type RouteDef } from "./http.js";
 import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
+import { registerClienteAnaliseRoutes } from "./routes/cliente-analise.js";
 import { registerClientesRoutes } from "./routes/clientes.js";
 import { registerContratosRoutes } from "./routes/contratos.js";
 import { registerDespesasRoutes } from "./routes/despesas.js";
 import { registerFipeRoutes } from "./routes/fipe.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerInicioLocacoesRoutes } from "./routes/inicio-locacoes.js";
 import { registerInfracoesRoutes } from "./routes/infracoes.js";
 import { registerImportacoesRoutes } from "./routes/importacoes.js";
 import { registerLocacoesRoutes } from "./routes/locacoes.js";
+import { registerMetaRoutes } from "./routes/meta.js";
+import { registerPagbankRoutes } from "./routes/pagbank.js";
 import { registerParceiroDespesasRoutes } from "./routes/parceiro-despesas.js";
 import { registerParceirosRoutes } from "./routes/parceiros.js";
+import { registerPedagioRoutes } from "./routes/pedagio.js";
 import { registerRenegociacaoRoutes } from "./routes/renegociacao.js";
 import { registerRastreameRoutes } from "./routes/rastreame.js";
 import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
@@ -36,8 +41,10 @@ function isAuthorized(req: IncomingMessage): boolean {
 function collectRoutes(): RouteDef[] {
   const routes: RouteDef[] = [];
   registerHealthRoutes(routes);
+  registerMetaRoutes(routes);
   registerClientesRoutes(routes);
   registerVeiculosRoutes(routes);
+  registerInicioLocacoesRoutes(routes);
   registerContratosRoutes(routes);
   registerDespesasRoutes(routes);
   registerLocacoesRoutes(routes);
@@ -46,12 +53,15 @@ function collectRoutes(): RouteDef[] {
   registerSyncRoutes(routes);
   registerImportacoesRoutes(routes);
   registerAnaliseCadastroRoutes(routes);
+  registerClienteAnaliseRoutes(routes);
   registerFipeRoutes(routes);
   registerParceirosRoutes(routes);
   registerParceiroDespesasRoutes(routes);
   registerInfracoesRoutes(routes);
   registerRenegociacaoRoutes(routes);
   registerRastreameRoutes(routes);
+  registerPagbankRoutes(routes);
+  registerPedagioRoutes(routes);
   return routes;
 }
 
@@ -105,6 +115,6 @@ export function logStartup(port: number, host: string): void {
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
   console.log(
-    "[@lanza/api] rotas: CRUD infracoes/contratos/parceiro-despesas/veiculos, prestacao-contas, renegociacao, sync, relatorios",
+    "[@lanza/api] rotas: meta/resumo, CRUD completo, sync, relatorios, pagbank, pedagio, importacoes",
   );
 }

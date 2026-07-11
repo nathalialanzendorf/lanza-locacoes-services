@@ -1,4 +1,5 @@
 import {
+  reconciliarCondutores,
   confirmarDebitoParceiroInfracao,
   findInfracaoByNumeroAuto,
   findVeiculoById,
@@ -70,6 +71,15 @@ export function vincularDespesaInfracao(numeroAuto: string, clienteDespesaId: st
   const item = vincularClienteDespesaInfracao(numeroAuto, clienteDespesaId);
   if (!item) throw new HttpError(404, "Infração não encontrada");
   return item;
+}
+
+export async function atribuirCondutoresInfracoes(opts: {
+  dryRun?: boolean;
+  placa?: string;
+  prazoDias?: number;
+  incluirPedagios?: boolean;
+}) {
+  return reconciliarCondutores(opts);
 }
 
 export function infracoesPorVeiculo(veiculoId: string) {

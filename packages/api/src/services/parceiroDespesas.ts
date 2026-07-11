@@ -1,5 +1,6 @@
 import {
   gravarParceiroDespesaManual,
+  lancarRastreadorFixo,
   loadParceiroDespesasDb,
   marcarBaixaParceiroDespesa,
   saveParceiroDespesasDb,
@@ -91,4 +92,16 @@ export function removerParceiroDespesa(id: string): ParceiroDespesaRegistro {
   const [removido] = db.parceiroDespesas.splice(idx, 1);
   saveParceiroDespesasDb(db);
   return removido!;
+}
+
+export function lancarRastreador(opts: {
+  desde?: string;
+  ate?: string;
+  dryRun?: boolean;
+}) {
+  return lancarRastreadorFixo({
+    desde: opts.desde ?? "01/2026",
+    ate: opts.ate,
+    dryRun: opts.dryRun,
+  });
 }

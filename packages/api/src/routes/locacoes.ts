@@ -1,4 +1,3 @@
-import type { LocacaoInput } from "../lib-imports.js";
 import {
   compileRoute,
   handleServiceError,
@@ -8,6 +7,7 @@ import {
   routeAsync,
   type RouteDef,
 } from "../http.js";
+import type { LocacaoInput, SugerirOpts } from "../lib-imports.js";
 import * as locacoesService from "../services/locacoes.js";
 
 export function registerLocacoesRoutes(routes: RouteDef[]): void {
@@ -21,6 +21,7 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
         placa: ctx.query.get("placa") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         situacao: ctx.query.get("situacao") ?? undefined,
+        abertas: ctx.query.get("abertas") === "true" || ctx.query.get("abertas") === "1",
       }));
     },
   });
@@ -36,6 +37,22 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const sugerir = compileRoute("/api/locacoes/sugerir");
+  routes.push({
+    method: "POST",
+    pattern: sugerir.regex,
+    paramNames: sugerir.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<SugerirOpts>(ctx.req);
+        const data = locacoesService.sugerirLocacoesPeriodo(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
   const one = compileRoute("/api/locacoes/:id");
   routes.push({
     method: "GET",
@@ -46,6 +63,21 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
       if (!item) return notFound(ctx, "Locação");
       json(ctx.res, 200, { data: item });
     },
+  });
+
+  routes.push({
+    method: "PATCH",
+    pattern: one.regex,
+    paramNames: one.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const patch = await readJsonBody<Partial<LocacaoInput>>(ctx.req);
+        const r = locacoesService.atualizarLocacao(ctx.params.id, patch);
+        json(ctx.res, 200, r);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
   });
 
   routes.push({

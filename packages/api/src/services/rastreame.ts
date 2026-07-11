@@ -7,12 +7,14 @@ import {
   fetchMotoristaByKey,
   fetchRastreameToken,
   findMotorista,
+  lancarSemanalRastreame,
   listMotoristas,
   loginRastreame,
   postGasto,
   postMotoristaPayload,
   putGasto,
   putMotorista,
+  type LancarSemanalRastreameOpts,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -126,5 +128,16 @@ export async function atualizarGastoRastreame(id: string | number, body: unknown
     return JSON.parse(text) as unknown;
   } catch {
     return { raw: text };
+  }
+}
+
+export async function lancarPagamentosSemanais(input: LancarSemanalRastreameOpts) {
+  if (!input.inicio || !input.fim) {
+    throw new HttpError(400, 'Campos "inicio" e "fim" (YYYY-MM-DD) são obrigatórios');
+  }
+  try {
+    return await lancarSemanalRastreame(input);
+  } catch (err) {
+    throw new HttpError(502, err instanceof Error ? err.message : String(err));
   }
 }

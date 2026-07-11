@@ -5,6 +5,7 @@ import {
   ativarClienteDoContrato,
   desativarClienteDoContrato,
   encerrarContratoDb,
+  excluirContrato,
   gerar,
   montarDadosContratoFromDb,
   registrarContrato,
@@ -111,4 +112,12 @@ export async function encerrarContrato(input: ContratoEncerrarInput) {
     contratoId: r.id,
   });
   return { contrato: r, clienteStatus };
+}
+
+export function removerContrato(idOuPasta: string) {
+  try {
+    return excluirContrato(idOuPasta);
+  } catch (err) {
+    throw new HttpError(404, err instanceof Error ? err.message : String(err));
+  }
 }

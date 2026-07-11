@@ -312,4 +312,89 @@ export {
   type ParcelaRenegociacao,
 } from "../../../src/lib/rastreame/renegociacao.js";
 
-export { formatPlacaHyphen, placasIguais } from "../../../src/lib/placa.js";
+export { formatPlacaHyphen, placasIguais, compactPlaca } from "../../../src/lib/placa.js";
+
+export {
+  readLanzaPaths,
+  defaultContratosDir,
+  prestacaoContasBaseDir,
+} from "../../../src/lib/lanzaPaths.js";
+
+export {
+  listarLocacoes,
+  sugerirLocacoes,
+  type SugerirOpts,
+  type SugestaoLocacoes,
+} from "../../../src/lib/locacoesDb.js";
+
+export {
+  reconciliarCondutores,
+  type ReconResult,
+} from "../../../src/lib/atribuirCondutores.js";
+
+export {
+  listarClienteAnalise,
+  type RegistroClienteAnalise,
+} from "../../../src/lib/analiseCadastro/clienteAnaliseDb.js";
+
+export {
+  importarClientesRastreame,
+  type ImportarClientesResult,
+} from "../../../src/lib/importarClientesRastreame.js";
+
+export {
+  lancarRastreadorFixo,
+  competenciaAtual,
+  RASTREADOR_VALOR_PADRAO,
+  RASTREADOR_DIA_PADRAO,
+} from "../../../src/lib/rastreadorFixo.js";
+
+export {
+  derivarInicioLocacoes,
+  gravarInicioLocacoesDerivado,
+} from "../../../src/lib/inicioLocacoes.js";
+
+export {
+  checkPagBankAuth,
+  pagBankAuthConfigured,
+} from "../../../src/lib/pagbank/auth.js";
+
+export {
+  fetchAllCreditosPagBank,
+  fetchCreditosPagBank,
+  defaultDateRange,
+} from "../../../src/lib/pagbank/statements.js";
+
+export {
+  montarLotePagBank,
+  type LotePagBankResult,
+} from "../../../src/lib/pagbank/matchLote.js";
+
+export {
+  registrarPlaca,
+  excluirPlacaPorPlaca,
+  listarVeiculos as listarVeiculosPedagio,
+} from "../../../src/lib/pedagioDigital/veiculos.js";
+
+export {
+  listarPassagens,
+  type PassagemStatus,
+} from "../../../src/lib/pedagioDigital/passagens.js";
+
+export {
+  sincronizarVeiculosCrlv,
+  type SincronizarVeiculosCrlvOpts,
+  type SincronizarVeiculosCrlvResult,
+} from "../../../src/cli/sincronizarVeiculosCrlv.js";
+
+export {
+  importarContratos,
+  type ImportarContratosOpts,
+  type ImportarContratosResult,
+} from "../../../src/cli/importarContratos.js";
+
+export {
+  lancarSemanalRastreame,
+  type LancarSemanalRastreameOpts,
+  type LancarSemanalRastreameResult,
+} from "../../../src/cli/rastreameLancarSemanal.js";
