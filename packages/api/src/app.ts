@@ -9,6 +9,7 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerLocacoesRoutes } from "./routes/locacoes.js";
 import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
 import { registerRelatoriosRoutes } from "./routes/relatorios.js";
+import { registerSyncRoutes } from "./routes/sync.js";
 import { registerVeiculosRoutes } from "./routes/veiculos.js";
 
 function applyCors(res: ServerResponse): void {
@@ -34,6 +35,7 @@ function collectRoutes(): RouteDef[] {
   registerLocacoesRoutes(routes);
   registerRecebimentosRoutes(routes);
   registerRelatoriosRoutes(routes);
+  registerSyncRoutes(routes);
   return routes;
 }
 
@@ -87,6 +89,6 @@ export function logStartup(port: number, host: string): void {
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
   console.log(
-    "[@lanza/api] rotas: /api/relatorios/*, /api/clientes, /api/veiculos, /api/despesas, /api/recebimentos/*",
+    "[@lanza/api] rotas: /api/sync/*, /api/relatorios/*, /api/clientes, /api/veiculos, /api/despesas, /api/recebimentos/*",
   );
 }

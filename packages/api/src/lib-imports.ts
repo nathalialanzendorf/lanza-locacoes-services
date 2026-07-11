@@ -129,3 +129,61 @@ export {
 export { compararDataBrAsc } from "../../../src/lib/contratoExtrair.js";
 
 export { dataVencimentoSemanalBr } from "../../../src/lib/pagamentoSemanal.js";
+
+export { syncMotoristas } from "../../../src/lib/rastreame/motoristasSync.js";
+export { syncRastreaveis } from "../../../src/lib/rastreame/rastreaveisSync.js";
+export {
+  syncRecebimentos,
+  pushRecebimentosToRastreame,
+} from "../../../src/lib/rastreame/recebimentosSync.js";
+export { pushManutencoesToRastreame } from "../../../src/lib/rastreame/manutencaoSync.js";
+
+export {
+  sincronizarPedagiosFrota,
+  sincronizarPedagiosVeiculo,
+  processarPassagensJson,
+  processarPassagensJsonLote,
+  normalizarTitulosPedagioNoDb,
+  loadPlacasParaSync,
+} from "../../../src/lib/pedagioDigital/syncPedagios.js";
+
+export {
+  loadVeiculosParaSync,
+  processarRespostaDetranSc,
+  sincronizarMultasFrotaDetranSc,
+  sincronizarMultasPorTicketDetranSc,
+  sincronizarMultasVeiculoDetranSc,
+} from "../../../src/lib/detranSc/syncVeiculo.js";
+
+export {
+  processarDespesasDetranSc,
+  sincronizarDespesasFrotaDetranSc,
+  sincronizarDespesasPorTicketDetranSc,
+  sincronizarDespesasVeiculoDetranSc,
+} from "../../../src/lib/detranSc/syncDespesasVeiculo.js";
+
+export {
+  loadVeiculosRsParaSync,
+  processarRespostaDetranRs,
+  sincronizarFrotaDetranRs,
+  sincronizarVeiculoDetranRs,
+} from "../../../src/lib/detranRs/syncVeiculo.js";
+
+export { ufRegistroDaPlaca } from "../../../src/lib/veiculoUf.js";
+
+export {
+  auditarInfracoesSemCondutor,
+} from "../../../src/lib/auditarInfracoes.js";
+
+export {
+  defaultSeguroComprovantesDirs,
+  extrairSeguroComprovantesDirs,
+} from "../../../src/lib/extrairSeguroComprovante.js";
+
+export {
+  sincronizarParceiroDespesa,
+} from "../../../src/lib/parceiroDespesasDb.js";
+
+export { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../../../src/lib/relatoriosPaths.js";
+
+export type { DetranRsConsultaVeiculo } from "../../../src/lib/detranRs/consulta.js";
