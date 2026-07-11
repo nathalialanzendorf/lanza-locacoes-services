@@ -31,6 +31,17 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
     },
   });
 
+  routes.push({
+    method: "POST",
+    pattern: list.regex,
+    paramNames: list.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<veiculosService.CriarVeiculoInput>(ctx.req);
+      const data = await veiculosService.criarVeiculo(body);
+      json(ctx.res, 201, data);
+    }),
+  });
+
   const one = compileRoute("/api/veiculos/:id");
   routes.push({
     method: "GET",

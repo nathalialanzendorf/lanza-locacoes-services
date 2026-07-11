@@ -18,11 +18,12 @@ export type { ClienteImportado } from "../../../src/lib/rastreame/mapMotoristaCl
 
 export {
   loadVeiculosDb,
+  saveVeiculosDb,
+  editarVeiculo,
+  excluirVeiculo,
   findVeiculoById,
   findVeiculoByPlaca,
   isVeiculoAtivo,
-  editarVeiculo,
-  excluirVeiculo,
   type VeiculoRegistro,
   type VeiculoPatch,
 } from "../../../src/lib/veiculosDb.js";
@@ -187,3 +188,128 @@ export {
 export { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../../../src/lib/relatoriosPaths.js";
 
 export type { DetranRsConsultaVeiculo } from "../../../src/lib/detranRs/consulta.js";
+
+export { REPO_ROOT } from "../../../src/lib/repoRoot.js";
+
+export {
+  defaultDocumentosRaiz,
+  importarClientesCnh,
+  listarPastasComCnh,
+  type ImportarCnhResult,
+} from "../../../src/lib/importarClientesCnh.js";
+
+export {
+  listarMarcas,
+  listarModelos,
+  listarAnos,
+  consultarValor,
+  montarUrlFipe,
+  resolverFipeVeiculo,
+} from "../../../src/lib/fipe/index.js";
+
+export {
+  executarTriagem,
+  type FonteId,
+} from "../../../src/lib/analiseCadastro/index.js";
+
+export {
+  caminhoBase,
+  gravarRelatorio,
+  montarRelatorio,
+  type DadosLgpd,
+  type RelatorioTriagem,
+} from "../../../src/lib/analiseCadastro/relatorio.js";
+
+export {
+  listarTriagens,
+  loadTriagemDb,
+  registrarTriagem,
+  saveTriagemDb,
+  ultimaTriagemPorCpf,
+  type TriagemRegistro,
+} from "../../../src/lib/analiseCadastro/triagemDb.js";
+
+export { registrarAchadosCliente } from "../../../src/lib/analiseCadastro/clienteAnaliseDb.js";
+
+export type { DadosLocatario, ResultadoFonte } from "../../../src/lib/analiseCadastro/tipos.js";
+
+export {
+  analiseClienteDeRegistro,
+  registrarAnaliseCadastroNoCliente,
+} from "../../../src/lib/clientesDb.js";
+
+export {
+  loginRastreame,
+  fetchRastreameToken,
+} from "../../../src/lib/rastreame/auth.js";
+
+export {
+  buildMotoristaPayload,
+  findMotorista,
+  listMotoristas,
+  postMotoristaPayload,
+  putMotorista,
+  fetchMotoristaByKey,
+  type MotoristaRastreame,
+} from "../../../src/lib/rastreame/motorista.js";
+
+export {
+  fetchGastosList,
+  fetchGastoById,
+  postGasto,
+  putGasto,
+} from "../../../src/lib/rastreame/gasto.js";
+
+export {
+  loadInfracoesDb,
+  findInfracaoByNumeroAuto,
+  confirmarDebitoParceiroInfracao,
+  vincularClienteDespesaInfracao,
+  type InfracaoRegistro,
+} from "../../../src/lib/infracoesDb.js";
+
+export {
+  loadParceiroDespesasDb,
+  saveParceiroDespesasDb,
+  gravarParceiroDespesaManual,
+  marcarBaixaParceiroDespesa,
+  type ParceiroDespesaInput,
+  type ParceiroDespesaRegistro,
+} from "../../../src/lib/parceiroDespesasDb.js";
+
+export {
+  registrarContrato,
+  encerrarContratoDb,
+  excluirContrato,
+  validarModoContrato,
+  type MotivoEncerramento,
+} from "../../../src/lib/contratosDb.js";
+
+export {
+  ativarClienteDoContrato,
+  desativarClienteDoContrato,
+} from "../../../src/lib/contratoClienteStatus.js";
+
+export { gerar, type GerarContratoDados } from "../../../src/lib/docxGerar.js";
+
+export {
+  montarDadosContratoFromDb,
+  type MontarContratoDbInput,
+} from "../../../src/lib/montarDadosContrato.js";
+
+export {
+  montarPrestacaoContas,
+  type PrestacaoContasInput,
+  type PrestacaoContasResult,
+} from "../../../src/cli/montarRelatorio.js";
+
+export {
+  executarRenegociacao,
+  listarDebitosAbertos,
+  somarDebitos,
+  validarParcelas,
+  type RenegociacaoInput,
+  type ParcelaRenegociacao,
+} from "../../../src/lib/rastreame/renegociacao.js";
+
+export { formatPlacaHyphen, placasIguais } from "../../../src/lib/placa.js";

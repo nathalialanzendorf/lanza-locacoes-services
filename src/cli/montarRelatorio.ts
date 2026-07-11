@@ -80,9 +80,19 @@ type Inp = {
   veiculos: Record<string, unknown>[];
 };
 
-export function main(argv: string[]): void {
-  const inpPath = path.resolve(argv[0]!);
-  const inp = JSON.parse(fs.readFileSync(inpPath, "utf8")) as Inp;
+export type PrestacaoContasInput = Inp;
+
+export type PrestacaoContasResult = {
+  competencia: string;
+  outDir: string;
+  dadosPath: string;
+  arquivos: { parceiro: string; arquivoTxt: string }[];
+  parceiros: unknown[];
+  avisos: string[];
+  textos: { parceiro: string; texto: string }[];
+};
+
+export function montarPrestacaoContas(inp: PrestacaoContasInput): PrestacaoContasResult {
   const comp = inp.competencia;
   const [mmComp, aaaaComp] = comp.split("/");
   const pastaComp = `${mmComp}.${aaaaComp}`;
@@ -371,14 +381,6 @@ export function main(argv: string[]): void {
     }
   }
 
-  console.log(`\n[arquivos gerados em ${outDir}]`);
-  for (const [p, s] of arquivosGerados) {
-    console.log(`  ${p}: ${s}`);
-  }
-  for (const a of avisosGlobais) console.log(a);
-
-  // JSON de dados estruturados (sidecar) — alimenta o canvas. Gravado no repo
-  // (relatorios/_tmp), não na pasta compartilhada de prestação de contas.
   fs.mkdirSync(RELATORIOS_TMP_DIR, { recursive: true });
   const dadosPath = path.join(RELATORIOS_TMP_DIR, `prestacao-${mmComp}-${aaaaComp}.json`);
   fs.writeFileSync(
@@ -399,5 +401,34 @@ export function main(argv: string[]): void {
     ),
     "utf8",
   );
-  console.log(`\n[dados p/ canvas]\n  ${dadosPath}`);
+
+  return {
+    competencia: comp,
+    outDir,
+    dadosPath,
+    arquivos: arquivosGerados.map(([parceiro, arquivoTxt]) => ({ parceiro, arquivoTxt })),
+    parceiros: dadosParceiros,
+    avisos: avisosGlobais,
+    textos: arquivosGerados.map(([parceiro, arquivoTxt]) => ({
+      parceiro,
+      texto: fs.readFileSync(arquivoTxt, "utf8"),
+    })),
+  };
+}
+
+export function main(argv: string[]): void {
+  const inpPath = path.resolve(argv[0]!);
+  const inp = JSON.parse(fs.readFileSync(inpPath, "utf8")) as PrestacaoContasInput;
+  const r = montarPrestacaoContas(inp);
+  for (const t of r.textos) {
+    console.log(t.texto);
+  }
+  if (r.avisos.length) {
+    for (const a of r.avisos) console.log(a);
+  }
+  console.log(`\n[arquivos gerados em ${r.outDir}]`);
+  for (const a of r.arquivos) {
+    console.log(`  ${a.parceiro}: ${a.arquivoTxt}`);
+  }
+  console.log(`\n[dados p/ canvas]\n  ${r.dadosPath}`);
 }

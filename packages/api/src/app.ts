@@ -2,11 +2,19 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { API_VERSION, apiKey, corsOrigin } from "./config.js";
 import { json, matchRoute, type RouteDef } from "./http.js";
+import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
 import { registerClientesRoutes } from "./routes/clientes.js";
 import { registerContratosRoutes } from "./routes/contratos.js";
 import { registerDespesasRoutes } from "./routes/despesas.js";
+import { registerFipeRoutes } from "./routes/fipe.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerInfracoesRoutes } from "./routes/infracoes.js";
+import { registerImportacoesRoutes } from "./routes/importacoes.js";
 import { registerLocacoesRoutes } from "./routes/locacoes.js";
+import { registerParceiroDespesasRoutes } from "./routes/parceiro-despesas.js";
+import { registerParceirosRoutes } from "./routes/parceiros.js";
+import { registerRenegociacaoRoutes } from "./routes/renegociacao.js";
+import { registerRastreameRoutes } from "./routes/rastreame.js";
 import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
 import { registerRelatoriosRoutes } from "./routes/relatorios.js";
 import { registerSyncRoutes } from "./routes/sync.js";
@@ -15,7 +23,7 @@ import { registerVeiculosRoutes } from "./routes/veiculos.js";
 function applyCors(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", corsOrigin());
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
 }
 
 function isAuthorized(req: IncomingMessage): boolean {
@@ -36,6 +44,14 @@ function collectRoutes(): RouteDef[] {
   registerRecebimentosRoutes(routes);
   registerRelatoriosRoutes(routes);
   registerSyncRoutes(routes);
+  registerImportacoesRoutes(routes);
+  registerAnaliseCadastroRoutes(routes);
+  registerFipeRoutes(routes);
+  registerParceirosRoutes(routes);
+  registerParceiroDespesasRoutes(routes);
+  registerInfracoesRoutes(routes);
+  registerRenegociacaoRoutes(routes);
+  registerRastreameRoutes(routes);
   return routes;
 }
 
@@ -89,6 +105,6 @@ export function logStartup(port: number, host: string): void {
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
   console.log(
-    "[@lanza/api] rotas: /api/sync/*, /api/relatorios/*, /api/clientes, /api/veiculos, /api/despesas, /api/recebimentos/*",
+    "[@lanza/api] rotas: CRUD infracoes/contratos/parceiro-despesas/veiculos, prestacao-contas, renegociacao, sync, relatorios",
   );
 }
