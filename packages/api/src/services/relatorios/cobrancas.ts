@@ -5,7 +5,6 @@ import {
   COBRANCAS_OUT_DIR,
   TIPOS_COBRANCA_ACTION,
   ROTULO_TIPO_COBRANCA,
-  buildSemanalAtrasoParaEscopo,
   compararDataBrAsc,
   dataVencimentoSemanalBr,
   ehRelatorioInfracoesGlobal,
@@ -246,7 +245,7 @@ export function gerarCobrancaPlaca(input: GerarCobrancaPlacaInput) {
     for (const r of resultados) {
       arquivos.push(salvarCobranca(r, outDir));
     }
-    arquivos.push(salvarCobrancasDados(resultados, placa, outDir));
+    arquivos.push(salvarCobrancasDados(resultados, input.modo, placa, outDir));
   }
 
   return { placa, modo: input.modo, resultados, arquivos };
