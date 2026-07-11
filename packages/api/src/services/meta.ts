@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { API_VERSION } from "../config.js";
+import { buildOpenApiDocument } from "../openapi/index.js";
 import {
   REPO_ROOT,
   RELATORIOS_SYNC_DIR,
@@ -34,8 +35,17 @@ function ultimosRelatoriosSync(limit = 5): { arquivo: string; modificado: string
 }
 
 export function obterMeta() {
+  const doc = buildOpenApiDocument();
   return {
     apiVersion: API_VERSION,
+    openapi: {
+      spec: "/api/openapi.json",
+      docs: "/api/docs",
+      operations: Object.values(doc.paths).reduce(
+        (n, item) => n + Object.keys(item).length,
+        0,
+      ),
+    },
     repoRoot: REPO_ROOT,
     paths: readLanzaPaths(),
     database: {

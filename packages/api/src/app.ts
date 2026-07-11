@@ -13,7 +13,9 @@ import { registerInicioLocacoesRoutes } from "./routes/inicio-locacoes.js";
 import { registerInfracoesRoutes } from "./routes/infracoes.js";
 import { registerImportacoesRoutes } from "./routes/importacoes.js";
 import { registerLocacoesRoutes } from "./routes/locacoes.js";
+import { OPENAPI_PUBLIC_PATHS } from "./openapi/index.js";
 import { registerMetaRoutes } from "./routes/meta.js";
+import { registerOpenApiRoutes } from "./routes/openapi.js";
 import { registerPagbankRoutes } from "./routes/pagbank.js";
 import { registerParceiroDespesasRoutes } from "./routes/parceiro-despesas.js";
 import { registerParceirosRoutes } from "./routes/parceiros.js";
@@ -41,6 +43,7 @@ function isAuthorized(req: IncomingMessage): boolean {
 function collectRoutes(): RouteDef[] {
   const routes: RouteDef[] = [];
   registerHealthRoutes(routes);
+  registerOpenApiRoutes(routes);
   registerMetaRoutes(routes);
   registerClientesRoutes(routes);
   registerVeiculosRoutes(routes);
@@ -82,7 +85,11 @@ export function createApp() {
       const pathname = url.pathname.replace(/\/+$/, "") || "/";
       const method = req.method ?? "GET";
 
-      if (pathname.startsWith("/api") && !isAuthorized(req)) {
+      if (
+        pathname.startsWith("/api") &&
+        !OPENAPI_PUBLIC_PATHS.has(pathname) &&
+        !isAuthorized(req)
+      ) {
         json(res, 401, { error: "Não autorizado" });
         return;
       }
@@ -115,6 +122,6 @@ export function logStartup(port: number, host: string): void {
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
   console.log(
-    "[@lanza/api] rotas: meta/resumo, CRUD completo, sync, relatorios, pagbank, pedagio, importacoes",
+    `[@lanza/api] docs: http://${host}:${port}/api/docs | spec: /api/openapi.json`,
   );
 }
