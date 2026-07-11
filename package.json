@@ -3,10 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "lanza": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lanza.ps1",
     "run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lanza.ps1",
     "typecheck": "tsc --noEmit",
+    "typecheck:api": "tsc --noEmit -p packages/api",
+    "api:dev": "npm run dev -w @lanza/api",
+    "api:start": "npm run start -w @lanza/api",
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
