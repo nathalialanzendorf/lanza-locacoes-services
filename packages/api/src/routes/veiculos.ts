@@ -1,4 +1,15 @@
-import { badRequest, compileRoute, json, notFound, parseAtivoQuery, type RouteDef } from "../http.js";
+import type { VeiculoPatch } from "../lib-imports.js";
+import {
+  badRequest,
+  compileRoute,
+  handleServiceError,
+  json,
+  notFound,
+  parseAtivoQuery,
+  readJsonBody,
+  routeAsync,
+  type RouteDef,
+} from "../http.js";
 import * as veiculosService from "../services/veiculos.js";
 
 export function registerVeiculosRoutes(routes: RouteDef[]): void {
@@ -29,6 +40,31 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
       const item = veiculosService.obterVeiculo(ctx.params.id);
       if (!item) return notFound(ctx, "Veículo");
       json(ctx.res, 200, { data: item });
+    },
+  });
+
+  routes.push({
+    method: "PATCH",
+    pattern: one.regex,
+    paramNames: one.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const patch = await readJsonBody<VeiculoPatch>(ctx.req);
+      const data = veiculosService.atualizarVeiculo(ctx.params.id, patch);
+      json(ctx.res, 200, { data });
+    }),
+  });
+
+  routes.push({
+    method: "DELETE",
+    pattern: one.regex,
+    paramNames: one.paramNames,
+    handler: (ctx) => {
+      try {
+        const data = veiculosService.removerVeiculo(ctx.params.id);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     },
   });
 }

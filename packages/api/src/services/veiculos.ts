@@ -1,10 +1,14 @@
 import {
+  editarVeiculo,
+  excluirVeiculo,
   findVeiculoById,
   findVeiculoByPlaca,
   isVeiculoAtivo,
   loadVeiculosDb,
+  type VeiculoPatch,
   type VeiculoRegistro,
 } from "../lib-imports.js";
+import { HttpError } from "../http.js";
 
 export type ListarVeiculosOpts = {
   ativo?: boolean;
@@ -36,4 +40,23 @@ export function obterVeiculo(idOuPlaca: string): VeiculoRegistro | null {
   const byId = findVeiculoById(idOuPlaca);
   if (byId) return byId;
   return findVeiculoByPlaca(idOuPlaca);
+}
+
+export function atualizarVeiculo(
+  idOuPlaca: string,
+  patch: VeiculoPatch,
+): VeiculoRegistro {
+  const item = editarVeiculo(idOuPlaca, patch);
+  if (!item) {
+    throw new HttpError(404, "Veículo não encontrado");
+  }
+  return item;
+}
+
+export function removerVeiculo(idOuPlaca: string): VeiculoRegistro {
+  const item = excluirVeiculo(idOuPlaca);
+  if (!item) {
+    throw new HttpError(404, "Veículo não encontrado");
+  }
+  return item;
 }

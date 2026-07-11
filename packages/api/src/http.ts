@@ -142,3 +142,15 @@ export function parseSyncRastreameBody(value: unknown, fallback = true): boolean
   if (typeof value === "string") return parseSyncRastreameQuery(value);
   return fallback;
 }
+
+export function routeAsync(handler: (ctx: ApiContext) => Promise<void>): ApiHandler {
+  return async (ctx) => {
+    try {
+      await handler(ctx);
+    } catch (err) {
+      if (!ctx.res.headersSent) {
+        handleServiceError(ctx, err);
+      }
+    }
+  };
+}

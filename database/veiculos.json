@@ -1,6 +1,6 @@
 {
   "descricao": "Frota de locação de veículos da Nathalia. id = uuid. Chave natural: placa.",
-  "atualizadoEm": "2026-07-10",
+  "atualizadoEm": "2026-07-11",
   "veiculos": [
     {
       "id": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
@@ -323,7 +323,7 @@
       "vencimentoDocumento": "2026-11-30",
       "inicioLocacoes": "2025-12-23",
       "clienteVinculadoId": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
-      "atualizadoEm": "2026-07-03T21:36:13.496Z"
+      "atualizadoEm": "2026-07-11T20:15:21.777Z"
     },
     {
       "id": "20025418-0fc3-4993-9a7b-40494862ad8d",

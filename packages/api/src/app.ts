@@ -6,12 +6,15 @@ import { registerClientesRoutes } from "./routes/clientes.js";
 import { registerContratosRoutes } from "./routes/contratos.js";
 import { registerDespesasRoutes } from "./routes/despesas.js";
 import { registerHealthRoutes } from "./routes/health.js";
+import { registerLocacoesRoutes } from "./routes/locacoes.js";
+import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
+import { registerRelatoriosRoutes } from "./routes/relatorios.js";
 import { registerVeiculosRoutes } from "./routes/veiculos.js";
 
 function applyCors(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", corsOrigin());
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
 }
 
 function isAuthorized(req: IncomingMessage): boolean {
@@ -28,6 +31,9 @@ function collectRoutes(): RouteDef[] {
   registerVeiculosRoutes(routes);
   registerContratosRoutes(routes);
   registerDespesasRoutes(routes);
+  registerLocacoesRoutes(routes);
+  registerRecebimentosRoutes(routes);
+  registerRelatoriosRoutes(routes);
   return routes;
 }
 
@@ -80,5 +86,7 @@ export function logStartup(port: number, host: string): void {
   const auth = apiKey() ? "LANZA_API_KEY ativa" : "sem LANZA_API_KEY (modo dev)";
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
-  console.log("[@lanza/api] rotas: GET /health, GET /api/clientes, /api/veiculos, /api/contratos, /api/despesas");
+  console.log(
+    "[@lanza/api] rotas: /api/relatorios/*, /api/clientes, /api/veiculos, /api/despesas, /api/recebimentos/*",
+  );
 }
