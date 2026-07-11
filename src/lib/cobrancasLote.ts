@@ -24,12 +24,13 @@ import {
 } from "./cobrancasAlvos.js";
 import { loadContratosDb } from "./contratosDb.js";
 import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb } from "./clienteDespesasDb.js";
 import {
-  calcularCobrancaSemanalAtraso,
-  calcularResumoCobrancaSemanal,
+  filtrarVencimentosAposDataInicioJuros,
+  filtrarVencimentosCalculoSemanal,
   filtrarVencimentosSemanalCobranca,
-  formatCobrancaSemanalAtrasoMarkdown,
   inferirDiaEscalonamento,
+  montarPacoteCobrancaSemanalAtraso,
   resolverDiaEscalonamentoSemanal,
   type ResumoCobrancaSemanal,
 } from "./pagamentoSemanalCobranca.js";
@@ -141,6 +142,17 @@ export type SemanalAtrasoPacote = {
   resumo?: ResumoCobrancaSemanal;
 };
 
+function despesasSemanalEscopo(alvo: AlvoCobranca): ClienteDespesaRegistro[] {
+  const db = loadClienteDespesasDb();
+  const placaKey = compactPlaca(alvo.placa);
+  return db.clienteDespesas.filter(
+    (d) =>
+      d.categoria === "Locação semanal" &&
+      compactPlaca(d.veiculoId) === placaKey &&
+      (!alvo.clienteId || d.condutorId === alvo.clienteId),
+  );
+}
+
 function buildSemanalAtrasoAlvo(
   alvo: AlvoCobranca,
   dataPagamentoBr: string,
@@ -149,52 +161,36 @@ function buildSemanalAtrasoAlvo(
   const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
   const valorSemanal = contrato?.valorSemanal ?? null;
   const valorDiaria = contrato?.valorDiaria ?? null;
-  const vencimentos = filtrarVencimentosSemanalCobranca(
-    alvo.vencimentosBr ?? [],
-    dataPagamentoBr,
+  const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
+  const vencimentos = filtrarVencimentosAposDataInicioJuros(
+    filtrarVencimentosCalculoSemanal(alvo.vencimentosBr ?? [], dataPagamentoBr, true),
+    dataInicioJurosMultaBr,
   );
 
   if (valorSemanal == null || valorDiaria == null || vencimentos.length === 0) {
     return null;
   }
 
-  const input = {
+  const pacote = montarPacoteCobrancaSemanalAtraso({
     valorSemanal,
     valorDiaria,
-    vencimentosBr: vencimentos,
+    vencimentosBr: alvo.vencimentosBr ?? [],
     dataPagamentoBr,
-  };
-  const resultado = calcularCobrancaSemanalAtraso(input);
-  const resumo =
-    diaEscalonamento != null
-      ? calcularResumoCobrancaSemanal(input, resultado, diaEscalonamento)
-      : undefined;
-  const payload: Record<string, unknown> = {
-    ...input,
-    tipo: "pagamento-semanal",
-    cliente: {
-      id: alvo.clienteId,
-      nome: alvo.clienteNome,
-    },
+    emAberto: true,
+    diaEscalonamento,
+    clienteNome: alvo.clienteNome ?? undefined,
     placa: alvo.placa,
-    ...resultado,
-    diaEscalonamento: diaEscalonamento ?? null,
-    resumo: resumo ?? null,
-  };
+    clienteId: alvo.clienteId,
+    dataInicioJurosMultaBr,
+    despesasSemanal: despesasSemanalEscopo(alvo),
+  });
+  if (!pacote) return null;
 
   return {
-    markdown: formatCobrancaSemanalAtrasoMarkdown(
-      {
-        ...input,
-        clienteNome: alvo.clienteNome ?? undefined,
-        placa: alvo.placa,
-      },
-      resultado,
-      resumo,
-    ),
-    payload,
-    totalGeral: resultado.totalGeral,
-    resumo,
+    markdown: pacote.markdown,
+    payload: pacote.payload,
+    totalGeral: pacote.totalGeral,
+    resumo: pacote.resumo,
   };
 }
 
@@ -206,10 +202,16 @@ export function buildSemanalAtrasoParaEscopo(
   vencimentosBr: string[],
   dataPagamentoBr: string,
   diaOverride?: number,
+  dataInicioJurosMultaBr?: string | null,
+  despesas?: ClienteDespesaRegistro[],
 ): SemanalAtrasoPacote | null {
-  if (vencimentosBr.length === 0) return null;
+  const contrato = contratoAtivoPlaca(placa, clienteId);
+  const dataInicio =
+    dataInicioJurosMultaBr ?? contrato?.dataInicioJurosMultaBr ?? null;
+  const vencJuros = filtrarVencimentosAposDataInicioJuros(vencimentosBr, dataInicio);
+  if (vencJuros.length === 0) return null;
   const dia = resolverDiaEscalonamentoSemanal(
-    vencimentosBr,
+    vencJuros,
     dataPagamentoBr,
     diaOverride,
   );
@@ -219,7 +221,7 @@ export function buildSemanalAtrasoParaEscopo(
       placa,
       clienteId,
       clienteNome,
-      despesas: [],
+      despesas: despesas ?? [],
       vencimentosBr,
     },
     dataPagamentoBr,
@@ -263,41 +265,70 @@ export function executarLoteCobranca(
     };
 
     if (tipo === "pagamento-semanal") {
-      const vencimentos = filtrarVencimentosSemanalCobranca(
-        alvo.vencimentosBr ?? [],
+      const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
+      const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
+      const vencimentosBr = alvo.vencimentosBr ?? [];
+      const vencimentosJuros = filtrarVencimentosAposDataInicioJuros(
+        vencimentosBr,
+        dataInicioJurosMultaBr,
+      );
+      const vencimentosWhatsApp = filtrarVencimentosSemanalCobranca(
+        vencimentosJuros,
         dataPagamentoBr,
       );
+      const vencimentosExibicao = filtrarVencimentosCalculoSemanal(
+        vencimentosJuros,
+        dataPagamentoBr,
+        true,
+      );
       const dia = resolverDiaEscalonamentoSemanal(
-        vencimentos,
+        vencimentosWhatsApp,
         dataPagamentoBr,
         opts?.diaOverride,
       );
       item.diaEscalonamento = dia;
 
-      const semanal = buildSemanalAtrasoAlvo(
-        { ...alvo, vencimentosBr: vencimentos },
-        dataPagamentoBr,
-        dia ?? undefined,
-      );
+      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr, dia ?? undefined);
       if (!semanal) {
-        const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
         if (
           contrato?.valorSemanal == null ||
           contrato?.valorDiaria == null
         ) {
           item.aviso =
             "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de atraso.";
-        } else if (vencimentos.length === 0) {
-          item.aviso =
-            "Nenhuma parcela semanal vencida (D+1+) — sem cobrança.";
+        } else if (vencimentosExibicao.length === 0) {
+          if (
+            dataInicioJurosMultaBr &&
+            filtrarVencimentosCalculoSemanal(vencimentosBr, dataPagamentoBr, true).length > 0
+          ) {
+            item.aviso =
+              `Parcelas anteriores a ${dataInicioJurosMultaBr} sem juros/bloqueio (acordo) — sem tabela de atraso elegível.`;
+          } else {
+            item.aviso =
+              "Nenhuma parcela semanal em aberto elegível — sem tabela de atraso.";
+          }
         } else {
           item.aviso = "Sem tabela de atraso.";
         }
         ignorados++;
       } else {
         item.semanalAtraso = semanal;
+        if (dataInicioJurosMultaBr) {
+          const excluidos = filtrarVencimentosCalculoSemanal(
+            vencimentosBr,
+            dataPagamentoBr,
+            true,
+          ).filter(
+            (v) =>
+              !filtrarVencimentosAposDataInicioJuros([v], dataInicioJurosMultaBr).length,
+          );
+          if (excluidos.length > 0) {
+            item.aviso =
+              `Acordo: vencimentos ${excluidos.join(", ")} sem juros/bloqueio (anteriores a ${dataInicioJurosMultaBr}).`;
+          }
+        }
         if (dia == null) {
-          const venc = vencimentos[0] ?? "?";
+          const venc = vencimentosExibicao[0] ?? vencimentosBr[0] ?? "?";
           item.aviso = `Ainda no prazo de pagamento (vencimento ${venc}) — sem mensagem WhatsApp.`;
         }
       }

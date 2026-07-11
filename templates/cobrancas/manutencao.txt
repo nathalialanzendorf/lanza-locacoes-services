@@ -5,3 +5,5 @@ Olá, {NOME}! Há pendência de *manutenção* (responsabilidade do locatário) 
 Valor total pendente: *R$ {VALOR}*
 
 Regularize para evitar acúmulo no acerto. Responda neste canal se precisar de detalhes.
+
+_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._

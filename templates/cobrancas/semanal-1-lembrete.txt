@@ -15,3 +15,5 @@ Agência: 0410 • Operação: 1292
 Conta: 576661724-7
 
 Se você já efetuou o pagamento, é só desconsiderar esta mensagem.
+
+_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._

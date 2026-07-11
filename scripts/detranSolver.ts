@@ -639,6 +639,7 @@ async function main(): Promise<void> {
       const browserRes = await cdp.evaluate<{
         status: string;
         payload?: unknown;
+        ticket?: string;
         message?: string;
       }>(
         `(async () => {
@@ -669,7 +670,16 @@ async function main(): Promise<void> {
         "utf8",
       );
 
-      const inf = await processarRespostaDetranSc(v.placa, payload, { dryRun, prazoDias: 90, renavam });
+      if (DEBUG && !browserRes.ticket) {
+        console.error(`[debug] ${v.placa}: consulta sem ticket — ait-pdf indisponível`);
+      }
+
+      const inf = await processarRespostaDetranSc(v.placa, payload, {
+        dryRun,
+        prazoDias: 90,
+        renavam,
+        ticket: browserRes.ticket,
+      });
       const desp = await processarDespesasDetranSc(v.placa, payload, { dryRun });
       ok++;
       console.log(

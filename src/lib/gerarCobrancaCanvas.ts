@@ -8,7 +8,7 @@ import { REPO_ROOT } from "./repoRoot.js";
 
 const GEN_SCRIPT = path.join(REPO_ROOT, "scripts", "gen-cobranca-canvas.mjs");
 
-/** Sidecar `cobranca-{slug}-{DD-MM-AAAA}.json` → `canvases/cobranca-{slug}.canvas.tsx`. */
+/** Sidecar JSON → `canvases/cobranca[-simples]-{slug}.canvas.tsx`. */
 export function canvasPathFromSidecarJson(jsonPath: string): string {
   const base = path.basename(jsonPath, ".json");
   const slug = base.replace(/-\d{2}-\d{2}-\d{4}$/, "");

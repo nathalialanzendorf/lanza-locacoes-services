@@ -5,3 +5,5 @@ Olá, {NOME}! Identificamos parcela(s) de *renegociação de débitos* em aberto
 Valor total pendente: *R$ {VALOR}*
 
 Regularize o pagamento conforme combinado. Em caso de dúvida, responda neste canal.
+
+_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._

@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,13 +69,24 @@ const dados = {
   "dataInicio": "27/06/2026",
   "dataFim": "25/09/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "06/07/2026",
-  "qtdDiasLocado": 9,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 14,
+  "linhaEncerramento": null,
   "valorSemanal": 800,
   "valorDiaria": 150,
-  "totalDebitos": 1921.49,
-  "infracoes": [],
-  "totalInfracoes": 0,
+  "totalDebitos": 2916.72,
+  "infracoes": [
+    {
+      "descricao": "ATRASADO Multa conversão - 09/06/2026 10:57",
+      "placa": "IWP-5G63",
+      "data": "09/06/2026 10:57:32",
+      "categoria": "Infração",
+      "valor": 195.23
+    }
+  ],
+  "totalInfracoes": 195.23,
+  "infracoesPagas": [],
+  "totalInfracoesPagas": 0,
   "manutencoes": [
     {
       "descricao": "ATRASADO Acionamento franquia Sandero 2015",
@@ -113,9 +125,17 @@ const dados = {
       "data": "04/07/2026",
       "categoria": "Locação semanal",
       "valor": 100
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sábado 11",
+      "placa": "OZC-0B50",
+      "data": "11/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 800
     }
   ],
-  "totalParcelasEmAberto": 142,
+  "totalParcelasEmAberto": 942,
+  "totalSemanalCobrar": 942,
   "debitosDiversos": [
     {
       "descricao": "ATRASADO Pagamento pedágio 29/05/2026 18:45",
@@ -147,6 +167,9 @@ const dados = {
     }
   ],
   "totalDebitosDiversos": 903,
+  "placasEscopo": [
+    "OZC-0B50"
+  ],
   "resumoSemanal": {
     "diaEscalonamento": 3,
     "tituloEscalonamento": "bloqueio programado",
@@ -154,10 +177,10 @@ const dados = {
       "27/06/2026",
       "04/07/2026"
     ],
-    "dataBloqueioBr": "30/06/2026",
-    "totalReceber": 1500,
+    "dataBloqueioBr": "06/07/2026",
+    "totalReceber": 1957.1,
     "diasAtrasados": 10,
-    "diasEmDia": 0,
+    "diasEmDia": 5,
     "jurosMultaAcumulados": 357.1
   },
   "pagamentoSemanal": {
@@ -286,14 +309,14 @@ const dados = {
         "total": 1021.45
       }
     ],
-    "totalGeral": 2071.45,
-    "dataPagamentoBr": "06/07/2026"
+    "totalGeral": 1957.1,
+    "dataPagamentoBr": "11/07/2026"
   },
   "mensagensWhatsApp": [
     {
       "tipo": "pagamento-semanal",
       "titulo": "🚨 Bloqueio programado — OZC-0B50",
-      "texto": "🚨 *Bloqueio programado* — OZC-0B50\n\nOlá, Juliano!\nA *parcela semanal* da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nℹ️ A liberação do veículo está condicionada à quitação integral dos valores em atraso.\n\n📊 *Resumo do atraso*\nOlá, Juliano!\nSegue cálculo do atraso das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\nData bloqueio: 30/06/2026\nBase de cálculo: 06/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 1.050,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 1.021,45*\n\n*Total a devido : R$ 2.071,45 (10 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "🚨 *Bloqueio programado* — OZC-0B50\n\nOlá, Juliano!\nA *parcela semanal* da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "renegociacao",
@@ -301,14 +324,29 @@ const dados = {
       "texto": "Renegociação em aberto — OZC-0B50\n\nOlá, Juliano! Identificamos parcela(s) de *renegociação de débitos* em aberto referente ao veículo locado.\n\nValor total pendente: *R$ 600,00*\n\nRegularize o pagamento conforme combinado. Em caso de dúvida, responda neste canal.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — IWP-5G63",
+      "texto": "🚦 *Notificação de infração* — IWP-5G63\n\nOlá, Juliano! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.6 Flex - BRANCO:\n\n🚨 *Infração:* Multa conversão - 09/06/2026 10:57\n🗓️ *Data/hora:* 09/06/2026 às 10:57:32\n📍 *Local:* CRICIUMA/SC\n💰 *Valor:* R$ 195,23\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
       "tipo": "pedagio",
       "titulo": "🛣️ Pedágio em aberto — IWP-5G63",
       "texto": "🛣️ *Pedágio em aberto* — IWP-5G63\n\nOlá, Juliano! Identificamos uma pendência junto à *CCR Via Costeira* referente ao veículo locado.\n\nO não pagamento do pedágio caracteriza infração grave, sujeita a:\n🚫 Multa de *R$ 195,23*\n⚠️ *5 pontos* na CNH\n\nEvite transtornos e regularize de forma rápida pelo WhatsApp 👉 *+55 48 3211-3130*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
+      "tipo": "manutencao",
+      "titulo": "Manutenção em aberto — IWP-5G63",
+      "texto": "Manutenção em aberto — IWP-5G63\n\nOlá, Juliano! Há pendência de *manutenção* (responsabilidade do locatário) referente ao veículo locado.\n\nValor total pendente: *R$ 876,49*\n\nRegularize para evitar acúmulo no acerto. Responda neste canal se precisar de detalhes.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — OZC-0B50",
+      "texto": "📊 *Cálculo do atraso semanal* — OZC-0B50\n\nOlá, Juliano!\nSegue cálculo do atraso da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV:\n\nData bloqueio: 06/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 800,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 800,00*\n\n*Total a devido : R$ 1.957,10 (10 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — OZC-0B50",
-      "texto": "📋 *Despesas em aberto* — OZC-0B50\n\nOlá, Juliano!\nSegue a listagem das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\n• IWP-5G63 · 29/05/2026 18:45 · ATRASADO Pagamento pedágio 29/05/2026 18:45 · R$ 3,00\n• IWP-5G63 · 20/06/2026 · ATRASADO Pagamento semanal - Sábado 20 · R$ 2,00\n• OZC-0B50 · 20/06/2026 · ATRASADO  Negociação 3x4 · R$ 350,00\n• IWP-5G63 · 26/06/2026 · ATRASADO Acionamento franquia Sandero 2015 · R$ 796,49\n• IWP-5G63 · 26/06/2026 · ATRASADO  Lavação Sandero 2015 · R$ 80,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Negociação 4x4 · R$ 250,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Pagamento caução · R$ 300,00\n• OZC-0B50 · 27/06/2026 · ATRASADO Pagamento semanal - Sábado 27 · R$ 40,00\n• OZC-0B50 · 04/07/2026 · ATRASADO Pagamento semanal - Sábado 04 · R$ 100,00\n\n*Total em aberto: R$ 1.921,49*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — OZC-0B50\n\nOlá, Juliano!\nSegue a listagem das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\n• IWP-5G63 · 29/05/2026 18:45 · ATRASADO Pagamento pedágio 29/05/2026 18:45 · R$ 3,00\n• IWP-5G63 · 09/06/2026 10:57:32 · ATRASADO Multa conversão - 09/06/2026 10:57 · R$ 195,23\n• IWP-5G63 · 20/06/2026 · ATRASADO Pagamento semanal - Sábado 20 · R$ 2,00\n• OZC-0B50 · 20/06/2026 · ATRASADO  Negociação 3x4 · R$ 350,00\n• IWP-5G63 · 26/06/2026 · ATRASADO Acionamento franquia Sandero 2015 · R$ 796,49\n• IWP-5G63 · 26/06/2026 · ATRASADO  Lavação Sandero 2015 · R$ 80,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Negociação 4x4 · R$ 250,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Pagamento caução · R$ 300,00\n• OZC-0B50 · 27/06/2026 · ATRASADO Pagamento semanal - Sábado 27 · R$ 40,00\n• OZC-0B50 · 04/07/2026 · ATRASADO Pagamento semanal - Sábado 04 · R$ 100,00\n• OZC-0B50 · 11/07/2026 · ATRASADO Pagamento semanal - Sábado 11 · R$ 800,00\n\n*Total em aberto: R$ 2.916,72*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []
@@ -322,11 +360,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -633,17 +674,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaOzc0b50JulianoFoizerSilveira() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -656,6 +732,11 @@ export default function CobrancaOzc0b50JulianoFoizerSilveira() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -695,6 +776,14 @@ export default function CobrancaOzc0b50JulianoFoizerSilveira() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -721,18 +810,23 @@ export default function CobrancaOzc0b50JulianoFoizerSilveira() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

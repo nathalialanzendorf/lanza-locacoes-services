@@ -1,0 +1,6 @@
+📊 *Cálculo do atraso semanal* — {PLACA}
+
+Olá, {NOME}!
+Segue cálculo do atraso da locação do seu {MARCA_MODELO}:
+
+{RESUMO}

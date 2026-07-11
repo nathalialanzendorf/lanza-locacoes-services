@@ -18,12 +18,16 @@ export function cobrancaCanvasDados(j) {
     totalDebitos: j.totalDebitos,
     infracoes: j.infracoes ?? [],
     totalInfracoes: j.totalInfracoes ?? 0,
+    infracoesPagas: j.infracoesPagas ?? [],
+    totalInfracoesPagas: j.totalInfracoesPagas ?? 0,
     manutencoes: j.manutencoes ?? [],
     totalManutencoes: j.totalManutencoes ?? 0,
     parcelasEmAberto: j.parcelasEmAberto ?? [],
     totalParcelasEmAberto: j.totalParcelasEmAberto ?? 0,
+    totalSemanalCobrar: j.totalSemanalCobrar ?? j.totalParcelasEmAberto ?? 0,
     debitosDiversos: j.debitosDiversos ?? [],
     totalDebitosDiversos: j.totalDebitosDiversos ?? 0,
+    placasEscopo: j.placasEscopo ?? (j.placa ? [j.placa] : []),
     resumoSemanal,
     pagamentoSemanal: pagamentoSemanal
       ? {

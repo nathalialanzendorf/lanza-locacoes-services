@@ -1,6 +1,6 @@
 {
   "descricao": "Contratos de locação (ativos e encerrados). id = uuid.",
-  "atualizadoEm": "2026-07-05",
+  "atualizadoEm": "2026-07-11",
   "schemaContrato": {
     "id": "uuid",
     "versao": "Número sequencial por par cliente + veículo (1, 2, 3 … — renovações)",
@@ -362,8 +362,9 @@
       "valorMensal": null,
       "valorDiaria": 150,
       "valorCaucao": 1800,
+      "dataInicioJurosMultaBr": "09/07/2026",
       "cadastradoEm": "2026-06-28T16:58:46.967Z",
-      "atualizadoEm": "2026-07-05T19:27:00.000Z"
+      "atualizadoEm": "2026-07-11T19:20:00.000Z"
     },
     {
       "id": "cc2e7efc-bc51-4234-9f7e-f4dfa429b89a",
@@ -2819,7 +2820,7 @@
       "veiculoId": "AVU-6740",
       "cliente": {
         "id": "656291e2-8b83-4ee3-8905-43d5193a54b7",
-        "nome": "NOE DE OLIVEIRA JUNIOR",
+        "nome": "Noe de Oliveira Junior",
         "cpf": "052.137.819-26",
         "rg": null,
         "telefone": "(48) 99634-1342",
@@ -2850,15 +2851,15 @@
         "fipeValor": "R$ 32.171,00"
       },
       "pastaContrato": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\01.10.2025 - Noe de Oliveira Junior (trocou 08.10)",
-      "clienteNome": "NOE DE OLIVEIRA JUNIOR",
+      "clienteNome": "Noe de Oliveira Junior",
       "placa": "AVU-6740",
       "cpf": "052.137.819-26",
       "dataInicio": "01/10/2025",
       "dataFimPrevista": "08/10/2025",
-      "dataEncerramento": null,
+      "dataEncerramento": "08/10/2025",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "troca",
+      "status": "encerrado",
       "prazoDias": 7,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "terca",
@@ -2869,7 +2870,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1501.5,
       "cadastradoEm": "2026-06-28T16:58:47.631Z",
-      "atualizadoEm": "2026-06-28T17:20:06.385Z"
+      "atualizadoEm": "2026-07-11T19:11:24.817Z"
     },
     {
       "id": "17da9050-6b17-41f9-8918-cbc649dcd96c",
@@ -4990,6 +4991,45 @@
       "valorCaucao": 1500,
       "cadastradoEm": "2026-07-03T21:36:13.467Z",
       "atualizadoEm": "2026-07-03T21:38:51.103Z"
+    },
+    {
+      "id": "810db07c-02cc-42a8-8f3d-9e075086072e",
+      "versao": 1,
+      "contratoAnteriorId": null,
+      "clienteId": "656291e2-8b83-4ee3-8905-43d5193a54b7",
+      "veiculoId": "OWN-3259",
+      "cliente": {
+        "id": "656291e2-8b83-4ee3-8905-43d5193a54b7",
+        "nome": "NOE DE OLIVEIRA JUNIOR",
+        "cpf": "052.137.819-26"
+      },
+      "veiculo": {
+        "id": "b76e08f1-3b53-4581-9419-805e5764586a",
+        "placa": "OWN-3259",
+        "marcaModelo": "SANDERO",
+        "anoModelo": "2013/2013"
+      },
+      "pastaContrato": "D:\\\\Dropbox\\\\Aluguel Carros\\\\Felipe - RENAULT SANDERO 2013-2014\\\\07.01.2026 - Noe de Oliveira Junior (devolvido 19.01.26)",
+      "clienteNome": "NOE DE OLIVEIRA JUNIOR",
+      "placa": "OWN-3259",
+      "cpf": "052.137.819-26",
+      "dataInicio": "07/01/2026",
+      "dataFimPrevista": "07/04/2026",
+      "dataEncerramento": "19/01/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
+      "prazoDias": 90,
+      "tipoContrato": "semanal",
+      "diaPagamentoSemana": "terca",
+      "diaPagamentoMes": null,
+      "diaPagamentoTexto": "terças-feiras",
+      "valorSemanal": 650,
+      "valorMensal": null,
+      "valorDiaria": 120,
+      "valorCaucao": 1500,
+      "cadastradoEm": "2026-07-11T19:13:15.946Z",
+      "atualizadoEm": "2026-07-11T19:13:15.946Z"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "descricao": "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.",
-  "atualizadoEm": "2026-07-03",
+  "atualizadoEm": "2026-07-09",
   "schemaCliente": {
     "id": "uuid",
     "nome": "Nome completo",
@@ -80,7 +80,7 @@
       "rastreameMotoristaKey": "36",
       "rastreameMotoristaId": 36,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.346Z"
+      "rastreameSyncEm": "2026-07-09T21:40:40.196Z"
     },
     {
       "nome": "Vitor Hugo Pacifico Machado",
@@ -110,7 +110,7 @@
       "rastreameMotoristaKey": "30",
       "rastreameMotoristaId": 30,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.706Z"
+      "rastreameSyncEm": "2026-07-09T21:40:41.115Z"
     },
     {
       "nome": "LUIZ FILIPE BERTO MATIAS",
@@ -132,7 +132,7 @@
       "id": "c3ab9fc6-ced5-4e39-9648-62f1a74aac08",
       "rastreameMotoristaKey": "37",
       "rastreameMotoristaId": 37,
-      "rastreameSyncEm": "2026-07-03T21:21:52.502Z",
+      "rastreameSyncEm": "2026-07-09T21:40:42.025Z",
       "ativo": false
     },
     {
@@ -161,7 +161,7 @@
       "rastreameMotoristaKey": "14",
       "rastreameMotoristaId": 14,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.700Z"
+      "rastreameSyncEm": "2026-07-09T21:40:42.892Z"
     },
     {
       "nome": "MIKAEL SCHMIDT",
@@ -183,7 +183,7 @@
       "id": "8cb42547-f0b8-4485-b746-3cef7e30b054",
       "rastreameMotoristaKey": "38",
       "rastreameMotoristaId": 38,
-      "rastreameSyncEm": "2026-07-03T21:21:52.569Z",
+      "rastreameSyncEm": "2026-07-09T21:40:43.761Z",
       "ativo": false
     },
     {
@@ -206,7 +206,7 @@
       "id": "a582a855-9a4a-424a-9257-b535d3af79c0",
       "rastreameMotoristaKey": "39",
       "rastreameMotoristaId": 39,
-      "rastreameSyncEm": "2026-07-03T21:21:52.414Z",
+      "rastreameSyncEm": "2026-07-09T21:40:44.663Z",
       "ativo": false
     },
     {
@@ -237,7 +237,7 @@
       "rastreameMotoristaKey": "31",
       "rastreameMotoristaId": 31,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.667Z"
+      "rastreameSyncEm": "2026-07-09T21:40:45.613Z"
     },
     {
       "nome": "MARIA LUIZA VARGAS MINA DE OLIVEIRA",
@@ -259,7 +259,7 @@
       "id": "2df336db-f9bd-4df5-82d0-d23edd184650",
       "rastreameMotoristaKey": "40",
       "rastreameMotoristaId": 40,
-      "rastreameSyncEm": "2026-07-03T21:21:52.528Z",
+      "rastreameSyncEm": "2026-07-09T21:40:46.942Z",
       "ativo": false
     },
     {
@@ -282,7 +282,7 @@
       "id": "94ac09ef-aad3-49a9-a706-560f5c4709a8",
       "rastreameMotoristaKey": "41",
       "rastreameMotoristaId": 41,
-      "rastreameSyncEm": "2026-07-03T21:21:52.398Z",
+      "rastreameSyncEm": "2026-07-09T21:40:47.837Z",
       "ativo": false
     },
     {
@@ -305,7 +305,7 @@
       "id": "c99ec984-3300-4e4f-bdee-5f56f32a25e2",
       "rastreameMotoristaKey": "42",
       "rastreameMotoristaId": 42,
-      "rastreameSyncEm": "2026-07-03T21:21:52.443Z",
+      "rastreameSyncEm": "2026-07-09T21:40:48.751Z",
       "ativo": false
     },
     {
@@ -334,7 +334,7 @@
       "rastreameMotoristaKey": "5",
       "rastreameMotoristaId": 5,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.296Z"
+      "rastreameSyncEm": "2026-07-09T21:40:49.712Z"
     },
     {
       "nome": "SERGIO ALEXANDRE PINTO GLORIA",
@@ -367,7 +367,7 @@
       "rastreameMotoristaKey": "25",
       "rastreameMotoristaId": 25,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.653Z",
+      "rastreameSyncEm": "2026-07-09T21:40:50.737Z",
       "atualizadoEm": "2026-06-28T17:19:46.039Z"
     },
     {
@@ -390,7 +390,7 @@
       "id": "2c6e7aba-bd76-40e4-ba75-8f2798e57cfc",
       "rastreameMotoristaKey": "43",
       "rastreameMotoristaId": 43,
-      "rastreameSyncEm": "2026-07-03T21:21:52.303Z",
+      "rastreameSyncEm": "2026-07-09T21:40:51.765Z",
       "ativo": false
     },
     {
@@ -424,7 +424,7 @@
       "rastreameMotoristaKey": "27",
       "rastreameMotoristaId": 27,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.542Z"
+      "rastreameSyncEm": "2026-07-09T21:40:52.650Z"
     },
     {
       "nome": "Noe de Oliveira Junior",
@@ -454,7 +454,7 @@
       "rastreameMotoristaKey": "20",
       "rastreameMotoristaId": 20,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.603Z"
+      "rastreameSyncEm": "2026-07-09T21:40:53.566Z"
     },
     {
       "nome": "Renan Peters da Silva",
@@ -487,7 +487,7 @@
       "rastreameMotoristaKey": "12",
       "rastreameMotoristaId": 12,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.642Z"
+      "rastreameSyncEm": "2026-07-09T21:40:54.458Z"
     },
     {
       "nome": "LUIS ROSSANO QUIROGA CUNHA",
@@ -509,7 +509,7 @@
       "id": "93675f58-3def-4c9e-b31d-390efdf47e6d",
       "rastreameMotoristaKey": "44",
       "rastreameMotoristaId": 44,
-      "rastreameSyncEm": "2026-07-03T21:21:52.493Z",
+      "rastreameSyncEm": "2026-07-09T21:40:55.352Z",
       "ativo": false
     },
     {
@@ -540,7 +540,7 @@
       "rastreameMotoristaKey": "32",
       "rastreameMotoristaId": 32,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.596Z"
+      "rastreameSyncEm": "2026-07-09T21:40:56.224Z"
     },
     {
       "nome": "ALVARO LUIZ COLLARES LADO",
@@ -562,7 +562,7 @@
       "id": "cf49702d-a4ba-4b42-8459-c88ff412d5d4",
       "rastreameMotoristaKey": "45",
       "rastreameMotoristaId": 45,
-      "rastreameSyncEm": "2026-07-03T21:21:52.311Z",
+      "rastreameSyncEm": "2026-07-09T21:40:59.414Z",
       "ativo": false
     },
     {
@@ -596,7 +596,7 @@
       "rastreameMotoristaKey": "10",
       "rastreameMotoristaId": 10,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.721Z"
+      "rastreameSyncEm": "2026-07-09T21:41:00.312Z"
     },
     {
       "nome": "Laryssa (Gustavo) Costa de Quadros",
@@ -629,7 +629,7 @@
       "rastreameMotoristaKey": "6",
       "rastreameMotoristaId": 6,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.476Z"
+      "rastreameSyncEm": "2026-07-09T21:41:00.703Z"
     },
     {
       "nome": "Luiz Marcelo Porto Menezes Moreira",
@@ -662,7 +662,7 @@
       "rastreameMotoristaKey": "7",
       "rastreameMotoristaId": 7,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.511Z"
+      "rastreameSyncEm": "2026-07-09T21:41:01.617Z"
     },
     {
       "nome": "Virginia Jose Caraballo Camacho",
@@ -690,7 +690,7 @@
       "rastreameMotoristaKey": "33",
       "rastreameMotoristaId": 33,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.692Z"
+      "rastreameSyncEm": "2026-07-09T21:41:01.981Z"
     },
     {
       "nome": "Rafaela Cardoso Debiazi (Higor)",
@@ -723,7 +723,7 @@
       "rastreameMotoristaKey": "8",
       "rastreameMotoristaId": 8,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.619Z"
+      "rastreameSyncEm": "2026-07-09T21:41:02.358Z"
     },
     {
       "nome": "MONICA GUIMARAES DE OLIVEIRA",
@@ -745,7 +745,7 @@
       "id": "b68066a6-7b6e-4f81-8483-ed20103448b0",
       "rastreameMotoristaKey": "46",
       "rastreameMotoristaId": 46,
-      "rastreameSyncEm": "2026-07-03T21:21:52.588Z",
+      "rastreameSyncEm": "2026-07-09T21:41:03.334Z",
       "ativo": false
     },
     {
@@ -768,7 +768,7 @@
       "id": "80666f66-0424-4a33-8aca-db3a4a9207be",
       "rastreameMotoristaKey": "47",
       "rastreameMotoristaId": 47,
-      "rastreameSyncEm": "2026-07-03T21:21:52.661Z",
+      "rastreameSyncEm": "2026-07-09T21:41:04.246Z",
       "ativo": false
     },
     {
@@ -791,7 +791,7 @@
       "id": "995dc8b2-6db6-41bf-88fd-676366691adb",
       "rastreameMotoristaKey": "48",
       "rastreameMotoristaId": 48,
-      "rastreameSyncEm": "2026-07-03T21:21:52.548Z",
+      "rastreameSyncEm": "2026-07-09T21:41:05.176Z",
       "ativo": false
     },
     {
@@ -825,7 +825,7 @@
       "rastreameMotoristaKey": "24",
       "rastreameMotoristaId": 24,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.685Z",
+      "rastreameSyncEm": "2026-07-09T21:41:06.086Z",
       "atualizadoEm": "2026-07-01T02:56:02.489Z"
     },
     {
@@ -848,7 +848,7 @@
       "id": "ed1a153f-7533-475e-88e8-aeeba3b712d9",
       "rastreameMotoristaKey": "49",
       "rastreameMotoristaId": 49,
-      "rastreameSyncEm": "2026-07-03T21:21:52.636Z",
+      "rastreameSyncEm": "2026-07-09T21:41:06.983Z",
       "ativo": false
     },
     {
@@ -871,7 +871,7 @@
       "id": "4cf1fe6e-c55b-4399-85c5-e80f2c95d880",
       "rastreameMotoristaKey": "50",
       "rastreameMotoristaId": 50,
-      "rastreameSyncEm": "2026-07-03T21:21:52.554Z",
+      "rastreameSyncEm": "2026-07-09T21:41:07.901Z",
       "ativo": false
     },
     {
@@ -894,7 +894,7 @@
       "id": "ae503083-2cd3-4ef1-829c-be55d7953a29",
       "rastreameMotoristaKey": "51",
       "rastreameMotoristaId": 51,
-      "rastreameSyncEm": "2026-07-03T21:21:52.267Z",
+      "rastreameSyncEm": "2026-07-09T21:41:09.143Z",
       "ativo": false
     },
     {
@@ -917,7 +917,7 @@
       "id": "cdce8613-4da4-4865-a158-c5779b0f4783",
       "rastreameMotoristaKey": "52",
       "rastreameMotoristaId": 52,
-      "rastreameSyncEm": "2026-07-03T21:21:52.332Z",
+      "rastreameSyncEm": "2026-07-09T21:41:10.060Z",
       "ativo": false
     },
     {
@@ -951,7 +951,7 @@
       "rastreameMotoristaKey": "13",
       "rastreameMotoristaId": 13,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.382Z"
+      "rastreameSyncEm": "2026-07-09T21:41:10.939Z"
     },
     {
       "nome": "Tiago Augusto da Silva Piareti",
@@ -981,7 +981,7 @@
       "rastreameMotoristaKey": "29",
       "rastreameMotoristaId": 29,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.672Z"
+      "rastreameSyncEm": "2026-07-09T21:41:11.310Z"
     },
     {
       "nome": "Ronald Viana Junior",
@@ -1011,7 +1011,7 @@
       "rastreameMotoristaKey": "35",
       "rastreameMotoristaId": 35,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-03T21:21:52.648Z"
+      "rastreameSyncEm": "2026-07-09T21:41:11.680Z"
     },
     {
       "nome": "Lucas da Silva Dimas",
@@ -1044,21 +1044,21 @@
       "rastreameMotoristaKey": "26",
       "rastreameMotoristaId": 26,
       "ativo": false,
-      "rastreameSyncEm": "2026-07-03T21:21:52.483Z"
+      "rastreameSyncEm": "2026-07-09T21:41:12.816Z"
     },
     {
-      "nome": "DJAIR CARDOSO FERNANDES",
-      "cpf": "090.329.699-15",
+      "nome": "Djair Cardoso Fernandes",
+      "cpf": "090.329.699-35",
       "telefone": null,
       "email": null,
       "endereco": {
-        "logradouro": "Rua Eponina dos Santos Cardoso, 109",
-        "numero": "",
-        "complemento": "",
+        "cep": "88706-124",
+        "logradouro": "Rua Eponina dos Santos Cardoso",
+        "numero": "109",
+        "complemento": "Residencial Cardoso",
         "bairro": "São Clemente",
         "cidade": "Tubarão",
-        "uf": "SC",
-        "cep": "88"
+        "uf": "SC"
       },
       "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)\\CNH-e.pdf",
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.03.2025 - Djair Cardoso Fernades (Recuperado)",
@@ -1066,9 +1066,24 @@
       "id": "1a5ea522-2a15-4f49-8150-9baf63239139",
       "rastreameMotoristaKey": "53",
       "rastreameMotoristaId": 53,
-      "rastreameSyncEm": "2026-07-03T21:21:52.390Z",
+      "rastreameSyncEm": "2026-07-09T21:41:13.745Z",
       "ativo": false,
-      "atualizadoEm": "2026-06-28T17:13:58.377Z"
+      "atualizadoEm": "2026-07-09T21:40:30.135Z",
+      "cnh": {
+        "numeroRegistro": "05091823330",
+        "categoria": "AB",
+        "dataEmissao": "21/01/2021",
+        "validade": "17/02/2026",
+        "orgaoEmissor": "DETRAN",
+        "ufEmissor": "SC",
+        "ear": false
+      },
+      "rg": "4753124",
+      "rgOrgaoExpedidor": "SSP/SC",
+      "dataNascimento": "19/10/1982",
+      "localNascimento": "Tubarão/SC",
+      "filiacao": "Djair Fernandes e Leonilda Cardoso Fernandes",
+      "nacionalidade": "Brasileiro(a)"
     },
     {
       "nome": "CLOVIS ADAIR GONCALVES CRISPIM",
@@ -1090,7 +1105,7 @@
       "id": "6fe338f2-d24e-46a6-a751-5bde251708b9",
       "rastreameMotoristaKey": "54",
       "rastreameMotoristaId": 54,
-      "rastreameSyncEm": "2026-07-03T21:21:52.353Z",
+      "rastreameSyncEm": "2026-07-09T21:41:14.632Z",
       "ativo": false
     },
     {
@@ -1113,7 +1128,7 @@
       "id": "4f96f84c-1288-4aad-a159-4ef66cdbf0fd",
       "rastreameMotoristaKey": "55",
       "rastreameMotoristaId": 55,
-      "rastreameSyncEm": "2026-07-03T21:21:52.461Z",
+      "rastreameSyncEm": "2026-07-09T21:41:15.530Z",
       "ativo": false
     },
     {
@@ -1136,7 +1151,7 @@
       "id": "d5ec3405-bb1f-4318-92c9-f7af830ab22b",
       "rastreameMotoristaKey": "56",
       "rastreameMotoristaId": 56,
-      "rastreameSyncEm": "2026-07-03T21:21:52.680Z",
+      "rastreameSyncEm": "2026-07-09T21:41:16.427Z",
       "ativo": false
     },
     {
@@ -1168,7 +1183,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "bf1d4b0e-6c46-4878-8f1f-b639854af568",
-      "rastreameSyncEm": "2026-07-03T21:21:52.325Z",
+      "rastreameSyncEm": "2026-07-09T21:41:17.330Z",
       "atualizadoEm": "2026-06-27T21:03:24.085Z"
     },
     {
@@ -1197,7 +1212,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "d83b9728-e78a-4c83-a9a1-b77bfbc08f1d",
-      "rastreameSyncEm": "2026-07-03T21:21:52.338Z",
+      "rastreameSyncEm": "2026-07-09T21:41:18.209Z",
       "atualizadoEm": "2026-06-27T21:03:24.094Z"
     },
     {
@@ -1228,7 +1243,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "0621844a-475e-46a2-b595-89967488dd9c",
-      "rastreameSyncEm": "2026-07-03T21:21:52.368Z",
+      "rastreameSyncEm": "2026-07-09T21:41:18.565Z",
       "atualizadoEm": "2026-06-27T21:03:24.109Z"
     },
     {
@@ -1260,7 +1275,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "400d2519-36f7-4d81-af20-782b9b5f9869",
-      "rastreameSyncEm": "2026-07-03T21:21:52.375Z",
+      "rastreameSyncEm": "2026-07-09T21:41:19.587Z",
       "atualizadoEm": "2026-06-27T21:03:24.115Z"
     },
     {
@@ -1290,7 +1305,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "81fd1098-b897-4a3b-b80d-9e2b6f43a605",
-      "rastreameSyncEm": "2026-07-03T21:21:52.405Z",
+      "rastreameSyncEm": "2026-07-09T21:41:20.662Z",
       "atualizadoEm": "2026-06-27T21:03:24.127Z"
     },
     {
@@ -1319,7 +1334,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "6b965bc9-1ce6-4f61-a99d-2b01a79065db",
-      "rastreameSyncEm": "2026-07-03T21:21:52.437Z",
+      "rastreameSyncEm": "2026-07-09T21:41:22.090Z",
       "atualizadoEm": "2026-06-27T21:03:24.133Z"
     },
     {
@@ -1348,7 +1363,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "7fa5300b-0223-49a2-bf7b-6d6368f22b9d",
-      "rastreameSyncEm": "2026-07-03T21:21:52.448Z",
+      "rastreameSyncEm": "2026-07-09T21:41:23.212Z",
       "atualizadoEm": "2026-07-01T02:59:04.021Z"
     },
     {
@@ -1374,7 +1389,7 @@
       "origemImportacao": "rastreame",
       "ativo": true,
       "id": "a56a4d8e-03d0-4600-b06e-31fab673299a",
-      "rastreameSyncEm": "2026-07-03T21:21:52.469Z",
+      "rastreameSyncEm": "2026-07-09T21:41:23.614Z",
       "atualizadoEm": "2026-06-28T16:37:44.488Z"
     },
     {
@@ -1404,7 +1419,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "e5056ec1-efcf-4a6f-a530-59d40124f948",
-      "rastreameSyncEm": "2026-07-03T21:21:52.519Z",
+      "rastreameSyncEm": "2026-07-09T21:41:24.633Z",
       "atualizadoEm": "2026-06-27T21:03:24.178Z"
     },
     {
@@ -1436,7 +1451,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "765b6a80-dc50-43ba-9dde-df1e956064be",
-      "rastreameSyncEm": "2026-07-03T21:21:52.535Z",
+      "rastreameSyncEm": "2026-07-09T21:41:25.658Z",
       "atualizadoEm": "2026-06-27T21:03:24.185Z"
     },
     {
@@ -1458,7 +1473,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "c23dbf38-59e7-4b05-85ef-6b0313f352d4",
-      "rastreameSyncEm": "2026-07-03T21:21:52.562Z",
+      "rastreameSyncEm": "2026-07-09T21:41:26.593Z",
       "atualizadoEm": "2026-06-27T21:03:24.199Z"
     },
     {
@@ -1484,7 +1499,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "61c88b36-3079-40e9-a04d-1138818f0639",
-      "rastreameSyncEm": "2026-07-03T21:21:52.578Z",
+      "rastreameSyncEm": "2026-07-09T21:41:27.466Z",
       "atualizadoEm": "2026-06-27T21:03:24.207Z"
     },
     {
@@ -1516,7 +1531,7 @@
       "origemImportacao": "rastreame",
       "ativo": false,
       "id": "c8e09888-27d6-4200-8fc6-16acf921812d",
-      "rastreameSyncEm": "2026-07-03T21:21:52.629Z",
+      "rastreameSyncEm": "2026-07-09T21:41:28.325Z",
       "atualizadoEm": "2026-06-27T21:03:24.234Z"
     },
     {
@@ -1528,7 +1543,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "57",
       "rastreameMotoristaId": 57,
-      "rastreameSyncEm": "2026-07-03T21:21:52.419Z",
+      "rastreameSyncEm": "2026-07-09T21:41:29.203Z",
       "telefone": null,
       "email": null
     },
@@ -1541,7 +1556,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "58",
       "rastreameMotoristaId": 58,
-      "rastreameSyncEm": "2026-07-03T21:21:52.729Z",
+      "rastreameSyncEm": "2026-07-09T21:41:30.058Z",
       "telefone": null,
       "email": null
     },
@@ -1569,7 +1584,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "59",
       "rastreameMotoristaId": 59,
-      "rastreameSyncEm": "2026-07-03T21:21:52.361Z",
+      "rastreameSyncEm": "2026-07-09T21:41:30.926Z",
       "telefone": null,
       "email": null
     },
@@ -1596,7 +1611,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "60",
       "rastreameMotoristaId": 60,
-      "rastreameSyncEm": "2026-07-03T21:21:52.432Z",
+      "rastreameSyncEm": "2026-07-09T21:41:31.781Z",
       "telefone": null,
       "email": null
     },
@@ -1624,7 +1639,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "61",
       "rastreameMotoristaId": 61,
-      "rastreameSyncEm": "2026-07-03T21:21:52.426Z",
+      "rastreameSyncEm": "2026-07-09T21:41:32.653Z",
       "telefone": null,
       "email": null
     },
@@ -1652,7 +1667,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "62",
       "rastreameMotoristaId": 62,
-      "rastreameSyncEm": "2026-07-03T21:21:52.453Z",
+      "rastreameSyncEm": "2026-07-09T21:41:33.537Z",
       "telefone": null,
       "email": null
     },
@@ -1680,7 +1695,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "63",
       "rastreameMotoristaId": 63,
-      "rastreameSyncEm": "2026-07-03T21:21:52.318Z",
+      "rastreameSyncEm": "2026-07-09T21:41:34.501Z",
       "telefone": null,
       "email": null
     },
@@ -1708,7 +1723,7 @@
       "ativo": false,
       "rastreameMotoristaKey": "64",
       "rastreameMotoristaId": 64,
-      "rastreameSyncEm": "2026-07-03T21:21:52.613Z",
+      "rastreameSyncEm": "2026-07-09T21:41:35.353Z",
       "telefone": null,
       "email": null
     },
@@ -1732,7 +1747,7 @@
       },
       "ativo": true,
       "id": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
-      "rastreameSyncEm": "2026-07-03T21:42:04.900Z",
+      "rastreameSyncEm": "2026-07-09T21:41:35.699Z",
       "atualizadoEm": "2026-07-03T21:42:03.872Z",
       "cpf": "570.533.161-49",
       "rg": "7007931",
@@ -1761,6 +1776,46 @@
         }
       ],
       "comprovanteResidenciaArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\03.07.2026 - Waldemir Pereira De Oliveira Filho\\Comprovante de residencia.jpeg"
+    },
+    {
+      "nome": "Edson de Souza Boeno",
+      "telefone": null,
+      "email": null,
+      "rastreameMotoristaKey": "66",
+      "rastreameMotoristaId": 66,
+      "origemImportacao": "rastreame",
+      "cnh": {
+        "numeroRegistro": "06940222900",
+        "categoria": "B",
+        "primeiraHabilitacao": "05/02/2013",
+        "dataEmissao": "20/06/2022",
+        "validade": "20/06/2025",
+        "orgaoEmissor": "DETRAN",
+        "ufEmissor": "SC",
+        "ear": false
+      },
+      "ativo": true,
+      "id": "21568b10-c02f-413e-93d3-d97bcf4cd7bc",
+      "rastreameSyncEm": "2026-07-09T21:41:36.039Z",
+      "atualizadoEm": "2026-07-09T21:11:27.551Z",
+      "cpf": "974.676.341-53",
+      "rg": "7062007187",
+      "rgOrgaoExpedidor": "SSP/SC",
+      "dataNascimento": "16/09/1994",
+      "localNascimento": "Porto Alegre/RS",
+      "filiacao": "Leila de Souza Boeno e Alcides Boeno",
+      "nacionalidade": "Brasileiro(a)",
+      "endereco": {
+        "cep": "88708-605",
+        "logradouro": "Rua João Mendes Antunes",
+        "numero": "105",
+        "complemento": "Casa cor verde claro (ref. rua da Igreja São Rai)",
+        "bairro": null,
+        "cidade": "Tubarão",
+        "uf": "SC"
+      },
+      "cnhArquivo": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\27.01.2025 - Edson de Souza Boeno (devolvido)\\CNH-e.pdf.pdf",
+      "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\27.01.2025 - Edson de Souza Boeno (devolvido)"
     }
   ]
 }

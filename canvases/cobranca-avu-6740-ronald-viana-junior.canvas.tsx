@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,22 +69,134 @@ const dados = {
   "dataInicio": "24/05/2026",
   "dataFim": "22/08/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "05/07/2026",
-  "qtdDiasLocado": 42,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 48,
+  "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
-  "totalDebitos": 0,
+  "totalDebitos": 108.56,
   "infracoes": [],
   "totalInfracoes": 0,
+  "infracoesPagas": [],
+  "totalInfracoesPagas": 0,
   "manutencoes": [],
   "totalManutencoes": 0,
-  "parcelasEmAberto": [],
-  "totalParcelasEmAberto": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Multa atraso (4 dias) pagamento semanal - Segunda 06",
+      "placa": "AVU-6740",
+      "data": "09/07/2026 13:29",
+      "categoria": "Locação semanal",
+      "valor": 108.56
+    }
+  ],
+  "totalParcelasEmAberto": 108.56,
+  "totalSemanalCobrar": 108.56,
   "debitosDiversos": [],
   "totalDebitosDiversos": 0,
-  "resumoSemanal": null,
-  "pagamentoSemanal": null,
-  "mensagensWhatsApp": [],
+  "placasEscopo": [
+    "AVU-6740"
+  ],
+  "resumoSemanal": {
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
+    "vencimentosEmAbertoBr": [
+      "06/07/2026"
+    ],
+    "dataBloqueioBr": "08/07/2026",
+    "totalReceber": 758.56,
+    "diasAtrasados": 4,
+    "diasEmDia": 2,
+    "jurosMultaAcumulados": 108.56
+  },
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "06/07/2026",
+        "periodoInicioBr": "06/07/2026",
+        "periodoFimBr": "13/07/2026",
+        "linhas": [
+          {
+            "dataBr": "06/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "07/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "12/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "13/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          }
+        ],
+        "subtotalJurosMulta": 108.56,
+        "total": 851.44
+      }
+    ],
+    "totalGeral": 758.56,
+    "dataPagamentoBr": "11/07/2026"
+  },
+  "mensagensWhatsApp": [
+    {
+      "tipo": "pagamento-semanal",
+      "titulo": "🚨 Bloqueio programado — AVU-6740",
+      "texto": "🚨 *Bloqueio programado* — AVU-6740\n\nOlá, Ronald!\nA *parcela semanal* da locação do seu VW/GOL 1.0 segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — AVU-6740",
+      "texto": "📊 *Cálculo do atraso semanal* — AVU-6740\n\nOlá, Ronald!\nSegue cálculo do atraso da locação do seu VW/GOL 1.0:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 108,56 (4 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 758,56 (4 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "despesas-em-aberto",
+      "titulo": "📋 Despesas em aberto — AVU-6740",
+      "texto": "📋 *Despesas em aberto* — AVU-6740\n\nOlá, Ronald!\nSegue a listagem das despesas referente à locação do seu VW/GOL 1.0 que segue em aberto:\n\n• AVU-6740 · 09/07/2026 13:29 · ATRASADO Multa atraso (4 dias) pagamento semanal - Segunda 06 · R$ 108,56\n\n*Total em aberto: R$ 108,56*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    }
+  ],
   "avisos": []
 } as {
   cliente: string;
@@ -95,11 +208,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -406,17 +522,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaAvu6740RonaldVianaJunior() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -429,6 +580,11 @@ export default function CobrancaAvu6740RonaldVianaJunior() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -468,6 +624,14 @@ export default function CobrancaAvu6740RonaldVianaJunior() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -494,18 +658,23 @@ export default function CobrancaAvu6740RonaldVianaJunior() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

@@ -10,13 +10,20 @@ import {
 } from "../lib/cobrancasLote.js";
 import { gerarCobrancaCanvasDeSidecar } from "../lib/gerarCobrancaCanvas.js";
 import {
+  ehRelatorioInfracoesGlobal,
   montarCobrancaSidecar,
   salvarCobrancasSidecar,
+  salvarCobrancaSimplesSidecar,
+  salvarRelatorioInfracoesSidecars,
+  agruparMensagensWhatsAppPorTipo,
   type CobrancaRelatorioSidecar,
+  type VarianteCanvasInfracoes,
 } from "../lib/cobrancasRelatorioSidecar.js";
 import {
   normalizarTipoCobrancaAction,
+  resolverModoCanvasCobranca,
   TIPOS_COBRANCA_ACTION,
+  listarEscoposContratosAtivosCobranca,
   type FiltroAlvosCobranca,
   type TipoCobrancaAction,
 } from "../lib/cobrancasAlvos.js";
@@ -117,6 +124,7 @@ Opções:
   --listar              Só lista alvos elegíveis (não gera mensagens)
   --dia N               (pagamento-semanal) força template 1–4 [padrão: auto D+1 lembrete · D+2 aviso · D+3 bloqueio]
   --data-pagamento DD/MM/AAAA  (pagamento-semanal) data p/ tabela de atraso [hoje]
+  --canvas-infracoes completo|resumido|ambos  (só infracoes global) [completo]
   --no-salvar           Só imprime no terminal
   --out DIR             Diretório de saída [padrão relatorios/_tmp/cobrancas/]
 
@@ -141,6 +149,39 @@ function resolverTipos(argv: string[]): TipoCobrancaAction[] | null {
     if (t) return [t];
   }
   return [...TIPOS_COBRANCA_ACTION];
+}
+
+function argsPosicionais(argv: string[]): string[] {
+  const skip = new Set<number>();
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a.startsWith("-") && argv[i + 1] && !argv[i + 1]!.startsWith("-")) {
+      skip.add(i + 1);
+    }
+  }
+  return argv.filter((a, i) => !a.startsWith("-") && !skip.has(i));
+}
+
+function resolverVarianteCanvasInfracoes(
+  argv: string[],
+  tipos: TipoCobrancaAction[],
+  filtro: FiltroAlvosCobranca,
+): VarianteCanvasInfracoes {
+  if (!ehRelatorioInfracoesGlobal(tipos, filtro)) return "completo";
+
+  const fromFlag = getOpt(argv, "--canvas-infracoes");
+  if (fromFlag) {
+    const v = fromFlag.trim().toLowerCase();
+    if (v === "completo" || v === "resumido" || v === "ambos") return v;
+    console.error(
+      `Erro: --canvas-infracoes inválido (${fromFlag}). Use completo, resumido ou ambos.`,
+    );
+    process.exit(1);
+  }
+
+  const segundo = argsPosicionais(argv)[1]?.trim().toLowerCase();
+  if (segundo === "completo" || segundo === "resumido" || segundo === "ambos") return segundo;
+  return "completo";
 }
 
 function imprimirListagem(tipo: TipoCobrancaAction, filtro: FiltroAlvosCobranca): void {
@@ -233,10 +274,16 @@ function imprimirBlocoFinalRelatorio(
   }
   if (mensagens.length > 0) {
     console.log("\n## Mensagens WhatsApp (enviar separadamente)\n");
-    for (let i = 0; i < mensagens.length; i++) {
-      const m = mensagens[i]!;
-      console.log(`── ${i + 1}. ${m.titulo.replace(/\r/g, "").trim()} (${m.tipo}) ──\n`);
-      console.log(m.texto + "\n");
+    const grupos = agruparMensagensWhatsAppPorTipo(mensagens);
+    for (const grupo of grupos) {
+      console.log(`### ${grupo.rotulo}\n`);
+      for (let i = 0; i < grupo.mensagens.length; i++) {
+        const m = grupo.mensagens[i]!;
+        const prefixo =
+          grupo.mensagens.length > 1 ? `${i + 1}. ` : "";
+        console.log(`── ${prefixo}${m.titulo.replace(/\r/g, "").trim()} ──\n`);
+        console.log(m.texto + "\n");
+      }
     }
   }
 }
@@ -289,6 +336,28 @@ export function mainLote(argv: string[]): void {
   console.log(`\n=== Cobrança: ${cabecalho} ===`);
 
   if (apenasListar) {
+    if (!filtro.placa && !filtro.clienteId) {
+      const contratos = listarEscoposContratosAtivosCobranca();
+      const clientesUnicos = new Map<string, string[]>();
+      for (const e of contratos) {
+        if (!e.clienteId) continue;
+        const placas = clientesUnicos.get(e.clienteId) ?? [];
+        if (e.placa) placas.push(e.placa);
+        clientesUnicos.set(e.clienteId, placas);
+      }
+      console.log(
+        `\nClientes com contrato ativo: ${clientesUnicos.size} (${contratos.length} veículo(s))\n`,
+      );
+      for (const [clienteId, placas] of [...clientesUnicos.entries()].sort((a, b) => {
+        const nomeA = loadClientesDb().clientes.find((x) => x.id === a[0])?.nome ?? "";
+        const nomeB = loadClientesDb().clientes.find((x) => x.id === b[0])?.nome ?? "";
+        return nomeA.localeCompare(nomeB, "pt-BR");
+      })) {
+        const c = loadClientesDb().clientes.find((x) => x.id === clienteId);
+        const nome = c?.nome ?? clienteId;
+        console.log(`  ${nome} · ${placas.join(", ")}`);
+      }
+    }
     for (const tipo of tipos) {
       imprimirListagem(tipo, filtro);
     }
@@ -372,25 +441,47 @@ export function mainLote(argv: string[]): void {
     );
   }
 
-  if (salvar && escopoUnico) {
-    const sidecars = salvarCobrancasSidecar(resultadosLote, dataRef, {
-      outDir,
-      filtro,
-      tiposSolicitados: tipos,
-    });
+  if (salvar) {
+    const modoCanvas = resolverModoCanvasCobranca(tipos, filtro);
+    const varianteInfracoes = resolverVarianteCanvasInfracoes(argv, tipos, filtro);
+    const sidecars = ehRelatorioInfracoesGlobal(tipos, filtro)
+      ? salvarRelatorioInfracoesSidecars(resultadosLote, dataRef, {
+          outDir,
+          variante: varianteInfracoes,
+        })
+      : modoCanvas === "simples-tipo" || modoCanvas === "simples-placa"
+        ? salvarCobrancaSimplesSidecar(resultadosLote, dataRef, {
+            outDir,
+            filtro,
+            tiposSolicitados: tipos,
+            modo: modoCanvas,
+          })
+        : salvarCobrancasSidecar(resultadosLote, dataRef, {
+            outDir,
+            filtro,
+            tiposSolicitados: tipos,
+          });
     if (sidecars.length) {
-      console.log("\n[sidecar canvas]");
+      const modoLabel = ehRelatorioInfracoesGlobal(tipos, filtro)
+        ? `relatorio-infracoes · ${varianteInfracoes}`
+        : modoCanvas !== "completo"
+          ? modoCanvas
+          : "";
+      console.log(`\n[sidecar canvas${modoLabel ? ` · ${modoLabel}` : ""}]`);
       for (const p of sidecars) console.log(`  ${p}`);
 
-      console.log("\n[canvas]");
-      for (const p of sidecars.filter((f) => f.endsWith(".json"))) {
-        try {
-          const { repoPath, cursorPath } = gerarCobrancaCanvasDeSidecar(p);
-          console.log(`  ${repoPath}`);
-          if (cursorPath) console.log(`  ${cursorPath}`);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          console.warn(`  AVISO: falha ao gerar canvas: ${msg}`);
+      const jsonSidecars = [...new Set(sidecars.filter((f) => f.endsWith(".json")))];
+      if (jsonSidecars.length) {
+        console.log("\n[canvas]");
+        for (const p of jsonSidecars) {
+          try {
+            const { repoPath, cursorPath } = gerarCobrancaCanvasDeSidecar(p);
+            console.log(`  ${repoPath}`);
+            if (cursorPath) console.log(`  ${cursorPath}`);
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.warn(`  AVISO: falha ao gerar canvas: ${msg}`);
+          }
         }
       }
     }

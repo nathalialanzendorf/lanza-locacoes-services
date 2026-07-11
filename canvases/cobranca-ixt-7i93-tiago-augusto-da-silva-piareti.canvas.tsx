@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,19 +69,13 @@ const dados = {
   "dataInicio": "24/03/2026",
   "dataFim": "22/06/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "06/07/2026",
-  "qtdDiasLocado": 104,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 109,
+  "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
-  "totalDebitos": 717.1,
+  "totalDebitos": 798.52,
   "infracoes": [
-    {
-      "descricao": "Multa parada - 02/04/2026 14:30 (Advertida)",
-      "placa": "IXT-7I93",
-      "data": "02/04/2026 14:30:03",
-      "categoria": "Infração",
-      "valor": 88.38
-    },
     {
       "descricao": "ATRASADO Multa parada - 16/04/2026",
       "placa": "IXT-7I93",
@@ -104,15 +99,123 @@ const dados = {
     }
   ],
   "totalInfracoes": 717.1,
+  "infracoesPagas": [
+    {
+      "descricao": "Multa parada - 02/04/2026 14:30 (Advertida)",
+      "placa": "IXT-7I93",
+      "data": "02/04/2026 14:30:03",
+      "categoria": "Infração",
+      "valor": 88.38
+    }
+  ],
+  "totalInfracoesPagas": 88.38,
   "manutencoes": [],
   "totalManutencoes": 0,
-  "parcelasEmAberto": [],
-  "totalParcelasEmAberto": 0,
+  "parcelasEmAberto": [
+    {
+      "descricao": "ATRASADO Multa atraso (3 dias) pagamento semanal - Quarta 08",
+      "placa": "IXT-7I93",
+      "data": "08/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 81.42
+    }
+  ],
+  "totalParcelasEmAberto": 81.42,
+  "totalSemanalCobrar": 81.42,
   "debitosDiversos": [],
   "totalDebitosDiversos": 0,
-  "resumoSemanal": null,
-  "pagamentoSemanal": null,
+  "placasEscopo": [
+    "IXT-7I93"
+  ],
+  "resumoSemanal": {
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
+    "vencimentosEmAbertoBr": [
+      "08/07/2026"
+    ],
+    "dataBloqueioBr": "10/07/2026",
+    "totalReceber": 731.42,
+    "diasAtrasados": 3,
+    "diasEmDia": 1,
+    "jurosMultaAcumulados": 81.42
+  },
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "08/07/2026",
+        "periodoInicioBr": "08/07/2026",
+        "periodoFimBr": "15/07/2026",
+        "linhas": [
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "12/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "13/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "14/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          },
+          {
+            "dataBr": "15/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 92.86
+          }
+        ],
+        "subtotalJurosMulta": 81.42,
+        "total": 824.3
+      }
+    ],
+    "totalGeral": 731.42,
+    "dataPagamentoBr": "11/07/2026"
+  },
   "mensagensWhatsApp": [
+    {
+      "tipo": "pagamento-semanal",
+      "titulo": "🚨 Bloqueio programado — IXT-7I93",
+      "texto": "🚨 *Bloqueio programado* — IXT-7I93\n\nOlá, Tiago!\nA *parcela semanal* da locação do seu RENAULT/SANDERO 1.0 Flex segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
     {
       "tipo": "infracoes",
       "titulo": "🚦 Notificação de infração — IXT-7I93",
@@ -129,9 +232,14 @@ const dados = {
       "texto": "🚦 *Notificação de infração* — IXT-7I93\n\nOlá, Tiago! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.0 Flex - Preto:\n\n🚨 *Infração:* Multa celular - 27/05/2026 08:30\n🗓️ *Data/hora:* 27/05/2026 às 08:30:11\n📍 *Local:* TUBARAO/SC\n💰 *Valor:* R$ 293,47\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — IXT-7I93",
+      "texto": "📊 *Cálculo do atraso semanal* — IXT-7I93\n\nOlá, Tiago!\nSegue cálculo do atraso da locação do seu RENAULT/SANDERO 1.0 Flex:\n\nData bloqueio: 10/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 08/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 731,42 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — IXT-7I93",
-      "texto": "📋 *Despesas em aberto* — IXT-7I93\n\nOlá, Tiago!\nSegue a listagem das despesas referente à locação do seu RENAULT/SANDERO 1.0 Flex que segue em aberto:\n\n• IXT-7I93 · 02/04/2026 14:30:03 · Multa parada - 02/04/2026 14:30 (Advertida) · R$ 88,38\n• IXT-7I93 · 16/04/2026 07:57:46 · ATRASADO Multa parada - 16/04/2026 · R$ 130,16\n• IXT-7I93 · 27/05/2026 08:09:55 · ATRASADO Multa celular - 27/05/2026 08:09 · R$ 293,47\n• IXT-7I93 · 27/05/2026 08:30:11 · ATRASADO Multa celular - 27/05/2026 08:30 · R$ 293,47\n\n*Total em aberto: R$ 717,10*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — IXT-7I93\n\nOlá, Tiago!\nSegue a listagem das despesas referente à locação do seu RENAULT/SANDERO 1.0 Flex que segue em aberto:\n\n• IXT-7I93 · 16/04/2026 07:57:46 · ATRASADO Multa parada - 16/04/2026 · R$ 130,16\n• IXT-7I93 · 27/05/2026 08:09:55 · ATRASADO Multa celular - 27/05/2026 08:09 · R$ 293,47\n• IXT-7I93 · 27/05/2026 08:30:11 · ATRASADO Multa celular - 27/05/2026 08:30 · R$ 293,47\n• IXT-7I93 · 08/07/2026 · ATRASADO Multa atraso (3 dias) pagamento semanal - Quarta 08 · R$ 81,42\n\n*Total em aberto: R$ 798,52*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []
@@ -145,11 +253,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -456,17 +567,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaIxt7i93TiagoAugustoDaSilvaPiareti() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -479,6 +625,11 @@ export default function CobrancaIxt7i93TiagoAugustoDaSilvaPiareti() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -518,6 +669,14 @@ export default function CobrancaIxt7i93TiagoAugustoDaSilvaPiareti() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -544,18 +703,23 @@ export default function CobrancaIxt7i93TiagoAugustoDaSilvaPiareti() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

@@ -8,6 +8,14 @@
 const DESC_RE =
   /(?:ATRASADO\s*[-–—]?\s*)?(?:\[[^\]]+\]\s*)?Pagamento semanal\s*-\s*(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})\s*$/i;
 
+/** Formato atual — `ATRASADO Multa atraso (N dias) pagamento semanal - Quarta 08`. */
+const MULTA_ATRASO_SEMANAL_RE =
+  /^(?:ATRASADO\s*[-–—]?\s*)?Multa atraso\s*\((\d+)\s*dias?\)\s*pagamento semanal\s*(?:-\s*(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})|(\d{2}\/\d{2}(?:\/\d{4})?))\s*$/i;
+
+/** Legado — `ATRASADO Juros e multa - Pagamento semanal Quarta 8`. */
+const JUROS_DESC_RE =
+  /^(?:ATRASADO\s*[-–—]?\s*)?Juros e multa\s*-\s*Pagamento semanal\s+(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})\s*$/i;
+
 const DOW_JS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
@@ -29,6 +37,52 @@ export type PagamentoSemanalParsed = {
 
 export function isPagamentoSemanalDescricao(descricao: string): boolean {
   return DESC_RE.test(String(descricao ?? "").trim());
+}
+
+export function isMultaAtrasoSemanalDescricao(descricao: string): boolean {
+  const desc = String(descricao ?? "").trim();
+  return MULTA_ATRASO_SEMANAL_RE.test(desc) || JUROS_DESC_RE.test(desc);
+}
+
+/** @deprecated Use `isMultaAtrasoSemanalDescricao`. */
+export function isJurosMultaSemanalDescricao(descricao: string): boolean {
+  return isMultaAtrasoSemanalDescricao(descricao);
+}
+
+/** Vencimento DD/MM/AAAA — parcela semanal ou linha de juros vinculada à semana. */
+export function vencimentoDespesaSemanalBr(
+  descricao: string,
+  rastreameDataIso?: string | null,
+  dataAutuacao?: string,
+): string | null {
+  const desc = String(descricao ?? "").trim();
+  const multa = desc.match(MULTA_ATRASO_SEMANAL_RE);
+  if (multa) {
+    if (multa[4]) {
+      const dataCurta = multa[4].trim();
+      const comAno = /^\d{2}\/\d{2}\/\d{4}$/.test(dataCurta);
+      if (comAno) return dataCurta;
+      const hint = hintDate(rastreameDataIso);
+      return `${dataCurta}/${hint.getFullYear()}`;
+    }
+    const sintetico = `Pagamento semanal - ${multa[2]} ${multa[3]}`;
+    return (
+      dataVencimentoSemanalBr(sintetico, rastreameDataIso) ??
+      dataVencimentoSemanalBr(sintetico, null)
+    );
+  }
+  const juros = desc.match(JUROS_DESC_RE);
+  if (juros) {
+    const sintetico = `Pagamento semanal - ${juros[1]} ${juros[2]}`;
+    return (
+      dataVencimentoSemanalBr(sintetico, rastreameDataIso) ??
+      dataVencimentoSemanalBr(sintetico, null)
+    );
+  }
+  const venc = dataVencimentoSemanalBr(desc, rastreameDataIso);
+  if (venc) return venc;
+  const m = String(dataAutuacao ?? "").trim().match(/^(\d{2}\/\d{2}\/\d{4})/);
+  return m?.[1] ?? null;
 }
 
 export function parsePagamentoSemanalDescricao(
@@ -128,6 +182,17 @@ export function montarDescricaoAtrasadoSemanal(
   diaMes: number,
 ): string {
   return `ATRASADO Pagamento semanal - ${parsed.diaSemanaLabel} ${diaMes}`;
+}
+
+/** Multa de atraso (juros) vinculada à parcela semanal — fonte única do título. */
+export function montarDescricaoMultaAtrasoSemanal(
+  diasAtraso: number,
+  parsed: PagamentoSemanalParsed,
+  opts?: { atrasado?: boolean },
+): string {
+  const prefix = opts?.atrasado !== false ? "ATRASADO " : "";
+  const diasLabel = diasAtraso === 1 ? "dia" : "dias";
+  return `${prefix}Multa atraso (${diasAtraso} ${diasLabel}) pagamento semanal - ${parsed.diaSemanaLabel} ${pad2(parsed.diaMes)}`;
 }
 
 /** Próxima parcela (+7 dias) a partir da descrição e vencimento atual. */

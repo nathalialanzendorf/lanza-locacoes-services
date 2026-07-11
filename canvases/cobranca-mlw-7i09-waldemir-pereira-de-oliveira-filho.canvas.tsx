@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,13 +69,16 @@ const dados = {
   "dataInicio": "03/07/2026",
   "dataFim": "01/10/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "04/07/2026",
-  "qtdDiasLocado": 1,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 8,
+  "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
   "totalDebitos": 1700,
   "infracoes": [],
   "totalInfracoes": 0,
+  "infracoesPagas": [],
+  "totalInfracoesPagas": 0,
   "manutencoes": [],
   "totalManutencoes": 0,
   "parcelasEmAberto": [
@@ -87,6 +91,7 @@ const dados = {
     }
   ],
   "totalParcelasEmAberto": 650,
+  "totalSemanalCobrar": 650,
   "debitosDiversos": [
     {
       "descricao": "ATRASADO Pagamento caução - 1x7",
@@ -139,6 +144,9 @@ const dados = {
     }
   ],
   "totalDebitosDiversos": 1050,
+  "placasEscopo": [
+    "MLW-7I09"
+  ],
   "resumoSemanal": null,
   "pagamentoSemanal": {
     "tabelas": [
@@ -150,9 +158,9 @@ const dados = {
           {
             "dataBr": "11/07/2026",
             "diaSemana": "Sáb",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
           },
           {
             "dataBr": "12/07/2026",
@@ -204,12 +212,12 @@ const dados = {
             "totalDia": 92.86
           }
         ],
-        "subtotalJurosMulta": 0,
-        "total": 742.88
+        "subtotalJurosMulta": 27.14,
+        "total": 770.02
       }
     ],
-    "totalGeral": 742.88,
-    "dataPagamentoBr": "04/07/2026"
+    "totalGeral": 677.14,
+    "dataPagamentoBr": "11/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -218,9 +226,7 @@ const dados = {
       "texto": "📋 *Despesas em aberto* — MLW-7I09\n\nOlá, Waldemir!\nSegue a listagem das despesas referente à locação do seu HYUNDAI/HB20 1.0M COMFOR que segue em aberto:\n\n• MLW-7I09 · 11/07/2026 · ATRASADO Pagamento semanal - Sábado 11 · R$ 650,00\n• MLW-7I09 · 11/07/2026 · ATRASADO Pagamento caução - 1x7 · R$ 150,00\n• MLW-7I09 · 18/07/2026 · ATRASADO Pagamento caução - 2x7 · R$ 150,00\n• MLW-7I09 · 25/07/2026 · ATRASADO Pagamento caução - 3x7 · R$ 150,00\n• MLW-7I09 · 01/08/2026 · ATRASADO Pagamento caução - 4x7 · R$ 150,00\n• MLW-7I09 · 08/08/2026 · ATRASADO Pagamento caução - 5x7 · R$ 150,00\n• MLW-7I09 · 15/08/2026 · ATRASADO Pagamento caução - 6x7 · R$ 150,00\n• MLW-7I09 · 22/08/2026 · ATRASADO Pagamento caução - 7x7 · R$ 150,00\n\n*Total em aberto: R$ 1.700,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
-  "avisos": [
-    "Ainda no prazo de pagamento (vencimento 11/07/2026) — sem mensagem WhatsApp."
-  ]
+  "avisos": []
 } as {
   cliente: string;
   placa: string;
@@ -231,11 +237,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -542,17 +551,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaMlw7i09WaldemirPereiraDeOliveiraFilho() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -565,6 +609,11 @@ export default function CobrancaMlw7i09WaldemirPereiraDeOliveiraFilho() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -604,6 +653,14 @@ export default function CobrancaMlw7i09WaldemirPereiraDeOliveiraFilho() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -630,18 +687,23 @@ export default function CobrancaMlw7i09WaldemirPereiraDeOliveiraFilho() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

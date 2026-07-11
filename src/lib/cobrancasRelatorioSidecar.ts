@@ -17,19 +17,33 @@ import {
 import { loadClientesDb } from "./clientesDb.js";
 import {
   COBRANCAS_OUT_DIR,
+  ensureRodapeWhatsApp,
   RODAPE_AUTOMATICO,
-  formatIntroResumoAtrasoSemanal,
   gerarDespesasEmAberto,
+  gerarMensagemSemanalAtrasoWhatsApp,
 } from "./cobrancas.js";
+import type { LoteCobrancaItem, LoteCobrancaResult } from "./cobrancasLote.js";
 import {
   infracaoCobravelRelatorio,
   infracaoIncluirListagemDespesasRelatorio,
   infracaoIncluirListagemRelatorio,
   rotuloInfracaoCobranca,
+  situacaoInfracaoResumida,
+  type RotuloGastoInput,
+  type SituacaoInfracaoResumida,
 } from "./infracaoTitulo.js";
-import type { LoteCobrancaItem, LoteCobrancaResult } from "./cobrancasLote.js";
+import { loadInfracoesDb, type InfracaoRegistro } from "./infracoesDb.js";
+import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
+import type { BlocoInfracoesRelatorio } from "./relatorioInfracoesBlocos.js";
+import { montarRelatorioInfracoesBlocos } from "./relatorioInfracoesBlocos.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
-import type { FiltroAlvosCobranca, TipoCobrancaAction } from "./cobrancasAlvos.js";
+import {
+  listarEscoposContratosAtivosCobranca,
+  ROTULO_TIPO_COBRANCA,
+  type FiltroAlvosCobranca,
+  type ModoCanvasCobranca,
+  type TipoCobrancaAction,
+} from "./cobrancasAlvos.js";
 import {
   contratoMaisRecentePar,
   loadContratosDb,
@@ -39,11 +53,12 @@ import {
 import { compararDataBrAsc, daysBetween, parseDataBr } from "./contratoExtrair.js";
 import { isCreditoDevolucaoLocatario } from "./encerrarContrato.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { dataVencimentoSemanalBr } from "./pagamentoSemanal.js";
+import { vencimentoDespesaSemanalBr } from "./pagamentoSemanal.js";
 import {
   despesaSemanalElegivelRelatorio,
   formatResumoCobrancaSemanal,
-  vencimentoSemanalElegivelCobranca,
+  type FormatResumoCobrancaSemanalOpts,
+  vencimentoSemanalElegivelListagemRelatorio,
   type ResumoCobrancaSemanal,
   type TabelaCobrancaSemanal,
 } from "./pagamentoSemanalCobranca.js";
@@ -97,6 +112,8 @@ export type CobrancaRelatorioSidecar = {
   };
   infracoes: LinhaRelatorioCobranca[];
   totalInfracoes: number;
+  infracoesPagas: LinhaRelatorioCobranca[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaRelatorioCobranca[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaRelatorioCobranca[];
@@ -432,21 +449,75 @@ export function formatDespesasEmAbertoWhatsApp(
 
 /** Remove o rodapé automático antes de concatenar mensagens. */
 export function stripRodapeWhatsApp(texto: string): string {
-  const idx = texto.lastIndexOf(RODAPE_AUTOMATICO);
-  if (idx === -1) return texto.trimEnd();
-  return texto.slice(0, idx).trimEnd();
+  let corpo = texto.trimEnd();
+  const plain = RODAPE_AUTOMATICO.replace(/^_|_$/g, "");
+  for (const marcador of [RODAPE_AUTOMATICO, plain]) {
+    const idx = corpo.lastIndexOf(marcador);
+    if (idx !== -1) {
+      corpo = corpo.slice(0, idx).trimEnd();
+    }
+  }
+  return corpo;
+}
+
+const ORDEM_TIPO_WHATSAPP = [
+  "pagamento-semanal",
+  "semanal-atraso",
+  "infracoes",
+  "renegociacao",
+  "pedagio",
+  "estacionamento-rotativo",
+  "manutencao",
+  "despesas-em-aberto",
+] as const;
+
+const ROTULO_TIPO_WHATSAPP: Record<string, string> = {
+  "pagamento-semanal": "Pagamento semanal",
+  "semanal-atraso": "Atraso semanal (juros e multa)",
+  infracoes: "Infrações",
+  renegociacao: "Renegociação",
+  pedagio: "Pedágio",
+  "estacionamento-rotativo": "Estacionamento rotativo",
+  manutencao: "Manutenção",
+  "despesas-em-aberto": "Despesas em aberto",
+};
+
+export function rotuloTipoWhatsApp(tipo: string): string {
+  return ROTULO_TIPO_WHATSAPP[tipo] ?? tipo;
+}
+
+/** Todas as mensagens por tipo — sem ocultar tipos dedicados. */
+export function mensagensWhatsAppVisiveis<
+  T extends { titulo: string; texto: string; tipo?: string },
+>(mensagens: T[]): T[] {
+  return mensagens;
+}
+
+export function agruparMensagensWhatsAppPorTipo<
+  T extends { tipo: string; titulo: string; texto: string },
+>(mensagens: T[]): Array<{ tipo: string; rotulo: string; mensagens: T[] }> {
+  const porTipo = new Map<string, T[]>();
+  for (const m of mensagens) {
+    const lista = porTipo.get(m.tipo) ?? [];
+    lista.push(m);
+    porTipo.set(m.tipo, lista);
+  }
+  const ordenados = [...porTipo.entries()].sort(([a], [b]) => {
+    const ia = ORDEM_TIPO_WHATSAPP.indexOf(a as (typeof ORDEM_TIPO_WHATSAPP)[number]);
+    const ib = ORDEM_TIPO_WHATSAPP.indexOf(b as (typeof ORDEM_TIPO_WHATSAPP)[number]);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  return ordenados.map(([tipo, msgs]) => ({
+    tipo,
+    rotulo: rotuloTipoWhatsApp(tipo),
+    mensagens: msgs,
+  }));
 }
 
 /** Resumo semanal com destaque WhatsApp (totais por semana + total a devido). */
 export function formatResumoSemanalWhatsApp(
   resumo: ResumoCobrancaSemanal,
-  opts?: {
-    tabelas?: TabelaCobrancaSemanal[];
-    dataPagamentoBr?: string;
-    totalGeral?: number;
-    /** @deprecated Use totalGeral */
-    totalDevido?: number;
-  },
+  opts?: FormatResumoCobrancaSemanalOpts,
 ): string {
   return formatResumoCobrancaSemanal(resumo, opts)
     .split("\n")
@@ -474,72 +545,59 @@ export type MontarMensagensWhatsAppOpts = {
   totalGeralSemanal?: number;
   /** @deprecated Use totalGeralSemanal */
   totalDevidoSemanal?: number;
+  valorSemanal?: number;
   /** Tipos pedidos na CLI — quando só `manutencao`, mantém mensagem dedicada (sem despesas em aberto). */
   tiposSolicitados?: TipoCobrancaAction[];
   /** Total cobrável — exclui infrações advertidas/quitadas no DETRAN. */
   totalDespesasEmAberto?: number;
 };
 
-function enriquecerMensagemSemanal(
-  texto: string,
-  resumo: ResumoCobrancaSemanal,
-  tabelas: TabelaCobrancaSemanal[],
-  dataPagamentoBr: string,
-  totalGeral: number,
-  placa: string,
-  nomeCliente: string,
-): string {
-  const corpo = stripRodapeWhatsApp(texto);
-  const intro = formatIntroResumoAtrasoSemanal(placa, { nome: nomeCliente });
-  const blocoResumo = formatResumoSemanalWhatsApp(resumo, {
-    tabelas,
-    dataPagamentoBr,
-    totalGeral,
-  });
-  return `${corpo}\n\n📊 *Resumo do atraso*\n${intro}\n\n${blocoResumo}\n\n${RODAPE_AUTOMATICO}\n`;
-}
-
-/** Mensagens WhatsApp separadas: pagamento semanal + despesas em aberto (e tipos dedicados quando aplicável). */
+/** Mensagens WhatsApp separadas: uma por tipo de cobrança + despesas em aberto (escopo completo). */
 export function montarMensagensWhatsAppEscopo(
   opts: MontarMensagensWhatsAppOpts,
 ): Array<{ tipo: string; placa: string; titulo: string; texto: string }> {
   const out: Array<{ tipo: string; placa: string; titulo: string; texto: string }> = [];
 
-  const soManutencao =
-    opts.tiposSolicitados?.length === 1 && opts.tiposSolicitados[0] === "manutencao";
-  const incluirDespesasEmAberto = !soManutencao && opts.despesasEmAberto.length > 0;
+  const tipoUnico = opts.tiposSolicitados?.length === 1;
+  const incluirDespesasEmAberto =
+    !tipoUnico &&
+    opts.despesasEmAberto.length > 0 &&
+    (opts.totalDespesasEmAberto ?? 0) > 0;
 
-  const mensagens = incluirDespesasEmAberto
-    ? opts.mensagens.filter((m) => m.tipo !== "manutencao")
-    : opts.mensagens;
-
-  for (const m of mensagens) {
-    if (
-      m.tipo === "pagamento-semanal" &&
-      opts.resumoSemanal &&
-      opts.tabelasSemanal?.length &&
-      opts.dataPagamentoBr
-    ) {
-      out.push({
-        ...m,
-        texto: enriquecerMensagemSemanal(
-          m.texto,
-          opts.resumoSemanal,
-          opts.tabelasSemanal,
-          opts.dataPagamentoBr,
-          opts.totalGeralSemanal ??
-            opts.totalDevidoSemanal ??
-            opts.resumoSemanal.totalReceber,
-          opts.placa,
-          opts.nomeCliente,
-        ),
-      });
-    } else {
-      out.push(m);
-    }
+  for (const m of opts.mensagens) {
+    out.push(m);
   }
 
-  if (!incluirDespesasEmAberto) return out;
+  if (
+    opts.resumoSemanal &&
+    opts.tabelasSemanal?.length &&
+    opts.dataPagamentoBr &&
+    !out.some((m) => m.tipo === "semanal-atraso")
+  ) {
+    const blocoResumo = formatResumoSemanalWhatsApp(opts.resumoSemanal, {
+      tabelas: opts.tabelasSemanal,
+      dataPagamentoBr: opts.dataPagamentoBr,
+      valorSemanal: opts.valorSemanal,
+      totalGeral:
+        opts.totalGeralSemanal ??
+        opts.totalDevidoSemanal ??
+        opts.resumoSemanal.totalReceber,
+    });
+    const msgAtraso = gerarMensagemSemanalAtrasoWhatsApp(opts.placa, {
+      nome: opts.nomeCliente,
+      blocoResumo,
+    });
+    out.push({
+      tipo: "semanal-atraso",
+      placa: opts.placa,
+      titulo: msgAtraso.titulo.replace(/\*/g, "").trim(),
+      texto: msgAtraso.texto,
+    });
+  }
+
+  if (!incluirDespesasEmAberto) {
+    return out.map((m) => ({ ...m, texto: ensureRodapeWhatsApp(m.texto) }));
+  }
 
   const despesas = gerarDespesasEmAberto(
     opts.placa,
@@ -560,7 +618,7 @@ export function montarMensagensWhatsAppEscopo(
     });
   }
 
-  return out;
+  return out.map((m) => ({ ...m, texto: ensureRodapeWhatsApp(m.texto) }));
 }
 
 function parseResumoSemanal(raw: Record<string, unknown> | null): ResumoCobrancaSemanal | null {
@@ -588,10 +646,20 @@ function classificarDespesasEmSecoes(
   despesas: ClienteDespesaRegistro[],
   infracoesRelatorio: ClienteDespesaRegistro[],
 ) {
-  const infracoes: LinhaRelatorioCobranca[] = infracoesRelatorio.map((d) => linhaDespesa(d));
+  const infracoes: LinhaRelatorioCobranca[] = [];
+  const infracoesPagas: LinhaRelatorioCobranca[] = [];
   const manutencoes: LinhaRelatorioCobranca[] = [];
   const parcelasEmAberto: LinhaRelatorioCobranca[] = [];
   const debitosDiversos: LinhaRelatorioCobranca[] = [];
+
+  for (const d of infracoesRelatorio) {
+    const linha = linhaDespesa(d);
+    if (infracaoCobravelRelatorio(d)) {
+      infracoes.push(linha);
+    } else {
+      infracoesPagas.push(linha);
+    }
+  }
 
   for (const d of despesas) {
     const linha = linhaDespesa(d);
@@ -612,6 +680,7 @@ function classificarDespesasEmSecoes(
 
   return {
     infracoes: ordenarLinhas(infracoes),
+    infracoesPagas: ordenarLinhas(infracoesPagas),
     manutencoes: ordenarLinhas(manutencoes),
     parcelasEmAberto: ordenarLinhas(parcelasEmAberto),
     debitosDiversos: ordenarLinhas(debitosDiversos),
@@ -681,12 +750,15 @@ function vencimentosAtrasadoSemanal(
     if (compactPlaca(d.veiculoId) !== placaKey) continue;
     if (clienteId && !despesaDoCliente(d, clienteId)) continue;
 
-    const venc =
-      dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;
+    const venc = vencimentoDespesaSemanalBr(
+      d.descricao ?? "",
+      d.rastreameDataIso,
+      d.dataAutuacao,
+    );
     if (
       venc &&
       !vencimentos.includes(venc) &&
-      vencimentoSemanalElegivelCobranca(venc, hojeBr)
+      vencimentoSemanalElegivelListagemRelatorio(venc, hojeBr)
     ) {
       vencimentos.push(venc);
     }
@@ -751,6 +823,9 @@ function garantirPagamentoSemanalSidecar(
     opts.clienteNome,
     vencimentos,
     opts.dataReferencia,
+    undefined,
+    undefined,
+    opts.despesas,
   );
   if (!semanal) return { pagamentoSemanal: null, resumoSemanal: null };
 
@@ -787,11 +862,8 @@ export function montarCobrancaSidecar(
     filtro.clienteId ?? contratoReferenciaCobranca(placa)?.clienteId ?? null;
 
   const secoes = classificarDespesasEmSecoes(despesas, infracoesDb);
-  const totalInfracoes = round2(
-    infracoesDb
-      .filter((d) => infracaoCobravelRelatorio(d))
-      .reduce((s, d) => s + (Number(d.valorMulta) || 0), 0),
-  );
+  const totalInfracoes = somaLinhas(secoes.infracoes);
+  const totalInfracoesPagas = somaLinhas(secoes.infracoesPagas);
   const totalManutencoes = somaLinhas(secoes.manutencoes);
   const totalParcelasEmAberto = somaLinhas(secoes.parcelasEmAberto);
   const totalDebitosDiversos = somaLinhas(secoes.debitosDiversos);
@@ -836,6 +908,10 @@ export function montarCobrancaSidecar(
   const dataPagamentoBr =
     String(pagamentoSemanal?.dataPagamentoBr ?? dataReferencia);
 
+  const { modelo, ano } = veiculoInfo(placa);
+  const dataAtual = hojeBr();
+  const vigencia = contratoInfo(placa, clienteId, dataAtual);
+
   mensagensWhatsApp = montarMensagensWhatsAppEscopo({
     mensagens: mensagensWhatsApp,
     despesasEmAberto,
@@ -844,6 +920,10 @@ export function montarCobrancaSidecar(
     resumoSemanal: parseResumoSemanal(resumoSemanal),
     tabelasSemanal,
     dataPagamentoBr,
+    valorSemanal:
+      typeof pagamentoSemanal?.valorSemanal === "number"
+        ? pagamentoSemanal.valorSemanal
+        : vigencia.valorSemanal ?? undefined,
     totalGeralSemanal:
       typeof pagamentoSemanal?.totalGeral === "number"
         ? pagamentoSemanal.totalGeral
@@ -851,10 +931,6 @@ export function montarCobrancaSidecar(
     tiposSolicitados,
     totalDespesasEmAberto,
   });
-
-  const { modelo, ano } = veiculoInfo(placa);
-  const dataAtual = hojeBr();
-  const vigencia = contratoInfo(placa, clienteId, dataAtual);
 
   return {
     tipo: "cobranca",
@@ -883,6 +959,8 @@ export function montarCobrancaSidecar(
     linhaEncerramento: vigencia.linhaEncerramento,
     infracoes: secoes.infracoes,
     totalInfracoes,
+    infracoesPagas: secoes.infracoesPagas,
+    totalInfracoesPagas,
     manutencoes: secoes.manutencoes,
     totalManutencoes,
     parcelasEmAberto: secoes.parcelasEmAberto,
@@ -918,30 +996,52 @@ function itemsLoteDoEscopo(
   return items;
 }
 
-export function salvarCobrancasSidecar(
-  results: LoteCobrancaResult[],
-  dataReferencia: string,
-  opts?: {
-    outDir?: string;
-    filtro?: FiltroAlvosCobranca;
-    tiposSolicitados?: TipoCobrancaAction[];
-  },
+function nomeClientePorId(clienteId: string): string {
+  return loadClientesDb().clientes.find((x) => x.id === clienteId)?.nome ?? clienteId;
+}
+
+/**
+ * Escopos para sidecar/canvas sem filtro CLI: **um por cliente** (todas as placas/débitos),
+ * igual a `--cliente`. Inclui locatários ativos e ex-locatários com pendência no lote.
+ * Fallback placa-only só quando o alvo do lote não tem `clienteId`.
+ */
+export function listarEscoposSidecar(results: LoteCobrancaResult[]): FiltroAlvosCobranca[] {
+  const clienteIds = new Set<string>();
+  const placasSemCliente = new Set<string>();
+
+  for (const escopo of listarEscoposContratosAtivosCobranca()) {
+    if (escopo.clienteId) clienteIds.add(escopo.clienteId);
+  }
+
+  for (const result of results) {
+    for (const item of result.items) {
+      if (item.alvo.clienteId) {
+        clienteIds.add(item.alvo.clienteId);
+      } else {
+        placasSemCliente.add(item.alvo.placa);
+      }
+    }
+  }
+
+  const escopos: FiltroAlvosCobranca[] = [...clienteIds]
+    .map((clienteId) => ({ clienteId }))
+    .sort((a, b) =>
+      nomeClientePorId(a.clienteId!).localeCompare(nomeClientePorId(b.clienteId!), "pt-BR"),
+    );
+
+  for (const placa of [...placasSemCliente].sort((a, b) =>
+    compactPlaca(a).localeCompare(compactPlaca(b)),
+  )) {
+    escopos.push({ placa });
+  }
+
+  return escopos;
+}
+
+function salvarSidecarUnico(
+  sidecar: CobrancaRelatorioSidecar,
+  dir: string,
 ): string[] {
-  const filtro = opts?.filtro;
-  if (!filtro?.clienteId && !filtro?.placa) return [];
-
-  const dir = opts?.outDir ?? COBRANCAS_OUT_DIR;
-  fs.mkdirSync(dir, { recursive: true });
-
-  const items = itemsLoteDoEscopo(results, filtro);
-  const sidecar = montarCobrancaSidecar(
-    filtro,
-    items,
-    dataReferencia,
-    opts?.tiposSolicitados,
-  );
-  if (!sidecar) return [];
-
   const placaSlug = slug(sidecar.placa);
   const clienteSlug = slug(sidecar.cliente);
   const arquivo = path.join(
@@ -966,8 +1066,632 @@ export function salvarCobrancasSidecar(
       dir,
       `cobranca-${placaSlug}-${clienteSlug}-${dataArquivoBr()}-whatsapp-${tipoSlug}${sufixo}.txt`,
     );
-    fs.writeFileSync(whatsappPath, msg.texto, "utf8");
+    fs.writeFileSync(whatsappPath, ensureRodapeWhatsApp(msg.texto), "utf8");
     paths.push(whatsappPath);
+  }
+  return paths;
+}
+
+export function salvarCobrancasSidecar(
+  results: LoteCobrancaResult[],
+  dataReferencia: string,
+  opts?: {
+    outDir?: string;
+    filtro?: FiltroAlvosCobranca;
+    tiposSolicitados?: TipoCobrancaAction[];
+  },
+): string[] {
+  const filtro = opts?.filtro ?? {};
+  const escopos =
+    filtro.clienteId != null || filtro.placa != null
+      ? [filtro]
+      : listarEscoposSidecar(results);
+  if (escopos.length === 0) return [];
+
+  const dir = opts?.outDir ?? COBRANCAS_OUT_DIR;
+  fs.mkdirSync(dir, { recursive: true });
+
+  const paths: string[] = [];
+  for (const escopo of escopos) {
+    const items = itemsLoteDoEscopo(results, escopo);
+    const sidecar = montarCobrancaSidecar(
+      escopo,
+      items,
+      dataReferencia,
+      opts?.tiposSolicitados,
+    );
+    if (!sidecar) continue;
+    paths.push(...salvarSidecarUnico(sidecar, dir));
+  }
+  return paths;
+}
+
+export type GrupoCobrancaSimples = {
+  titulo: string;
+  subtitulo?: string;
+  linhas: LinhaRelatorioCobranca[];
+  total: number;
+};
+
+export type CobrancaSimplesSidecar = {
+  tipo: "cobranca-simples";
+  modo: "por-tipo" | "por-placa";
+  geradoEm: string;
+  geradoEmBr: string;
+  titulo: string;
+  tipoDespesa?: string;
+  placa?: string;
+  grupos: GrupoCobrancaSimples[];
+  totalGeral: number;
+};
+
+function linhasDeItem(item: LoteCobrancaItem): LinhaRelatorioCobranca[] {
+  return item.alvo.despesas.map((d) => linhaDespesa(d));
+}
+
+function ordenarGruposSimples(grupos: GrupoCobrancaSimples[]): GrupoCobrancaSimples[] {
+  return grupos
+    .map((g) => ({
+      ...g,
+      linhas: ordenarLinhas(g.linhas),
+      total: somaLinhas(g.linhas),
+    }))
+    .filter((g) => g.linhas.length > 0);
+}
+
+function modoSimplesParaMontagem(
+  modo: Extract<ModoCanvasCobranca, "simples-tipo" | "simples-placa">,
+): "por-tipo" | "por-placa" {
+  return modo === "simples-tipo" ? "por-tipo" : "por-placa";
+}
+
+function tituloRelatorioSimplesPorTipo(rotulo: string): string {
+  const nome = rotulo.charAt(0).toLowerCase() + rotulo.slice(1);
+  return `Relatório de ${nome}`;
+}
+
+export function montarCobrancaSimplesSidecar(
+  results: LoteCobrancaResult[],
+  opts: {
+    modo: "por-tipo" | "por-placa";
+    filtro: FiltroAlvosCobranca;
+    tiposSolicitados: TipoCobrancaAction[];
+    dataReferencia: string;
+  },
+): CobrancaSimplesSidecar | null {
+  const gruposRaw: GrupoCobrancaSimples[] = [];
+
+  if (opts.modo === "por-tipo") {
+    const tipo = opts.tiposSolicitados[0];
+    if (!tipo) return null;
+    const porPlaca = new Map<string, GrupoCobrancaSimples>();
+
+    for (const result of results) {
+      if (result.tipo !== tipo) continue;
+      for (const item of result.items) {
+        const placaFmt = formatPlacaHyphen(item.alvo.placa);
+        const pKey = compactPlaca(placaFmt);
+        const { modelo, ano } = veiculoInfo(placaFmt);
+        let grupo = porPlaca.get(pKey);
+        if (!grupo) {
+          grupo = {
+            titulo: `${placaFmt} · ${modelo} (${ano})`,
+            subtitulo: item.alvo.clienteNome ?? undefined,
+            linhas: [],
+            total: 0,
+          };
+          porPlaca.set(pKey, grupo);
+        }
+        grupo.linhas.push(...linhasDeItem(item));
+      }
+    }
+
+    gruposRaw.push(...porPlaca.values());
+    const rotulo = ROTULO_TIPO_COBRANCA[tipo];
+    const grupos = ordenarGruposSimples(gruposRaw).sort((a, b) =>
+      a.titulo.localeCompare(b.titulo),
+    );
+    if (grupos.length === 0) return null;
+
+    return {
+      tipo: "cobranca-simples",
+      modo: "por-tipo",
+      geradoEm: new Date().toISOString(),
+      geradoEmBr: hojeBr(),
+      titulo: tituloRelatorioSimplesPorTipo(rotulo),
+      tipoDespesa: tipo,
+      grupos,
+      totalGeral: round2(grupos.reduce((s, g) => s + g.total, 0)),
+    };
+  }
+
+  const placaFmt = opts.filtro.placa ? formatPlacaHyphen(opts.filtro.placa) : "";
+  if (!placaFmt) return null;
+  const { modelo, ano } = veiculoInfo(placaFmt);
+  const porTipo = new Map<string, GrupoCobrancaSimples>();
+
+  for (const result of results) {
+    if (!opts.tiposSolicitados.includes(result.tipo)) continue;
+    const rotulo = ROTULO_TIPO_COBRANCA[result.tipo];
+    let grupo = porTipo.get(result.tipo);
+    if (!grupo) {
+      grupo = { titulo: rotulo, linhas: [], total: 0 };
+      porTipo.set(result.tipo, grupo);
+    }
+    for (const item of result.items) {
+      if (compactPlaca(item.alvo.placa) !== compactPlaca(placaFmt)) continue;
+      grupo.linhas.push(...linhasDeItem(item));
+    }
+  }
+
+  const ordem = opts.tiposSolicitados.map((t) => ROTULO_TIPO_COBRANCA[t]);
+  const grupos = ordenarGruposSimples([...porTipo.values()]).sort(
+    (a, b) => ordem.indexOf(a.titulo) - ordem.indexOf(b.titulo),
+  );
+  if (grupos.length === 0) return null;
+
+  return {
+    tipo: "cobranca-simples",
+    modo: "por-placa",
+    geradoEm: new Date().toISOString(),
+    geradoEmBr: hojeBr(),
+    titulo: `Cobranças — ${placaFmt} · ${modelo} (${ano})`,
+    placa: placaFmt,
+    grupos,
+    totalGeral: round2(grupos.reduce((s, g) => s + g.total, 0)),
+  };
+}
+
+export function salvarCobrancaSimplesSidecar(
+  results: LoteCobrancaResult[],
+  dataReferencia: string,
+  opts: {
+    outDir?: string;
+    filtro: FiltroAlvosCobranca;
+    tiposSolicitados: TipoCobrancaAction[];
+    modo: Extract<ModoCanvasCobranca, "simples-tipo" | "simples-placa">;
+  },
+): string[] {
+  const sidecar = montarCobrancaSimplesSidecar(results, {
+    modo: modoSimplesParaMontagem(opts.modo),
+    filtro: opts.filtro,
+    tiposSolicitados: opts.tiposSolicitados,
+    dataReferencia,
+  });
+  if (!sidecar) return [];
+
+  const dir = opts.outDir ?? COBRANCAS_OUT_DIR;
+  fs.mkdirSync(dir, { recursive: true });
+
+  const arquivo =
+    opts.modo === "simples-tipo" && sidecar.tipoDespesa
+      ? path.join(
+          dir,
+          `cobranca-simples-${slug(sidecar.tipoDespesa)}-${dataArquivoBr()}.json`,
+        )
+      : path.join(
+          dir,
+          `cobranca-simples-${slug(sidecar.placa ?? "placa")}-${dataArquivoBr()}.json`,
+        );
+
+  fs.writeFileSync(arquivo, JSON.stringify(sidecar, null, 2), "utf8");
+  return [arquivo];
+}
+
+export type RelatorioInfracoesSidecar = {
+  tipo: "relatorio-infracoes";
+  geradoEm: string;
+  geradoEmBr: string;
+  titulo: string;
+  fonte: string;
+  totalInfracoes: number;
+  totalPlacas: number;
+  totalGeral: number;
+  totalCobravel: number;
+  blocos: BlocoInfracoesRelatorio[];
+};
+
+export type LinhaInfracaoResumida = {
+  auto: string;
+  titulo: string;
+  descricao: string;
+  placa: string;
+  data: string;
+  situacao: SituacaoInfracaoResumida;
+  valor: number;
+};
+
+export type GrupoInfracoesResumido = {
+  titulo: string;
+  contratoPlaca?: string;
+  contratoMarcaModelo?: string;
+  subtitulo?: string;
+  linhas: LinhaInfracaoResumida[];
+  total: number;
+};
+
+export type BlocoContratoInfracoesResumido = {
+  id: "ativo" | "encerrado";
+  titulo: string;
+  qtd: number;
+  total: number;
+  grupos: GrupoInfracoesResumido[];
+};
+
+export type RelatorioInfracoesResumidoSidecar = {
+  tipo: "relatorio-infracoes-resumido";
+  geradoEm: string;
+  geradoEmBr: string;
+  titulo: string;
+  blocos: BlocoContratoInfracoesResumido[];
+  totalGeral: number;
+};
+
+type ItemInfracaoResumida = {
+  reg: InfracaoRegistro;
+  clienteId: string;
+  despesa?: ClienteDespesaRegistro;
+};
+
+function mapaPagasLanzaResumido(): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const d of loadClienteDespesasDb().clienteDespesas) {
+    if (!isInfracaoTransito(d)) continue;
+    const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
+    if (!auto) continue;
+    if (d.paga === true) map.set(auto, true);
+  }
+  return map;
+}
+
+function mapaDespesaPorAutoInfracao(): Map<string, ClienteDespesaRegistro> {
+  const map = new Map<string, ClienteDespesaRegistro>();
+  for (const d of loadClienteDespesasDb().clienteDespesas) {
+    if (!isInfracaoTransito(d)) continue;
+    const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
+    if (!auto) continue;
+    map.set(auto, d);
+  }
+  return map;
+}
+
+function veiculoParticularPorPlacaResumido(): Map<string, boolean> {
+  const out = new Map<string, boolean>();
+  for (const v of loadVeiculosDb().veiculos ?? []) {
+    if (v.particular === true) out.set(compactPlaca(v.placa), true);
+  }
+  return out;
+}
+
+function infracaoDebitoParceiroResumido(
+  reg: InfracaoRegistro,
+  placaNorm: string,
+  particulares: Map<string, boolean>,
+): boolean {
+  if (reg.condutorId) return false;
+  if (reg.debitoParceiroConfirmado === true) return true;
+  return particulares.get(placaNorm) === true;
+}
+
+function clienteIdentificadoInfracao(reg: InfracaoRegistro): string | null {
+  if (reg.condutorId) return reg.condutorId;
+  if (reg.condutorNaoIdentificado === true) return null;
+  if (reg.condutorContrato && !reg.condutorId) return null;
+  const data = String(reg.dataAutuacao ?? "").trim();
+  if (!data || !parseDataAutuacao(data)) return null;
+  return (
+    inferirCondutorInfracao(formatPlacaHyphen(reg.veiculoId), reg.dataAutuacao, 90).condutorId ??
+    null
+  );
+}
+
+function rotuloInputInfracaoResumida(
+  reg: InfracaoRegistro,
+  despesa: ClienteDespesaRegistro | undefined,
+  pagasLanza: Map<string, boolean>,
+): RotuloGastoInput {
+  const auto = String(reg.numeroAuto ?? "").trim().toUpperCase();
+  return {
+    categoria: "Infração",
+    titulo: despesa?.titulo,
+    descricao: reg.descricao,
+    dataAutuacao: reg.dataAutuacao,
+    numeroAuto: reg.numeroAuto,
+    autoInfracao: reg.numeroAuto,
+    paga: pagasLanza.get(auto) === true || despesa?.paga === true,
+    situacao: despesa?.situacao ?? reg.situacao,
+    statusInfracao: reg.statusInfracao,
+    statusDetran: reg.statusDetran,
+    quitadaDetran: reg.quitadaDetran,
+  };
+}
+
+function linhaInfracaoResumidaFromItem(
+  item: ItemInfracaoResumida,
+  pagasLanza: Map<string, boolean>,
+): LinhaInfracaoResumida {
+  const { reg, despesa } = item;
+  return {
+    auto: String(reg.numeroAuto ?? "").trim() || "—",
+    titulo: rotuloInfracaoCobranca(rotuloInputInfracaoResumida(reg, despesa, pagasLanza)),
+    descricao: reg.descricao?.trim() || "—",
+    placa: formatPlacaHyphen(reg.veiculoId),
+    data: reg.dataAutuacao || "—",
+    situacao: situacaoInfracaoResumida(reg, {
+      pagaLanza: pagasLanza.get(String(reg.numeroAuto ?? "").trim().toUpperCase()) === true,
+    }),
+    valor: round2(Number(reg.valorMulta) || Number(reg.valor) || 0),
+  };
+}
+
+function ordenarLinhasInfracaoResumida(
+  linhas: LinhaInfracaoResumida[],
+): LinhaInfracaoResumida[] {
+  return [...linhas].sort(
+    (a, b) =>
+      compararDataBrAsc(a.data, b.data) ||
+      a.placa.localeCompare(b.placa) ||
+      a.auto.localeCompare(b.auto),
+  );
+}
+
+function somaLinhasInfracaoResumida(linhas: LinhaInfracaoResumida[]): number {
+  return round2(
+    linhas.reduce((s, l) => (l.situacao === "Em aberto" ? s + l.valor : s), 0),
+  );
+}
+
+function ordenarGruposInfracoesResumido(
+  grupos: GrupoInfracoesResumido[],
+): GrupoInfracoesResumido[] {
+  return grupos
+    .map((g) => {
+      const linhas = ordenarLinhasInfracaoResumida(g.linhas);
+      return { ...g, linhas, total: somaLinhasInfracaoResumida(linhas) };
+    })
+    .filter((g) => g.linhas.length > 0)
+    .sort((a, b) => a.titulo.localeCompare(b.titulo));
+}
+
+function veiculosElegiveisResumidoInfracoes(): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const v of loadVeiculosDb().veiculos) {
+    if (v.particular === true) continue;
+    map.set(compactPlaca(v.placa), true);
+  }
+  return map;
+}
+
+function nomeClienteResumidoInfracao(clienteId: string | null): string {
+  if (!clienteId) return "— sem cliente";
+  const c = loadClientesDb().clientes.find((x) => x.id === clienteId);
+  return c?.nome?.trim() || "— sem cliente";
+}
+
+function clienteTemContratoAtivo(clienteId: string): boolean {
+  return loadContratosDb().contratos.some(
+    (c) => c.clienteId === clienteId && c.status === "ativo",
+  );
+}
+
+function situacaoContratoClienteInfracao(clienteId: string | null): "ativo" | "encerrado" {
+  if (!clienteId) return "encerrado";
+  return clienteTemContratoAtivo(clienteId) ? "ativo" : "encerrado";
+}
+
+function ultimoEncerramentoCliente(clienteId: string | null): string | null {
+  if (!clienteId) return "Sem contrato ativo";
+  if (clienteTemContratoAtivo(clienteId)) return null;
+  const encerrados = loadContratosDb().contratos.filter(
+    (c) => c.clienteId === clienteId && c.status === "encerrado",
+  );
+  if (encerrados.length === 0) return "Sem contrato ativo";
+  const recente = encerrados.sort(ordenarContratosRecentes)[0];
+  return linhaEncerramentoContrato(recente) ?? "Sem contrato ativo";
+}
+
+function coletarInfracoesResumido(): ItemInfracaoResumida[] {
+  const veiculos = veiculosElegiveisResumidoInfracoes();
+  const particulares = veiculoParticularPorPlacaResumido();
+  const despesas = mapaDespesaPorAutoInfracao();
+  const vistos = new Set<string>();
+  const out: ItemInfracaoResumida[] = [];
+
+  for (const reg of loadInfracoesDb().infracoes ?? []) {
+    if (reg.ativo === false) continue;
+    const auto = String(reg.numeroAuto ?? "").trim().toUpperCase();
+    if (!auto || vistos.has(auto)) continue;
+    const placaNorm = compactPlaca(reg.veiculoId);
+    if (!veiculos.has(placaNorm)) continue;
+    if (infracaoDebitoParceiroResumido(reg, placaNorm, particulares)) continue;
+    const clienteId = clienteIdentificadoInfracao(reg);
+    if (!clienteId) continue;
+    vistos.add(auto);
+    out.push({ reg, clienteId, despesa: despesas.get(auto) });
+  }
+
+  return out;
+}
+
+function veiculoContratoCliente(clienteId: string | null): {
+  placa?: string;
+  marcaModelo?: string;
+} {
+  if (!clienteId) return {};
+  const contratos = loadContratosDb().contratos.filter((c) => c.clienteId === clienteId);
+  const ativos = contratos
+    .filter((c) => c.status === "ativo")
+    .sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
+  const ref =
+    ativos[0] ??
+    contratos.filter((c) => c.status === "encerrado").sort(ordenarContratosRecentes)[0];
+  if (!ref) return {};
+  const placa = formatPlacaHyphen(ref.placa ?? ref.veiculoId ?? "");
+  if (!placa) return {};
+  const v = loadVeiculosDb().veiculos.find(
+    (x) => compactPlaca(x.placa) === compactPlaca(placa),
+  );
+  const marcaModelo = String(v?.marcaModelo ?? v?.modelo ?? "").trim();
+  return { placa, marcaModelo: marcaModelo || undefined };
+}
+
+function subtituloGrupoInfracaoResumido(
+  clienteId: string | null,
+  linhas: LinhaInfracaoResumida[],
+  veiculoContrato: { placa?: string; marcaModelo?: string },
+): string | undefined {
+  const partes: string[] = [];
+  const placasInf = [...new Set(linhas.map((l) => l.placa).filter(Boolean))];
+  const placaContrato = veiculoContrato.placa?.trim();
+  const infForaContrato =
+    placaContrato &&
+    placasInf.some((p) => compactPlaca(p) !== compactPlaca(placaContrato));
+  if (infForaContrato && placasInf.length > 0) {
+    partes.push(`Infrações em: ${placasInf.join(", ")}`);
+  }
+  if (clienteId && !clienteTemContratoAtivo(clienteId)) {
+    const enc = ultimoEncerramentoCliente(clienteId);
+    if (enc) partes.push(enc);
+  }
+  return partes.length > 0 ? partes.join(" · ") : undefined;
+}
+
+const BLOCOS_CONTRATO_RESUMIDO: Array<{
+  id: BlocoContratoInfracoesResumido["id"];
+  titulo: string;
+}> = [
+  { id: "ativo", titulo: "Contrato ativo" },
+  { id: "encerrado", titulo: "Contrato encerrado" },
+];
+
+function montarBlocosInfracoesResumido(
+  _results?: LoteCobrancaResult[],
+): BlocoContratoInfracoesResumido[] {
+  const porClientePorBloco = new Map<
+    BlocoContratoInfracoesResumido["id"],
+    Map<string, { clienteId: string | null; clienteNome: string; linhas: LinhaInfracaoResumida[] }>
+  >();
+  for (const def of BLOCOS_CONTRATO_RESUMIDO) {
+    porClientePorBloco.set(def.id, new Map());
+  }
+
+  const pagasLanza = mapaPagasLanzaResumido();
+
+  for (const item of coletarInfracoesResumido()) {
+    const clienteId = item.clienteId;
+    const blocoId = situacaoContratoClienteInfracao(clienteId);
+    const clienteNome = nomeClienteResumidoInfracao(clienteId);
+    const clienteKey = clienteId ?? clienteNome;
+    const mapa = porClientePorBloco.get(blocoId)!;
+    let entrada = mapa.get(clienteKey);
+    if (!entrada) {
+      entrada = { clienteId, clienteNome, linhas: [] };
+      mapa.set(clienteKey, entrada);
+    }
+    entrada.linhas.push(linhaInfracaoResumidaFromItem(item, pagasLanza));
+  }
+
+  return BLOCOS_CONTRATO_RESUMIDO.map((def) => {
+    const mapa = porClientePorBloco.get(def.id)!;
+    const grupos = ordenarGruposInfracoesResumido(
+      [...mapa.values()].map((entrada) => {
+        const linhas = ordenarLinhasInfracaoResumida(entrada.linhas);
+        const veiculoContrato = veiculoContratoCliente(entrada.clienteId);
+        return {
+          titulo: entrada.clienteNome,
+          contratoPlaca: veiculoContrato.placa,
+          contratoMarcaModelo: veiculoContrato.marcaModelo,
+          subtitulo: subtituloGrupoInfracaoResumido(
+            entrada.clienteId,
+            linhas,
+            veiculoContrato,
+          ),
+          linhas,
+          total: somaLinhasInfracaoResumida(linhas),
+        };
+      }),
+    );
+    const qtd = grupos.reduce((s, g) => s + g.linhas.length, 0);
+    const total = round2(grupos.reduce((s, g) => s + g.total, 0));
+    return { id: def.id, titulo: def.titulo, qtd, total, grupos };
+  }).filter((b) => b.grupos.length > 0);
+}
+
+function montarGruposInfracoesPorCliente(
+  results?: LoteCobrancaResult[],
+): GrupoInfracoesResumido[] {
+  return montarBlocosInfracoesResumido(results).flatMap((b) => b.grupos);
+}
+
+export type VarianteCanvasInfracoes = "completo" | "resumido" | "ambos";
+
+/** `/relatorio-cobrancas infracoes` sem cliente/placa → layout global (não cobranca-simples). */
+export function ehRelatorioInfracoesGlobal(
+  tipos: TipoCobrancaAction[],
+  filtro: FiltroAlvosCobranca,
+): boolean {
+  return (
+    tipos.length === 1 &&
+    tipos[0] === "infracoes" &&
+    filtro.clienteId == null &&
+    filtro.placa == null
+  );
+}
+
+export function salvarRelatorioInfracoesSidecars(
+  results: LoteCobrancaResult[],
+  _dataReferencia: string,
+  opts?: { outDir?: string; variante?: VarianteCanvasInfracoes },
+): string[] {
+  const blocosResumido = montarBlocosInfracoesResumido();
+  const blocosDados = montarRelatorioInfracoesBlocos();
+  const temCompleto = blocosDados.totalInfracoes > 0;
+  const temResumido = blocosResumido.some((b) => b.grupos.length > 0);
+  if (!temCompleto && !temResumido) return [];
+
+  const totalGeralResumido = round2(
+    blocosResumido.reduce((s, b) => s + b.total, 0),
+  );
+  const geradoEm = new Date().toISOString();
+  const geradoEmBr = hojeBr();
+  const variante = opts?.variante ?? "completo";
+
+  const completo: RelatorioInfracoesSidecar = {
+    tipo: "relatorio-infracoes",
+    geradoEm,
+    geradoEmBr,
+    titulo: blocosDados.titulo,
+    fonte: blocosDados.fonte,
+    totalInfracoes: blocosDados.totalInfracoes,
+    totalPlacas: blocosDados.totalPlacas,
+    totalGeral: blocosDados.totalGeral,
+    totalCobravel: blocosDados.totalCobravel,
+    blocos: blocosDados.blocos,
+  };
+
+  const resumido: RelatorioInfracoesResumidoSidecar = {
+    tipo: "relatorio-infracoes-resumido",
+    geradoEm,
+    geradoEmBr,
+    titulo: "Relatório de infrações (resumido)",
+    blocos: blocosResumido,
+    totalGeral: totalGeralResumido,
+  };
+
+  const dir = opts?.outDir ?? COBRANCAS_OUT_DIR;
+  fs.mkdirSync(dir, { recursive: true });
+  const data = dataArquivoBr();
+  const paths: string[] = [];
+
+  if ((variante === "completo" || variante === "ambos") && temCompleto) {
+    const p = path.join(dir, `relatorio-infracoes-${data}.json`);
+    fs.writeFileSync(p, JSON.stringify(completo, null, 2), "utf8");
+    paths.push(p);
+  }
+  if ((variante === "resumido" || variante === "ambos") && temResumido) {
+    const p = path.join(dir, `relatorio-infracoes-resumido-${data}.json`);
+    fs.writeFileSync(p, JSON.stringify(resumido, null, 2), "utf8");
+    paths.push(p);
   }
   return paths;
 }

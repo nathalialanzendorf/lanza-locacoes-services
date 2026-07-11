@@ -84,7 +84,7 @@ const dados = {
     {
       "descricao": "ATRASADO Pagamento renegociação",
       "placa": "MLW-7I09",
-      "data": "06/07/2026",
+      "data": "11/01/2026",
       "categoria": "Renegociação",
       "valor": 1379
     }
@@ -96,7 +96,7 @@ const dados = {
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — MLW-7I09",
-      "texto": "📋 *Despesas em aberto* — MLW-7I09\n\nOlá, Weslley!\nSegue a listagem das despesas referente à locação do seu HYUNDAI/HB20 1.0M COMFOR que segue em aberto:\n\n• MLW-7I09 · 06/07/2026 · ATRASADO Pagamento renegociação · R$ 1.379,00\n\n*Total em aberto: R$ 1.379,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — MLW-7I09\n\nOlá, Weslley!\nSegue a listagem das despesas referente à locação do seu HYUNDAI/HB20 1.0M COMFOR que segue em aberto:\n\n• MLW-7I09 · 11/01/2026 · ATRASADO Pagamento renegociação · R$ 1.379,00\n\n*Total em aberto: R$ 1.379,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []

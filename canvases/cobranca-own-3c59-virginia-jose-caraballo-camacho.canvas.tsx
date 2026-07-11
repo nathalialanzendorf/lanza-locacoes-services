@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,109 +69,38 @@ const dados = {
   "dataInicio": "12/05/2026",
   "dataFim": "10/08/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "04/07/2026",
-  "qtdDiasLocado": 53,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 60,
+  "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
-  "totalDebitos": 650,
+  "totalDebitos": 0,
   "infracoes": [],
   "totalInfracoes": 0,
+  "infracoesPagas": [
+    {
+      "descricao": "Multa alcoolemia (Paga)",
+      "placa": "OWN-3C59",
+      "data": "30/05/2026 00:22:00",
+      "categoria": "Infração",
+      "valor": 2934.7
+    }
+  ],
+  "totalInfracoesPagas": 2934.7,
   "manutencoes": [],
   "totalManutencoes": 0,
-  "parcelasEmAberto": [
-    {
-      "descricao": "ATRASADO Pagamento semanal - Quarta 8",
-      "placa": "OWN-3C59",
-      "data": "08/07/2026",
-      "categoria": "Locação semanal",
-      "valor": 650
-    }
-  ],
-  "totalParcelasEmAberto": 650,
+  "parcelasEmAberto": [],
+  "totalParcelasEmAberto": 0,
+  "totalSemanalCobrar": 0,
   "debitosDiversos": [],
   "totalDebitosDiversos": 0,
-  "resumoSemanal": null,
-  "pagamentoSemanal": {
-    "tabelas": [
-      {
-        "vencimentoBr": "08/07/2026",
-        "periodoInicioBr": "08/07/2026",
-        "periodoFimBr": "15/07/2026",
-        "linhas": [
-          {
-            "dataBr": "08/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "09/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "10/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "11/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "12/07/2026",
-            "diaSemana": "Dom",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "13/07/2026",
-            "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "14/07/2026",
-            "diaSemana": "Ter",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "15/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          }
-        ],
-        "subtotalJurosMulta": 0,
-        "total": 742.88
-      }
-    ],
-    "totalGeral": 742.88,
-    "dataPagamentoBr": "04/07/2026"
-  },
-  "mensagensWhatsApp": [
-    {
-      "tipo": "despesas-em-aberto",
-      "titulo": "📋 Despesas em aberto — OWN-3C59",
-      "texto": "📋 *Despesas em aberto* — OWN-3C59\n\nOlá, Virginia!\nSegue a listagem das despesas referente à locação do seu RENAULT/SANDERO 1.0 Flex que segue em aberto:\n\n• OWN-3C59 · 08/07/2026 · ATRASADO Pagamento semanal - Quarta 8 · R$ 650,00\n\n*Total em aberto: R$ 650,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    }
+  "placasEscopo": [
+    "OWN-3C59"
   ],
-  "avisos": [
-    "Ainda no prazo de pagamento (vencimento 08/07/2026) — sem mensagem WhatsApp."
-  ]
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [],
+  "avisos": []
 } as {
   cliente: string;
   placa: string;
@@ -181,11 +111,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -492,17 +425,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaOwn3c59VirginiaJoseCaraballoCamacho() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -515,6 +483,11 @@ export default function CobrancaOwn3c59VirginiaJoseCaraballoCamacho() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -554,6 +527,14 @@ export default function CobrancaOwn3c59VirginiaJoseCaraballoCamacho() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -580,18 +561,23 @@ export default function CobrancaOwn3c59VirginiaJoseCaraballoCamacho() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

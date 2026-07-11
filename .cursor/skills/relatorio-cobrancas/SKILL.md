@@ -73,11 +73,11 @@ npx tsx src/run.ts relatorio-cobrancas --placa RAH-4F54
 
 **pagamento-semanal** gera, por alvo: tabela **semanal-atraso** (padrão obrigatório) + WhatsApp (dia **automático** por vencimento + hoje). Demais tipos: uma mensagem por placa (infrações: uma por multa).
 
-Grava `.txt`, sidecars JSON por tipo (`dados-lote-*.json`) e, quando o escopo é **um cliente ou uma placa**, um **JSON consolidado para canvas** no formato do encerramento de contrato:
+Grava `.txt`, sidecars JSON por tipo (`dados-lote-*.json`) e **JSON consolidado para canvas** (`cobranca-{placa}-{cliente}-{data}.json`):
+- **`--cliente`** ou **`--placa`**: um sidecar para o escopo filtrado.
+- **Sem parâmetros**: um sidecar **por cliente** elegível (todas as placas/débitos do locatário, como `--cliente`).
 
-- `cobranca-{placa}-{cliente}-{DD-MM-AAAA}.json` em `relatorios/_tmp/cobrancas/`
-
-Implementação sidecar: `src/lib/cobrancasRelatorioSidecar.ts`.
+Implementação sidecar: `src/lib/cobrancasRelatorioSidecar.ts` (`listarEscoposSidecar` + `salvarCobrancasSidecar`).
 
 ## Escalonamento do pagamento semanal
 
@@ -93,7 +93,7 @@ Contado a partir do **vencimento** (D0). O `--dia` do WhatsApp é **inferido aut
 
 Exemplo (vencimento 01/07): 01/07 em prazo · 02/07 lembrete · 03/07 aviso · 04/07 bloqueio.
 
-**Data bloqueio** no resumo = vencimento + **3 dias** (sempre).
+**Data bloqueio** no resumo = **3º dia contando o vencimento** (vencimento + **2 dias**). Referência: última parcela em aberto no cálculo.
 
 ## Cobrança semanal — pagamento não realizado (padrão obrigatório)
 
@@ -114,17 +114,20 @@ dia a dia neste padrão (antes de informar valor ao locatário ou montar baixa i
 
 Uma **tabela por vencimento** não pago, em ordem cronológica:
 
-| Parcela | Início | Fim |
+| Parcela | Início | Fim (tabela) |
 |---|---|---|
-| Com parcela seguinte | vencimento (inclusive) | véspera do próximo vencimento |
-| Última em aberto | vencimento (inclusive) | vencimento + 7 dias (inclusive) |
+| Com parcela seguinte (≤7 dias) | vencimento (inclusive) | véspera do próximo vencimento |
+| Com lacuna até a próxima | vencimento (inclusive) | vencimento + **6 dias** (só a semana) |
+| Última em aberto | vencimento (inclusive) | vencimento + **7 dias** (inclusive) |
 
 ### Situação por dia
 
 | Situação | Quando |
 |---|---|
-| **Atrasado** | Dia ≥ vencimento **e** dia ≤ data do pagamento (vencimento **incluso** se não pago) |
-| **Em dia** | Dia > data do pagamento (dentro do período da parcela) |
+| **Atrasado** | Dia ≥ vencimento **e** dia ≤ data do pagamento **e** dentro dos **7 dias da parcela** (vencimento +6) |
+| **Em dia** | Demais dias do período da tabela (após o pagamento ou após a 1ª semana de atraso) |
+
+**Juros e multa** só nos dias **Atrasado** — no máximo **7 diárias por parcela semanal**, mesmo que a próxima parcela em aberto esteja distante.
 
 ### Colunas da tabela (ordem fixa)
 
@@ -145,23 +148,23 @@ Base de cálculo: 04/07/2026
 
 Vencimento em aberto: 27/06/2026
 Juros e multa: R$ 189,98 (7 diárias)
-Total semana: R$ 840,00
+Total semana: R$ 650,00
 
 Vencimento em aberto: 04/07/2026
 Juros e multa: R$ 27,14 (1 diária)
-Valor semana: R$ 770,02
+Valor semana: R$ 650,00
 
-Total a devido : R$ 1.610,02 (8 dias em atraso)
+Total a devido : R$ 1.517,12 (8 dias em atraso)
 ```
 
 | Campo | Regra |
 |---|---|
 | **Escalonamento (dia N)** | No template bloqueio/lembrete — **fora** do bloco resumo |
 | **Base de cálculo** | `--data-pagamento` ou hoje |
-| **Data bloqueio** | 1º vencimento em aberto + **3 dias** |
-| **Juros e multa (por semana)** | Soma dos dias **Atrasado** até a base de cálculo |
-| **Total semana / Valor semana** | Total da tabela semanal (1ª: «Total semana», 2ª+: «Valor semana») |
-| **Total a devido** | Soma dos totais semanais (`totalGeral`) · N dias em atraso |
+| **Data bloqueio** | Última parcela no cálculo + **2 dias** (3º dia contando o vencimento) |
+| **Juros e multa (por semana)** | Soma dos dias **Atrasado** até a base de cálculo (máx. 7 diárias/parcela) |
+| **Total semana / Valor semana** | **Valor semanal do contrato** (nominal) |
+| **Total a devido** | Soma (valor semanal + juros/multa) por parcela em aberto |
 
 Implementação: `calcularResumoCobrancaSemanal()` · `formatResumoCobrancaSemanal()` · `formatResumoPorSemana()` em `pagamentoSemanalCobranca.ts`.
 
@@ -193,7 +196,9 @@ npx tsx src/run.ts relatorio-cobrancas multa --placa QJB-0I83 [--auto P07MQ009QP
 
 Opções: `--no-salvar` (só imprime), `--out DIR` (padrão `relatorios/_tmp/cobrancas/`), `--nome NOME` (saudação personalizada).
 
-Além dos `.txt`, cada tipo grava `dados-lote-{tipo}-{data}.json`. Com **`--cliente`** ou **`--placa`**, grava também o sidecar **`cobranca-{placa}-{cliente}-{data}.json`** para o canvas.
+Além dos `.txt`, cada tipo grava `dados-lote-{tipo}-{data}.json`. Grava também o sidecar **`cobranca-{placa}-{cliente}-{data}.json`** para o canvas:
+- **`--cliente`** ou **`--placa`**: um sidecar para o escopo filtrado.
+- **Sem parâmetros** (todos): um sidecar **por cliente** (veículo + débitos de outras placas); inclui ex-locatário com pendência.
 
 ## Saída obrigatória no fim do relatório
 
@@ -234,16 +239,36 @@ Implementação: `gerarDespesasEmAberto()` em `cobrancas.ts` · `montarMensagens
 
 ## Canvas (obrigatório junto ao TXT)
 
-**Toda cobrança com escopo de cliente ou placa gera três entregáveis: `.txt` (WhatsApp), JSON sidecar e canvas.** Depois de rodar a CLI, **sempre** crie um canvas a partir do JSON `cobranca-*.json` (não use `dados-lote-*.json` para o canvas). O gerador **copia automaticamente** o `.canvas.tsx` para `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/` — é desse caminho que o Cursor abre o canvas.
+A CLI gera sidecar JSON + canvas automaticamente. Dois layouts:
 
-### Layout — um ficheiro por relatório (independentes)
+| Modo | Quando | Layout | Agrupamento |
+|---|---|---|---|
+| **Completo** | sem parâmetros · `--cliente` | `cobranca.layout.tsx` | Um canvas por **cliente** (todas as placas/débitos) |
+| **Infrações completo** | **só** `infracoes` (sem cliente/placa) | `relatorio-infracoes.layout.tsx` (= `cobranca-simples`) | Todos os veículos + totalizadores por placa |
+| **Infrações resumido** | **só** `infracoes` (sem cliente/placa) | `relatorio-infracoes-resumido.layout.tsx` | Igual ao completo, título **(resumido)** |
+| **Simples** | **só tipo** (ex. `pedagio`) | `cobranca-simples.layout.tsx` | **Por veículo** — tópico `{placa} · {marca/modelo} ({ano})` + tabela |
+| **Simples** | **só `--placa`** | `cobranca-simples.layout.tsx` | **Por tipo de despesa** — tópico do tipo + tabela |
+
+Tabela em ambos os modos simples: **Descrição · Placa · Data · Categoria · Valor** (só despesas do filtro).
+
+- Sidecar completo: `cobranca-{placa}-{cliente}-{data}.json`
+- Sidecar infrações: `relatorio-infracoes-{data}.json` (padrão); resumido só com `infracoes resumido` ou `--canvas-infracoes resumido|ambos`
+- Sidecar simples: `cobranca-simples-{tipo|placa}-{data}.json`
+- Gerador: `node scripts/gen-cobranca-canvas.mjs` — detecta `tipo` no JSON (`cobranca`, `cobranca-simples`, `relatorio-infracoes`, `relatorio-infracoes-resumido`)
+- Cópia automática para `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/`
+
+Implementação: `resolverModoCanvasCobranca()` · `montarCobrancaSimplesSidecar()` em `cobrancasRelatorioSidecar.ts`.
+
+### Layout completo (`cobranca.layout.tsx`)
 
 Cada relatório tem **o seu próprio layout** em `templates/canvas/`:
 
 | Relatório | Layout | Gerador |
 |---|---|---|
 | Encerramento | `encerramento.layout.tsx` | `node scripts/gen-encerramento-canvas.mjs …` |
-| Cobrança | `cobranca.layout.tsx` | `node scripts/gen-cobranca-canvas.mjs …` |
+| Cobrança (completo) | `cobranca.layout.tsx` | `node scripts/gen-cobranca-canvas.mjs …` |
+| Infrações (completo / resumido) | `relatorio-infracoes.layout.tsx` / `relatorio-infracoes-resumido.layout.tsx` | `node scripts/gen-cobranca-canvas.mjs …` |
+| Cobrança (filtro tipo/placa) | `cobranca-simples.layout.tsx` | `node scripts/gen-cobranca-canvas.mjs …` |
 
 O layout de **cobrança** foi **copiado** do de encerramento (tabelas, cartão, stats, divisor). Depois da cópia, **evoluem em paralelo** — alterar um **não** altera o outro.
 

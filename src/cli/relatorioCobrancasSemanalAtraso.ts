@@ -9,9 +9,9 @@ import { loadClienteDespesasDb } from "../lib/clienteDespesasDb.js";
 import { loadContratosDb } from "../lib/contratosDb.js";
 import { dataVencimentoSemanalBr } from "../lib/pagamentoSemanal.js";
 import {
-  calcularCobrancaSemanalAtraso,
-  formatCobrancaSemanalAtrasoMarkdown,
+  filtrarVencimentosCalculoSemanal,
   jurosMultaDiario,
+  montarPacoteCobrancaSemanalAtraso,
 } from "../lib/pagamentoSemanalCobranca.js";
 import { parseDataBr, resolverCliente } from "../lib/recebimento/baixaPlano.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
@@ -156,29 +156,42 @@ export function mainSemanalAtraso(argv: string[]): void {
   const input = {
     valorSemanal,
     valorDiaria,
-    vencimentosBr: vencimentos,
+    vencimentosBr: filtrarVencimentosCalculoSemanal(vencimentos, dataPagamentoBr, true),
     dataPagamentoBr,
   };
 
-  const resultado = calcularCobrancaSemanalAtraso(input);
+  if (input.vencimentosBr.length === 0) {
+    console.error(
+      "Nenhum vencimento elegível para cálculo (em aberto ou após vencimento).",
+    );
+    process.exit(1);
+  }
+
+  const pacote = montarPacoteCobrancaSemanalAtraso({
+    valorSemanal,
+    valorDiaria,
+    vencimentosBr: input.vencimentosBr,
+    dataPagamentoBr,
+    emAberto: true,
+    clienteNome: cliente.nome,
+    placa: placa ?? undefined,
+    clienteId: cliente.id ?? null,
+  });
+  if (!pacote) {
+    console.error("Não foi possível montar tabela de juros/multa.");
+    process.exit(1);
+  }
 
   const payload = {
-    ...input,
+    ...pacote.payload,
     cliente: { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf },
-    placa: placa ?? null,
     jurosMultaDiario: jurosMultaDiario(valorSemanal, valorDiaria),
-    ...resultado,
   };
 
   if (asJson) {
     console.log(JSON.stringify(payload, null, 2));
   } else {
-    console.log(
-      formatCobrancaSemanalAtrasoMarkdown(
-        { ...input, clienteNome: cliente.nome, placa: placa ?? undefined },
-        resultado,
-      ),
-    );
+    console.log(pacote.markdown);
   }
 
   if (salvar) {
@@ -192,14 +205,7 @@ export function mainSemanalAtraso(argv: string[]): void {
     const dataArq = dataPagamentoBr.replace(/\//g, "-");
     const mdPath = path.join(outDir, `semanal-atraso-${slug}-${dataArq}.md`);
     const jsonPath = path.join(outDir, `dados-semanal-atraso-${slug}-${dataArq}.json`);
-    fs.writeFileSync(
-      mdPath,
-      formatCobrancaSemanalAtrasoMarkdown(
-        { ...input, clienteNome: cliente.nome, placa: placa ?? undefined },
-        resultado,
-      ),
-      "utf8",
-    );
+    fs.writeFileSync(mdPath, pacote.markdown, "utf8");
     fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), "utf8");
     if (!asJson) {
       console.log(`\n[arquivos gerados]\n  ${mdPath}\n  ${jsonPath}`);

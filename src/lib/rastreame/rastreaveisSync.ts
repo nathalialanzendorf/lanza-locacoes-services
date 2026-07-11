@@ -104,6 +104,23 @@ export function buildRastreavelLabel(
   return `${placa} - ${c}${mm ? ` - ${mm}` : ""}${suffix}`.replace(/\s+/g, " ").trim();
 }
 
+/** Payload PUT /rastreavel — API usa identificador+descricao, não `value`. */
+function buildRastreavelPutBody(
+  atual: Rastreavel,
+  placa: string,
+  label: string,
+): Record<string, unknown> {
+  const { value: _omit, ...rest } = atual as Rastreavel & { value?: string };
+  const identificador = compactPlaca(placa);
+  const placaH = formatPlacaHyphen(placa);
+  const parts = label.split(/\s*-\s*/).map((p) => p.trim()).filter(Boolean);
+  let start = 1;
+  if (parts[1] && compactPlaca(parts[1]!) === identificador) start = 2;
+  const tail = parts.slice(start).join(" - ").trim();
+  const descricao = tail ? `${placaH} - ${tail}` : String(atual.descricao ?? label).trim();
+  return { ...rest, identificador, descricao, ativo: true };
+}
+
 function rastreavelToUpsertInput(r: Rastreavel): Parameters<typeof upsertVeiculoFromRastreame>[0] | null {
   const key = refKey(r);
   if (!key) return null;
@@ -300,11 +317,10 @@ async function pushOneVeiculo(
   }
 
   const atual = await fetchRastreavelByKey(v.rastreameRastreavelKey);
-  await putRastreavel(v.rastreameRastreavelKey, {
-    ...atual,
-    value: label,
-    ativo: true,
-  });
+  await putRastreavel(
+    v.rastreameRastreavelKey,
+    buildRastreavelPutBody(atual, v.placa, label),
+  );
   marcarVeiculoRastreameSyncOk(v.id, v.rastreameRastreavelKey, label);
   return "atualizado";
 }

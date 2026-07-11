@@ -112,15 +112,60 @@ npx tsx src/run.ts baixa-recebimento plano --cliente "Virginia" --valor 650 --da
 ### Valor devido com atraso (pagamento não realizado)
 
 Quando houver parcela(s) **ATRASADO** em aberto, **não** usar só o `valorMulta` da despesa
-(R$ semanal fixo). Calcular o total com juros e multa dia a dia — **padrão obrigatório** da
-skill **`relatorio-cobrancas`** (secção *Cobrança semanal — pagamento não realizado*):
+(R$ semanal fixo). O plano de baixa (`baixa-recebimento plano --json`) inclui automaticamente
+**`calculoSemanalAtraso`** com tabelas dia a dia e **`totalGeral`** — exceto quando o pagamento
+é **na data de vencimento** (nesse caso o campo vem omitido/`null`).
+
+Regra de exibição:
+
+| Situação | Exibir cálculo |
+|----------|----------------|
+| Parcela em aberto (não paga) | **Sim** (base = hoje ou `--data-pagamento`) |
+| Pagamento **após** o vencimento | **Sim** |
+| Pagamento **no** vencimento | **Não** |
+
+Usar o **`totalGeral`** de `calculoSemanalAtraso` como `--valor` na baixa quando houver juros.
+Comando manual (opcional):
 
 ```powershell
 npx tsx src/run.ts relatorio-cobrancas semanal-atraso --cliente "Nome" --data-pagamento DD/MM/AAAA --no-salvar
 ```
 
-Usar o **`totalGeral`** retornado como `--valor` em `baixa-recebimento plano`. Detalhe em
-`.cursor/skills/relatorio-cobrancas/reference.md`.
+Detalhe em `.cursor/skills/relatorio-cobrancas/reference.md`.
+
+### Formato da descrição — multa de atraso (juros semanal)
+
+> **Fonte única** desta regra para a linha de **juros/multa** vinculada a uma parcela semanal
+> em atraso — separada da parcela nominal (`Pagamento semanal - …`).
+
+Quando o pagamento semanal é feito **com atraso**, os juros/multa são lançados como **despesa
+própria** (categoria `Locação semanal`, tipo Rastreame **OUTROS**), **não** embutidos na
+parcela semanal.
+
+| Situação | Descrição | Tipo Rastreame |
+|----------|-----------|----------------|
+| Em aberto | `ATRASADO Multa atraso ({N} dias) pagamento semanal - {DiaSemana} {DD}` | **OUTROS** |
+| Quitada | `Multa atraso ({N} dias) pagamento semanal - {DiaSemana} {DD}` | **OUTROS** |
+
+- **`{N}`** — dias **Atrasado** da tabela `calculoSemanalAtraso` da parcela vinculada (máx. 7).
+- **`{DiaSemana} {DD}`** — mesmo sufixo da parcela semanal (ex.: `Quarta 08`).
+- **`pagamento semanal`** em minúsculas; hífen **antes** do dia da semana.
+- **`{DD}`** com 2 dígitos (zero à esquerda).
+
+**Proibido** usar o formato antigo `Juros e multa - Pagamento semanal …` em lançamentos novos.
+
+**Exemplo (Tiago — Quarta 08, 3 diárias):**
+
+`ATRASADO Multa atraso (3 dias) pagamento semanal - Quarta 08`
+
+Helper: `montarDescricaoMultaAtrasoSemanal(n, parsed, { atrasado })` em `src/lib/pagamentoSemanal.ts`.
+
+**Fluxo na baixa com atraso:**
+
+1. Baixar a **parcela semanal nominal** (`--valor` = valor semanal do contrato).
+2. Se `calculoSemanalAtraso` tiver juros > 0, **cadastrar ou atualizar** a linha de multa de
+   atraso com o título acima e valor = juros da tabela (confirmar Sim/Não).
+3. Ao **quitar** a multa de atraso, remover `ATRASADO` (mesma regra do pagamento semanal).
 
 Parâmetros opcionais:
 

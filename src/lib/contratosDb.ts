@@ -84,6 +84,11 @@ export type ContratoRegistro = {
   valorMensal: number | null;
   valorDiaria: number | null;
   valorCaucao: number;
+  /**
+   * Acordo operacional: vencimentos com data ≤ este valor não entram em juros/multa
+   * nem na base de bloqueio do veículo (DD/MM/AAAA). Só vencimentos **após** esta data.
+   */
+  dataInicioJurosMultaBr?: string | null;
   cadastradoEm: string;
   atualizadoEm: string;
 };
@@ -123,6 +128,8 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   valorMensal: "Valor mensal (R$) — null se não for mensal",
   valorDiaria: "Valor diário (R$) — null se não for diária",
   valorCaucao: "Caução (R$)",
+  dataInicioJurosMultaBr:
+    "DD/MM/AAAA — vencimentos até esta data ficam sem juros/multa e fora da base de bloqueio (acordo)",
   cadastradoEm: "ISO 8601",
   atualizadoEm: "ISO 8601",
 };

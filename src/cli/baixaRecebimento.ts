@@ -94,6 +94,12 @@ export async function main(argv: string[]): Promise<void> {
         );
       }
       for (const a of plano.avisos) console.log(`[aviso] ${a}`);
+      if (plano.calculoSemanalAtraso?.exibir) {
+        console.log(
+          `\n=== Juros e multa semanal (total R$ ${plano.calculoSemanalAtraso.totalGeral.toFixed(2)}) ===\n`,
+        );
+        console.log(plano.calculoSemanalAtraso.markdown);
+      }
       console.log("\n" + formatPlanoTabela(plano));
     }
     return;

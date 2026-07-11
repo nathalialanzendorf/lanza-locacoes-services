@@ -40,11 +40,72 @@ function relativoDocumentosRaiz(absPath: string): string {
   return absPath.replace(/\\/g, "/");
 }
 
-/** Nome do PDF: `{auto} - {placa}.pdf` */
-export function nomeArquivoPdfInfracao(autoInfracao: string, placa: string): string {
+/** Caminho relativo a `documentosRaiz` para gravar no DB. */
+export function caminhoRelativoPdfSalvo(absPath: string): string {
+  return relativoDocumentosRaiz(absPath);
+}
+
+/** Tipo de PDF gravado na pasta Débitos. */
+export type PdfInfracaoTipo = "ait" | "na";
+
+/** Nome do PDF: `{auto} - AIT|NA - {placa}.pdf` */
+export function nomeArquivoPdfInfracao(
+  autoInfracao: string,
+  placa: string,
+  tipo: PdfInfracaoTipo = "ait",
+): string {
+  const auto = String(autoInfracao).trim().replace(/[^\w.-]+/g, "_");
+  const pl = compactPlaca(placa);
+  const rotulo = tipo === "na" ? "NA" : "AIT";
+  return `${auto} - ${rotulo} - ${pl}.pdf`;
+}
+
+/** Nome legado do AIT (antes do sufixo `- AIT -`). */
+export function nomeArquivoPdfInfracaoLegado(autoInfracao: string, placa: string): string {
   const auto = String(autoInfracao).trim().replace(/[^\w.-]+/g, "_");
   const pl = compactPlaca(placa);
   return `${auto} - ${pl}.pdf`;
+}
+
+/** Resolve caminho relativo gravado no DB para absoluto em `documentosRaiz`. */
+export function resolverAbsPdfSalvo(caminho: string | null | undefined): string | null {
+  const c = String(caminho ?? "").trim();
+  if (!c) return null;
+  if (path.isAbsolute(c)) return c;
+  const raiz = readLanzaPaths().documentosRaiz || defaultContratosDir();
+  return path.join(raiz, c);
+}
+
+function pdfValidoNoDisco(abs: string): boolean {
+  try {
+    const st = fs.statSync(abs);
+    return st.isFile() && st.size > 64;
+  } catch {
+    return false;
+  }
+}
+
+/** Retorna o caminho absoluto se o PDF já existir (DB, nome novo ou legado). */
+export function localizarPdfInfracaoExistente(
+  reg: ClienteDespesaRegistro,
+  tipo: PdfInfracaoTipo,
+  caminhoDb?: string | null,
+): string | null {
+  const absDb = resolverAbsPdfSalvo(caminhoDb);
+  if (absDb && pdfValidoNoDisco(absDb)) return absDb;
+
+  const nomes = [nomeArquivoPdfInfracao(reg.autoInfracao, reg.veiculoId, tipo)];
+  if (tipo === "ait") {
+    nomes.push(nomeArquivoPdfInfracaoLegado(reg.autoInfracao, reg.veiculoId));
+  }
+
+  for (const dir of resolverDestinosPdfInfracao(reg)) {
+    for (const nome of nomes) {
+      const abs = path.join(dir, nome);
+      if (pdfValidoNoDisco(abs)) return abs;
+    }
+  }
+  return null;
 }
 
 /**
@@ -87,11 +148,11 @@ export type SalvarPdfInfracaoResult = {
 export function salvarPdfInfracao(
   buffer: Buffer,
   reg: ClienteDespesaRegistro,
-  opts?: { dryRun?: boolean },
+  opts?: { dryRun?: boolean; tipo?: PdfInfracaoTipo },
 ): SalvarPdfInfracaoResult {
   const destinos = resolverDestinosPdfInfracao(reg);
   const avisos: string[] = [];
-  const nome = nomeArquivoPdfInfracao(reg.autoInfracao, reg.veiculoId);
+  const nome = nomeArquivoPdfInfracao(reg.autoInfracao, reg.veiculoId, opts?.tipo ?? "ait");
   let pdfArquivo: string | null = null;
 
   if (destinos.length === 0) {

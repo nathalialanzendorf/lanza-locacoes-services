@@ -181,6 +181,7 @@ async function main(): Promise<void> {
       dryRun,
       prazoDias: 90,
       renavam: renavamDaPlaca(placaFrota),
+      ticket: t.ticket,
     });
     const desp = processarDespesasDetranSc(placaFrota, payload, { dryRun });
     okCount++;

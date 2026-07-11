@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,13 +69,16 @@ const dados = {
   "dataInicio": "20/06/2026",
   "dataFim": "18/09/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "06/07/2026",
-  "qtdDiasLocado": 16,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 21,
+  "linhaEncerramento": null,
   "valorSemanal": 1000,
   "valorDiaria": 200,
   "totalDebitos": 1142.86,
   "infracoes": [],
   "totalInfracoes": 0,
+  "infracoesPagas": [],
+  "totalInfracoesPagas": 0,
   "manutencoes": [],
   "totalManutencoes": 0,
   "parcelasEmAberto": [
@@ -87,19 +91,119 @@ const dados = {
     }
   ],
   "totalParcelasEmAberto": 1000,
+  "totalSemanalCobrar": 1000,
   "debitosDiversos": [
     {
       "descricao": "ATRASADO Pagamento troca data - Segunda 29",
       "placa": "RLA-1G81",
       "data": "29/06/2026",
-      "categoria": "Outros",
+      "categoria": "Renegociação",
       "valor": 142.86
     }
   ],
   "totalDebitosDiversos": 142.86,
-  "resumoSemanal": null,
-  "pagamentoSemanal": null,
+  "placasEscopo": [
+    "RLA-1G81"
+  ],
+  "resumoSemanal": {
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
+    "vencimentosEmAbertoBr": [
+      "06/07/2026"
+    ],
+    "dataBloqueioBr": "08/07/2026",
+    "totalReceber": 1342.84,
+    "diasAtrasados": 6,
+    "diasEmDia": 0,
+    "jurosMultaAcumulados": 342.84
+  },
+  "pagamentoSemanal": {
+    "tabelas": [
+      {
+        "vencimentoBr": "06/07/2026",
+        "periodoInicioBr": "06/07/2026",
+        "periodoFimBr": "13/07/2026",
+        "linhas": [
+          {
+            "dataBr": "06/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "07/07/2026",
+            "diaSemana": "Ter",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "08/07/2026",
+            "diaSemana": "Qua",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "09/07/2026",
+            "diaSemana": "Qui",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "10/07/2026",
+            "diaSemana": "Sex",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "11/07/2026",
+            "diaSemana": "Sáb",
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
+          },
+          {
+            "dataBr": "12/07/2026",
+            "diaSemana": "Dom",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 142.86
+          },
+          {
+            "dataBr": "13/07/2026",
+            "diaSemana": "Seg",
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 142.86
+          }
+        ],
+        "subtotalJurosMulta": 342.84,
+        "total": 1485.72
+      }
+    ],
+    "totalGeral": 1342.84,
+    "dataPagamentoBr": "11/07/2026"
+  },
   "mensagensWhatsApp": [
+    {
+      "tipo": "pagamento-semanal",
+      "titulo": "🚨 Bloqueio programado — RLA-1G81",
+      "texto": "🚨 *Bloqueio programado* — RLA-1G81\n\nOlá, Ceres!\nA *parcela semanal* da locação do seu PEUGEOT/2008 ALLURE EAT6 segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "renegociacao",
+      "titulo": "Renegociação em aberto — RLA-1G81",
+      "texto": "Renegociação em aberto — RLA-1G81\n\nOlá, Ceres! Identificamos parcela(s) de *renegociação de débitos* em aberto referente ao veículo locado.\n\nValor total pendente: *R$ 142,86*\n\nRegularize o pagamento conforme combinado. Em caso de dúvida, responda neste canal.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — RLA-1G81",
+      "texto": "📊 *Cálculo do atraso semanal* — RLA-1G81\n\nOlá, Ceres!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 ALLURE EAT6:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 342,84 (6 diárias)\n*Total semana: R$ 1.000,00*\n\n*Total a devido : R$ 1.342,84 (6 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — RLA-1G81",
@@ -117,11 +221,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -428,17 +535,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaRla1g81CeresBeatrizGonzagaPereira() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -451,6 +593,11 @@ export default function CobrancaRla1g81CeresBeatrizGonzagaPereira() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -490,6 +637,14 @@ export default function CobrancaRla1g81CeresBeatrizGonzagaPereira() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -516,18 +671,23 @@ export default function CobrancaRla1g81CeresBeatrizGonzagaPereira() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

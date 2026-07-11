@@ -11,6 +11,7 @@ import {
 } from "../clienteDespesasDb.js";
 import {
   atualizarPdfArquivoInfracaoDb,
+  atualizarNotificacaoPdfArquivoInfracaoDb,
   clienteDespesaInputFromInfracao,
   inputInfracaoFromDetran,
   infracaoDeveEspelharClienteDespesa,
@@ -21,16 +22,16 @@ import {
   vincularClienteDespesaInfracao,
   type InfracaoRegistro,
 } from "../infracoesDb.js";
-import { salvarPdfInfracao } from "../infracaoPdfStorage.js";
+import { caminhoRelativoPdfSalvo, localizarPdfInfracaoExistente, salvarPdfInfracao } from "../infracaoPdfStorage.js";
 import {
   sincronizarParceiroDespesa,
   removerParceiroDespesaPorOrigem,
   type GravarParceiroDespesaResult,
 } from "../parceiroDespesasDb.js";
-import { consultarVeiculoDetranSc, consultarVeiculoDetranScPorTicket } from "./consulta.js";
+import { consultarVeiculoDetranSc, consultarVeiculoDetranScComTicket, consultarVeiculoDetranScPorTicket, extrairTicketConsultaDetranSc } from "./consulta.js";
 import { indexarRawInfracoesDetranSc } from "./indexRawInfracoes.js";
 import { extrairMultasDetranSc } from "./mapInfracoes.js";
-import { baixarPdfInfracaoDetranSc } from "./pdfInfracao.js";
+import { baixarPdfsInfracaoDetranSc } from "./pdfInfracao.js";
 import type { DetranScMultaNormalizada } from "./types.js";
 
 export type VeiculoFrota = {
@@ -229,36 +230,111 @@ async function tentarBaixarPdfInfracao(
   m: DetranScMultaNormalizada,
   registro: SincronizarClienteDespesaResult["registro"],
   rawPorAuto: ReturnType<typeof indexarRawInfracoesDetranSc>,
-  opts?: { dryRun?: boolean },
-): Promise<{ gravado: boolean; avisos: string[] }> {
+  opts?: {
+    dryRun?: boolean;
+    ticket?: string;
+    detranRaw?: Record<string, unknown> | null;
+    notificacaoPdfArquivo?: string | null;
+  },
+): Promise<{ gravados: number; avisos: string[]; falhas: number }> {
   const avisos: string[] = [];
   if (!registro?.autoInfracao || registro.id === "(dry-run)") {
-    return { gravado: false, avisos };
+    return { gravados: 0, avisos, falhas: 0 };
   }
 
-  const rawItem = rawPorAuto.get(m.autoInfracao.trim().toUpperCase());
-  const dl = await baixarPdfInfracaoDetranSc({
+  const rawItem =
+    rawPorAuto.get(m.autoInfracao.trim().toUpperCase()) ??
+    (opts?.detranRaw as DetranScInfracao | undefined);
+
+  const aitExistente = localizarPdfInfracaoExistente(registro, "ait", registro.pdfArquivo);
+  const naExistente = localizarPdfInfracaoExistente(
+    registro,
+    "na",
+    opts?.notificacaoPdfArquivo,
+  );
+
+  if (aitExistente) {
+    avisos.push(`${m.autoInfracao} [AIT]: PDF já existe (pulado): ${aitExistente}`);
+    if (!opts?.dryRun && !registro.pdfArquivo) {
+      const rel = caminhoRelativoPdfSalvo(aitExistente);
+      atualizarPdfArquivoInfracaoDb(m.autoInfracao, rel);
+      atualizarPdfArquivoInfracao(m.autoInfracao, rel);
+      registro.pdfArquivo = rel;
+    }
+  }
+  if (naExistente) {
+    avisos.push(`${m.autoInfracao} [NA]: PDF já existe (pulado): ${naExistente}`);
+    if (!opts?.dryRun && !opts?.notificacaoPdfArquivo) {
+      atualizarNotificacaoPdfArquivoInfracaoDb(
+        m.autoInfracao,
+        caminhoRelativoPdfSalvo(naExistente),
+      );
+    }
+  }
+
+  const baixarAit = !aitExistente;
+  const baixarNa = !naExistente;
+  if (!baixarAit && !baixarNa) {
+    return { gravados: 0, avisos, falhas: 0 };
+  }
+
+  const pdfs = await baixarPdfsInfracaoDetranSc({
     placa,
     renavam,
     autoInfracao: m.autoInfracao,
+    ticket: opts?.ticket,
     rawItem,
+    detranRaw: opts?.detranRaw,
+    baixarAit,
+    baixarNa,
   });
 
-  if (!dl.buffer) {
-    if (dl.aviso) avisos.push(`${m.autoInfracao}: ${dl.aviso}`);
-    return { gravado: false, avisos };
+  let gravados = 0;
+  let falhas = 0;
+
+  if (baixarAit) {
+    if (pdfs.ait.buffer) {
+      const saved = salvarPdfInfracao(pdfs.ait.buffer, registro, {
+        dryRun: opts?.dryRun,
+        tipo: "ait",
+      });
+      avisos.push(...saved.avisos.map((a) => `${m.autoInfracao} [AIT]: ${a}`));
+      if (saved.pdfArquivo) {
+        gravados++;
+        if (!opts?.dryRun) {
+          atualizarPdfArquivoInfracaoDb(m.autoInfracao, saved.pdfArquivo);
+          atualizarPdfArquivoInfracao(m.autoInfracao, saved.pdfArquivo);
+          registro.pdfArquivo = saved.pdfArquivo;
+        }
+      }
+    } else {
+      falhas++;
+      if (pdfs.ait.aviso) avisos.push(`${m.autoInfracao} [AIT]: ${pdfs.ait.aviso}`);
+    }
   }
 
-  const saved = salvarPdfInfracao(dl.buffer, registro, { dryRun: opts?.dryRun });
-  avisos.push(...saved.avisos.map((a) => `${m.autoInfracao}: ${a}`));
-
-  if (saved.pdfArquivo && !opts?.dryRun) {
-    atualizarPdfArquivoInfracaoDb(m.autoInfracao, saved.pdfArquivo);
-    atualizarPdfArquivoInfracao(m.autoInfracao, saved.pdfArquivo);
-    registro.pdfArquivo = saved.pdfArquivo;
+  if (baixarNa) {
+    if (pdfs.notificacao.buffer) {
+      const saved = salvarPdfInfracao(pdfs.notificacao.buffer, registro, {
+        dryRun: opts?.dryRun,
+        tipo: "na",
+      });
+      avisos.push(...saved.avisos.map((a) => `${m.autoInfracao} [NA]: ${a}`));
+      if (saved.pdfArquivo) {
+        gravados++;
+        if (!opts?.dryRun) {
+          atualizarNotificacaoPdfArquivoInfracaoDb(m.autoInfracao, saved.pdfArquivo);
+        }
+      }
+    } else {
+      falhas++;
+      if (pdfs.notificacao.aviso) {
+        avisos.push(`${m.autoInfracao} [NA]: ${pdfs.notificacao.aviso}`);
+      }
+    }
   }
 
-  return { gravado: !!saved.pdfArquivo, avisos };
+  return { gravados, avisos, falhas };
 }
 
 export async function sincronizarMultasVeiculoDetranSc(
@@ -266,8 +342,10 @@ export async function sincronizarMultasVeiculoDetranSc(
   renavam: string,
   opts?: { dryRun?: boolean; prazoDias?: number; captcha?: string },
 ): Promise<SyncVeiculoResult> {
-  const raw = await consultarVeiculoDetranSc(placa, renavam, { captcha: opts?.captcha });
-  return processarRespostaDetranSc(placa, raw, { ...opts, renavam });
+  const { data: raw, ticket } = await consultarVeiculoDetranScComTicket(placa, renavam, {
+    captcha: opts?.captcha,
+  });
+  return processarRespostaDetranSc(placa, raw, { ...opts, renavam, ticket: ticket ?? undefined });
 }
 
 export async function sincronizarMultasPorTicketDetranSc(
@@ -276,18 +354,19 @@ export async function sincronizarMultasPorTicketDetranSc(
   opts?: { dryRun?: boolean; prazoDias?: number; renavam?: string },
 ): Promise<SyncVeiculoResult> {
   const raw = await consultarVeiculoDetranScPorTicket(ticket);
-  return processarRespostaDetranSc(placa, raw, opts);
+  return processarRespostaDetranSc(placa, raw, { ...opts, ticket });
 }
 
 export async function processarRespostaDetranSc(
   placa: string,
   raw: unknown,
-  opts?: { dryRun?: boolean; prazoDias?: number; renavam?: string },
+  opts?: { dryRun?: boolean; prazoDias?: number; renavam?: string; ticket?: string },
 ): Promise<SyncVeiculoResult> {
   const { cobraveis, historico, debitosIgnoradosProprietario } =
     extrairMultasDetranSc(raw);
   const rawPorAuto = indexarRawInfracoesDetranSc(raw);
   const renavam = opts?.renavam ?? "";
+  const ticket = opts?.ticket ?? extrairTicketConsultaDetranSc(raw) ?? undefined;
 
   const result: SyncVeiculoResult = {
     placa: formatPlacaHyphen(placa),
@@ -353,10 +432,15 @@ export async function processarRespostaDetranSc(
         m,
         pdfAlvo,
         rawPorAuto,
-        opts,
+        {
+          ...opts,
+          ticket,
+          detranRaw: infRes.registro.detranRaw,
+          notificacaoPdfArquivo: infRes.registro.notificacaoPdfArquivo,
+        },
       );
-      if (pdf.gravado) result.pdfsGravados++;
-      else result.pdfsFalha++;
+      if (pdf.gravados > 0) result.pdfsGravados += pdf.gravados;
+      if (pdf.falhas > 0) result.pdfsFalha += pdf.falhas;
       result.avisos.push(...pdf.avisos);
     }
   }

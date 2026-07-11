@@ -7,6 +7,7 @@ import {
   Grid,
   H1,
   H2,
+  H3,
   Row,
   Stack,
   Stat,
@@ -68,21 +69,45 @@ const dados = {
   "dataInicio": "22/05/2026",
   "dataFim": "18/11/2026",
   "qtdDiasContrato": 180,
-  "dataAtual": "05/07/2026",
-  "qtdDiasLocado": 44,
+  "dataAtual": "11/07/2026",
+  "qtdDiasLocado": 50,
+  "linhaEncerramento": null,
   "valorSemanal": 800,
   "valorDiaria": 150,
-  "totalDebitos": 1758.8,
+  "totalDebitos": 3180.51,
   "infracoes": [
     {
-      "descricao": "Multa velocidade - 02/03/2026 20:54 (Paga)",
+      "descricao": "ATRASADO Multa velocidade - 02/03/2026 20:54",
       "placa": "OZC-0B50",
-      "data": "02/03/2026 20:54",
+      "data": "02/03/2026 20:54:00",
       "categoria": "Infração",
       "valor": 130.16
+    },
+    {
+      "descricao": "ATRASADO Multa velocidade - 09/05/2026 23:33",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:33:00",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "ATRASADO Multa velocidade - 09/05/2026 23:43",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:43:00",
+      "categoria": "Infração",
+      "valor": 130.16
+    },
+    {
+      "descricao": "ATRASADO Multa trânsito - 09/05/2026 23:47",
+      "placa": "OZC-0B50",
+      "data": "09/05/2026 23:47:00",
+      "categoria": "Infração",
+      "valor": 195.23
     }
   ],
-  "totalInfracoes": 0,
+  "totalInfracoes": 585.71,
+  "infracoesPagas": [],
+  "totalInfracoesPagas": 0,
   "manutencoes": [],
   "totalManutencoes": 0,
   "parcelasEmAberto": [
@@ -99,10 +124,32 @@ const dados = {
       "data": "29/06/2026",
       "categoria": "Locação semanal",
       "valor": 530
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Sexta 10",
+      "placa": "IYR-8F19",
+      "data": "10/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 800
     }
   ],
-  "totalParcelasEmAberto": 1330,
+  "totalParcelasEmAberto": 2130,
+  "totalSemanalCobrar": 2130,
   "debitosDiversos": [
+    {
+      "descricao": "ATRASADO Pagamento pedágio 29/05/2026 18:45",
+      "placa": "IYR-8F19",
+      "data": "29/05/2026 18:45",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 02/06/2026 09:12",
+      "placa": "IYR-8F19",
+      "data": "02/06/2026 09:12",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
     {
       "descricao": "ATRASADO Pagamento renegociação - 3x8",
       "placa": "IYR-8F19",
@@ -111,280 +158,168 @@ const dados = {
       "valor": 214.4
     },
     {
+      "descricao": "ATRASADO Pagamento pedágio 08/06/2026 14:56",
+      "placa": "IYR-8F19",
+      "data": "08/06/2026 14:56",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 11/06/2026 18:08",
+      "placa": "IYR-8F19",
+      "data": "11/06/2026 18:08",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
       "descricao": "ATRASADO Pagamento renegociação - 5x8",
       "placa": "IYR-8F19",
       "data": "19/06/2026",
       "categoria": "Renegociação",
       "valor": 214.4
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 24/06/2026 07:42",
+      "placa": "IYR-8F19",
+      "data": "24/06/2026 07:42",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 26/06/2026 20:55",
+      "placa": "IYR-8F19",
+      "data": "26/06/2026 20:55",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 29/06/2026 22:27",
+      "placa": "IYR-8F19",
+      "data": "29/06/2026 22:27",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 01/07/2026 10:03",
+      "placa": "IYR-8F19",
+      "data": "01/07/2026 10:03",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 01/07/2026 14:26",
+      "placa": "IYR-8F19",
+      "data": "01/07/2026 14:26",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 01/07/2026 19:54",
+      "placa": "IYR-8F19",
+      "data": "01/07/2026 19:54",
+      "categoria": "Pedágio",
+      "valor": 3
+    },
+    {
+      "descricao": "ATRASADO Pagamento pedágio 01/07/2026 20:23",
+      "placa": "IYR-8F19",
+      "data": "01/07/2026 20:23",
+      "categoria": "Pedágio",
+      "valor": 6
     }
   ],
-  "totalDebitosDiversos": 428.8,
+  "totalDebitosDiversos": 464.8,
+  "placasEscopo": [
+    "IYR-8F19"
+  ],
   "resumoSemanal": {
-    "diaEscalonamento": 3,
-    "tituloEscalonamento": "bloqueio programado",
+    "diaEscalonamento": 1,
+    "tituloEscalonamento": "lembrete",
     "vencimentosEmAbertoBr": [
-      "05/06/2026",
-      "29/06/2026"
+      "10/07/2026"
     ],
-    "dataBloqueioBr": "08/06/2026",
-    "totalReceber": 4650,
-    "diasAtrasados": 31,
+    "dataBloqueioBr": "12/07/2026",
+    "totalReceber": 871.42,
+    "diasAtrasados": 2,
     "diasEmDia": 0,
-    "jurosMultaAcumulados": 1107.01
+    "jurosMultaAcumulados": 71.42
   },
   "pagamentoSemanal": {
     "tabelas": [
       {
-        "vencimentoBr": "05/06/2026",
-        "periodoInicioBr": "05/06/2026",
-        "periodoFimBr": "28/06/2026",
+        "vencimentoBr": "10/07/2026",
+        "periodoInicioBr": "10/07/2026",
+        "periodoFimBr": "17/07/2026",
         "linhas": [
           {
-            "dataBr": "05/06/2026",
+            "dataBr": "10/07/2026",
             "diaSemana": "Sex",
             "situacao": "Atrasado",
             "jurosMulta": 35.71,
             "totalDia": 150
           },
           {
-            "dataBr": "06/06/2026",
+            "dataBr": "11/07/2026",
             "diaSemana": "Sáb",
             "situacao": "Atrasado",
             "jurosMulta": 35.71,
             "totalDia": 150
           },
           {
-            "dataBr": "07/06/2026",
+            "dataBr": "12/07/2026",
             "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
           },
           {
-            "dataBr": "08/06/2026",
+            "dataBr": "13/07/2026",
             "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
           },
           {
-            "dataBr": "09/06/2026",
+            "dataBr": "14/07/2026",
             "diaSemana": "Ter",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
           },
           {
-            "dataBr": "10/06/2026",
+            "dataBr": "15/07/2026",
             "diaSemana": "Qua",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
           },
           {
-            "dataBr": "11/06/2026",
+            "dataBr": "16/07/2026",
             "diaSemana": "Qui",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
+            "situacao": "Em dia",
+            "jurosMulta": null,
+            "totalDia": 114.29
           },
           {
-            "dataBr": "12/06/2026",
+            "dataBr": "17/07/2026",
             "diaSemana": "Sex",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "13/06/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "14/06/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "15/06/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "16/06/2026",
-            "diaSemana": "Ter",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "17/06/2026",
-            "diaSemana": "Qua",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "18/06/2026",
-            "diaSemana": "Qui",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "19/06/2026",
-            "diaSemana": "Sex",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "20/06/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "21/06/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "22/06/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "23/06/2026",
-            "diaSemana": "Ter",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "24/06/2026",
-            "diaSemana": "Qua",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "25/06/2026",
-            "diaSemana": "Qui",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "26/06/2026",
-            "diaSemana": "Sex",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "27/06/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "28/06/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          }
-        ],
-        "subtotalJurosMulta": 857.04,
-        "total": 3600
-      },
-      {
-        "vencimentoBr": "29/06/2026",
-        "periodoInicioBr": "29/06/2026",
-        "periodoFimBr": "06/07/2026",
-        "linhas": [
-          {
-            "dataBr": "29/06/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "30/06/2026",
-            "diaSemana": "Ter",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "01/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "02/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "03/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "04/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "05/07/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "06/07/2026",
-            "diaSemana": "Seg",
             "situacao": "Em dia",
             "jurosMulta": null,
             "totalDia": 114.29
           }
         ],
-        "subtotalJurosMulta": 249.97,
-        "total": 1164.29
+        "subtotalJurosMulta": 71.42,
+        "total": 985.74
       }
     ],
-    "totalGeral": 4764.29,
-    "dataPagamentoBr": "05/07/2026"
+    "totalGeral": 871.42,
+    "dataPagamentoBr": "11/07/2026"
   },
   "mensagensWhatsApp": [
     {
       "tipo": "pagamento-semanal",
-      "titulo": "🚨 Bloqueio programado — IYR-8F19",
-      "texto": "🚨 *Bloqueio programado* — IYR-8F19\n\nOlá, Laryssa!\nA *parcela semanal* da locação do seu PEUGEOT/2008 STYLE EAT6 segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nℹ️ A liberação do veículo está condicionada à quitação integral dos valores em atraso.\n\n📊 *Resumo do atraso*\nOlá, Laryssa!\nSegue cálculo do atraso das despesas referente à locação do seu PEUGEOT/2008 STYLE EAT6 que segue em aberto:\n\nData bloqueio: 08/06/2026\nBase de cálculo: 05/07/2026\n\nVencimento em aberto: 05/06/2026\nJuros e multa: R$ 857,04 (24 diárias)\n*Total semana: R$ 3.600,00*\n\nVencimento em aberto: 29/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Valor semana: R$ 1.164,29*\n\n*Total a devido : R$ 4.764,29 (31 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "titulo": "🔔 Lembrete de pagamento — IYR-8F19",
+      "texto": "🔔 *Lembrete de pagamento* — IYR-8F19\n\nOlá, Laryssa! Tudo bem? 😊\nPassando para lembrar que a *parcela semanal* da locação do seu PEUGEOT/2008 STYLE EAT6 está disponível para pagamento.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nSe você já efetuou o pagamento, é só desconsiderar esta mensagem.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "renegociacao",
@@ -394,15 +329,42 @@ const dados = {
     {
       "tipo": "infracoes",
       "titulo": "🚦 Notificação de infração — OZC-0B50",
-      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Laryssa! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* Multa velocidade - 02/03/2026 20:54\n🗓️ *Data/hora:* 02/03/2026 às 20:54\n📍 *Local:* SANGAO/SC\n💰 *Valor:* R$ 130,16\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Laryssa! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* Multa velocidade - 02/03/2026 20:54\n🗓️ *Data/hora:* 02/03/2026 às 20:54:00\n📍 *Local:* SANGAO/SC\n💰 *Valor:* R$ 130,16\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — OZC-0B50",
+      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Laryssa! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* Multa velocidade - 09/05/2026 23:33\n🗓️ *Data/hora:* 09/05/2026 às 23:33:00\n📍 *Local:* IMBITUBA/SC\n💰 *Valor:* R$ 130,16\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — OZC-0B50",
+      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Laryssa! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* Multa velocidade - 09/05/2026 23:43\n🗓️ *Data/hora:* 09/05/2026 às 23:43:00\n📍 *Local:* GAROPABA/SC\n💰 *Valor:* R$ 130,16\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — OZC-0B50",
+      "texto": "🚦 *Notificação de infração* — OZC-0B50\n\nOlá, Laryssa! Recebemos uma notificação de infração referente ao seu FORD/FOCUS SE 1.6 SEDAN GNV - PRETA:\n\n🚨 *Infração:* Multa trânsito - 09/05/2026 23:47\n🗓️ *Data/hora:* 09/05/2026 às 23:47:00\n📍 *Local:* PAULO LOPES/SC\n💰 *Valor:* R$ 195,23\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "pedagio",
+      "titulo": "🛣️ Pedágio em aberto — IYR-8F19",
+      "texto": "🛣️ *Pedágio em aberto* — IYR-8F19\n\nOlá, Laryssa! Identificamos uma pendência junto à *CCR Via Costeira* referente ao veículo locado.\n\nO não pagamento do pedágio caracteriza infração grave, sujeita a:\n🚫 Multa de *R$ 195,23*\n⚠️ *5 pontos* na CNH\n\nEvite transtornos e regularize de forma rápida pelo WhatsApp 👉 *+55 48 3211-3130*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — IYR-8F19",
+      "texto": "📊 *Cálculo do atraso semanal* — IYR-8F19\n\nOlá, Laryssa!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 STYLE EAT6:\n\nData bloqueio: 12/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 10/07/2026\nJuros e multa: R$ 71,42 (2 diárias)\n*Total semana: R$ 800,00*\n\n*Total a devido : R$ 871,42 (2 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — IYR-8F19",
-      "texto": "📋 *Despesas em aberto* — IYR-8F19\n\nOlá, Laryssa!\nSegue a listagem das despesas referente à locação do seu PEUGEOT/2008 STYLE EAT6 que segue em aberto:\n\n• OZC-0B50 · 02/03/2026 20:54 · Multa velocidade - 02/03/2026 20:54 (Paga) · R$ 130,16\n• IYR-8F19 · 05/06/2026 · ATRASADO Pagamento semanal - Sexta 05 · R$ 800,00\n• IYR-8F19 · 05/06/2026 · ATRASADO Pagamento renegociação - 3x8 · R$ 214,40\n• IYR-8F19 · 19/06/2026 · ATRASADO Pagamento renegociação - 5x8 · R$ 214,40\n• IYR-8F19 · 29/06/2026 · ATRASADO Pagamento semanal - Sexta 29 · R$ 530,00\n\n*Total em aberto: R$ 1.758,80*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — IYR-8F19\n\nOlá, Laryssa!\nSegue a listagem das despesas referente à locação do seu PEUGEOT/2008 STYLE EAT6 que segue em aberto:\n\n• OZC-0B50 · 02/03/2026 20:54:00 · ATRASADO Multa velocidade - 02/03/2026 20:54 · R$ 130,16\n• OZC-0B50 · 09/05/2026 23:33:00 · ATRASADO Multa velocidade - 09/05/2026 23:33 · R$ 130,16\n• OZC-0B50 · 09/05/2026 23:43:00 · ATRASADO Multa velocidade - 09/05/2026 23:43 · R$ 130,16\n• OZC-0B50 · 09/05/2026 23:47:00 · ATRASADO Multa trânsito - 09/05/2026 23:47 · R$ 195,23\n• IYR-8F19 · 29/05/2026 18:45 · ATRASADO Pagamento pedágio 29/05/2026 18:45 · R$ 3,00\n• IYR-8F19 · 02/06/2026 09:12 · ATRASADO Pagamento pedágio 02/06/2026 09:12 · R$ 3,00\n• IYR-8F19 · 05/06/2026 · ATRASADO Pagamento semanal - Sexta 05 · R$ 800,00\n• IYR-8F19 · 05/06/2026 · ATRASADO Pagamento renegociação - 3x8 · R$ 214,40\n• IYR-8F19 · 08/06/2026 14:56 · ATRASADO Pagamento pedágio 08/06/2026 14:56 · R$ 3,00\n• IYR-8F19 · 11/06/2026 18:08 · ATRASADO Pagamento pedágio 11/06/2026 18:08 · R$ 3,00\n• IYR-8F19 · 19/06/2026 · ATRASADO Pagamento renegociação - 5x8 · R$ 214,40\n• IYR-8F19 · 24/06/2026 07:42 · ATRASADO Pagamento pedágio 24/06/2026 07:42 · R$ 3,00\n• IYR-8F19 · 26/06/2026 20:55 · ATRASADO Pagamento pedágio 26/06/2026 20:55 · R$ 3,00\n• IYR-8F19 · 29/06/2026 · ATRASADO Pagamento semanal - Sexta 29 · R$ 530,00\n• IYR-8F19 · 29/06/2026 22:27 · ATRASADO Pagamento pedágio 29/06/2026 22:27 · R$ 3,00\n• IYR-8F19 · 01/07/2026 10:03 · ATRASADO Pagamento pedágio 01/07/2026 10:03 · R$ 3,00\n• IYR-8F19 · 01/07/2026 14:26 · ATRASADO Pagamento pedágio 01/07/2026 14:26 · R$ 3,00\n• IYR-8F19 · 01/07/2026 19:54 · ATRASADO Pagamento pedágio 01/07/2026 19:54 · R$ 3,00\n• IYR-8F19 · 01/07/2026 20:23 · ATRASADO Pagamento pedágio 01/07/2026 20:23 · R$ 6,00\n• IYR-8F19 · 10/07/2026 · ATRASADO Pagamento semanal - Sexta 10 · R$ 800,00\n\n*Total em aberto: R$ 3.180,51*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
-  "avisos": []
+  "avisos": [
+    "Acordo: vencimentos 05/06/2026, 29/06/2026 sem juros/bloqueio (anteriores a 09/07/2026)."
+  ]
 } as {
   cliente: string;
   placa: string;
@@ -413,11 +375,14 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
   infracoes: LinhaTabela[];
   totalInfracoes: number;
+  infracoesPagas: LinhaTabela[];
+  totalInfracoesPagas: number;
   manutencoes: LinhaTabela[];
   totalManutencoes: number;
   parcelasEmAberto: LinhaTabela[];
@@ -724,17 +689,52 @@ function SecaoPagamentoSemanalAtraso() {
   );
 }
 
-function mensagensWhatsAppVisiveis(
+function agruparMensagensPorTipo(
   mensagens: { titulo: string; texto: string; tipo?: string }[],
-): typeof mensagens {
-  const temDespesasEmAberto = mensagens.some((m) => m.tipo === "despesas-em-aberto");
-  if (!temDespesasEmAberto) return mensagens;
-  return mensagens.filter((m) => m.tipo !== "manutencao");
+): Array<{ tipo: string; rotulo: string; mensagens: typeof mensagens }> {
+  const ordem = [
+    "pagamento-semanal",
+    "semanal-atraso",
+    "infracoes",
+    "renegociacao",
+    "pedagio",
+    "estacionamento-rotativo",
+    "manutencao",
+    "despesas-em-aberto",
+  ];
+  const rotulos: Record<string, string> = {
+    "pagamento-semanal": "Pagamento semanal",
+    "semanal-atraso": "Atraso semanal (juros e multa)",
+    infracoes: "Infrações",
+    renegociacao: "Renegociação",
+    pedagio: "Pedágio",
+    "estacionamento-rotativo": "Estacionamento rotativo",
+    manutencao: "Manutenção",
+    "despesas-em-aberto": "Despesas em aberto",
+  };
+  const porTipo = new Map<string, typeof mensagens>();
+  for (const m of mensagens) {
+    const tipo = m.tipo ?? "outros";
+    const lista = porTipo.get(tipo) ?? [];
+    lista.push(m);
+    porTipo.set(tipo, lista);
+  }
+  return [...porTipo.entries()]
+    .sort(([a], [b]) => {
+      const ia = ordem.indexOf(a);
+      const ib = ordem.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([tipo, msgs]) => ({
+      tipo,
+      rotulo: rotulos[tipo] ?? tipo,
+      mensagens: msgs,
+    }));
 }
 
 export default function CobrancaIyr8f19LaryssaGustavoCostaDeQuadros() {
   const theme = useHostTheme();
-  const mensagensWhatsApp = mensagensWhatsAppVisiveis(dados.mensagensWhatsApp);
+  const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 
   return (
     <Stack gap={20} style={{ padding: 24, maxWidth: 780 }}>
@@ -747,6 +747,11 @@ export default function CobrancaIyr8f19LaryssaGustavoCostaDeQuadros() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>
@@ -786,6 +791,14 @@ export default function CobrancaIyr8f19LaryssaGustavoCostaDeQuadros() {
         </Stack>
       )}
 
+      {dados.infracoesPagas.length > 0 && (
+        <Stack gap={12}>
+          <H2>Infrações (pagas)</H2>
+          <TabelaCobranca linhas={linhasTabela(dados.infracoesPagas)} />
+          <LinhaTotal rotulo="Subtotal infrações pagas" valor={dados.totalInfracoesPagas} />
+        </Stack>
+      )}
+
       {dados.manutencoes.length > 0 && (
         <Stack gap={12}>
           <H2>Manutenção / avarias (em aberto)</H2>
@@ -812,18 +825,23 @@ export default function CobrancaIyr8f19LaryssaGustavoCostaDeQuadros() {
 
       <SecaoPagamentoSemanalAtraso />
 
-      {mensagensWhatsApp.length > 0 && (
+      {gruposWhatsApp.length > 0 && (
         <Stack gap={12}>
           <H2>Mensagens WhatsApp</H2>
-          {mensagensWhatsApp.map((m) => (
-            <Card key={`${m.tipo ?? ""}-${m.titulo}`}>
-              <CardHeader>{m.titulo}</CardHeader>
-              <CardBody>
-                <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
-                  {m.texto}
-                </Text>
-              </CardBody>
-            </Card>
+          {gruposWhatsApp.map((grupo) => (
+            <Stack key={grupo.tipo} gap={8}>
+              <H3>{grupo.rotulo}</H3>
+              {grupo.mensagens.map((m) => (
+                <Card key={`${grupo.tipo}-${m.titulo}`}>
+                  <CardHeader>{m.titulo}</CardHeader>
+                  <CardBody>
+                    <Text style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.5 }}>
+                      {m.texto}
+                    </Text>
+                  </CardBody>
+                </Card>
+              ))}
+            </Stack>
           ))}
         </Stack>
       )}

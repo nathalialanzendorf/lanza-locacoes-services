@@ -68,130 +68,23 @@ const dados = {
   "dataInicio": "29/05/2026",
   "dataFim": "25/11/2026",
   "qtdDiasContrato": 180,
-  "dataAtual": "06/07/2026",
-  "qtdDiasLocado": 38,
+  "dataAtual": "08/07/2026",
+  "qtdDiasLocado": 40,
+  "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
-  "totalDebitos": 570,
+  "totalDebitos": 0,
   "infracoes": [],
   "totalInfracoes": 0,
-  "manutencoes": [
-    {
-      "descricao": "ATRASADO Troca de Pneu",
-      "placa": "MLX-2H34",
-      "data": "01/05/2026",
-      "categoria": "Manutenção",
-      "valor": 320
-    }
-  ],
-  "totalManutencoes": 320,
-  "parcelasEmAberto": [
-    {
-      "descricao": "ATRASADO Pagamento semanal - Sábado 4",
-      "placa": "RAH-4F54",
-      "data": "04/07/2026",
-      "categoria": "Locação semanal",
-      "valor": 250
-    }
-  ],
-  "totalParcelasEmAberto": 250,
+  "manutencoes": [],
+  "totalManutencoes": 0,
+  "parcelasEmAberto": [],
+  "totalParcelasEmAberto": 0,
   "debitosDiversos": [],
   "totalDebitosDiversos": 0,
-  "resumoSemanal": {
-    "diaEscalonamento": 2,
-    "tituloEscalonamento": "aviso",
-    "vencimentosEmAbertoBr": [
-      "04/07/2026"
-    ],
-    "dataBloqueioBr": "07/07/2026",
-    "totalReceber": 360,
-    "diasAtrasados": 3,
-    "diasEmDia": 0,
-    "jurosMultaAcumulados": 81.42
-  },
-  "pagamentoSemanal": {
-    "tabelas": [
-      {
-        "vencimentoBr": "04/07/2026",
-        "periodoInicioBr": "04/07/2026",
-        "periodoFimBr": "11/07/2026",
-        "linhas": [
-          {
-            "dataBr": "04/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 27.14,
-            "totalDia": 120
-          },
-          {
-            "dataBr": "05/07/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 27.14,
-            "totalDia": 120
-          },
-          {
-            "dataBr": "06/07/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 27.14,
-            "totalDia": 120
-          },
-          {
-            "dataBr": "07/07/2026",
-            "diaSemana": "Ter",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "08/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "09/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "10/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          },
-          {
-            "dataBr": "11/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
-          }
-        ],
-        "subtotalJurosMulta": 81.42,
-        "total": 824.3
-      }
-    ],
-    "totalGeral": 824.3,
-    "dataPagamentoBr": "06/07/2026"
-  },
-  "mensagensWhatsApp": [
-    {
-      "tipo": "pagamento-semanal",
-      "titulo": "⚠️ Pagamento em atraso — RAH-4F54",
-      "texto": "⚠️ *Pagamento em atraso* — RAH-4F54\n\nOlá, Daniel! Identificamos que a *parcela semanal* do seu veículo ainda está em aberto.\n\nPara *evitar o bloqueio*, pedimos a regularização o quanto antes 🙏\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nℹ️ A liberação do veículo está condicionada à quitação integral dos valores em atraso.\n\n📊 *Resumo do atraso*\nOlá, Daniel!\nSegue cálculo do atraso das despesas referente à locação do seu FIAT/MOBI LIKE que segue em aberto:\n\nData bloqueio: 07/07/2026\nBase de cálculo: 06/07/2026\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 824,30*\n\n*Total a devido : R$ 824,30 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "despesas-em-aberto",
-      "titulo": "📋 Despesas em aberto — RAH-4F54",
-      "texto": "📋 *Despesas em aberto* — RAH-4F54\n\nOlá, Daniel!\nSegue a listagem das despesas referente à locação do seu FIAT/MOBI LIKE que segue em aberto:\n\n• MLX-2H34 · 01/05/2026 · ATRASADO Troca de Pneu · R$ 320,00\n• RAH-4F54 · 04/07/2026 · ATRASADO Pagamento semanal - Sábado 4 · R$ 250,00\n\n*Total em aberto: R$ 570,00*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    }
-  ],
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
+  "mensagensWhatsApp": [],
   "avisos": []
 } as {
   cliente: string;
@@ -203,6 +96,7 @@ const dados = {
   qtdDiasContrato: number;
   dataAtual: string;
   qtdDiasLocado: number;
+  linhaEncerramento?: string | null;
   valorSemanal: number;
   valorDiaria: number;
   totalDebitos: number;
@@ -537,6 +431,11 @@ export default function CobrancaRah4f54DanielDamasceno() {
           {dados.dataInicio} → {dados.dataFim} ({dados.qtdDiasContrato} dias de contrato) · Gerado em{" "}
           {dados.dataAtual} ({dados.qtdDiasLocado} dias de locação)
         </Text>
+        {dados.linhaEncerramento ? (
+          <Text tone="secondary" style={{ textAlign: "center" }}>
+            {dados.linhaEncerramento}
+          </Text>
+        ) : null}
       </Stack>
 
       <Card style={{ width: "100%" }}>

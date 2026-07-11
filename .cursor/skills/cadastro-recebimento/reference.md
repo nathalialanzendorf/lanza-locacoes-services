@@ -25,6 +25,16 @@ Sufixo **`{parcelaAtual}x{totalParcelas}`** (total de parcelas, **não** dia do 
 
 Ver secção **Formato das descrições — caução** em `SKILL.md`. Helper: `src/lib/caucaoParcelas.ts`.
 
+## Descrição — multa de atraso (juros semanal)
+
+Formato atual (em aberto):
+
+`ATRASADO Multa atraso ({N} dias) pagamento semanal - {DiaSemana} {DD}`
+
+Helper: `montarDescricaoMultaAtrasoSemanal(n, parsed, { atrasado })` em `src/lib/pagamentoSemanal.ts`.
+
+Ver secção **Formato da descrição — multa de atraso** em `SKILL.md`.
+
 ## CLI `baixa-recebimento` (plano de baixa)
 
 Monta o plano **sem gravar** — o agente usa a saída JSON para a tabela de confirmação:

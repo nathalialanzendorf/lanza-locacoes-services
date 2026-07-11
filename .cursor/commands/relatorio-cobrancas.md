@@ -48,6 +48,11 @@ npx tsx src/run.ts relatorio-cobrancas --placa RAH-4F54
    - Resumo semanal com juros por semana (se ATRASADO)
    - **Uma tabela semanal-atraso por semana** em aberto + total geral
    - **Mensagens WhatsApp separadas** — uma por tipo de cobrança + despesas em aberto
-5. Criar **canvas** com `node scripts/gen-cobranca-canvas.mjs` a partir do JSON sidecar `cobranca-*.json` (layout em `templates/canvas/cobranca.layout.tsx`). O gerador grava em `canvases/` **e copia** para `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/` (só o IDE abre daí).
+5. **Canvas (sempre):**
+   - **Sem parâmetros** / **`--cliente`**: layout completo — um canvas por **cliente** (reúne débitos de todas as placas).
+   - **Só `infracoes`** (sem cliente/placa): canvas **completo** (blocos). Resumido só com `infracoes resumido` ou `--canvas-infracoes resumido|ambos`.
+   - **Só tipo** (ex. `pedagio`): layout **simples** — agrupa **por veículo** (placa + modelo); tabela Descrição · Placa · Data · Categoria · Valor.
+   - **Só `--placa`**: layout **simples** — agrupa **por tipo de despesa**; mesma tabela filtrada pela placa.
+   - Gerador: `node scripts/gen-cobranca-canvas.mjs` · layouts em `templates/canvas/`. Cópia para `~/.cursor/projects/d-Dropbox-Aworklanza/canvases/`.
 
 Modo legado por placa: `semanal`, `semanal-atraso`, `estacionamento`, `multa` — exige `--placa`.

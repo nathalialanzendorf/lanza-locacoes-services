@@ -30,13 +30,13 @@ Base de cálculo: 04/07/2026
 
 Vencimento em aberto: 27/06/2026
 Juros e multa: R$ 189,98 (7 diárias)
-Total semana: R$ 840,00
+Total semana: R$ 650,00
 
 Vencimento em aberto: 04/07/2026
 Juros e multa: R$ 27,14 (1 diária)
-Valor semana: R$ 770,02
+Valor semana: R$ 650,00
 
-Total a devido : R$ 1.610,02 (8 dias em atraso)
+Total a devido : R$ 1.517,12 (8 dias em atraso)
 ```
 
 Escalonamento (vencimento = D0):
@@ -48,11 +48,11 @@ Escalonamento (vencimento = D0):
 | D+2 | Aviso (dia 2) |
 | D+3+ | Bloqueio (dia 3) |
 
-- **Data bloqueio** = vencimento + **3 dias**.
-- **Juros e multa (por semana)** = soma dos dias **Atrasado** até a base de cálculo.
-- **Total semana / Valor semana (por semana)** = total da tabela semanal (1ª semana: «Total semana», demais: «Valor semana»).
-- **Total a devido** = soma dos totais semanais (`totalGeral`), com dias em atraso até a base de cálculo.
-- **Total geral** da tabela completa (até fim do período da parcela) permanece para baixa integral — usar `--data-pagamento` na baixa.
+- **Data bloqueio** = **3º dia contando o vencimento** (vencimento = dia 1 → bloqueio em vencimento **+ 2 dias**). Referência: **última** parcela em aberto no cálculo.
+- **Juros e multa (por semana)** = soma dos dias **Atrasado** até a base de cálculo, **máx. 7 diárias por parcela** (só dentro da semana do vencimento).
+- **Total semana / Valor semana (por semana)** = **valor semanal do contrato** (nominal).
+- **Total a devido** = soma (valor semanal + juros/multa) por parcela em aberto.
+- **Total geral** da tabela diária permanece no detalhe markdown; **`totalGeral`** do pacote = total a devido (baixa integral).
 
 ### Integração cadastro-recebimento
 
@@ -66,9 +66,31 @@ Não usar só `valorSemanal` da despesa quando houver juros e multa acumulados.
 
 ---
 
-## JSON sidecar para canvas (`cobranca-*.json`)
+## JSON sidecar para canvas (`cobranca-*.json` / `cobranca-simples-*.json`)
 
-Gerado em `relatorios/_tmp/cobrancas/` quando a CLI roda com **`--cliente`** ou **`--placa`** (escopo único). Formato **próprio** de cobranças — distinto do sidecar `encerramento-contrato-*.json`.
+### Modo completo (`tipo: "cobranca"`)
+
+Gerado com escopo **contrato** (lote sem filtro, ou `--cliente`).
+
+### Modo simples (`tipo: "cobranca-simples"`)
+
+**Exceção — só `infracoes` sem cliente/placa:** não usa `cobranca-simples`.
+- Padrão: `relatorio-infracoes-{data}.json` (`tipo: "relatorio-infracoes"`) — completo (blocos)
+- Com `resumido` / `--canvas-infracoes resumido`: `relatorio-infracoes-resumido-{data}.json` — cobráveis por veículo
+- Com `ambos` / `--canvas-infracoes ambos`: os dois sidecars
+
+| Filtro CLI | `modo` no JSON | Agrupamento (`grupos[]`) |
+|---|---|---|
+| Só **tipo** (ex. `pedagio`) | `por-tipo` | Um grupo por **placa** — `titulo`: `{PLACA} · {marca/modelo} ({ano})` |
+| Só **`--placa`** | `por-placa` | Um grupo por **tipo de despesa** — `titulo`: rótulo do tipo |
+
+Cada grupo: `linhas[]` com `descricao`, `placa`, `data`, `categoria`, `valor` + `total`. Raiz: `titulo`, `totalGeral`, `geradoEmBr`.
+
+Gerado em `relatorios/_tmp/cobrancas/` pela CLI em **qualquer** execução com alvos elegíveis:
+- **`--cliente`** ou **`--placa`**: um sidecar para o escopo filtrado.
+- **Sem parâmetros** (todos): um sidecar **por cliente** (todas as placas/débitos do locatário, como `--cliente`).
+
+Formato **próprio** de cobranças — distinto do sidecar `encerramento-contrato-*.json`.
 
 Implementação: `src/lib/cobrancasRelatorioSidecar.ts` · função `coletarTodasDespesasAbertas()`.
 
@@ -122,6 +144,16 @@ totalInfracoes + totalManutencoes + totalParcelasEmAberto + totalDebitosDiversos
 - `creditosDevolucao`, `totalCreditos`
 - `linhaQuebraContrato`
 - Despesas categoria **Quebra contrato** ou retenção proporcional de caução
+
+### Regra de exibição do cálculo (juros/multa)
+
+| Situação | Exibir tabela |
+|---|---|
+| Parcela **em aberto** (não paga) | **Sim** — inclui D0 (vencimento hoje) |
+| Pagamento **após** o vencimento | **Sim** |
+| Pagamento **no** vencimento | **Não** |
+
+Implementação: `deveExibirCalculoSemanalAtraso()` e `filtrarVencimentosCalculoSemanal()` em `pagamentoSemanalCobranca.ts`. O plano de baixa (`baixa-recebimento plano`) expõe `calculoSemanalAtraso` no JSON com a mesma regra.
 
 ### Saída obrigatória (CLI + canvas)
 

@@ -28,6 +28,8 @@ export type DetranScInfracao = {
   situacao?: string;
   status?: string;
   protocolo?: string;
+  /** Senha para download da notificação de autuação (`/infracoes/na/{protocolo}/{senha}/`). */
+  senha?: string;
   limiteDefesa?: string;
   dataLimiteDefesa?: string;
   prazoDefesa?: string;

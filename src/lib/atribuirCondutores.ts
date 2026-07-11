@@ -1,5 +1,6 @@
 import {
   categoriaInfereCondutor,
+  editarClienteDespesa,
   isClienteDespesaAtiva,
   isInfracaoTransito,
   loadClienteDespesasDb,
@@ -24,6 +25,7 @@ import {
   espelharInfracaoParceiro,
   reconciliarEspelhosParceiro,
 } from "./espelharSemLocatarioParceiro.js";
+import { loadVeiculosDb } from "./veiculosDb.js";
 
 export type ReconAcao =
   | "vinculado"
@@ -50,10 +52,22 @@ export type ReconResult = {
   itens: ReconItem[];
 };
 
+function veiculoParticular(placa: string): boolean {
+  const key = compactPlaca(placa);
+  return (loadVeiculosDb().veiculos ?? []).some(
+    (v) => compactPlaca(v.placa) === key && v.particular === true,
+  );
+}
+
+function espelharParceiroSeParticular(reg: InfracaoRegistro): void {
+  if (veiculoParticular(reg.veiculoId)) espelharInfracaoParceiro(reg);
+}
+
 function elegivelReconciliarInfracao(r: InfracaoRegistro): boolean {
   if (r.ativo === false) return false;
   if (infracaoNaoCobravelDetran(r)) return false;
-  if (r.condutorId && r.condutorConfirmado && !r.condutorNaoIdentificado) return false;
+  if (r.condutorConfirmado && r.condutorNaoIdentificado) return false;
+  if (r.condutorId && r.condutorConfirmado) return false;
   return true;
 }
 
@@ -73,6 +87,13 @@ async function promoverInfracaoParaCliente(
   const r = await sincronizarClienteDespesa(reg.veiculoId, clienteDespesaInputFromInfracao(reg));
   if (r.registro.id && r.acao !== "ignorado") {
     vincularClienteDespesaInfracao(reg.numeroAuto, r.registro.id);
+    await editarClienteDespesa(r.registro.id, {
+      condutorId,
+      condutorContrato,
+      condutorConfirmado: true,
+      condutorNaoIdentificado: false,
+      ativo: true,
+    });
   }
   removerParceiroDespesaPorOrigem(
     origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto),
@@ -136,7 +157,7 @@ export async function reconciliarCondutores(opts?: {
         r.condutorId = null;
         r.condutorContrato = null;
         r.atualizadoEm = new Date().toISOString();
-        espelharInfracaoParceiro(r);
+        espelharParceiroSeParticular(r);
         mutouInfracoes = true;
       }
       itens.push({ ...base, acao: "nao-identificado" });
@@ -146,7 +167,7 @@ export async function reconciliarCondutores(opts?: {
         r.condutorConfirmado = true;
         r.condutorId = null;
         r.atualizadoEm = new Date().toISOString();
-        espelharInfracaoParceiro(r);
+        espelharParceiroSeParticular(r);
         mutouInfracoes = true;
       }
       itens.push({ ...base, acao: "cliente-faltando", cliente: res.condutorContrato });

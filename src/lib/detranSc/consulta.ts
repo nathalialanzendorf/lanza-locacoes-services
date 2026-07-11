@@ -18,6 +18,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Extrai ticket UUID de uma resposta bruta do DETRAN (consulta ou requisitar). */
+export function extrairTicketConsultaDetranSc(raw: unknown): string | null {
+  return pickTicketFromString(raw) ?? pickTicket(raw);
+}
+
 function pickTicket(raw: unknown): string | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
@@ -122,7 +127,8 @@ async function iniciarConsulta(
   if (msgErro) throw new DetranScConsultaError(`DETRAN SC requisitar-consulta: ${msgErro}`);
 
   if (r.ok && hasVeiculoPayload(raw)) {
-    return { ticket: null, direct: raw as DetranScConsultaVeiculo };
+    const ticket = pickTicketFromString(raw) ?? pickTicket(raw);
+    return { ticket, direct: raw as DetranScConsultaVeiculo };
   }
 
   const ticket = pickTicketFromString(raw) ?? pickTicket(raw);
@@ -173,20 +179,37 @@ async function buscarResposta(ticket: string): Promise<DetranScConsultaVeiculo> 
   throw new Error("DETRAN SC: timeout aguardando resposta-consulta");
 }
 
+export type DetranScConsultaComTicket = {
+  data: DetranScConsultaVeiculo;
+  /** Ticket UUID da consulta — necessário para `/veiculo/ait-pdf`. */
+  ticket: string | null;
+};
+
+/** Consulta veículo e devolve o ticket (quando houver) para download de PDFs. */
+export async function consultarVeiculoDetranScComTicket(
+  placa: string,
+  renavam: string,
+  opts?: { captcha?: string },
+): Promise<DetranScConsultaComTicket> {
+  const { ticket, direct } = await iniciarConsulta(placa, renavam, opts?.captcha);
+  if (direct) return { data: direct, ticket: null };
+  if (!ticket) {
+    throw new Error(
+      "DETRAN SC: não foi possível iniciar consulta (verifique token, X-Empresa e placa/renavam).",
+    );
+  }
+  const data = await buscarResposta(ticket);
+  return { data, ticket };
+}
+
 /** Consulta veículo no portal Detran Digital SC (placa + renavam + captcha). */
 export async function consultarVeiculoDetranSc(
   placa: string,
   renavam: string,
   opts?: { captcha?: string },
 ): Promise<DetranScConsultaVeiculo> {
-  const { ticket, direct } = await iniciarConsulta(placa, renavam, opts?.captcha);
-  if (direct) return direct;
-  if (!ticket) {
-    throw new Error(
-      "DETRAN SC: não foi possível iniciar consulta (verifique token, X-Empresa e placa/renavam).",
-    );
-  }
-  return buscarResposta(ticket);
+  const { data } = await consultarVeiculoDetranScComTicket(placa, renavam, opts);
+  return data;
 }
 
 /** Busca resposta quando o operador já tem o ticket `t` copiado do DevTools. */

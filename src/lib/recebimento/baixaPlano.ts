@@ -12,6 +12,7 @@ import {
 } from "../clienteDespesasDb.js";
 import { findClienteByCpf, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
+import { loadContratosDb } from "../contratosDb.js";
 import {
   dataBrComHora,
   dataVencimentoSemanalBr,
@@ -19,6 +20,11 @@ import {
   proximaParcelaSemanal,
   stripAtrasadoSemanal,
 } from "../pagamentoSemanal.js";
+import {
+  deveExibirCalculoSemanalAtraso,
+  montarPacoteCobrancaSemanalAtraso,
+} from "../pagamentoSemanalCobranca.js";
+import { compactPlaca } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { verificarIdempotenciaBaixa } from "./idempotenciaBaixa.js";
 export type { IdempotenciaBaixa, IdempotenciaStatus } from "./idempotenciaBaixa.js";
@@ -62,6 +68,16 @@ export type PlanoBaixaRecebimento = {
   revisaoManual?: boolean;
   /** Pagamento ou despesa alvo já existente no database — confirmar antes de gravar. */
   idempotencia?: IdempotenciaBaixa;
+  /** Tabela de juros/multa semanal — omitida só se pagamento na data de vencimento. */
+  calculoSemanalAtraso?: CalculoSemanalAtrasoPlano | null;
+};
+
+export type CalculoSemanalAtrasoPlano = {
+  exibir: boolean;
+  markdown: string;
+  totalGeral: number;
+  valorNominal: number;
+  payload: Record<string, unknown>;
 };
 
 type VeiculoDb = {
@@ -80,6 +96,77 @@ function loadClientes(): ClienteRegistro[] {
   const p = path.join(REPO_ROOT, "database", "clientes.json");
   const j = JSON.parse(fs.readFileSync(p, "utf8")) as { clientes?: ClienteRegistro[] };
   return j.clientes ?? [];
+}
+
+function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
+  const p = compactPlaca(veiculoId);
+  const list = loadContratosDb().contratos.filter(
+    (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
+  );
+  const par = list.find((c) => c.clienteId === clienteId);
+  if (par) return par;
+  list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
+  return list[0] ?? null;
+}
+
+function vencimentosSemanalAbertosCliente(clienteId: string, placa?: string): string[] {
+  const db = loadClienteDespesasDb();
+  const placaKey = placa ? compactPlaca(placa) : null;
+  const vencs = db.clienteDespesas
+    .filter(
+      (d) =>
+        d.condutorId === clienteId &&
+        d.ativo !== false &&
+        d.paga !== true &&
+        d.categoria === "Locação semanal" &&
+        /ATRASADO/i.test(d.descricao ?? "") &&
+        (!placaKey || compactPlaca(d.veiculoId) === placaKey),
+    )
+    .map((d) => dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao)
+    .filter(Boolean) as string[];
+
+  return [...new Set(vencs)].sort(compararDataBrAsc);
+}
+
+function montarCalculoSemanalAtrasoPlano(opts: {
+  clienteId: string;
+  clienteNome: string;
+  veiculoId: string;
+  dataPagamentoBr: string;
+  valorNominal: number;
+}): CalculoSemanalAtrasoPlano | null {
+  const vencimentosBr = vencimentosSemanalAbertosCliente(opts.clienteId, opts.veiculoId);
+  if (
+    vencimentosBr.length === 0 ||
+    !deveExibirCalculoSemanalAtraso(opts.dataPagamentoBr, vencimentosBr, false)
+  ) {
+    return null;
+  }
+
+  const contrato = contratoAtivoVeiculo(opts.veiculoId, opts.clienteId);
+  if (contrato?.valorSemanal == null || contrato?.valorDiaria == null) {
+    return null;
+  }
+
+  const pacote = montarPacoteCobrancaSemanalAtraso({
+    valorSemanal: contrato.valorSemanal,
+    valorDiaria: contrato.valorDiaria,
+    vencimentosBr,
+    dataPagamentoBr: opts.dataPagamentoBr,
+    emAberto: false,
+    clienteNome: opts.clienteNome,
+    placa: opts.veiculoId,
+    clienteId: opts.clienteId,
+  });
+  if (!pacote) return null;
+
+  return {
+    exibir: true,
+    markdown: pacote.markdown,
+    totalGeral: pacote.totalGeral,
+    valorNominal: opts.valorNominal,
+    payload: pacote.payload,
+  };
 }
 
 export function rastreavelLabel(veiculoId: string): string {
@@ -498,6 +585,38 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     avisos.push(`Idempotência (${idempotencia.status}): ${idempotencia.motivo}`);
   }
 
+  let calculoSemanalAtraso: CalculoSemanalAtrasoPlano | null = null;
+  if (alvo.categoria === "Locação semanal" && /ATRASADO/i.test(alvo.descricao)) {
+    calculoSemanalAtraso = montarCalculoSemanalAtrasoPlano({
+      clienteId: cliente.id!,
+      clienteNome: cliente.nome,
+      veiculoId: alvo.veiculoId,
+      dataPagamentoBr: dataBr,
+      valorNominal: valorDevido,
+    });
+    if (calculoSemanalAtraso) {
+      const diffJuros =
+        Math.round((calculoSemanalAtraso.totalGeral - valorDevido) * 100) / 100;
+      if (diffJuros > 0.01) {
+        avisos.push(
+          `Valor devido com juros/multa: R$ ${calculoSemanalAtraso.totalGeral.toFixed(2)} (nominal R$ ${valorDevido.toFixed(2)}).`,
+        );
+      }
+    } else {
+      const vencs = vencimentosSemanalAbertosCliente(cliente.id!, alvo.veiculoId);
+      const contrato = contratoAtivoVeiculo(alvo.veiculoId, cliente.id!);
+      if (
+        vencs.length > 0 &&
+        deveExibirCalculoSemanalAtraso(dataBr, vencs, false) &&
+        (contrato?.valorSemanal == null || contrato?.valorDiaria == null)
+      ) {
+        avisos.push(
+          "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de juros/multa.",
+        );
+      }
+    }
+  }
+
   return {
     cliente: { id: cliente.id!, nome: cliente.nome, cpf: cliente.cpf ?? null },
     pagamento: { valor, dataBr, horaBr, pagaEmIso },
@@ -513,6 +632,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     avisos,
     revisaoManual: input.revisaoManual || idempotencia.status !== "ok",
     idempotencia,
+    calculoSemanalAtraso,
   };
 }
 

@@ -92,9 +92,15 @@ export type InfracaoRegistro = {
   condutorConfirmado: boolean;
   condutorContrato: string | null;
   condutorNaoIdentificado?: boolean;
+  /** Operador confirmou: débito do parceiro/dono (não cobrar locatário). */
+  debitoParceiroConfirmado?: boolean;
+  /** Parceiro confirmado manualmente (uuid → parceiros.json); sobrescreve dono atual da placa. */
+  debitoParceiroId?: string | null;
   revisarManual?: boolean;
   revisarMotivo?: string | null;
   pdfArquivo?: string | null;
+  /** Notificação de autuação (`/infracoes/na/…`) — pasta Débitos. */
+  notificacaoPdfArquivo?: string | null;
   /** uuid em cliente-despesas.json quando existe débito cobrável espelhado. */
   clienteDespesaId?: string | null;
   /** Payload bruto do DETRAN (campos extras entre versões do portal). */
@@ -172,9 +178,12 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   condutorConfirmado: "boolean",
   condutorContrato: "Pasta do contrato usado na inferência",
   condutorNaoIdentificado: "boolean — sem locatário na autuação (espelho parceiro-despesas)",
+  debitoParceiroConfirmado: "boolean — débito do parceiro confirmado manualmente",
+  debitoParceiroId: "uuid -> parceiros.json — parceiro na época (confirmação manual)",
   revisarManual: "boolean — precisa revisão (ex.: sem data)",
   revisarMotivo: "Motivo da revisão manual",
-  pdfArquivo: "Caminho do PDF (pasta Débitos)",
+  pdfArquivo: "Caminho do PDF — auto de infração (AIT)",
+  notificacaoPdfArquivo: "Caminho do PDF — notificação de autuação (NA)",
   clienteDespesaId: "uuid -> cliente-despesas.json (débito cobrável espelhado)",
   detranRaw: "Payload bruto DETRAN (campos extras)",
   origem: "detran-sc | backfill-cliente-despesas | manual",
@@ -453,6 +462,28 @@ export function findInfracaoByNumeroAuto(numeroAuto: string): InfracaoRegistro |
   return db.infracoes.find((i) => autoKey(i.numeroAuto) === key) ?? null;
 }
 
+/** Marca infração como débito do parceiro/dono (confirmação manual do operador). */
+export function confirmarDebitoParceiroInfracao(
+  numeroAuto: string,
+  parceiroId?: string | null,
+): InfracaoRegistro | null {
+  const db = loadInfracoesDb();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  reg.debitoParceiroConfirmado = true;
+  if (parceiroId !== undefined) reg.debitoParceiroId = parceiroId;
+  reg.condutorNaoIdentificado = true;
+  reg.condutorConfirmado = true;
+  reg.condutorId = null;
+  reg.condutorContrato = null;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  saveInfracoesDb(db);
+  return reg;
+}
+
 export function vincularClienteDespesaInfracao(
   numeroAuto: string,
   clienteDespesaId: string,
@@ -481,6 +512,23 @@ export function atualizarPdfArquivoInfracaoDb(
   const reg = db.infracoes[idx]!;
   if (reg.pdfArquivo === pdfArquivo) return reg;
   reg.pdfArquivo = pdfArquivo;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  saveInfracoesDb(db);
+  return reg;
+}
+
+export function atualizarNotificacaoPdfArquivoInfracaoDb(
+  numeroAuto: string,
+  notificacaoPdfArquivo: string,
+): InfracaoRegistro | null {
+  const db = loadInfracoesDb();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  if (reg.notificacaoPdfArquivo === notificacaoPdfArquivo) return reg;
+  reg.notificacaoPdfArquivo = notificacaoPdfArquivo;
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
   saveInfracoesDb(db);

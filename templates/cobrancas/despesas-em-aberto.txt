@@ -6,3 +6,5 @@ Segue a listagem das despesas referente à locação do seu {MARCA_MODELO} que s
 {LISTA}
 
 *Total em aberto: R$ {VALOR}*
+
+_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._

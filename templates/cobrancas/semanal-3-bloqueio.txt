@@ -15,4 +15,4 @@ Banco: Caixa Econômica Federal
 Agência: 0410 • Operação: 1292
 Conta: 576661724-7
 
-ℹ️ A liberação do veículo está condicionada à quitação integral dos valores em atraso.
+_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._

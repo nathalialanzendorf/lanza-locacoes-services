@@ -47,6 +47,7 @@ const TEMPLATE_RENEGOCIACAO = "renegociacao.txt";
 const TEMPLATE_MANUTENCAO = "manutencao.txt";
 const TEMPLATE_DESPESAS_ABERTO = "despesas-em-aberto.txt";
 const TEMPLATE_SEMANAL_RESUMO_ATRASO_INTRO = "semanal-resumo-atraso-intro.txt";
+const TEMPLATE_SEMANAL_ATRASO = "semanal-atraso.txt";
 
 /** Dados estruturados da cobrança (alimenta o JSON sidecar e o canvas). */
 export type CobrancaDados = {
@@ -106,9 +107,29 @@ function preencher(tpl: string, vars: Record<string, string>): string {
   );
 }
 
-/** Rodapé em itálico (WhatsApp) indicando envio automático. */
-export const RODAPE_AUTOMATICO =
-  "_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._";
+/** Texto do rodapé (sem formatação). */
+const RODAPE_TEXTO =
+  "Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares.";
+
+/** Rodapé em itálico (WhatsApp) — sempre acrescentado pelo código. */
+export const RODAPE_AUTOMATICO = `_${RODAPE_TEXTO}_`;
+
+function stripRodapeFromText(texto: string): string {
+  let corpo = texto.trimEnd();
+  for (const marcador of [RODAPE_AUTOMATICO, RODAPE_TEXTO]) {
+    const idx = corpo.lastIndexOf(marcador);
+    if (idx !== -1) {
+      corpo = corpo.slice(0, idx).trimEnd();
+    }
+  }
+  return corpo;
+}
+
+/** Garante exatamente um rodapé automático no fim da mensagem (idempotente). */
+export function ensureRodapeWhatsApp(texto: string): string {
+  const corpo = stripRodapeFromText(texto);
+  return `${corpo}\n\n${RODAPE_AUTOMATICO}\n`;
+}
 
 /**
  * Preenche o template, ajusta a saudação quando não há nome ("Olá, !" → "Olá!")
@@ -118,7 +139,7 @@ function montarTexto(tpl: string, vars: Record<string, string>): string {
   const corpo = preencher(tpl, vars)
     .replace(/Olá,\s*!/g, "Olá!")
     .replace(/\s+$/, "");
-  return `${corpo}\n\n${RODAPE_AUTOMATICO}\n`;
+  return ensureRodapeWhatsApp(corpo);
 }
 
 /** Primeiro nome, capitalizado (ex.: "CERES BEATRIZ" → "Ceres"). */
@@ -376,7 +397,7 @@ export type LinhaDespesaEmAbertoWhatsApp = {
   total: number;
 };
 
-/** Intro do bloco «Resumo do atraso» na mensagem pagamento-semanal (sem rodapé). */
+/** Intro do bloco «Resumo do atraso» (sem rodapé). */
 export function formatIntroResumoAtrasoSemanal(
   placaRaw: string,
   opts?: { nome?: string },
@@ -391,6 +412,27 @@ export function formatIntroResumoAtrasoSemanal(
   })
     .replace(/Olá,\s*!/g, "Olá!")
     .trimEnd();
+}
+
+/** Mensagem WhatsApp separada com juros/multa do pagamento semanal em atraso. */
+export function gerarMensagemSemanalAtrasoWhatsApp(
+  placaRaw: string,
+  opts: { nome?: string; blocoResumo: string },
+): { titulo: string; texto: string } {
+  const placa = formatPlacaHyphen(placaRaw);
+  const v = buscarVeiculo(placa);
+  const nome = opts.nome ? primeiroNome(opts.nome) : nomePorPlaca(placa);
+  const tpl = lerTemplate(TEMPLATE_SEMANAL_ATRASO);
+  const texto = montarTexto(tpl, {
+    PLACA: placa,
+    NOME: nome,
+    MARCA_MODELO: marcaModeloDe(v),
+    RESUMO: opts.blocoResumo.trim(),
+  });
+  return {
+    titulo: texto.split("\n")[0] ?? "",
+    texto,
+  };
 }
 
 /** Mensagem WhatsApp com todas as despesas em aberto do escopo. */
@@ -510,7 +552,7 @@ export function salvarCobranca(r: ResultadoCobranca, outDir?: string): string {
   const dir = outDir ?? COBRANCAS_OUT_DIR;
   fs.mkdirSync(dir, { recursive: true });
   const saida = path.join(dir, r.nomeArquivo);
-  fs.writeFileSync(saida, r.texto, "utf8");
+  fs.writeFileSync(saida, ensureRodapeWhatsApp(r.texto), "utf8");
   return saida;
 }
 

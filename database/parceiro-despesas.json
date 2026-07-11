@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-07-06",
+  "atualizadoEm": "2026-07-11",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -456,7 +456,10 @@
       "data": "10/06/2026",
       "valor": 50,
       "competencia": "06/2026",
-      "origem": "rastreador-fixo/RLA1G81/06-2026"
+      "origem": "rastreador-fixo/RLA1G81/06-2026",
+      "rastreameManutencaoId": 179,
+      "rastreameHash": "42397c4b9ced22ed",
+      "rastreameSyncEm": "2026-07-09T00:10:12.322Z"
     },
     {
       "id": "a98e41c0-32a0-4392-aa94-a698874704b4",
@@ -3239,7 +3242,10 @@
       "data": "10/01/2026",
       "valor": 50,
       "competencia": "01/2026",
-      "origem": "rastreador-fixo/RLA1G81/01-2026"
+      "origem": "rastreador-fixo/RLA1G81/01-2026",
+      "rastreameManutencaoId": 38,
+      "rastreameHash": "baf3acdcb2cc5bf8",
+      "rastreameSyncEm": "2026-07-09T00:10:12.331Z"
     },
     {
       "id": "4ceff1cd-78f4-45e7-be4e-a2855c16d23e",
@@ -3250,7 +3256,10 @@
       "data": "10/02/2026",
       "valor": 50,
       "competencia": "02/2026",
-      "origem": "rastreador-fixo/RLA1G81/02-2026"
+      "origem": "rastreador-fixo/RLA1G81/02-2026",
+      "rastreameManutencaoId": 80,
+      "rastreameHash": "25c147e33b207ef5",
+      "rastreameSyncEm": "2026-07-09T00:10:12.338Z"
     },
     {
       "id": "508f5236-4b83-44a5-a45e-c9ca6313a5a3",
@@ -3261,7 +3270,10 @@
       "data": "10/03/2026",
       "valor": 50,
       "competencia": "03/2026",
-      "origem": "rastreador-fixo/RLA1G81/03-2026"
+      "origem": "rastreador-fixo/RLA1G81/03-2026",
+      "rastreameManutencaoId": 105,
+      "rastreameHash": "f2ffa7f59ad28b72",
+      "rastreameSyncEm": "2026-07-09T00:10:12.343Z"
     },
     {
       "id": "c76ff44a-4681-43b2-b3df-a41cba30a2c7",
@@ -3272,7 +3284,10 @@
       "data": "10/04/2026",
       "valor": 50,
       "competencia": "04/2026",
-      "origem": "rastreador-fixo/RLA1G81/04-2026"
+      "origem": "rastreador-fixo/RLA1G81/04-2026",
+      "rastreameManutencaoId": 307,
+      "rastreameHash": "72b94c57421b29dc",
+      "rastreameSyncEm": "2026-07-09T00:10:12.351Z"
     },
     {
       "id": "6f313acc-17fa-431c-88ad-c40e62b4be2b",
@@ -3283,7 +3298,10 @@
       "data": "10/05/2026",
       "valor": 50,
       "competencia": "05/2026",
-      "origem": "rastreador-fixo/RLA1G81/05-2026"
+      "origem": "rastreador-fixo/RLA1G81/05-2026",
+      "rastreameManutencaoId": 171,
+      "rastreameHash": "8d49d55a10a30a91",
+      "rastreameSyncEm": "2026-07-09T00:10:12.361Z"
     },
     {
       "id": "e03b3c00-48d3-4a24-bd95-54a66f9f0cb0",
@@ -4185,40 +4203,10 @@
       "data": "10/07/2026",
       "valor": 50,
       "competencia": "07/2026",
-      "origem": "rastreador-fixo/RLA1G81/07-2026"
-    },
-    {
-      "id": "e1c94ea1-44bf-4acc-994c-de3369091016",
-      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
-      "placa": "OZC-0B50",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J008779003)",
-      "data": "17/07/2026",
-      "valor": 130.16,
-      "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779003"
-    },
-    {
-      "id": "18ae99ba-7fbf-4cef-a583-194a93654d49",
-      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
-      "placa": "OZC-0B50",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J008779092)",
-      "data": "17/07/2026",
-      "valor": 130.16,
-      "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779092"
-    },
-    {
-      "id": "a59d3f3e-ab64-4eff-a9df-0464073809fb",
-      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
-      "placa": "OZC-0B50",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANS EM VELOC SUP À MÁX PERMITIDA EM MAIS DE 20% ATE 50% (J008779127)",
-      "data": "17/07/2026",
-      "valor": 195.23,
-      "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779127"
+      "origem": "rastreador-fixo/RLA1G81/07-2026",
+      "rastreameManutencaoId": 162,
+      "rastreameHash": "25a0041b6961db7f",
+      "rastreameSyncEm": "2026-07-09T00:10:12.368Z"
     },
     {
       "id": "9aa3cceb-fc6f-4338-a177-2c77f1427e52",
@@ -4229,7 +4217,10 @@
       "data": "31/10/2022",
       "valor": 130.16,
       "competencia": "10/2022",
-      "origem": "detran-sc/infracao-sem-locatario/QJB0I83/P07MQ009QP"
+      "origem": "detran-sc/infracao-sem-locatario/QJB0I83/P07MQ009QP",
+      "rastreameManutencaoId": 434,
+      "rastreameHash": "84ab42aa8859f8bd",
+      "rastreameSyncEm": "2026-07-09T00:10:13.162Z"
     },
     {
       "id": "18df410a-6d09-412f-9e60-b8aee0aea46d",
@@ -4240,7 +4231,10 @@
       "data": "27/07/2026",
       "valor": 293.47,
       "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/QJB0I83/BC01212784"
+      "origem": "detran-sc/infracao-sem-locatario/QJB0I83/BC01212784",
+      "rastreameManutencaoId": 435,
+      "rastreameHash": "4e06e7d2a530e3ef",
+      "rastreameSyncEm": "2026-07-09T00:10:13.354Z"
     },
     {
       "id": "eff8d4e3-ce4c-4db5-9b49-9539704f6c50",
@@ -4251,7 +4245,10 @@
       "data": "19/01/2026",
       "valor": 195.23,
       "competencia": "01/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/Z000019845"
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/Z000019845",
+      "rastreameManutencaoId": 436,
+      "rastreameHash": "17f1554e391fb2d2",
+      "rastreameSyncEm": "2026-07-09T00:10:13.550Z"
     },
     {
       "id": "b925e03c-1969-4a23-a065-493a1feb42e9",
@@ -4262,7 +4259,10 @@
       "data": "13/01/2026",
       "valor": 195.23,
       "competencia": "01/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/Z000019946"
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/Z000019946",
+      "rastreameManutencaoId": 437,
+      "rastreameHash": "1d1fb252fa8f695d",
+      "rastreameSyncEm": "2026-07-09T00:10:13.754Z"
     },
     {
       "id": "cad714db-a2d1-4a15-af8d-e6a83072f285",
@@ -4273,7 +4273,10 @@
       "data": "09/01/2026",
       "valor": 130.16,
       "competencia": "01/2026",
-      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/P0C6O000FI"
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/P0C6O000FI",
+      "rastreameManutencaoId": 438,
+      "rastreameHash": "b002cc348aaa829d",
+      "rastreameSyncEm": "2026-07-09T00:10:13.960Z"
     },
     {
       "id": "ad57d65b-2543-4cb0-bc17-63dcf4d4e799",
@@ -4284,7 +4287,10 @@
       "data": "14/10/2019",
       "valor": 195.23,
       "competencia": "10/2019",
-      "origem": "detran-sc/infracao-sem-locatario/OWN3C59/55452346G"
+      "origem": "detran-sc/infracao-sem-locatario/OWN3C59/55452346G",
+      "rastreameManutencaoId": 439,
+      "rastreameHash": "188c1ee7c49b393e",
+      "rastreameSyncEm": "2026-07-09T00:10:14.147Z"
     },
     {
       "id": "15e17528-6f7a-4216-ad18-aeee2c3dd7cb",
@@ -4295,7 +4301,10 @@
       "data": "10/10/2025",
       "valor": 195.23,
       "competencia": "10/2025",
-      "origem": "detran-sc/infracao-sem-locatario/OWN3C59/Z000017399"
+      "origem": "detran-sc/infracao-sem-locatario/OWN3C59/Z000017399",
+      "rastreameManutencaoId": 440,
+      "rastreameHash": "bfcc82447cced29a",
+      "rastreameSyncEm": "2026-07-09T00:10:14.343Z"
     },
     {
       "id": "2f4f76da-bbdf-497e-81f8-5cf34934d3f9",
@@ -4306,7 +4315,10 @@
       "data": "01/03/2021",
       "valor": 88.38,
       "competencia": "03/2021",
-      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/P016S002ZX"
+      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/P016S002ZX",
+      "rastreameManutencaoId": 441,
+      "rastreameHash": "834c0b0b310e1fd3",
+      "rastreameSyncEm": "2026-07-09T00:10:14.529Z"
     },
     {
       "id": "a124e8b3-ca14-40ac-821a-bb1ca611cc9f",
@@ -4317,7 +4329,10 @@
       "data": "01/03/2021",
       "valor": 88.38,
       "competencia": "03/2021",
-      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/P016S0032R"
+      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/P016S0032R",
+      "rastreameManutencaoId": 442,
+      "rastreameHash": "a560ac9cc4ab9f42",
+      "rastreameSyncEm": "2026-07-09T00:10:14.722Z"
     },
     {
       "id": "7d115fc0-6468-46f5-ba6d-b0a6a51a7a98",
@@ -4328,7 +4343,10 @@
       "data": "24/02/2026",
       "valor": 195.23,
       "competencia": "02/2026",
-      "origem": "detran-sc/infracao-sem-locatario/IWP5G63/Z000021201"
+      "origem": "detran-sc/infracao-sem-locatario/IWP5G63/Z000021201",
+      "rastreameManutencaoId": 443,
+      "rastreameHash": "5fd485abc758c43d",
+      "rastreameSyncEm": "2026-07-09T00:10:14.923Z"
     },
     {
       "id": "036da633-d2fc-49fc-9fc2-2d216d629719",
@@ -4339,7 +4357,10 @@
       "data": "05/02/2026",
       "valor": 130.16,
       "competencia": "02/2026",
-      "origem": "detran-sc/infracao-sem-locatario/IYR8F19/55707381W"
+      "origem": "detran-sc/infracao-sem-locatario/IYR8F19/55707381W",
+      "rastreameManutencaoId": 444,
+      "rastreameHash": "d6881451d6e4dc5f",
+      "rastreameSyncEm": "2026-07-09T00:10:15.120Z"
     },
     {
       "id": "4633e20b-d926-4794-9e3a-9ac118d19f5c",
@@ -4350,18 +4371,10 @@
       "data": "29/05/2026",
       "valor": 130.16,
       "competencia": "05/2026",
-      "origem": "detran-sc/infracao-sem-locatario/IYR8F19/J007667297"
-    },
-    {
-      "id": "39fd31d1-d00b-4c14-8034-29b2ba34ab0d",
-      "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
-      "placa": "IYR-8F19",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (E033126290)",
-      "data": "22/06/2026",
-      "valor": 130.16,
-      "competencia": "06/2026",
-      "origem": "detran-sc/infracao-sem-locatario/IYR8F19/E033126290"
+      "origem": "detran-sc/infracao-sem-locatario/IYR8F19/J007667297",
+      "rastreameManutencaoId": 445,
+      "rastreameHash": "530e2abac438d5a9",
+      "rastreameSyncEm": "2026-07-09T00:10:15.309Z"
     },
     {
       "id": "b2c8ce3f-eadd-4af2-b5f0-06524e7d0824",
@@ -4383,7 +4396,10 @@
       "data": "19/09/2025",
       "valor": 130.16,
       "competencia": "09/2025",
-      "origem": "detran-sc/infracao-sem-locatario/RLA1G81/J002722271"
+      "origem": "detran-sc/infracao-sem-locatario/RLA1G81/J002722271",
+      "rastreameManutencaoId": 447,
+      "rastreameHash": "0ff3fb72e72e3101",
+      "rastreameSyncEm": "2026-07-09T00:10:15.696Z"
     },
     {
       "id": "5868405b-0d4a-4064-8d77-1b8d82f97bc9",
@@ -4394,7 +4410,10 @@
       "data": "10/07/2026",
       "valor": 130.16,
       "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/RLA1G81/J008489516"
+      "origem": "detran-sc/infracao-sem-locatario/RLA1G81/J008489516",
+      "rastreameManutencaoId": 448,
+      "rastreameHash": "bfa45091b39919ac",
+      "rastreameSyncEm": "2026-07-09T00:10:15.886Z"
     },
     {
       "id": "661c5458-6d08-43d2-ab83-911f10df8b5c",
@@ -4405,7 +4424,10 @@
       "data": "06/02/2026",
       "valor": 2.4,
       "competencia": "02/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-28749340"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-28749340",
+      "rastreameManutencaoId": 449,
+      "rastreameHash": "1c60906acf9db6d0",
+      "rastreameSyncEm": "2026-07-09T00:10:16.087Z"
     },
     {
       "id": "d7b074e8-2d70-4e30-b62d-3779025165e0",
@@ -4416,7 +4438,10 @@
       "data": "25/02/2026",
       "valor": 2.4,
       "competencia": "02/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-32935156"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-32935156",
+      "rastreameManutencaoId": 450,
+      "rastreameHash": "70db328df371ebb2",
+      "rastreameSyncEm": "2026-07-09T00:10:16.284Z"
     },
     {
       "id": "068082f5-3f66-4f2a-becd-230822e7ba98",
@@ -4427,7 +4452,10 @@
       "data": "25/02/2026",
       "valor": 2.4,
       "competencia": "02/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33173002"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33173002",
+      "rastreameManutencaoId": 451,
+      "rastreameHash": "840b59a46a189cfd",
+      "rastreameSyncEm": "2026-07-09T00:10:16.476Z"
     },
     {
       "id": "a9df2476-8bb3-434b-855e-f9686410ce49",
@@ -4438,7 +4466,10 @@
       "data": "02/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33707456"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33707456",
+      "rastreameManutencaoId": 452,
+      "rastreameHash": "b7bcda23cca1a833",
+      "rastreameSyncEm": "2026-07-09T00:10:16.668Z"
     },
     {
       "id": "d8c7e02e-15bb-4280-a6b4-ec44b164fd10",
@@ -4449,7 +4480,10 @@
       "data": "02/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33711564"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33711564",
+      "rastreameManutencaoId": 453,
+      "rastreameHash": "97a3fd69c7545214",
+      "rastreameSyncEm": "2026-07-09T00:10:16.856Z"
     },
     {
       "id": "2a07a566-c3ea-4f35-bf5f-c4fadb3ceb43",
@@ -4460,7 +4494,10 @@
       "data": "03/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33707887"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33707887",
+      "rastreameManutencaoId": 454,
+      "rastreameHash": "d886710ff80b3d0e",
+      "rastreameSyncEm": "2026-07-09T00:10:17.379Z"
     },
     {
       "id": "8913d364-0586-4030-a647-3ef10e2677d4",
@@ -4471,7 +4508,10 @@
       "data": "04/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33726679"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-33726679",
+      "rastreameManutencaoId": 455,
+      "rastreameHash": "55d67c73b96e095a",
+      "rastreameSyncEm": "2026-07-09T00:10:17.801Z"
     },
     {
       "id": "79abae3c-5b9a-4b56-a1bc-9dfece686f70",
@@ -4482,7 +4522,10 @@
       "data": "09/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34282716"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34282716",
+      "rastreameManutencaoId": 456,
+      "rastreameHash": "728206c5ab03cc14",
+      "rastreameSyncEm": "2026-07-09T00:10:18.084Z"
     },
     {
       "id": "174bb647-8f4c-493d-b4c5-dcf1bc7909d7",
@@ -4493,7 +4536,10 @@
       "data": "10/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34354393"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34354393",
+      "rastreameManutencaoId": 457,
+      "rastreameHash": "10182f13b468a382",
+      "rastreameSyncEm": "2026-07-09T00:10:18.388Z"
     },
     {
       "id": "7cc2f412-32dc-41c3-a21f-28da02d9124a",
@@ -4504,7 +4550,10 @@
       "data": "11/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34477828"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34477828",
+      "rastreameManutencaoId": 458,
+      "rastreameHash": "18bbdad86492f6ce",
+      "rastreameSyncEm": "2026-07-09T00:10:18.582Z"
     },
     {
       "id": "aba67ed9-1f26-4d44-bf04-9bd8fca6e3ff",
@@ -4515,7 +4564,10 @@
       "data": "13/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34652955"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34652955",
+      "rastreameManutencaoId": 459,
+      "rastreameHash": "520adec87c2e00c5",
+      "rastreameSyncEm": "2026-07-09T00:10:18.786Z"
     },
     {
       "id": "c4c9dd18-40aa-4b42-a792-2ee90960ba63",
@@ -4526,7 +4578,10 @@
       "data": "13/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34684494"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34684494",
+      "rastreameManutencaoId": 460,
+      "rastreameHash": "89b6bc53a77db82a",
+      "rastreameSyncEm": "2026-07-09T00:10:18.986Z"
     },
     {
       "id": "22312133-adaa-4b7b-b3ce-9085ff4b25b2",
@@ -4537,7 +4592,10 @@
       "data": "14/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34723974"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34723974",
+      "rastreameManutencaoId": 461,
+      "rastreameHash": "c4daa78083c7cd59",
+      "rastreameSyncEm": "2026-07-09T00:10:19.187Z"
     },
     {
       "id": "e43e1186-6fd8-4fa7-b6d0-f96ce29fe4e2",
@@ -4548,7 +4606,10 @@
       "data": "14/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34766154"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-34766154",
+      "rastreameManutencaoId": 462,
+      "rastreameHash": "9a816d7082ed549b",
+      "rastreameSyncEm": "2026-07-09T00:10:19.382Z"
     },
     {
       "id": "9c21c6a7-2b6a-4c8d-8f7c-41d168e4dd0b",
@@ -4559,7 +4620,10 @@
       "data": "19/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35129034"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35129034",
+      "rastreameManutencaoId": 463,
+      "rastreameHash": "e51c51003d02ab5f",
+      "rastreameSyncEm": "2026-07-09T00:10:19.580Z"
     },
     {
       "id": "885299b1-54db-4ec1-83ba-52dd623c0f03",
@@ -4570,7 +4634,10 @@
       "data": "19/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35162409"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35162409",
+      "rastreameManutencaoId": 464,
+      "rastreameHash": "99ccb4eb977ac2ad",
+      "rastreameSyncEm": "2026-07-09T00:10:19.779Z"
     },
     {
       "id": "2ddba3a1-092d-4b89-bbfa-450b2eadc671",
@@ -4581,7 +4648,10 @@
       "data": "20/03/2026",
       "valor": 3,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35190149"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35190149",
+      "rastreameManutencaoId": 465,
+      "rastreameHash": "a542a61888bfd71f",
+      "rastreameSyncEm": "2026-07-09T00:10:19.974Z"
     },
     {
       "id": "8cfb3004-4d71-4dd1-8838-764ad30e8771",
@@ -4592,7 +4662,10 @@
       "data": "20/03/2026",
       "valor": 3,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35227419"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-35227419",
+      "rastreameManutencaoId": 466,
+      "rastreameHash": "5f4586aac1f1f444",
+      "rastreameSyncEm": "2026-07-09T00:10:20.177Z"
     },
     {
       "id": "c62d127a-0fb1-46f1-876d-0006acb28475",
@@ -4603,7 +4676,10 @@
       "data": "13/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-37417288"
+      "origem": "pedagio-digital/sem-locatario/BBV6A91/PED-37417288",
+      "rastreameManutencaoId": 467,
+      "rastreameHash": "0515735af5dd323e",
+      "rastreameSyncEm": "2026-07-09T00:10:20.359Z"
     },
     {
       "id": "6df61244-4b48-45b0-bf18-3bfddfe49960",
@@ -4614,7 +4690,10 @@
       "data": "21/02/2026",
       "valor": 4.8,
       "competencia": "02/2026",
-      "origem": "pedagio-digital/sem-locatario/IYR8F19/PED-30095071"
+      "origem": "pedagio-digital/sem-locatario/IYR8F19/PED-30095071",
+      "rastreameManutencaoId": 468,
+      "rastreameHash": "9beed43ecef25f7a",
+      "rastreameSyncEm": "2026-07-09T00:10:20.555Z"
     },
     {
       "id": "62488fb8-3586-43ea-b1ea-2bee57d23af0",
@@ -4625,7 +4704,10 @@
       "data": "27/02/2026",
       "valor": 2.4,
       "competencia": "02/2026",
-      "origem": "pedagio-digital/sem-locatario/IYR8F19/PED-33331579"
+      "origem": "pedagio-digital/sem-locatario/IYR8F19/PED-33331579",
+      "rastreameManutencaoId": 469,
+      "rastreameHash": "37567c5a78c76dfd",
+      "rastreameSyncEm": "2026-07-09T00:10:20.759Z"
     },
     {
       "id": "f791509b-05e0-4960-bd22-68baeb0f2c15",
@@ -4636,7 +4718,10 @@
       "data": "11/09/2024",
       "valor": 2.4,
       "competencia": "09/2024",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16190633"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16190633",
+      "rastreameManutencaoId": 470,
+      "rastreameHash": "c28b29e937059ba9",
+      "rastreameSyncEm": "2026-07-09T00:10:20.963Z"
     },
     {
       "id": "e2e51bb0-5f87-4c82-aba0-6b00dfb822e9",
@@ -4647,7 +4732,10 @@
       "data": "11/09/2024",
       "valor": 2.4,
       "competencia": "09/2024",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16194120"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16194120",
+      "rastreameManutencaoId": 471,
+      "rastreameHash": "f02bfe78275df74b",
+      "rastreameSyncEm": "2026-07-09T00:10:21.175Z"
     },
     {
       "id": "776fb1e3-4eb4-47b9-8747-9257ab8c2609",
@@ -4658,7 +4746,10 @@
       "data": "17/09/2024",
       "valor": 2.4,
       "competencia": "09/2024",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16165029"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16165029",
+      "rastreameManutencaoId": 472,
+      "rastreameHash": "74bef4dd86fd3a96",
+      "rastreameSyncEm": "2026-07-09T00:10:21.381Z"
     },
     {
       "id": "fcd16f7f-03a0-4743-aa30-8e0f2f687240",
@@ -4669,7 +4760,10 @@
       "data": "15/10/2024",
       "valor": 2.4,
       "competencia": "10/2024",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16184163"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16184163",
+      "rastreameManutencaoId": 473,
+      "rastreameHash": "a328084c6d67eb1b",
+      "rastreameSyncEm": "2026-07-09T00:10:21.581Z"
     },
     {
       "id": "e844cb22-1619-4dd2-9481-eb6275a3973c",
@@ -4680,7 +4774,10 @@
       "data": "15/10/2024",
       "valor": 2.4,
       "competencia": "10/2024",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16184188"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-16184188",
+      "rastreameManutencaoId": 474,
+      "rastreameHash": "de3b1a7b47e71e21",
+      "rastreameSyncEm": "2026-07-09T00:10:21.781Z"
     },
     {
       "id": "3b93721e-8968-4617-87a6-b2ad60439994",
@@ -4691,7 +4788,10 @@
       "data": "16/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-43626169"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-43626169",
+      "rastreameManutencaoId": 475,
+      "rastreameHash": "b5a78151e91d38e4",
+      "rastreameSyncEm": "2026-07-09T00:10:21.990Z"
     },
     {
       "id": "ab7f88c7-b8c1-4e22-b5e7-0fa0e061f25c",
@@ -4702,7 +4802,10 @@
       "data": "16/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-43629004"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-43629004",
+      "rastreameManutencaoId": 476,
+      "rastreameHash": "4b20b5fc1c6c71cb",
+      "rastreameSyncEm": "2026-07-09T00:10:22.183Z"
     },
     {
       "id": "8a2daeb5-7747-41ba-b411-2a76f47ebaf4",
@@ -4713,7 +4816,10 @@
       "data": "28/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-44680689"
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-44680689",
+      "rastreameManutencaoId": 477,
+      "rastreameHash": "792c186f5dcb1d76",
+      "rastreameSyncEm": "2026-07-09T00:10:22.371Z"
     },
     {
       "id": "7b91a6de-892e-4a2d-9a12-d72e2ec340bd",
@@ -4724,7 +4830,10 @@
       "data": "23/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-44283287"
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-44283287",
+      "rastreameManutencaoId": 478,
+      "rastreameHash": "0e49d7db19ab5cae",
+      "rastreameSyncEm": "2026-07-09T00:10:22.568Z"
     },
     {
       "id": "31e4323a-48ad-4279-adc9-22d7e4a1e89c",
@@ -4735,7 +4844,10 @@
       "data": "24/07/2024",
       "valor": 4.8,
       "competencia": "07/2024",
-      "origem": "pedagio-digital/sem-locatario/OWN3C59/PED-16137274"
+      "origem": "pedagio-digital/sem-locatario/OWN3C59/PED-16137274",
+      "rastreameManutencaoId": 479,
+      "rastreameHash": "84013a0d83d168f6",
+      "rastreameSyncEm": "2026-07-09T00:10:22.760Z"
     },
     {
       "id": "cdbd9bda-b2d9-41f9-9d40-9d13aaf0c1c2",
@@ -4746,7 +4858,10 @@
       "data": "05/10/2025",
       "valor": 2.4,
       "competencia": "10/2025",
-      "origem": "pedagio-digital/sem-locatario/OWN3C59/PED-16625905"
+      "origem": "pedagio-digital/sem-locatario/OWN3C59/PED-16625905",
+      "rastreameManutencaoId": 480,
+      "rastreameHash": "0b90a244f59f3fe9",
+      "rastreameSyncEm": "2026-07-09T00:10:22.963Z"
     },
     {
       "id": "857d0465-0e94-4c94-a439-a996859045af",
@@ -4757,7 +4872,10 @@
       "data": "17/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35005754"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35005754",
+      "rastreameManutencaoId": 481,
+      "rastreameHash": "1fa7c6d4a05754bf",
+      "rastreameSyncEm": "2026-07-09T00:10:23.183Z"
     },
     {
       "id": "e4531a11-fb09-455c-b559-7d824d5355a4",
@@ -4768,7 +4886,10 @@
       "data": "18/03/2026",
       "valor": 4.8,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35050178"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35050178",
+      "rastreameManutencaoId": 482,
+      "rastreameHash": "231e30a1facfa0b7",
+      "rastreameSyncEm": "2026-07-09T00:10:23.376Z"
     },
     {
       "id": "7f59f547-d5da-4dd7-9ae7-b9799a16545b",
@@ -4779,7 +4900,10 @@
       "data": "18/03/2026",
       "valor": 2.4,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35050692"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35050692",
+      "rastreameManutencaoId": 483,
+      "rastreameHash": "70173782428982a1",
+      "rastreameSyncEm": "2026-07-09T00:10:23.565Z"
     },
     {
       "id": "41d8b387-d3d3-404e-b087-fc597d8c8e51",
@@ -4790,7 +4914,10 @@
       "data": "25/03/2026",
       "valor": 3,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35704921"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35704921",
+      "rastreameManutencaoId": 484,
+      "rastreameHash": "a784b4c3185351fd",
+      "rastreameSyncEm": "2026-07-09T00:10:23.763Z"
     },
     {
       "id": "e0b0307a-356a-469c-8727-cbf55d3322f1",
@@ -4801,7 +4928,10 @@
       "data": "26/03/2026",
       "valor": 3,
       "competencia": "03/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35791591"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-35791591",
+      "rastreameManutencaoId": 485,
+      "rastreameHash": "79bf84f610d58914",
+      "rastreameSyncEm": "2026-07-09T00:10:23.946Z"
     },
     {
       "id": "7cf4c51f-849a-4b4e-bc60-ddad9ef16b53",
@@ -4812,7 +4942,10 @@
       "data": "03/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-36511261"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-36511261",
+      "rastreameManutencaoId": 486,
+      "rastreameHash": "518a9b399c9336bf",
+      "rastreameSyncEm": "2026-07-09T00:10:24.142Z"
     },
     {
       "id": "6b41c617-11c6-4e92-adf3-6950ea35d661",
@@ -4823,7 +4956,10 @@
       "data": "04/04/2026",
       "valor": 6,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-36596921"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-36596921",
+      "rastreameManutencaoId": 487,
+      "rastreameHash": "95110d5172519964",
+      "rastreameSyncEm": "2026-07-09T00:10:24.335Z"
     },
     {
       "id": "4a0be83a-1e76-4e49-bd6a-7d8e1a5f9b02",
@@ -4834,7 +4970,10 @@
       "data": "11/04/2026",
       "valor": 6,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37194654"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37194654",
+      "rastreameManutencaoId": 488,
+      "rastreameHash": "45eb23b68ce0b693",
+      "rastreameSyncEm": "2026-07-09T00:10:24.527Z"
     },
     {
       "id": "a53c0d46-444c-4e53-9bfa-b6c9b04a737d",
@@ -4845,7 +4984,10 @@
       "data": "11/04/2026",
       "valor": 6,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37255207"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37255207",
+      "rastreameManutencaoId": 489,
+      "rastreameHash": "bdf5fa939cac70cb",
+      "rastreameSyncEm": "2026-07-09T00:10:24.727Z"
     },
     {
       "id": "bd8a69ea-9ae9-497a-81a3-98191faa7321",
@@ -4856,7 +4998,10 @@
       "data": "12/04/2026",
       "valor": 6,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37324146"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37324146",
+      "rastreameManutencaoId": 490,
+      "rastreameHash": "0670b02ab4681040",
+      "rastreameSyncEm": "2026-07-09T00:10:24.924Z"
     },
     {
       "id": "feb75f7e-c0bb-42c8-b328-2566d52c572f",
@@ -4867,7 +5012,10 @@
       "data": "13/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37453563"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37453563",
+      "rastreameManutencaoId": 491,
+      "rastreameHash": "718aa66a1c455ba0",
+      "rastreameSyncEm": "2026-07-09T00:10:25.108Z"
     },
     {
       "id": "730f8e5c-88c2-4d49-ac13-6c341b6e81de",
@@ -4878,7 +5026,10 @@
       "data": "13/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37456836"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37456836",
+      "rastreameManutencaoId": 492,
+      "rastreameHash": "fc8a8109240d3544",
+      "rastreameSyncEm": "2026-07-09T00:10:25.297Z"
     },
     {
       "id": "f03453e4-083e-4d13-b975-1c73a260dca1",
@@ -4889,7 +5040,10 @@
       "data": "14/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37460839"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37460839",
+      "rastreameManutencaoId": 493,
+      "rastreameHash": "73003aef4dddf40e",
+      "rastreameSyncEm": "2026-07-09T00:10:25.492Z"
     },
     {
       "id": "2512201a-274d-4c97-9c05-1d8b2e0f6068",
@@ -4900,7 +5054,10 @@
       "data": "14/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37463402"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37463402",
+      "rastreameManutencaoId": 494,
+      "rastreameHash": "2191bf172f0b2f90",
+      "rastreameSyncEm": "2026-07-09T00:10:25.684Z"
     },
     {
       "id": "85afd0b0-11d3-4b78-94fb-8fddf7831e20",
@@ -4911,7 +5068,10 @@
       "data": "14/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37503494"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37503494",
+      "rastreameManutencaoId": 495,
+      "rastreameHash": "8c57467171f14a39",
+      "rastreameSyncEm": "2026-07-09T00:10:25.867Z"
     },
     {
       "id": "7ae5e965-c56a-48d6-a4b2-47935f756855",
@@ -4922,7 +5082,10 @@
       "data": "14/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37506639"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37506639",
+      "rastreameManutencaoId": 496,
+      "rastreameHash": "8c057284a804cff8",
+      "rastreameSyncEm": "2026-07-09T00:10:26.063Z"
     },
     {
       "id": "6485b904-55ff-4dce-9618-aad5c25ae618",
@@ -4933,7 +5096,10 @@
       "data": "16/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37733754"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37733754",
+      "rastreameManutencaoId": 497,
+      "rastreameHash": "278e975409726607",
+      "rastreameSyncEm": "2026-07-09T00:10:26.256Z"
     },
     {
       "id": "85c94ab6-6d80-4e30-8736-048883bacb9f",
@@ -4944,7 +5110,10 @@
       "data": "16/04/2026",
       "valor": 3,
       "competencia": "04/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37737860"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-37737860",
+      "rastreameManutencaoId": 498,
+      "rastreameHash": "bf2ff90163de0b0a",
+      "rastreameSyncEm": "2026-07-09T00:10:26.450Z"
     },
     {
       "id": "8b547908-cc94-475d-960d-300a360849a5",
@@ -4955,7 +5124,10 @@
       "data": "02/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39530366"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39530366",
+      "rastreameManutencaoId": 499,
+      "rastreameHash": "e82bf52d17804057",
+      "rastreameSyncEm": "2026-07-09T00:10:26.641Z"
     },
     {
       "id": "5ac8cb33-6b54-49fd-9a89-ea095f3ed347",
@@ -4966,7 +5138,10 @@
       "data": "03/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39578280"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39578280",
+      "rastreameManutencaoId": 500,
+      "rastreameHash": "c56b0cff37adf911",
+      "rastreameSyncEm": "2026-07-09T00:10:26.834Z"
     },
     {
       "id": "98413133-34ad-4380-b403-95ce12dd68aa",
@@ -4977,7 +5152,10 @@
       "data": "03/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39604666"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-39604666",
+      "rastreameManutencaoId": 501,
+      "rastreameHash": "ce63a0bcf1022bb3",
+      "rastreameSyncEm": "2026-07-09T00:10:27.024Z"
     },
     {
       "id": "ea113208-6bcd-409a-a255-5e3ce3f57d22",
@@ -4988,7 +5166,10 @@
       "data": "10/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40237498"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40237498",
+      "rastreameManutencaoId": 502,
+      "rastreameHash": "6794f9802f74f640",
+      "rastreameSyncEm": "2026-07-09T00:10:27.215Z"
     },
     {
       "id": "16c43163-394b-4594-90c1-90b988e3e017",
@@ -4999,7 +5180,10 @@
       "data": "15/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740205"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740205",
+      "rastreameManutencaoId": 503,
+      "rastreameHash": "c763d46f1483b3ab",
+      "rastreameSyncEm": "2026-07-09T00:10:27.420Z"
     },
     {
       "id": "ad74fc4c-d2cd-44e4-acba-bc70e9e18986",
@@ -5010,7 +5194,10 @@
       "data": "15/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740206"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740206",
+      "rastreameManutencaoId": 504,
+      "rastreameHash": "f8d284216b9041dc",
+      "rastreameSyncEm": "2026-07-09T00:10:27.616Z"
     },
     {
       "id": "297da260-ab3c-47d4-8d27-78c06edb6aa9",
@@ -5021,7 +5208,10 @@
       "data": "15/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40739883"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40739883",
+      "rastreameManutencaoId": 505,
+      "rastreameHash": "e560f9cf5923cbb1",
+      "rastreameSyncEm": "2026-07-09T00:10:27.797Z"
     },
     {
       "id": "8e53ca45-d5fb-4fb7-86cf-29027d2f076f",
@@ -5032,7 +5222,10 @@
       "data": "15/05/2026",
       "valor": 6,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740657"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40740657",
+      "rastreameManutencaoId": 506,
+      "rastreameHash": "a4e7771180677e24",
+      "rastreameSyncEm": "2026-07-09T00:10:27.995Z"
     },
     {
       "id": "a7a6acec-a47c-4b22-8097-ac311958147c",
@@ -5043,7 +5236,10 @@
       "data": "17/05/2026",
       "valor": 6,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40891119"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-40891119",
+      "rastreameManutencaoId": 507,
+      "rastreameHash": "88c63c77cc5407bb",
+      "rastreameSyncEm": "2026-07-09T00:10:28.178Z"
     },
     {
       "id": "f7214aab-a430-43ef-9d9d-cad3b9e59279",
@@ -5054,7 +5250,10 @@
       "data": "22/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-41356499"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-41356499",
+      "rastreameManutencaoId": 508,
+      "rastreameHash": "cc99818515a2b45a",
+      "rastreameSyncEm": "2026-07-09T00:10:28.371Z"
     },
     {
       "id": "b4708c20-c110-47ad-8352-6a4826c7671a",
@@ -5065,7 +5264,10 @@
       "data": "30/05/2026",
       "valor": 3,
       "competencia": "05/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42156535"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42156535",
+      "rastreameManutencaoId": 509,
+      "rastreameHash": "264f942fb3b62612",
+      "rastreameSyncEm": "2026-07-09T00:10:28.574Z"
     },
     {
       "id": "22d37100-2170-4116-a533-b497f026c923",
@@ -5076,7 +5278,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742870"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742870",
+      "rastreameManutencaoId": 510,
+      "rastreameHash": "8632ee4980a2df64",
+      "rastreameSyncEm": "2026-07-09T00:10:28.787Z"
     },
     {
       "id": "f8021e83-e926-4c02-aa17-80daeab37cdb",
@@ -5087,7 +5292,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742078"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742078",
+      "rastreameManutencaoId": 511,
+      "rastreameHash": "a9788a972179b304",
+      "rastreameSyncEm": "2026-07-09T00:10:28.990Z"
     },
     {
       "id": "e50e0e35-90ff-4dd2-bc0f-a4ee591855c1",
@@ -5098,7 +5306,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742909"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42742909",
+      "rastreameManutencaoId": 512,
+      "rastreameHash": "bc455e85c6fe88ba",
+      "rastreameSyncEm": "2026-07-09T00:10:29.192Z"
     },
     {
       "id": "992a6f47-77e8-4f7e-a5fd-15790cea6f31",
@@ -5109,7 +5320,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42766198"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42766198",
+      "rastreameManutencaoId": 513,
+      "rastreameHash": "2b67c6ccf07b886a",
+      "rastreameSyncEm": "2026-07-09T00:10:29.387Z"
     },
     {
       "id": "1ae2fc25-7b25-456b-bfd7-084dc4a5516c",
@@ -5120,7 +5334,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42763951"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42763951",
+      "rastreameManutencaoId": 514,
+      "rastreameHash": "4c265171b5b931d6",
+      "rastreameSyncEm": "2026-07-09T00:10:29.589Z"
     },
     {
       "id": "54aed266-62f7-43e0-adcd-13d4282c3f83",
@@ -5131,7 +5348,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42766223"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42766223",
+      "rastreameManutencaoId": 515,
+      "rastreameHash": "f04bedd488a31683",
+      "rastreameSyncEm": "2026-07-09T00:10:29.788Z"
     },
     {
       "id": "942fa6de-a6f1-4d5b-bd23-3b7cf4d89ae7",
@@ -5142,7 +5362,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42773207"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42773207",
+      "rastreameManutencaoId": 516,
+      "rastreameHash": "26f4ea06b5c68e9c",
+      "rastreameSyncEm": "2026-07-09T00:10:30.006Z"
     },
     {
       "id": "eaf6c796-bb1f-4e9d-ad46-d1965a635ab5",
@@ -5153,7 +5376,10 @@
       "data": "06/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42773119"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42773119",
+      "rastreameManutencaoId": 517,
+      "rastreameHash": "a7c8fbf6a70014dc",
+      "rastreameSyncEm": "2026-07-09T00:10:30.203Z"
     },
     {
       "id": "259e3971-12f7-4ecd-a1db-636ffc388e13",
@@ -5164,7 +5390,10 @@
       "data": "07/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42826170"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42826170",
+      "rastreameManutencaoId": 518,
+      "rastreameHash": "b8e270a4b4f79765",
+      "rastreameSyncEm": "2026-07-09T00:10:30.395Z"
     },
     {
       "id": "eccca9c8-3e3b-4b5d-b3e7-33d95f821ed2",
@@ -5175,7 +5404,10 @@
       "data": "07/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42852830"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-42852830",
+      "rastreameManutencaoId": 519,
+      "rastreameHash": "31d3539de147b25d",
+      "rastreameSyncEm": "2026-07-09T00:10:30.583Z"
     },
     {
       "id": "c0e79c5e-d3e0-4dd7-b984-98705b19cdb8",
@@ -5186,7 +5418,10 @@
       "data": "10/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43145549"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43145549",
+      "rastreameManutencaoId": 520,
+      "rastreameHash": "53f49c3b9b962051",
+      "rastreameSyncEm": "2026-07-09T00:10:30.785Z"
     },
     {
       "id": "82e5b0ac-aa93-4ef0-baa0-44ad27d1f92f",
@@ -5197,7 +5432,10 @@
       "data": "10/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43145289"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43145289",
+      "rastreameManutencaoId": 521,
+      "rastreameHash": "fd7eeebe5f8f7533",
+      "rastreameSyncEm": "2026-07-09T00:10:30.978Z"
     },
     {
       "id": "b346482c-ef33-4180-be38-690dbfda1368",
@@ -5208,7 +5446,10 @@
       "data": "11/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43228924"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43228924",
+      "rastreameManutencaoId": 522,
+      "rastreameHash": "200158d620e7f592",
+      "rastreameSyncEm": "2026-07-09T00:10:31.171Z"
     },
     {
       "id": "1811e31c-f0bc-4c5a-b9fd-f56c6fa08c58",
@@ -5219,7 +5460,10 @@
       "data": "12/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43265583"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43265583",
+      "rastreameManutencaoId": 523,
+      "rastreameHash": "14550890a04fbac9",
+      "rastreameSyncEm": "2026-07-09T00:10:31.368Z"
     },
     {
       "id": "2562e8e3-4179-4f20-989e-353449c56c81",
@@ -5230,7 +5474,10 @@
       "data": "12/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43265124"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43265124",
+      "rastreameManutencaoId": 524,
+      "rastreameHash": "b3f80757e00217d4",
+      "rastreameSyncEm": "2026-07-09T00:10:31.569Z"
     },
     {
       "id": "3a3eea12-b8f6-47a4-9e61-cab2ced7d309",
@@ -5241,7 +5488,10 @@
       "data": "15/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43586728"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43586728",
+      "rastreameManutencaoId": 525,
+      "rastreameHash": "2b39958608670496",
+      "rastreameSyncEm": "2026-07-09T00:10:31.771Z"
     },
     {
       "id": "684136cf-eb08-4b45-8162-9bf44a7c8e60",
@@ -5252,7 +5502,10 @@
       "data": "16/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43619432"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43619432",
+      "rastreameManutencaoId": 526,
+      "rastreameHash": "df290130dd617738",
+      "rastreameSyncEm": "2026-07-09T00:10:31.968Z"
     },
     {
       "id": "ce11938d-fcd6-4609-b4e0-03b997492483",
@@ -5263,7 +5516,10 @@
       "data": "17/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43749267"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43749267",
+      "rastreameManutencaoId": 527,
+      "rastreameHash": "bcda86a7cc2e9c2a",
+      "rastreameSyncEm": "2026-07-09T00:10:32.169Z"
     },
     {
       "id": "4ca8eb9d-8a9c-4ee5-82fa-87af84496d84",
@@ -5274,7 +5530,10 @@
       "data": "18/06/2026",
       "valor": 3,
       "competencia": "06/2026",
-      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43781215"
+      "origem": "pedagio-digital/sem-locatario/RLA1G81/PED-43781215",
+      "rastreameManutencaoId": 528,
+      "rastreameHash": "ffff6184945b6453",
+      "rastreameSyncEm": "2026-07-09T00:10:32.372Z"
     },
     {
       "id": "ca987926-6f2f-4f29-9be3-0c602712870e",
@@ -5288,61 +5547,6 @@
       "origem": "pedagio-digital/sem-locatario/ICZ2H47/PED-33707273"
     },
     {
-      "id": "f9e2d21c-c57c-4148-97fa-20c591993b4e",
-      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
-      "placa": "MKV-6268",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J001031460)",
-      "data": "07/05/2025",
-      "valor": 130.16,
-      "competencia": "05/2025",
-      "origem": "detran-sc/infracao-sem-locatario/MKV6268/J001031460"
-    },
-    {
-      "id": "0d102718-edbf-4b50-9640-116a4329eabf",
-      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
-      "placa": "MKV-6268",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J000973494)",
-      "data": "30/04/2025",
-      "valor": 130.16,
-      "competencia": "04/2025",
-      "origem": "detran-sc/infracao-sem-locatario/MKV6268/J000973494"
-    },
-    {
-      "id": "5e832766-4344-45c0-8ef1-97f45de4a433",
-      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
-      "placa": "MKV-6268",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J001367949)",
-      "data": "13/06/2025",
-      "valor": 130.16,
-      "competencia": "06/2025",
-      "origem": "detran-sc/infracao-sem-locatario/MKV6268/J001367949"
-    },
-    {
-      "id": "a166f43c-0562-467b-aa8c-58a71386dfc8",
-      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
-      "placa": "MKV-6268",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J001435693)",
-      "data": "23/06/2025",
-      "valor": 130.16,
-      "competencia": "06/2025",
-      "origem": "detran-sc/infracao-sem-locatario/MKV6268/J001435693"
-    },
-    {
-      "id": "49093c82-803f-4e61-9d72-303e7ec8b02f",
-      "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
-      "placa": "MKV-6268",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (S046265908)",
-      "data": "09/09/2025",
-      "valor": 130.16,
-      "competencia": "09/2025",
-      "origem": "detran-sc/infracao-sem-locatario/MKV6268/S046265908"
-    },
-    {
       "id": "10041654-231d-447c-8d95-ad35b7b5c0f2",
       "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
       "placa": "FHG-0B73",
@@ -5351,7 +5555,10 @@
       "data": "01/07/2026",
       "valor": 3,
       "competencia": "07/2026",
-      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-44985864"
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-44985864",
+      "rastreameManutencaoId": 534,
+      "rastreameHash": "9b2f1effaebf5d52",
+      "rastreameSyncEm": "2026-07-09T00:10:33.565Z"
     },
     {
       "id": "34e2e687-4ea0-4ff7-a2cd-4af13ab7039f",
@@ -5362,7 +5569,10 @@
       "data": "02/07/2026",
       "valor": 3,
       "competencia": "07/2026",
-      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45018382"
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45018382",
+      "rastreameManutencaoId": 535,
+      "rastreameHash": "97efbc53adce5ed0",
+      "rastreameSyncEm": "2026-07-09T00:10:33.760Z"
     },
     {
       "id": "3e0a2a07-fc3c-442b-a2a2-30fafff9bb47",
@@ -5373,7 +5583,10 @@
       "data": "02/07/2026",
       "valor": 3,
       "competencia": "07/2026",
-      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45017935"
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45017935",
+      "rastreameManutencaoId": 536,
+      "rastreameHash": "9199021ed52f77cd",
+      "rastreameSyncEm": "2026-07-09T00:10:33.961Z"
     },
     {
       "id": "b78501a2-65db-4a5e-ac62-6cd19d3360d1",
@@ -5384,7 +5597,10 @@
       "data": "17/08/2026",
       "valor": 130.16,
       "competencia": "08/2026",
-      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/55810083W"
+      "origem": "detran-sc/infracao-sem-locatario/MLN0B87/55810083W",
+      "rastreameManutencaoId": 537,
+      "rastreameHash": "cba1b0bf1137b292",
+      "rastreameSyncEm": "2026-07-09T00:10:34.153Z"
     },
     {
       "id": "d29d6bdc-1d54-4916-a98a-b64a8a823df7",
@@ -5398,15 +5614,70 @@
       "origem": "detran-sc/infracao-sem-locatario/RYC7C32/N005452049"
     },
     {
-      "id": "9a9d830f-13bc-4c10-a86a-4c47e21bf863",
-      "veiculoId": "c033803d-2348-4bbf-9b7b-d779c8c23448",
-      "placa": "IWP-5G63",
+      "id": "7367a1ae-8f00-41c2-88dc-553703ba18d6",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
       "categoria": "Outros",
-      "descricao": "Multa sem locatário — EXEC OPER DE CONVERSAO A ESQ EM LOCAL PROIBIDO PELA SINALIZ (P0drq000lm)",
-      "data": "14/08/2026",
-      "valor": 195.23,
-      "competencia": "08/2026",
-      "origem": "detran-sc/infracao-sem-locatario/IWP5G63/P0DRQ000LM"
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 03/07/2026 23:36 (PED-45403469)",
+      "data": "03/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45403469"
+    },
+    {
+      "id": "f197d1e4-6ab3-44cd-becd-adfd9dd9ca68",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Outros",
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 04/07/2026 06:01 (PED-45403949)",
+      "data": "04/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45403949"
+    },
+    {
+      "id": "83cb84c0-4352-4360-9148-f74a4146583e",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Outros",
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 08/07/2026 06:03 (PED-45634483)",
+      "data": "08/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45634483"
+    },
+    {
+      "id": "7072ae90-9b3e-4d16-bf1e-4aebd6cc284f",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Outros",
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 08/07/2026 06:12 (PED-45634334)",
+      "data": "08/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45634334"
+    },
+    {
+      "id": "7e67db85-21af-4bb8-bfe7-95ef06631a11",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Outros",
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 04/07/2026 12:10 (PED-45406554)",
+      "data": "04/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-45406554"
+    },
+    {
+      "id": "93d2caf8-f856-4a1c-a8c0-91ac34340106",
+      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
+      "placa": "QJB-0I83",
+      "categoria": "Outros",
+      "descricao": "Pedágio sem locatário — ATRASADO Pagamento pedágio 06/07/2026 16:54 (PED-45417261)",
+      "data": "06/07/2026",
+      "valor": 3,
+      "competencia": "07/2026",
+      "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-45417261"
     }
   ]
 }

@@ -5,7 +5,19 @@ Dois layouts **independentes** para relatórios Lanza. Cada um vive no seu fiche
 | Layout | Ficheiro | Relatório |
 |---|---|---|
 | Encerramento | `encerramento.layout.tsx` | Acerto final de contrato (caução, créditos, quebra) |
-| Cobrança | `cobranca.layout.tsx` | Débitos em aberto + WhatsApp (sem caução/quebra) |
+| Cobrança | `cobranca.layout.tsx` | Débitos em aberto + WhatsApp (por contrato) |
+| Cobrança (filtro) | `cobranca-simples.layout.tsx` | Tipo ou placa: tabelas agrupadas |
+
+## Modos do canvas de cobrança
+
+| Invocação | Layout | Agrupamento |
+|---|---|---|
+| Sem parâmetros | `cobranca` | Um canvas por contrato ativo |
+| `--cliente` | `cobranca` | Um canvas do locatário |
+| **Só tipo** (ex. `pedagio`) | `cobranca-simples` | **Por veículo** (placa + modelo) |
+| **Só `--placa`** | `cobranca-simples` | **Por tipo de despesa** |
+
+Sidecar simples: `cobranca-simples-{tipo|placa}-{DD-MM-AAAA}.json` → `canvases/cobranca-simples-….canvas.tsx`
 
 ## Origem
 

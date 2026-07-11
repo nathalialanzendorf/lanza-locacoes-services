@@ -176,14 +176,13 @@ export const DETRAN_BROWSER_HOOK = String.raw`
     var tx1 = await r1.text();
     var j1; try { j1 = JSON.parse(tx1); } catch (e) { j1 = tx1; }
 
-    if (r1.ok && temPayload(j1)) return { status: "ok", payload: j1 };
-
     var em = msgErro(j1);
     var ticket = pickTicket(j1);
     if (!ticket) {
-      return { status: "erro", message: em || ("requisitar-consulta HTTP " + r1.status), body: String(tx1).slice(0, 300) };
+      return { status: "erro", message: em || ("requisitar-consulta sem ticket HTTP " + r1.status), body: String(tx1).slice(0, 300) };
     }
 
+    // Sempre usa resposta-consulta para obter o dossiê E preservar o ticket (ait-pdf).
     var respUrl = base + "/veiculo/resposta-consulta?t=" + encodeURIComponent(ticket);
     // ~40s de janela: o dossiê pode levar vários segundos a ficar pronto
     // (resposta devolve {pendente:true} enquanto monta).

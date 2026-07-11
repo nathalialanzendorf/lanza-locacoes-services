@@ -136,9 +136,35 @@ export function infracaoQuitadaDetran(reg: {
   return s === "paga";
 }
 
+export type SituacaoInfracaoResumida =
+  | "Em aberto"
+  | "Paga DETRAN"
+  | "Paga Lanza"
+  | "Advertida"
+  | "Justificada";
+
+/** Situação exibida no relatório resumido de infrações (coluna Situação). */
+export function situacaoInfracaoResumida(
+  reg: {
+    statusInfracao?: string;
+    statusDetran?: string;
+    situacao?: string;
+    quitadaDetran?: boolean;
+    paga?: boolean;
+  },
+  opts?: { pagaLanza?: boolean },
+): SituacaoInfracaoResumida {
+  if (opts?.pagaLanza === true || reg.paga === true) return "Paga Lanza";
+  const s = normStatusDetran(reg.statusInfracao ?? reg.statusDetran ?? reg.situacao);
+  if (s === "advertida" || s === "advertido") return "Advertida";
+  if (s === "justificada") return "Justificada";
+  if (infracaoQuitadaDetran(reg)) return "Paga DETRAN";
+  return "Em aberto";
+}
+
 /**
- * Infração entra na listagem de despesas do relatório de cobranças (canvas, WhatsApp).
- * Inclui cobráveis, advertidas e quitadas no DETRAN — sem valor no total a cobrar.
+ * Infração entra na listagem de **despesas em aberto** do relatório de cobranças.
+ * Somente cobráveis — pagas/advertidas/quitadas no DETRAN vão em `infracoesPagas`.
  */
 export function infracaoIncluirListagemDespesasRelatorio(
   reg: {
@@ -151,9 +177,15 @@ export function infracaoIncluirListagemDespesasRelatorio(
   },
   pagasAuto?: Set<string>,
 ): boolean {
-  if (infracaoAdvertida(reg)) return true;
-  if (infracaoQuitadaDetran(reg)) return true;
   return infracaoCobravelRelatorio(reg, pagasAuto);
+}
+
+/** Infração resolvida (paga/advertida/justificada) — histórico no relatório, fora do total. */
+export function infracaoResolvidaRelatorio(
+  reg: Parameters<typeof infracaoCobravelRelatorio>[0],
+  pagasAuto?: Set<string>,
+): boolean {
+  return !infracaoCobravelRelatorio(reg, pagasAuto);
 }
 
 /**

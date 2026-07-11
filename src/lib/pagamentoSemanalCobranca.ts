@@ -3,8 +3,21 @@
  *
  * Padrão Lanza (fonte única): skill relatorio-cobrancas + cadastro-recebimento.
  */
-import { addDays, daysBetween, parseDataBr, startOfDay } from "./contratoExtrair.js";
-import { dataVencimentoSemanalBr, formatDataBr } from "./pagamentoSemanal.js";
+import {
+  addDays,
+  compararDataBrAsc,
+  daysBetween,
+  parseDataBr,
+  startOfDay,
+} from "./contratoExtrair.js";
+import {
+  dataVencimentoSemanalBr,
+  formatDataBr,
+  isJurosMultaSemanalDescricao,
+  vencimentoDespesaSemanalBr,
+} from "./pagamentoSemanal.js";
+import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { compactPlaca } from "./placa.js";
 
 export type SituacaoDiaSemanal = "Atrasado" | "Em dia";
 
@@ -34,6 +47,8 @@ export type CobrancaSemanalAtrasoInput = {
   vencimentosBr: string[];
   /** Data em que o pagamento integral será/foi recebido. */
   dataPagamentoBr: string;
+  /** Sobrescreve `dataPagamentoBr` por vencimento (ex.: semanal já quitada). */
+  resolverDataPagamentoPorVencimento?: (vencimentoBr: string) => string;
 };
 
 /** Resumo operacional para cobrança WhatsApp (dia 1–4). */
@@ -55,8 +70,11 @@ const TITULO_ESCALONAMENTO: Record<number, string> = {
   4: "pagamento regularizado",
 };
 
-/** Dia previsto do bloqueio = vencimento + 3 dias corridos. */
+/** Bloqueio no 3º dia contando o vencimento (vencimento = dia 1 → bloqueio em vencimento + 2). */
 export const DIAS_ATE_BLOQUEIO = 3;
+
+/** Juros/multa: no máximo 7 dias corridos por parcela (vencimento inclusive → +6). */
+export const DIAS_JUROS_MULTA_SEMANA = 6;
 
 const DOW_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
 
@@ -84,13 +102,23 @@ function diaSemanaLabel(d: Date): string {
 }
 
 /**
- * Fim do período da parcela:
- * - Com parcela seguinte: véspera do próximo vencimento.
- * - Última parcela em aberto: vencimento + 7 dias (inclusive).
+ * Fim do período com juros/multa na parcela: 7 dias corridos (vencimento inclusive).
+ */
+export function fimJurosMultaParcela(vencimento: Date): Date {
+  return addDays(vencimento, DIAS_JUROS_MULTA_SEMANA);
+}
+
+/**
+ * Fim do período da parcela na tabela:
+ * - Com parcela seguinte próxima (≤7 dias): véspera do próximo vencimento.
+ * - Com lacuna até a próxima: só os 7 dias da semana (vencimento +6).
+ * - Última parcela em aberto: vencimento + 7 dias (dias «Em dia» após o pagamento).
  */
 export function periodoFimParcela(vencimento: Date, proximoVencimento: Date | null): Date {
+  const fimSemana = fimJurosMultaParcela(vencimento);
   if (proximoVencimento) {
-    return addDays(proximoVencimento, -1);
+    const vespera = addDays(proximoVencimento, -1);
+    return vespera.getTime() < fimSemana.getTime() ? vespera : fimSemana;
   }
   return addDays(vencimento, 7);
 }
@@ -103,7 +131,8 @@ function situacaoDia(
   const d = startOfDay(dia).getTime();
   const v = startOfDay(vencimento).getTime();
   const p = startOfDay(dataPagamento).getTime();
-  if (d >= v && d <= p) return "Atrasado";
+  const fimJuros = startOfDay(fimJurosMultaParcela(vencimento)).getTime();
+  if (d >= v && d <= p && d <= fimJuros) return "Atrasado";
   return "Em dia";
 }
 
@@ -158,13 +187,25 @@ export function calcularCobrancaSemanalAtraso(
 
   const tabelas: TabelaCobrancaSemanal[] = [];
   for (let i = 0; i < input.vencimentosBr.length; i++) {
+    const venc = input.vencimentosBr[i]!;
     const proximo = i + 1 < input.vencimentosBr.length ? input.vencimentosBr[i + 1]! : null;
+    const dataPag =
+      input.resolverDataPagamentoPorVencimento?.(venc) ?? input.dataPagamentoBr;
     tabelas.push(
-      calcularTabelaCobrancaSemanal(input.vencimentosBr[i]!, proximo, input),
+      calcularTabelaCobrancaSemanal(venc, proximo, {
+        valorSemanal: input.valorSemanal,
+        valorDiaria: input.valorDiaria,
+        dataPagamentoBr: dataPag,
+      }),
     );
   }
 
-  const totalGeral = round2(tabelas.reduce((s, t) => s + t.total, 0));
+  const totalGeral = calcularTotalDevidoCobrancaSemanal(
+    input.valorSemanal,
+    tabelas,
+    input.dataPagamentoBr,
+    input.resolverDataPagamentoPorVencimento,
+  );
   return { tabelas, totalGeral };
 }
 
@@ -185,7 +226,7 @@ export function inferirDiaEscalonamento(
   const hoje = parseDataBrOrThrow(hojeBr);
   const diasAposVencimento = daysBetween(vencimento, hoje);
   if (diasAposVencimento <= 0) return null;
-  if (diasAposVencimento >= DIAS_ATE_BLOQUEIO) return 3;
+  if (diasAposVencimento >= DIAS_ATE_BLOQUEIO - 1) return 3;
   return diasAposVencimento;
 }
 
@@ -221,6 +262,109 @@ export function filtrarVencimentosSemanalCobranca(
   return vencimentosBr.filter((v) => vencimentoSemanalElegivelCobranca(v, hojeBr));
 }
 
+/**
+ * Acordo operacional: só vencimentos **após** `dataInicioJurosMultaBr` entram em
+ * juros/multa e na base de bloqueio. Anteriores permanecem como débito nominal.
+ */
+export function filtrarVencimentosAposDataInicioJuros(
+  vencimentosBr: string[],
+  dataInicioJurosMultaBr: string | null | undefined,
+): string[] {
+  const corteBr = dataInicioJurosMultaBr?.trim();
+  if (!corteBr) return vencimentosBr;
+  const corte = parseDataBrOrThrow(corteBr);
+  return vencimentosBr.filter((v) => parseDataBrOrThrow(v).getTime() > corte.getTime());
+}
+
+/**
+ * Exibir tabela de juros/multa:
+ * - em aberto: sempre (inclui D0);
+ * - ao quitar: ocultar só se pagar exatamente no vencimento.
+ */
+export function deveExibirCalculoSemanalAtraso(
+  dataReferenciaBr: string,
+  vencimentosBr: string[],
+  emAberto: boolean,
+): boolean {
+  if (vencimentosBr.length === 0) return false;
+  if (emAberto) return true;
+  return vencimentosBr.some((v) => dataReferenciaBr !== v);
+}
+
+/** Vencimentos incluídos na tabela conforme regra de exibição. */
+export function filtrarVencimentosCalculoSemanal(
+  vencimentosBr: string[],
+  dataReferenciaBr: string,
+  emAberto: boolean,
+): string[] {
+  if (!deveExibirCalculoSemanalAtraso(dataReferenciaBr, vencimentosBr, emAberto)) {
+    return [];
+  }
+  return vencimentosBr
+    .filter((v) => {
+      if (emAberto) {
+        return vencimentoSemanalElegivelListagemRelatorio(v, dataReferenciaBr);
+      }
+      return dataReferenciaBr !== v;
+    })
+    .sort(compararDataBrAsc);
+}
+
+function dataBrDePagaEm(pagaEm: string | null | undefined): string | null {
+  if (!pagaEm) return null;
+  const d = new Date(pagaEm);
+  if (Number.isNaN(d.getTime())) return null;
+  const br = new Date(d.getTime() - 3 * 3600 * 1000);
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  return `${pad2(br.getUTCDate())}/${pad2(br.getUTCMonth() + 1)}/${br.getUTCFullYear()}`;
+}
+
+/** Data real do pagamento de uma parcela semanal quitada. */
+export function dataPagamentoDespesaSemanalBr(d: {
+  dataAutuacao?: string;
+  pagaEm?: string | null;
+}): string | null {
+  return (
+    dataBrDePagaEm(d.pagaEm) ??
+    String(d.dataAutuacao ?? "")
+      .trim()
+      .match(/^(\d{2}\/\d{2}\/\d{4})/)?.[1] ??
+    null
+  );
+}
+
+/**
+ * Data-base para juros/multa de um vencimento:
+ * - parcela nominal já quitada → data do pagamento (juros não continuam após a baixa);
+ * - em aberto → data de referência (hoje ou projeção da baixa).
+ */
+export function dataPagamentoEfetivoSemanal(
+  vencimentoBr: string,
+  dataReferenciaBr: string,
+  despesas: ClienteDespesaRegistro[],
+  placa: string,
+  clienteId: string | null,
+): string {
+  const placaKey = compactPlaca(placa);
+  for (const d of despesas) {
+    if (d.categoria !== "Locação semanal") continue;
+    if (d.paga !== true) continue;
+    if (isJurosMultaSemanalDescricao(d.descricao ?? "")) continue;
+    if (/\[NEGOCIADO/i.test(d.descricao ?? "")) continue;
+    if (compactPlaca(d.veiculoId) !== placaKey) continue;
+    if (clienteId && d.condutorId !== clienteId) continue;
+    const venc = vencimentoDespesaSemanalBr(
+      d.descricao ?? "",
+      d.rastreameDataIso,
+      d.dataAutuacao,
+    );
+    if (venc !== vencimentoBr) continue;
+    const pag = dataPagamentoDespesaSemanalBr(d);
+    if (pag) return pag;
+  }
+  return dataReferenciaBr;
+}
+
 /** Parcela semanal futura — omitir da listagem do relatório; D0 e atrasadas entram. */
 export function despesaSemanalElegivelRelatorio(
   d: {
@@ -233,8 +377,7 @@ export function despesaSemanalElegivelRelatorio(
 ): boolean {
   if (d.categoria !== "Locação semanal") return true;
   const venc =
-    dataVencimentoSemanalBr(d.descricao ?? "", d.rastreameDataIso) ??
-    d.dataAutuacao ??
+    vencimentoDespesaSemanalBr(d.descricao ?? "", d.rastreameDataIso, d.dataAutuacao) ??
     "";
   if (!venc) return true;
   return vencimentoSemanalElegivelListagemRelatorio(venc, hojeBr);
@@ -266,22 +409,52 @@ export function vencimentoReferenciaSemanal(
 }
 
 /**
- * Total a cobrar na mensagem: soma dos dias até hoje (`dataPagamentoBr`).
- * Data bloqueio fixa: vencimento + 3 dias.
+ * Data do bloqueio: 3º dia contando o vencimento (vencimento + 2 dias corridos).
+ */
+export function calcularDataBloqueioBr(vencimentoBr: string): string {
+  const vencimento = parseDataBrOrThrow(vencimentoBr);
+  return formatDataBr(addDays(vencimento, DIAS_ATE_BLOQUEIO - 1));
+}
+
+/**
+ * Total a devido: soma (valor semanal nominal + juros/multa) por parcela em aberto.
+ */
+export function calcularTotalDevidoCobrancaSemanal(
+  valorSemanal: number,
+  tabelas: TabelaCobrancaSemanal[],
+  dataPagamentoBr: string,
+  resolverDataPagamentoPorVencimento?: (vencimentoBr: string) => string,
+): number {
+  const porSemana = calcularJurosPorSemana(
+    tabelas,
+    dataPagamentoBr,
+    valorSemanal,
+    resolverDataPagamentoPorVencimento,
+  );
+  const jurosPorVenc = new Map(porSemana.map((j) => [j.vencimentoBr, j.jurosMulta]));
+  let total = 0;
+  for (const t of tabelas) {
+    total += valorSemanal + (jurosPorVenc.get(t.vencimentoBr) ?? 0);
+  }
+  return round2(total);
+}
+
+/**
+ * Total a cobrar na mensagem: valor semanal + juros por parcela.
+ * Data bloqueio: 3º dia a partir do vencimento (referência = última parcela em aberto).
  */
 export function calcularResumoCobrancaSemanal(
   input: CobrancaSemanalAtrasoInput,
   resultado: { tabelas: TabelaCobrancaSemanal[] },
   diaEscalonamento: number,
 ): ResumoCobrancaSemanal {
-  const primeiroVenc =
+  const vencBloqueio =
+    input.vencimentosBr[input.vencimentosBr.length - 1] ??
     vencimentoReferenciaSemanal(input.vencimentosBr, input.dataPagamentoBr) ??
     input.vencimentosBr[0]!;
-  const vencimento = parseDataBrOrThrow(primeiroVenc);
-  const dataBloqueioBr = formatDataBr(addDays(vencimento, DIAS_ATE_BLOQUEIO));
+  const dataBloqueioBr = calcularDataBloqueioBr(vencBloqueio);
   const dataCorte = parseDataBrOrThrow(input.dataPagamentoBr);
 
-  let totalReceber = 0;
   let jurosMultaAcumulados = 0;
   let diasAtrasados = 0;
   let diasEmDia = 0;
@@ -290,7 +463,6 @@ export function calcularResumoCobrancaSemanal(
     for (const linha of tabela.linhas) {
       const d = parseDataBrOrThrow(linha.dataBr);
       if (d.getTime() > dataCorte.getTime()) continue;
-      totalReceber += linha.totalDia;
       if (linha.situacao === "Atrasado") {
         diasAtrasados++;
         if (linha.jurosMulta != null) jurosMultaAcumulados += linha.jurosMulta;
@@ -300,12 +472,19 @@ export function calcularResumoCobrancaSemanal(
     }
   }
 
+  const totalReceber = calcularTotalDevidoCobrancaSemanal(
+    input.valorSemanal,
+    resultado.tabelas,
+    input.dataPagamentoBr,
+    input.resolverDataPagamentoPorVencimento,
+  );
+
   return {
     diaEscalonamento,
     tituloEscalonamento: tituloEscalonamento(diaEscalonamento),
     vencimentosEmAbertoBr: [...input.vencimentosBr],
     dataBloqueioBr,
-    totalReceber: round2(totalReceber),
+    totalReceber,
     diasAtrasados,
     diasEmDia,
     jurosMultaAcumulados: round2(jurosMultaAcumulados),
@@ -316,19 +495,23 @@ export type JurosPorSemana = {
   vencimentoBr: string;
   jurosMulta: number;
   dias: number;
-  /** Total da tabela semanal (período completo da parcela). */
-  totalDevido: number;
+  /** Valor semanal nominal do contrato (não o total da tabela diária). */
+  valorSemanal: number;
 };
 
 /** Juros e multa por semana até a data de pagamento (corte). */
 export function calcularJurosPorSemana(
   tabelas: TabelaCobrancaSemanal[],
   dataPagamentoBr: string,
+  valorSemanal: number,
+  resolverDataPagamentoPorVencimento?: (vencimentoBr: string) => string,
 ): JurosPorSemana[] {
-  const dataCorte = parseDataBrOrThrow(dataPagamentoBr);
   const out: JurosPorSemana[] = [];
 
   for (const tabela of tabelas) {
+    const dataCorte = parseDataBrOrThrow(
+      resolverDataPagamentoPorVencimento?.(tabela.vencimentoBr) ?? dataPagamentoBr,
+    );
     let jurosMulta = 0;
     let dias = 0;
     for (const linha of tabela.linhas) {
@@ -344,7 +527,7 @@ export function calcularJurosPorSemana(
         vencimentoBr: tabela.vencimentoBr,
         jurosMulta: round2(jurosMulta),
         dias,
-        totalDevido: tabela.total,
+        valorSemanal,
       });
     }
   }
@@ -355,8 +538,15 @@ export function calcularJurosPorSemana(
 export function formatResumoPorSemana(
   tabelas: TabelaCobrancaSemanal[],
   dataPagamentoBr: string,
+  valorSemanal: number,
+  resolverDataPagamentoPorVencimento?: (vencimentoBr: string) => string,
 ): string {
-  const porSemana = calcularJurosPorSemana(tabelas, dataPagamentoBr);
+  const porSemana = calcularJurosPorSemana(
+    tabelas,
+    dataPagamentoBr,
+    valorSemanal,
+    resolverDataPagamentoPorVencimento,
+  );
   if (porSemana.length === 0) return "";
 
   const blocos = porSemana.map((s, i) =>
@@ -364,8 +554,8 @@ export function formatResumoPorSemana(
       `Vencimento em aberto: ${s.vencimentoBr}`,
       `Juros e multa: R$ ${brl(s.jurosMulta)} (${s.dias} ${s.dias === 1 ? "diária" : "diárias"})`,
       i === 0
-        ? `Total semana: R$ ${brl(s.totalDevido)}`
-        : `Valor semana: R$ ${brl(s.totalDevido)}`,
+        ? `Total semana: R$ ${brl(s.valorSemanal)}`
+        : `Valor semana: R$ ${brl(s.valorSemanal)}`,
     ].join("\n"),
   );
 
@@ -376,14 +566,17 @@ export function formatResumoPorSemana(
 export function formatResumoJurosPorSemana(
   tabelas: TabelaCobrancaSemanal[],
   dataPagamentoBr: string,
+  valorSemanal: number,
 ): string {
-  return formatResumoPorSemana(tabelas, dataPagamentoBr);
+  return formatResumoPorSemana(tabelas, dataPagamentoBr, valorSemanal);
 }
 
 export type FormatResumoCobrancaSemanalOpts = {
   tabelas?: TabelaCobrancaSemanal[];
   dataPagamentoBr?: string;
-  /** Soma dos totais semanais (período completo de cada parcela). */
+  valorSemanal?: number;
+  resolverDataPagamentoPorVencimento?: (vencimentoBr: string) => string;
+  /** Soma valor semanal + juros por parcela. */
   totalGeral?: number;
   /** @deprecated Use totalGeral */
   totalDevido?: number;
@@ -398,16 +591,31 @@ export function formatResumoCobrancaSemanal(
 
   if (dataBase) partes.push(`Base de cálculo: ${dataBase}`);
 
-  if (opts?.tabelas?.length && dataBase) {
-    const jurosSemanas = calcularJurosPorSemana(opts.tabelas, dataBase);
-    const porSemana = formatResumoPorSemana(opts.tabelas, dataBase);
+  if (opts?.tabelas?.length && dataBase && opts.valorSemanal != null) {
+    const jurosSemanas = calcularJurosPorSemana(
+      opts.tabelas,
+      dataBase,
+      opts.valorSemanal,
+      opts.resolverDataPagamentoPorVencimento,
+    );
+    const porSemana = formatResumoPorSemana(
+      opts.tabelas,
+      dataBase,
+      opts.valorSemanal,
+      opts.resolverDataPagamentoPorVencimento,
+    );
     if (porSemana) {
       partes.push("", porSemana);
     }
     const totalGeral =
       opts.totalGeral ??
       opts.totalDevido ??
-      round2(opts.tabelas.reduce((s, t) => s + t.total, 0));
+      calcularTotalDevidoCobrancaSemanal(
+        opts.valorSemanal,
+        opts.tabelas,
+        dataBase,
+        opts.resolverDataPagamentoPorVencimento,
+      );
     const diasAtraso = jurosSemanas.reduce((s, x) => s + x.dias, 0);
     partes.push(
       "",
@@ -481,6 +689,8 @@ export function formatCobrancaSemanalAtrasoMarkdown(
       formatResumoCobrancaSemanal(resumo, {
         tabelas: resultado.tabelas,
         dataPagamentoBr: input.dataPagamentoBr,
+        valorSemanal: input.valorSemanal,
+        resolverDataPagamentoPorVencimento: input.resolverDataPagamentoPorVencimento,
         totalGeral: resultado.totalGeral,
       }),
     );
@@ -503,4 +713,90 @@ export function formatCobrancaSemanalAtrasoMarkdown(
   lines.push(`| **Total geral** | **R$ ${brl(resultado.totalGeral)}** |`);
 
   return lines.join("\n");
+}
+
+export type PacoteCobrancaSemanalAtraso = {
+  markdown: string;
+  payload: Record<string, unknown>;
+  totalGeral: number;
+  resumo?: ResumoCobrancaSemanal;
+};
+
+/** Monta markdown + payload da tabela semanal (baixa, cobrança, relatório). */
+export function montarPacoteCobrancaSemanalAtraso(opts: {
+  valorSemanal: number;
+  valorDiaria: number;
+  vencimentosBr: string[];
+  dataPagamentoBr: string;
+  emAberto: boolean;
+  diaEscalonamento?: number;
+  clienteNome?: string;
+  placa?: string;
+  clienteId?: string | null;
+  dataInicioJurosMultaBr?: string | null;
+  despesasSemanal?: ClienteDespesaRegistro[];
+}): PacoteCobrancaSemanalAtraso | null {
+  const vencimentos = filtrarVencimentosAposDataInicioJuros(
+    filtrarVencimentosCalculoSemanal(
+      opts.vencimentosBr,
+      opts.dataPagamentoBr,
+      opts.emAberto,
+    ),
+    opts.dataInicioJurosMultaBr,
+  );
+  if (vencimentos.length === 0) return null;
+
+  const resolverDataPagamentoPorVencimento =
+    opts.despesasSemanal && opts.placa
+      ? (vencimentoBr: string) =>
+          dataPagamentoEfetivoSemanal(
+            vencimentoBr,
+            opts.dataPagamentoBr,
+            opts.despesasSemanal!,
+            opts.placa!,
+            opts.clienteId ?? null,
+          )
+      : undefined;
+
+  const input: CobrancaSemanalAtrasoInput = {
+    valorSemanal: opts.valorSemanal,
+    valorDiaria: opts.valorDiaria,
+    vencimentosBr: vencimentos,
+    dataPagamentoBr: opts.dataPagamentoBr,
+    resolverDataPagamentoPorVencimento,
+  };
+  const resultado = calcularCobrancaSemanalAtraso(input);
+  const resumo =
+    opts.diaEscalonamento != null
+      ? calcularResumoCobrancaSemanal(input, resultado, opts.diaEscalonamento)
+      : undefined;
+
+  const payload: Record<string, unknown> = {
+    ...input,
+    tipo: "pagamento-semanal",
+    cliente: opts.clienteId != null || opts.clienteNome
+      ? { id: opts.clienteId ?? null, nome: opts.clienteNome ?? null }
+      : null,
+    placa: opts.placa ?? null,
+    dataInicioJurosMultaBr: opts.dataInicioJurosMultaBr ?? null,
+    ...resultado,
+    diaEscalonamento: opts.diaEscalonamento ?? null,
+    resumo: resumo ?? null,
+    emAberto: opts.emAberto,
+  };
+
+  return {
+    markdown: formatCobrancaSemanalAtrasoMarkdown(
+      {
+        ...input,
+        clienteNome: opts.clienteNome,
+        placa: opts.placa,
+      },
+      resultado,
+      resumo,
+    ),
+    payload,
+    totalGeral: resultado.totalGeral,
+    resumo,
+  };
 }

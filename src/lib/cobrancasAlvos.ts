@@ -19,7 +19,11 @@ import {
 import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import { infracaoIncluirListagemRelatorio } from "./infracaoTitulo.js";
 import { despesaCobravelLocatario } from "./espelharSemLocatarioParceiro.js";
-import { dataVencimentoSemanalBr } from "./pagamentoSemanal.js";
+import {
+  dataVencimentoSemanalBr,
+  isJurosMultaSemanalDescricao,
+  vencimentoDespesaSemanalBr,
+} from "./pagamentoSemanal.js";
 import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadVeiculosDb } from "./veiculosDb.js";
@@ -40,6 +44,29 @@ export const TIPOS_COBRANCA_ACTION: readonly TipoCobrancaAction[] = [
   "estacionamento-rotativo",
   "manutencao",
 ] as const;
+
+export const ROTULO_TIPO_COBRANCA: Record<TipoCobrancaAction, string> = {
+  "pagamento-semanal": "Pagamento semanal",
+  renegociacao: "Renegociação",
+  infracoes: "Infrações",
+  pedagio: "Pedágio",
+  "estacionamento-rotativo": "Estacionamento rotativo",
+  manutencao: "Manutenção",
+};
+
+export type ModoCanvasCobranca = "completo" | "simples-tipo" | "simples-placa";
+
+/** Canvas completo (por contrato) vs simplificado (agrupado por tipo ou por placa). */
+export function resolverModoCanvasCobranca(
+  tipos: TipoCobrancaAction[],
+  filtro: FiltroAlvosCobranca,
+): ModoCanvasCobranca {
+  if (filtro.placa && !filtro.clienteId) return "simples-placa";
+  if (filtro.clienteId) return "completo";
+  const todosTipos = tipos.length === TIPOS_COBRANCA_ACTION.length;
+  if (!todosTipos && tipos.length === 1) return "simples-tipo";
+  return "completo";
+}
 
 export type AlvoCobranca = {
   tipo: TipoCobrancaAction;
@@ -165,8 +192,13 @@ function semanalAtrasoObsoleto(
   placa: string,
   valorSemanal: number | null | undefined,
 ): boolean {
-  const vencAtraso =
-    dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;
+  if (isJurosMultaSemanalDescricao(d.descricao ?? "")) return false;
+
+  const vencAtraso = vencimentoDespesaSemanalBr(
+    d.descricao ?? "",
+    d.rastreameDataIso,
+    d.dataAutuacao,
+  );
   if (!vencAtraso) return false;
   if (valorSemanal == null || valorSemanal <= 0) return false;
 
@@ -183,9 +215,11 @@ function semanalAtrasoObsoleto(
     if (/ATRASADO/i.test(desc)) continue;
     if (/\[NEGOCIADO/i.test(desc)) continue;
 
-    const vencOther =
-      dataVencimentoSemanalBr(other.descricao, other.rastreameDataIso) ??
-      other.dataAutuacao;
+    const vencOther = vencimentoDespesaSemanalBr(
+      other.descricao ?? "",
+      other.rastreameDataIso,
+      other.dataAutuacao,
+    );
     if (vencOther !== vencAtraso) continue;
 
     totalPagoRegular += Number(other.valorMulta) || 0;
@@ -317,8 +351,11 @@ function filtrarPagamentoSemanal(
     if (!despesaAberta(d)) continue;
     if (d.categoria !== "Locação semanal") continue;
     if (!/ATRASADO/i.test(d.descricao)) continue;
-    const vencSemanal =
-      dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao ?? "";
+    const vencSemanal = vencimentoDespesaSemanalBr(
+      d.descricao ?? "",
+      d.rastreameDataIso,
+      d.dataAutuacao,
+    );
     if (
       vencSemanal &&
       !vencimentoSemanalElegivelCobranca(vencSemanal, dataReferencia)
@@ -351,8 +388,11 @@ function filtrarPagamentoSemanal(
     }
 
     const chave = `${efetivo.clienteId}|${compactPlaca(placa)}`;
-    const venc =
-      dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;
+    const venc = vencimentoDespesaSemanalBr(
+      d.descricao ?? "",
+      d.rastreameDataIso,
+      d.dataAutuacao,
+    );
 
     let alvo = porChave.get(chave);
     if (!alvo) {
@@ -387,6 +427,50 @@ export type FiltroAlvosCobranca = {
   /** Limita a um cliente (nome, CPF ou id — resolvido em clientes.json). */
   clienteId?: string;
 };
+
+/**
+ * Contratos ativos de locação elegíveis para relatório/canvas (1 por placa).
+ * Exige veículo ativo (não particular) e cliente ativo.
+ * Vários `ativo` na mesma placa: maior versão; empate → data de início mais recente.
+ */
+export function listarEscoposContratosAtivosCobranca(): FiltroAlvosCobranca[] {
+  const veiculos = veiculosAtivos();
+  const clientes = clientesAtivos();
+  const porPlaca = new Map<string, ContratoRegistro>();
+
+  for (const c of loadContratosDb().contratos) {
+    if (c.status !== "ativo" || !c.placa || !c.clienteId) continue;
+    if (!placaElegivel(c.placa, veiculos)) continue;
+    if (!clienteElegivel(c.clienteId, clientes)) continue;
+
+    const p = compactPlaca(c.placa);
+    const cur = porPlaca.get(p);
+    if (!cur) {
+      porPlaca.set(p, c);
+      continue;
+    }
+    const byVersao = (c.versao ?? 0) - (cur.versao ?? 0);
+    if (byVersao > 0) {
+      porPlaca.set(p, c);
+    } else if (byVersao === 0) {
+      if (compararDataBrAsc(cur.dataInicio ?? "", c.dataInicio ?? "") < 0) {
+        porPlaca.set(p, c);
+      }
+    }
+  }
+
+  const escopos: FiltroAlvosCobranca[] = [];
+  for (const c of porPlaca.values()) {
+    escopos.push({
+      clienteId: c.clienteId!,
+      placa: formatPlacaHyphen(c.placa),
+    });
+  }
+
+  return escopos.sort((a, b) =>
+    compactPlaca(a.placa ?? "").localeCompare(compactPlaca(b.placa ?? "")),
+  );
+}
 
 function filtrarAlvosPorEscopo(
   alvos: AlvoCobranca[],
