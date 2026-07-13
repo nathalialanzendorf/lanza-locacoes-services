@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -64,16 +65,16 @@ function nowIso(): string {
 }
 
 export function loadVeiculosDb(): VeiculosDb {
-  if (!fs.existsSync(DB_VEICULOS)) {
+  if (!jsonDocumentExists(DB_VEICULOS)) {
     return { descricao: DEFAULT_DESCRICAO, veiculos: [] };
   }
-  return JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as VeiculosDb;
+  return loadJsonDocument<VeiculosDb>(DB_VEICULOS);
 }
 
 export function saveVeiculosDb(db: VeiculosDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  fs.writeFileSync(DB_VEICULOS, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_VEICULOS, db, { description: DEFAULT_DESCRICAO });
 }
 
 export function isVeiculoAtivo(v: VeiculoRegistro): boolean {

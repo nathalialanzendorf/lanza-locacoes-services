@@ -62,350 +62,56 @@ type ResumoSemanalCanvas = {
 };
 
 const dados = {
-  "cliente": "Juliano Foizer Silveira",
-  "placa": "OZC-0B50",
-  "modeloVeiculo": "FORD/FOCUS SE 1.6 SEDAN GNV",
-  "anoModelo": "2013/2014",
-  "dataInicio": "27/06/2026",
-  "dataFim": "25/09/2026",
-  "qtdDiasContrato": 90,
+  "cliente": "Ronald Viana Junior",
+  "placa": "QJB-0I83",
+  "modeloVeiculo": "VW/FOX CONNECT MB GNV",
+  "anoModelo": "2018/2018",
+  "dataInicio": "—",
+  "dataFim": "—",
+  "qtdDiasContrato": 0,
   "dataAtual": "12/07/2026",
-  "qtdDiasLocado": 15,
+  "qtdDiasLocado": 0,
   "linhaEncerramento": null,
-  "valorSemanal": 800,
-  "valorDiaria": 150,
-  "totalDebitos": 2916.72,
+  "valorSemanal": 0,
+  "valorDiaria": 0,
+  "totalDebitos": 402.03,
   "infracoes": [
     {
-      "descricao": "ATRASADO Multa conversão - 09/06/2026 10:57",
-      "placa": "IWP-5G63",
-      "data": "09/06/2026 10:57:32",
+      "descricao": "Multa sinal - 25/05/2026 08:26",
+      "placa": "QJB-0I83",
+      "data": "25/05/2026 08:26:13",
       "categoria": "Infração",
-      "valor": 195.23
+      "valor": 293.47
     }
   ],
-  "totalInfracoes": 195.23,
+  "totalInfracoes": 293.47,
   "infracoesPagas": [],
   "totalInfracoesPagas": 0,
-  "manutencoes": [
-    {
-      "descricao": "ATRASADO Acionamento franquia Sandero 2015",
-      "placa": "IWP-5G63",
-      "data": "26/06/2026",
-      "categoria": "Manutenção",
-      "valor": 796.49
-    },
-    {
-      "descricao": "ATRASADO  Lavação Sandero 2015",
-      "placa": "IWP-5G63",
-      "data": "26/06/2026",
-      "categoria": "Manutenção",
-      "valor": 80
-    }
-  ],
-  "totalManutencoes": 876.49,
+  "manutencoes": [],
+  "totalManutencoes": 0,
   "parcelasEmAberto": [
     {
-      "descricao": "ATRASADO Pagamento semanal - Sábado 20",
-      "placa": "IWP-5G63",
-      "data": "20/06/2026",
+      "descricao": "ATRASADO Multa atraso (4 dias) pagamento semanal - Segunda 06",
+      "placa": "AVU-6740",
+      "data": "09/07/2026 13:29",
       "categoria": "Locação semanal",
-      "valor": 2
-    },
-    {
-      "descricao": "ATRASADO Pagamento semanal - Sábado 27",
-      "placa": "OZC-0B50",
-      "data": "27/06/2026",
-      "categoria": "Locação semanal",
-      "valor": 40
-    },
-    {
-      "descricao": "ATRASADO Pagamento semanal - Sábado 04",
-      "placa": "OZC-0B50",
-      "data": "04/07/2026",
-      "categoria": "Locação semanal",
-      "valor": 100
-    },
-    {
-      "descricao": "ATRASADO Pagamento semanal - Sábado 11",
-      "placa": "OZC-0B50",
-      "data": "11/07/2026",
-      "categoria": "Locação semanal",
-      "valor": 800
+      "valor": 108.56
     }
   ],
-  "totalParcelasEmAberto": 942,
-  "totalSemanalCobrar": 942,
-  "debitosDiversos": [
-    {
-      "descricao": "ATRASADO Pagamento pedágio 29/05/2026 18:45",
-      "placa": "IWP-5G63",
-      "data": "29/05/2026 18:45",
-      "categoria": "Pedágio",
-      "valor": 3
-    },
-    {
-      "descricao": "ATRASADO  Negociação 3x4",
-      "placa": "OZC-0B50",
-      "data": "20/06/2026",
-      "categoria": "Renegociação",
-      "valor": 350
-    },
-    {
-      "descricao": "ATRASADO  Negociação 4x4",
-      "placa": "OZC-0B50",
-      "data": "27/06/2026",
-      "categoria": "Renegociação",
-      "valor": 250
-    },
-    {
-      "descricao": "ATRASADO  Pagamento caução",
-      "placa": "OZC-0B50",
-      "data": "27/06/2026",
-      "categoria": "Caução",
-      "valor": 300
-    }
-  ],
-  "totalDebitosDiversos": 903,
+  "totalParcelasEmAberto": 108.56,
+  "totalSemanalCobrar": 108.56,
+  "debitosDiversos": [],
+  "totalDebitosDiversos": 0,
   "placasEscopo": [
-    "OZC-0B50"
+    "QJB-0I83"
   ],
-  "resumoSemanal": {
-    "diaEscalonamento": 3,
-    "tituloEscalonamento": "bloqueio programado",
-    "vencimentosEmAbertoBr": [
-      "27/06/2026",
-      "04/07/2026",
-      "11/07/2026"
-    ],
-    "dataBloqueioBr": "13/07/2026",
-    "totalReceber": 2828.52,
-    "diasAtrasados": 12,
-    "diasEmDia": 4,
-    "jurosMultaAcumulados": 428.52
-  },
-  "pagamentoSemanal": {
-    "tabelas": [
-      {
-        "vencimentoBr": "27/06/2026",
-        "periodoInicioBr": "27/06/2026",
-        "periodoFimBr": "03/07/2026",
-        "linhas": [
-          {
-            "dataBr": "27/06/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "28/06/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "29/06/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "30/06/2026",
-            "diaSemana": "Ter",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "01/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "02/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "03/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          }
-        ],
-        "subtotalJurosMulta": 249.97,
-        "total": 1050
-      },
-      {
-        "vencimentoBr": "04/07/2026",
-        "periodoInicioBr": "04/07/2026",
-        "periodoFimBr": "10/07/2026",
-        "linhas": [
-          {
-            "dataBr": "04/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "05/07/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "06/07/2026",
-            "diaSemana": "Seg",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "07/07/2026",
-            "diaSemana": "Ter",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "08/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "09/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "10/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          }
-        ],
-        "subtotalJurosMulta": 107.13,
-        "total": 907.16
-      },
-      {
-        "vencimentoBr": "11/07/2026",
-        "periodoInicioBr": "11/07/2026",
-        "periodoFimBr": "18/07/2026",
-        "linhas": [
-          {
-            "dataBr": "11/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "12/07/2026",
-            "diaSemana": "Dom",
-            "situacao": "Atrasado",
-            "jurosMulta": 35.71,
-            "totalDia": 150
-          },
-          {
-            "dataBr": "13/07/2026",
-            "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "14/07/2026",
-            "diaSemana": "Ter",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "15/07/2026",
-            "diaSemana": "Qua",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "16/07/2026",
-            "diaSemana": "Qui",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "17/07/2026",
-            "diaSemana": "Sex",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          },
-          {
-            "dataBr": "18/07/2026",
-            "diaSemana": "Sáb",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
-          }
-        ],
-        "subtotalJurosMulta": 71.42,
-        "total": 985.74
-      }
-    ],
-    "totalGeral": 2828.52,
-    "dataPagamentoBr": "12/07/2026"
-  },
+  "resumoSemanal": null,
+  "pagamentoSemanal": null,
   "mensagensWhatsApp": [
     {
-      "tipo": "pagamento-semanal",
-      "titulo": "🚨 Bloqueio programado — OZC-0B50",
-      "texto": "🚨 *Bloqueio programado* — OZC-0B50\n\nOlá, Juliano!\nA *parcela semanal* da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "renegociacao",
-      "titulo": "Renegociação em aberto — OZC-0B50",
-      "texto": "Renegociação em aberto — OZC-0B50\n\nOlá, Juliano! Identificamos parcela(s) de *renegociação de débitos* em aberto referente ao veículo locado.\n\nValor total pendente: *R$ 600,00*\n\nRegularize o pagamento conforme combinado. Em caso de dúvida, responda neste canal.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
       "tipo": "infracoes",
-      "titulo": "🚦 Notificação de infração — IWP-5G63",
-      "texto": "🚦 *Notificação de infração* — IWP-5G63\n\nOlá, Juliano! Recebemos uma notificação de infração referente ao seu RENAULT/SANDERO 1.6 Flex - BRANCO:\n\n🚨 *Infração:* Multa conversão - 09/06/2026 10:57\n🗓️ *Data/hora:* 09/06/2026 às 10:57:32\n📍 *Local:* CRICIUMA/SC\n💰 *Valor:* R$ 195,23\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "pedagio",
-      "titulo": "🛣️ Pedágio em aberto — IWP-5G63",
-      "texto": "🛣️ *Pedágio em aberto* — IWP-5G63\n\nOlá, Juliano! Identificamos uma pendência junto à *CCR Via Costeira* referente ao veículo locado.\n\nO não pagamento do pedágio caracteriza infração grave, sujeita a:\n🚫 Multa de *R$ 195,23*\n⚠️ *5 pontos* na CNH\n\nEvite transtornos e regularize de forma rápida pelo WhatsApp 👉 *+55 48 3211-3130*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "manutencao",
-      "titulo": "Manutenção em aberto — IWP-5G63",
-      "texto": "Manutenção em aberto — IWP-5G63\n\nOlá, Juliano! Há pendência de *manutenção* (responsabilidade do locatário) referente ao veículo locado.\n\nValor total pendente: *R$ 876,49*\n\nRegularize para evitar acúmulo no acerto. Responda neste canal se precisar de detalhes.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "semanal-atraso",
-      "titulo": "📊 Cálculo do atraso semanal — OZC-0B50",
-      "texto": "📊 *Cálculo do atraso semanal* — OZC-0B50\n\nOlá, Juliano!\nSegue cálculo do atraso da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 12/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 800,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 800,00*\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 71,42 (2 diárias)\n*Valor semana: R$ 800,00*\n\n*Total a devido : R$ 2.828,52 (12 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
-    },
-    {
-      "tipo": "despesas-em-aberto",
-      "titulo": "📋 Despesas em aberto — OZC-0B50",
-      "texto": "📋 *Despesas em aberto* — OZC-0B50\n\nOlá, Juliano!\nSegue a listagem das despesas referente à locação do seu FORD/FOCUS SE 1.6 SEDAN GNV que segue em aberto:\n\n• IWP-5G63 · 29/05/2026 18:45 · ATRASADO Pagamento pedágio 29/05/2026 18:45 · R$ 3,00\n• IWP-5G63 · 09/06/2026 10:57:32 · ATRASADO Multa conversão - 09/06/2026 10:57 · R$ 195,23\n• IWP-5G63 · 20/06/2026 · ATRASADO Pagamento semanal - Sábado 20 · R$ 2,00\n• OZC-0B50 · 20/06/2026 · ATRASADO  Negociação 3x4 · R$ 350,00\n• IWP-5G63 · 26/06/2026 · ATRASADO Acionamento franquia Sandero 2015 · R$ 796,49\n• IWP-5G63 · 26/06/2026 · ATRASADO  Lavação Sandero 2015 · R$ 80,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Negociação 4x4 · R$ 250,00\n• OZC-0B50 · 27/06/2026 · ATRASADO  Pagamento caução · R$ 300,00\n• OZC-0B50 · 27/06/2026 · ATRASADO Pagamento semanal - Sábado 27 · R$ 40,00\n• OZC-0B50 · 04/07/2026 · ATRASADO Pagamento semanal - Sábado 04 · R$ 100,00\n• OZC-0B50 · 11/07/2026 · ATRASADO Pagamento semanal - Sábado 11 · R$ 800,00\n\n*Total em aberto: R$ 2.916,72*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "titulo": "🚦 Notificação de infração — QJB-0I83",
+      "texto": "🚦 *Notificação de infração* — QJB-0I83\n\nOlá, Ronald! Recebemos uma notificação de infração referente ao seu VW/FOX CONNECT MB GNV - BRANCO:\n\n🚨 *Infração:* Multa sinal - 25/05/2026 08:26\n🗓️ *Data/hora:* 25/05/2026 às 08:26:13\n📍 *Local:* BALNEARIO CAMBORIU/SC\n💰 *Valor:* R$ 293,47\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []
@@ -776,7 +482,7 @@ function agruparMensagensPorTipo(
     }));
 }
 
-export default function CobrancaOzc0b50JulianoFoizerSilveira() {
+export default function CobrancaQjb0i83RonaldVianaJunior() {
   const theme = useHostTheme();
   const gruposWhatsApp = agruparMensagensPorTipo(dados.mensagensWhatsApp);
 

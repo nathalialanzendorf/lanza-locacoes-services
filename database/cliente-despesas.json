@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos locatários/clientes: infrações, locação, caução, manutenção (incl. lavação), quebra de contrato, estacionamento, pedágio, etc.",
-  "atualizadoEm": "2026-07-11",
+  "atualizadoEm": "2026-07-12",
   "schemaClienteDespesa": {
     "id": "uuid",
     "categoria": "Infração | Locação semanal | Caução | Manutenção | Quebra contrato | Estacionamento | Pedágio | Outros",
@@ -60,7 +60,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05)",
       "cadastradoEm": "2026-06-26T16:28:23.174Z",
-      "atualizadoEm": "2026-07-09T22:52:17.176Z",
+      "atualizadoEm": "2026-07-12T20:29:57.925Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -70,7 +70,7 @@
       "rastreameRastreavelKey": "106",
       "rastreameDataIso": "2026-04-16T16:58:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:52:18.780Z",
+      "rastreameSyncEm": "2026-07-12T20:29:59.176Z",
       "titulo": "Multa estacionamento - 16/04/2026",
       "paga": false,
       "ativo": true,
@@ -97,7 +97,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05)",
       "cadastradoEm": "2026-06-26T16:28:23.674Z",
-      "atualizadoEm": "2026-07-11T18:30:23.089Z",
+      "atualizadoEm": "2026-07-12T20:29:52.722Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -117,7 +117,7 @@
       "pagaEm": null,
       "pdfArquivo": "Felipe - VW FOX 2018-2018/11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05)/Débitos/P0cc2001yr - QJB0I83.pdf",
       "rastreameId": 744,
-      "rastreameSyncEm": "2026-07-11T18:30:23.315Z"
+      "rastreameSyncEm": "2026-07-12T20:29:54.171Z"
     },
     {
       "id": "e0d9a000-1bc3-4820-8207-10d0659449e5",
@@ -133,7 +133,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05)",
       "cadastradoEm": "2026-06-26T16:28:24.576Z",
-      "atualizadoEm": "2026-07-09T22:51:17.348Z",
+      "atualizadoEm": "2026-07-12T20:29:54.227Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -143,7 +143,7 @@
       "rastreameRastreavelKey": "106",
       "rastreameDataIso": "2026-05-10T19:44:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:51:18.638Z",
+      "rastreameSyncEm": "2026-07-12T20:29:55.703Z",
       "titulo": "Multa cinto - 10/05/2026",
       "paga": false,
       "ativo": true,
@@ -169,7 +169,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - VW FOX 2018-2018\\11.12.2025 - Luiz Marcelo Porto Menezes Moreira (devolvido 18.05)",
       "cadastradoEm": "2026-06-26T16:28:24.998Z",
-      "atualizadoEm": "2026-07-09T22:51:19.369Z",
+      "atualizadoEm": "2026-07-12T20:29:55.753Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -179,7 +179,7 @@
       "rastreameRastreavelKey": "106",
       "rastreameDataIso": "2026-05-14T12:16:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:51:21.060Z",
+      "rastreameSyncEm": "2026-07-12T20:29:57.222Z",
       "titulo": "Multa estacionamento - 14/05/2026",
       "paga": false,
       "ativo": true,
@@ -197,22 +197,26 @@
       "autoInfracao": "BC01212784",
       "descricao": "AVANÇAR SINAL VERM, EXC OND. PERM LIVR CONV A DIR - Fisc Ele",
       "localInfracao": "AV. ALVIN BAUER X 4 AVENIDA, LESTE/OESTE, FX 01 - BALNEARIO CAMBORIU/SC",
-      "dataAutuacao": "25/05/2026 08:26",
+      "dataAutuacao": "25/05/2026 08:26:13",
       "valorMulta": 293.47,
       "situacao": "Autuação notificada",
-      "limiteDefesa": "2026-07-27",
-      "condutorId": null,
+      "limiteDefesa": "27/07/2026",
+      "condutorId": "9c055b90-e03b-4225-9e5d-0aaf512faffe",
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:32:37.998Z",
-      "atualizadoEm": "2026-07-09T22:14:40.859Z",
+      "atualizadoEm": "2026-07-12T20:21:16.366Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
-      "condutorNaoIdentificado": true,
+      "condutorNaoIdentificado": false,
       "titulo": "Multa sinal - 25/05/2026 08:26",
-      "ativo": false,
-      "pdfArquivo": "Débitos/BC01212784 - QJB0I83.pdf"
+      "ativo": true,
+      "pdfArquivo": "Débitos/BC01212784 - QJB0I83.pdf",
+      "dataLimiteDefesa": "27/07/2026",
+      "convertidaEmDebito": false,
+      "numeroAuto": "BC01212784",
+      "statusInfracao": "Notificada"
     },
     {
       "id": "67ff8cac-3c92-46b1-b6e7-294198dbeb06",
@@ -414,13 +418,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:33:51.313Z",
-      "atualizadoEm": "2026-07-05T22:39:41.374Z",
+      "atualizadoEm": "2026-07-12T20:31:02.349Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa estacionamento - 31/10/2025 10:10",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/Z000019845 - AIT - OZC0B50.pdf"
     },
     {
       "id": "06cebd42-597f-4c3e-a2af-18a667cd0f88",
@@ -436,13 +441,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:33:51.714Z",
-      "atualizadoEm": "2026-07-05T22:39:41.915Z",
+      "atualizadoEm": "2026-07-12T20:31:03.010Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa estacionamento - 03/11/2025 09:29",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/Z000019946 - AIT - OZC0B50.pdf"
     },
     {
       "id": "256dce82-8ba3-4d47-9306-285deb02be2d",
@@ -458,13 +464,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:33:52.127Z",
-      "atualizadoEm": "2026-07-05T22:39:42.365Z",
+      "atualizadoEm": "2026-07-12T20:31:03.770Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa estacionamento - 06/11/2025 11:19",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/P0c6o000fi - AIT - OZC0B50.pdf"
     },
     {
       "id": "cf48e6aa-974a-42e2-aa25-d82a6afcfd7f",
@@ -480,7 +487,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FOCUS 2013-2014\\11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)",
       "cadastradoEm": "2026-06-26T16:33:52.512Z",
-      "atualizadoEm": "2026-07-11T18:24:00.000Z",
+      "atualizadoEm": "2026-07-12T20:31:04.107Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -499,7 +506,8 @@
       "rastreameRastreavelKey": "174",
       "rastreameDataIso": "2026-03-02T23:54:00.000Z",
       "rastreameTipo": "MULTA",
-      "ativo": true
+      "ativo": true,
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)/Débitos/J007356743 - AIT - OZC0B50.pdf"
     },
     {
       "id": "d4828d57-837b-484e-8434-36d7717446c2",
@@ -515,7 +523,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FOCUS 2013-2014\\11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)",
       "cadastradoEm": "2026-06-26T16:33:52.911Z",
-      "atualizadoEm": "2026-07-11T18:20:01.237Z",
+      "atualizadoEm": "2026-07-12T20:31:04.475Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -529,7 +537,8 @@
       "dataLimiteDefesa": "17/07/2026",
       "convertidaEmDebito": false,
       "numeroAuto": "J008779003",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)/Débitos/J008779003 - AIT - OZC0B50.pdf"
     },
     {
       "id": "7dc63202-7339-475c-b924-22aedee91fee",
@@ -545,7 +554,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FOCUS 2013-2014\\11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)",
       "cadastradoEm": "2026-06-26T16:33:53.444Z",
-      "atualizadoEm": "2026-07-11T18:20:02.956Z",
+      "atualizadoEm": "2026-07-12T20:31:04.860Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -559,7 +568,8 @@
       "dataLimiteDefesa": "17/07/2026",
       "convertidaEmDebito": false,
       "numeroAuto": "J008779092",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)/Débitos/J008779092 - AIT - OZC0B50.pdf"
     },
     {
       "id": "75c341f1-e5d8-49c8-9010-961e33dc2b87",
@@ -575,7 +585,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Felipe - FORD FOCUS 2013-2014\\11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)",
       "cadastradoEm": "2026-06-26T16:33:53.880Z",
-      "atualizadoEm": "2026-07-11T18:20:04.292Z",
+      "atualizadoEm": "2026-07-12T20:31:05.234Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -589,7 +599,8 @@
       "dataLimiteDefesa": "17/07/2026",
       "convertidaEmDebito": false,
       "numeroAuto": "J008779127",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/11.12.2025 - Laryssa (Gustavo) Costa de Quadros (troca 22.05)/Débitos/J008779127 - AIT - OZC0B50.pdf"
     },
     {
       "id": "f03ce398-15cd-41db-b0c2-6e16ed92cfdb",
@@ -605,13 +616,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:34:20.856Z",
-      "atualizadoEm": "2026-07-05T22:39:42.995Z",
+      "atualizadoEm": "2026-07-12T20:31:11.676Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa estacionamento - 07/09/2019 16:00",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/55452346G - AIT - OWN3C59.pdf"
     },
     {
       "id": "03047fad-de53-4853-b00f-d4f13a259179",
@@ -627,13 +639,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:34:21.504Z",
-      "atualizadoEm": "2026-07-05T22:39:43.458Z",
+      "atualizadoEm": "2026-07-12T20:31:12.111Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa estacionamento - 25/07/2025 17:14",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/Z000017399 - AIT - OWN3C59.pdf"
     },
     {
       "id": "5414a30a-79cf-48f6-abfa-008afd8da03e",
@@ -649,7 +662,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\08.10.2025 - Renan Peters da Silva (devolvido 14.01)",
       "cadastradoEm": "2026-06-26T16:34:51.474Z",
-      "atualizadoEm": "2026-07-05T23:01:26.569Z",
+      "atualizadoEm": "2026-07-12T20:28:33.363Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -658,7 +671,8 @@
       "dataLimiteDefesa": "06/03/2026",
       "convertidaEmDebito": true,
       "numeroAuto": "J005833081",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Maicon - VW GOL 2017-2018/08.10.2025 - Renan Peters da Silva (devolvido 14.01)/Débitos/J005833081 - AIT - BBV6A91.pdf"
     },
     {
       "id": "2bcf95cc-bc68-4faa-a572-d5b84891ed88",
@@ -674,7 +688,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva",
       "cadastradoEm": "2026-06-26T16:34:52.037Z",
-      "atualizadoEm": "2026-07-09T22:49:44.935Z",
+      "atualizadoEm": "2026-07-12T20:28:37.104Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -683,7 +697,7 @@
       "rastreameRastreavelKey": "105",
       "rastreameDataIso": "2026-05-12T20:39:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:49:47.217Z",
+      "rastreameSyncEm": "2026-07-12T20:28:36.560Z",
       "titulo": "Multa velocidade - 12/05/2026",
       "paga": false,
       "ativo": true,
@@ -692,7 +706,8 @@
       "numeroAuto": "CRC0883952",
       "statusInfracao": "Notificada",
       "detranAutoInfracao": "CRC0883952",
-      "pagaEm": null
+      "pagaEm": null,
+      "pdfArquivo": "Maicon - VW GOL 2017-2018/05.05.2026 - Susana da Silva/Débitos/CRC0883952 - AIT - BBV6A91.pdf"
     },
     {
       "id": "a33e58c7-4878-40e6-972c-00313d648bde",
@@ -708,7 +723,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2017-2018\\05.05.2026 - Susana da Silva",
       "cadastradoEm": "2026-06-26T16:34:52.545Z",
-      "atualizadoEm": "2026-07-09T22:49:47.380Z",
+      "atualizadoEm": "2026-07-12T20:28:39.240Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -718,7 +733,7 @@
       "rastreameMotoristaKey": "31",
       "rastreameRastreavelKey": "105",
       "rastreameId": 649,
-      "rastreameSyncEm": "2026-07-09T22:49:48.655Z",
+      "rastreameSyncEm": "2026-07-12T20:28:38.708Z",
       "rastreameDataIso": "2026-06-03T02:59:00.000Z",
       "rastreameTipo": "MULTA",
       "detranAutoInfracao": "CRC0890597",
@@ -726,7 +741,8 @@
       "dataLimiteDefesa": "24/07/2026",
       "convertidaEmDebito": false,
       "numeroAuto": "CRC0890597",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Maicon - VW GOL 2017-2018/05.05.2026 - Susana da Silva/Débitos/CRC0890597 - AIT - BBV6A91.pdf"
     },
     {
       "id": "170f3955-05cc-4f90-a070-f37303980dc3",
@@ -742,13 +758,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:27.466Z",
-      "atualizadoEm": "2026-07-05T22:39:44.012Z",
+      "atualizadoEm": "2026-07-12T20:28:58.734Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa parada - 14/09/2020 17:07",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/P016S002ZX - AIT - MLN0B87.pdf"
     },
     {
       "id": "c865da22-301d-41d6-8718-034aae6712ec",
@@ -764,13 +781,14 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:27.975Z",
-      "atualizadoEm": "2026-07-05T22:39:44.486Z",
+      "atualizadoEm": "2026-07-12T20:29:00.091Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
       "condutorNaoIdentificado": true,
       "titulo": "Multa parada - 23/09/2020 14:14",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/P016S0032R - AIT - MLN0B87.pdf"
     },
     {
       "id": "3f459df4-c7f2-4c5f-970f-e8c6614211cc",
@@ -786,7 +804,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:28.460Z",
-      "atualizadoEm": "2026-07-05T23:02:33.552Z",
+      "atualizadoEm": "2026-07-12T20:29:15.300Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -795,7 +813,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0CBO000BO",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P0CBO000BO - AIT - MLN0B87.pdf"
     },
     {
       "id": "79e1a66e-9645-4fc7-b9ce-af0381c5acce",
@@ -811,7 +830,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:28.895Z",
-      "atualizadoEm": "2026-07-05T23:02:33.898Z",
+      "atualizadoEm": "2026-07-12T20:29:16.547Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -820,7 +839,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0CBN000CL",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P0CBN000CL - AIT - MLN0B87.pdf"
     },
     {
       "id": "f00f56ff-f508-4be2-be4e-c365f1225989",
@@ -836,7 +856,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:29.283Z",
-      "atualizadoEm": "2026-07-05T23:02:34.299Z",
+      "atualizadoEm": "2026-07-12T20:29:17.112Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -845,7 +865,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8779I37319",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8779I37319 - AIT - MLN0B87.pdf"
     },
     {
       "id": "c59881da-0f61-4fb7-bab1-71cb1c4b830d",
@@ -861,7 +882,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Ana - FORD FIESTA 2013-2014\\05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)",
       "cadastradoEm": "2026-06-26T16:35:29.642Z",
-      "atualizadoEm": "2026-07-05T23:02:19.954Z",
+      "atualizadoEm": "2026-07-12T20:29:00.511Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -870,7 +891,8 @@
       "dataLimiteDefesa": "13/02/2026",
       "convertidaEmDebito": true,
       "numeroAuto": "J005307158",
-      "statusInfracao": "Notificada"
+      "statusInfracao": "Notificada",
+      "pdfArquivo": "Ana - FORD FIESTA 2013-2014/05.12.2025 - Alberto Jose Gonzalez Salazar (devolvido 05.01)/Débitos/J005307158 - AIT - MLN0B87.pdf"
     },
     {
       "id": "faa0b1a0-921b-4d19-b409-6ea77a2bb9d9",
@@ -886,7 +908,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:30.077Z",
-      "atualizadoEm": "2026-07-05T23:02:34.691Z",
+      "atualizadoEm": "2026-07-12T20:29:17.717Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -895,7 +917,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0det0005p",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P0det0005p - AIT - MLN0B87.pdf"
     },
     {
       "id": "4e001273-8c97-4401-83d3-29e1deef927d",
@@ -911,7 +934,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:30.536Z",
-      "atualizadoEm": "2026-07-05T23:02:35.048Z",
+      "atualizadoEm": "2026-07-12T20:29:18.135Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -920,7 +943,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0det0005w",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P0det0005w - AIT - MLN0B87.pdf"
     },
     {
       "id": "a9b4e716-e534-4e24-9ffd-d7a5a5b4276e",
@@ -936,7 +960,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:35:30.991Z",
-      "atualizadoEm": "2026-07-05T23:02:35.571Z",
+      "atualizadoEm": "2026-07-12T20:29:18.518Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": true,
@@ -945,7 +969,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "C251001171",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/C251001171 - AIT - MLN0B87.pdf"
     },
     {
       "id": "eda31238-fea2-4598-a44c-888d6d505f82",
@@ -961,7 +986,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Maicon - VW GOL 2012-2013\\30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)",
       "cadastradoEm": "2026-06-26T16:35:31.373Z",
-      "atualizadoEm": "2026-07-09T22:50:10.134Z",
+      "atualizadoEm": "2026-07-12T20:29:03.698Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -971,7 +996,7 @@
       "rastreameRastreavelKey": "99",
       "rastreameDataIso": "2026-05-18T12:34:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:50:11.740Z",
+      "rastreameSyncEm": "2026-07-12T20:29:03.228Z",
       "paga": true,
       "pagaEm": null,
       "titulo": "Multa parada - 18/05/2026",
@@ -980,7 +1005,8 @@
       "convertidaEmDebito": true,
       "numeroAuto": "P0cc20016c",
       "statusInfracao": "Notificada",
-      "detranAutoInfracao": "P0CC20016C"
+      "detranAutoInfracao": "P0CC20016C",
+      "pdfArquivo": "Maicon - VW GOL 2012-2013/30.01.2026 - Sergio Alexandre Pinto Gloria (trocado)/Débitos/P0cc20016c - AIT - MLN0B87.pdf"
     },
     {
       "id": "493ca8c7-45d4-4600-b6bb-946705828db4",
@@ -1129,7 +1155,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)",
       "cadastradoEm": "2026-06-26T16:36:05.196Z",
-      "atualizadoEm": "2026-07-09T22:49:56.963Z",
+      "atualizadoEm": "2026-07-12T20:28:47.714Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -1139,7 +1165,7 @@
       "rastreameRastreavelKey": "101",
       "rastreameDataIso": "2026-02-08T16:09:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:49:59.113Z",
+      "rastreameSyncEm": "2026-07-12T20:28:49.505Z",
       "paga": true,
       "pagaEm": null,
       "titulo": "Multa velocidade - 08/02/2026",
@@ -1165,7 +1191,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Regiane - HYUNDAI HB20 2012-2013\\28.01.2026 - Lucas da Silva Dimas (recuperado 04.05)",
       "cadastradoEm": "2026-06-26T16:36:05.622Z",
-      "atualizadoEm": "2026-07-09T22:49:59.179Z",
+      "atualizadoEm": "2026-07-12T20:28:49.558Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -1175,7 +1201,7 @@
       "rastreameRastreavelKey": "101",
       "rastreameDataIso": "2026-04-22T23:14:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:50:00.655Z",
+      "rastreameSyncEm": "2026-07-12T20:28:51.239Z",
       "paga": true,
       "pagaEm": null,
       "titulo": "Multa farol - 22/04/2026",
@@ -1224,7 +1250,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-26T16:36:29.885Z",
-      "atualizadoEm": "2026-07-10T22:49:44.374Z",
+      "atualizadoEm": "2026-07-12T20:29:24.352Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -1237,7 +1263,7 @@
       "rastreameRastreavelKey": "208",
       "rastreameDataIso": "2026-04-10T08:23:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-10T22:49:46.833Z",
+      "rastreameSyncEm": "2026-07-12T20:29:26.043Z",
       "ativo": true,
       "dataLimiteDefesa": "19/06/2026",
       "convertidaEmDebito": true,
@@ -1297,7 +1323,7 @@
       "condutorConfirmado": true,
       "condutorContrato": "D:\\Dropbox\\Aluguel Carros\\Luiz - RENAULT SANDERO 2017-2017\\24.03.26 - Tiago Augusto da Silva Piareti",
       "cadastradoEm": "2026-06-26T16:36:58.857Z",
-      "atualizadoEm": "2026-07-09T22:50:40.814Z",
+      "atualizadoEm": "2026-07-12T20:29:36.315Z",
       "origem": "detran-sc",
       "categoria": "Infração",
       "quitadaDetran": false,
@@ -1307,7 +1333,7 @@
       "rastreameRastreavelKey": "209",
       "rastreameDataIso": "2026-04-16T10:57:00.000Z",
       "rastreameTipo": "MULTA",
-      "rastreameSyncEm": "2026-07-09T22:50:42.281Z",
+      "rastreameSyncEm": "2026-07-12T20:29:37.785Z",
       "titulo": "Multa parada - 16/04/2026",
       "paga": false,
       "ativo": true,
@@ -14853,7 +14879,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.262Z",
-      "atualizadoEm": "2026-07-05T23:05:53.884Z",
+      "atualizadoEm": "2026-07-12T20:30:13.721Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14863,7 +14889,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "54599595W",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/54599595W - AIT - FHG0B73.pdf"
     },
     {
       "id": "03d616b5-5879-49a8-ae68-9b1ab3098b46",
@@ -14880,7 +14907,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.291Z",
-      "atualizadoEm": "2026-07-05T23:05:54.577Z",
+      "atualizadoEm": "2026-07-12T20:30:14.265Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14890,7 +14917,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R438569016",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R438569016 - AIT - FHG0B73.pdf"
     },
     {
       "id": "8a35b149-c0af-4b34-904a-40222bbf7546",
@@ -14907,7 +14935,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.319Z",
-      "atualizadoEm": "2026-07-05T23:05:54.889Z",
+      "atualizadoEm": "2026-07-12T20:30:14.663Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14917,7 +14945,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "54700169G",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/54700169G - AIT - FHG0B73.pdf"
     },
     {
       "id": "d27d1b65-57a6-451e-b77a-e2a19162356b",
@@ -14934,7 +14963,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.342Z",
-      "atualizadoEm": "2026-07-05T23:05:55.179Z",
+      "atualizadoEm": "2026-07-12T20:30:15.038Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14944,7 +14973,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "E078005203",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/E078005203 - AIT - FHG0B73.pdf"
     },
     {
       "id": "991d4bc9-a203-4877-aaed-0713b7bb9953",
@@ -14961,7 +14991,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.367Z",
-      "atualizadoEm": "2026-07-05T23:05:56.632Z",
+      "atualizadoEm": "2026-07-12T20:30:15.469Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14971,7 +15001,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P040M002BC",
       "statusInfracao": "Advertida",
-      "statusDetran": "advertida"
+      "statusDetran": "advertida",
+      "pdfArquivo": "Débitos/P040M002BC - AIT - FHG0B73.pdf"
     },
     {
       "id": "7ae939fe-997a-44f3-9b86-0eb1ae4589bd",
@@ -14988,7 +15019,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.391Z",
-      "atualizadoEm": "2026-07-05T23:05:58.089Z",
+      "atualizadoEm": "2026-07-12T20:30:15.842Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -14998,7 +15029,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T640206735",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/T640206735 - AIT - FHG0B73.pdf"
     },
     {
       "id": "9f2ef455-d845-461e-a844-eff8dbde9215",
@@ -15015,7 +15047,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.414Z",
-      "atualizadoEm": "2026-07-05T23:05:59.320Z",
+      "atualizadoEm": "2026-07-12T20:30:16.316Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15025,7 +15057,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "J000406609",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/J000406609 - AIT - FHG0B73.pdf"
     },
     {
       "id": "2a6a040d-e52d-4377-b965-255af700351a",
@@ -15042,7 +15075,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.432Z",
-      "atualizadoEm": "2026-07-05T23:05:59.813Z",
+      "atualizadoEm": "2026-07-12T20:30:57.111Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15052,7 +15085,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "Z000013601",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/Z000013601 - AIT - FHG0B73.pdf"
     },
     {
       "id": "1c221ffa-a840-4754-bdeb-7b537b5a2fe8",
@@ -15069,7 +15103,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.632Z",
-      "atualizadoEm": "2026-07-05T23:08:26.986Z",
+      "atualizadoEm": "2026-07-12T20:31:05.710Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15079,7 +15113,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "JV00004741",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/JV00004741 - AIT - OZC0B50.pdf"
     },
     {
       "id": "1151a7cc-b38d-4c7e-807b-f2cbe7e195d7",
@@ -15096,7 +15131,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.659Z",
-      "atualizadoEm": "2026-07-05T23:08:28.489Z",
+      "atualizadoEm": "2026-07-12T20:31:06.073Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15106,7 +15141,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R710688164",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/R710688164 - AIT - OZC0B50.pdf"
     },
     {
       "id": "a3b6f618-5c14-4c85-88b2-f2c57e9d6f30",
@@ -15123,7 +15159,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.679Z",
-      "atualizadoEm": "2026-07-05T23:08:28.906Z",
+      "atualizadoEm": "2026-07-12T20:31:06.464Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15133,7 +15169,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "Z000015953",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Felipe - FORD FOCUS 2013-2014/Débitos/Z000015953 - AIT - OZC0B50.pdf"
     },
     {
       "id": "348e813b-63e0-4260-8b5b-90d2db497011",
@@ -15150,7 +15187,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.818Z",
-      "atualizadoEm": "2026-07-05T22:55:53.648Z",
+      "atualizadoEm": "2026-07-12T20:31:12.477Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15160,7 +15197,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T475731794",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/T475731794 - AIT - OWN3C59.pdf"
     },
     {
       "id": "f6d96b50-a232-4c77-87a9-258705d91301",
@@ -15177,7 +15215,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.855Z",
-      "atualizadoEm": "2026-07-05T22:55:53.727Z",
+      "atualizadoEm": "2026-07-12T20:31:12.838Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15187,7 +15225,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T486358747",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/T486358747 - AIT - OWN3C59.pdf"
     },
     {
       "id": "440d3e4a-0933-48ea-aab3-8fd994a54862",
@@ -15204,7 +15243,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.880Z",
-      "atualizadoEm": "2026-07-05T22:55:53.809Z",
+      "atualizadoEm": "2026-07-12T20:31:13.298Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15214,7 +15253,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R668290117",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R668290117 - AIT - OWN3C59.pdf"
     },
     {
       "id": "3ec30219-5d2e-418f-a1bb-37fbebe6f53c",
@@ -15231,7 +15271,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.900Z",
-      "atualizadoEm": "2026-07-05T22:55:54.847Z",
+      "atualizadoEm": "2026-07-12T20:31:13.639Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15241,7 +15281,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R697341615",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/R697341615 - AIT - OWN3C59.pdf"
     },
     {
       "id": "594093c9-1e99-4675-87d2-c1cb5d546b92",
@@ -15258,7 +15299,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.921Z",
-      "atualizadoEm": "2026-07-05T22:55:54.912Z",
+      "atualizadoEm": "2026-07-12T20:31:13.993Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15268,7 +15309,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R752194607",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R752194607 - AIT - OWN3C59.pdf"
     },
     {
       "id": "a69d428b-45a8-48cf-940b-ab75bad252c9",
@@ -15285,7 +15327,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:01.963Z",
-      "atualizadoEm": "2026-07-05T22:55:54.979Z",
+      "atualizadoEm": "2026-07-12T20:31:14.373Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15295,7 +15337,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R806484179",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R806484179 - AIT - OWN3C59.pdf"
     },
     {
       "id": "9550f104-b495-44bd-8598-776c2d90c48b",
@@ -15312,7 +15355,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.003Z",
-      "atualizadoEm": "2026-07-05T22:55:55.055Z",
+      "atualizadoEm": "2026-07-12T20:31:14.758Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15322,7 +15365,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "55510765W",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/55510765W - AIT - OWN3C59.pdf"
     },
     {
       "id": "d4ea535f-64e4-4c98-a47e-42511b5ea6ad",
@@ -15339,7 +15383,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.042Z",
-      "atualizadoEm": "2026-07-05T22:55:55.112Z",
+      "atualizadoEm": "2026-07-12T20:31:52.583Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15349,7 +15393,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "C139011265",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/C139011265 - AIT - OWN3C59.pdf"
     },
     {
       "id": "1ac31c2d-4ea4-49bd-81be-1564ba70ee47",
@@ -15366,7 +15411,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.083Z",
-      "atualizadoEm": "2026-07-05T22:55:56.087Z",
+      "atualizadoEm": "2026-07-12T20:31:53.032Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15376,7 +15421,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "N005035885",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/N005035885 - AIT - OWN3C59.pdf"
     },
     {
       "id": "075ac2dc-d33f-40c1-a1e1-7586e0e978ac",
@@ -15393,7 +15439,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.732Z",
-      "atualizadoEm": "2026-07-05T23:01:36.359Z",
+      "atualizadoEm": "2026-07-12T20:28:39.941Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15403,7 +15449,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P08UC001LA",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/P08UC001LA - AIT - BBV6A91.pdf"
     },
     {
       "id": "9f96aebb-de0f-4012-9af5-171f2a994709",
@@ -15420,7 +15467,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.750Z",
-      "atualizadoEm": "2026-07-05T23:01:36.726Z",
+      "atualizadoEm": "2026-07-12T20:28:40.331Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15430,7 +15477,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P08UC001LB",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P08UC001LB - AIT - BBV6A91.pdf"
     },
     {
       "id": "07583372-42db-41ba-91ed-d99d25b7a474",
@@ -15447,7 +15495,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.769Z",
-      "atualizadoEm": "2026-07-05T23:01:37.001Z",
+      "atualizadoEm": "2026-07-12T20:28:40.729Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15457,7 +15505,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P08UC001LC",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P08UC001LC - AIT - BBV6A91.pdf"
     },
     {
       "id": "c58342a3-c2a8-4ba2-875b-c679ec11ce92",
@@ -15474,7 +15523,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.788Z",
-      "atualizadoEm": "2026-07-05T23:01:37.329Z",
+      "atualizadoEm": "2026-07-12T20:28:41.208Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15484,7 +15533,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P08UC001LD",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P08UC001LD - AIT - BBV6A91.pdf"
     },
     {
       "id": "a6ff5e76-2fcc-4bbf-91a3-42540c64813b",
@@ -15501,7 +15551,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.809Z",
-      "atualizadoEm": "2026-07-05T23:01:38.585Z",
+      "atualizadoEm": "2026-07-12T20:28:41.647Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15511,7 +15561,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0CSB0000I",
       "statusInfracao": "Advertida",
-      "statusDetran": "advertida"
+      "statusDetran": "advertida",
+      "pdfArquivo": "Débitos/P0CSB0000I - AIT - BBV6A91.pdf"
     },
     {
       "id": "07b13768-d6e8-460a-abde-672c8ca0ba7e",
@@ -15528,7 +15579,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.826Z",
-      "atualizadoEm": "2026-07-05T23:01:40.381Z",
+      "atualizadoEm": "2026-07-12T20:28:42.035Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15538,7 +15589,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "J001208390",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/J001208390 - AIT - BBV6A91.pdf"
     },
     {
       "id": "0c920106-6199-4757-a789-118fe49026f3",
@@ -15555,7 +15607,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.843Z",
-      "atualizadoEm": "2026-07-05T23:01:40.758Z",
+      "atualizadoEm": "2026-07-12T20:28:42.473Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15565,7 +15617,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "CRC0697711",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/CRC0697711 - AIT - BBV6A91.pdf"
     },
     {
       "id": "9da1f757-c152-4d4b-90ac-1888549ae6f6",
@@ -15582,7 +15635,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.941Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:24.920Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15590,7 +15643,8 @@
       "titulo": "Multa estacionamento",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/N010317295 - AIT - AVU6740.pdf"
     },
     {
       "id": "eda4c3f4-e45f-4725-8183-85241eca24df",
@@ -15607,7 +15661,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.960Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:25.397Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15615,7 +15669,8 @@
       "titulo": "Multa velocidade",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/E027814274 - AIT - AVU6740.pdf"
     },
     {
       "id": "e85be7df-05f6-4c10-a66b-2d183d72078c",
@@ -15632,7 +15687,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:02.991Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:25.772Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15640,7 +15695,8 @@
       "titulo": "Multa trânsito",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/E027664650 - AIT - AVU6740.pdf"
     },
     {
       "id": "a445a39a-dece-49cc-86ef-d30f26c1bd65",
@@ -15657,7 +15713,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.030Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:26.126Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15665,7 +15721,8 @@
       "titulo": "Multa velocidade",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/E027837914 - AIT - AVU6740.pdf"
     },
     {
       "id": "e102f77d-cfb6-4f3e-acf0-aa30136482fb",
@@ -15682,7 +15739,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.077Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:26.484Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15690,7 +15747,8 @@
       "titulo": "Multa velocidade",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/E027855411 - AIT - AVU6740.pdf"
     },
     {
       "id": "49b3b844-2a3f-4257-8f54-d13960cb8e36",
@@ -15707,7 +15765,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.101Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:27.321Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15715,7 +15773,8 @@
       "titulo": "Multa sinal",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/E027858742 - AIT - AVU6740.pdf"
     },
     {
       "id": "11851670-06e1-47d7-890b-1dfbb3eb8ecf",
@@ -15732,7 +15791,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.121Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:27.675Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15740,7 +15799,8 @@
       "titulo": "Multa conversão",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/T762501207 - AIT - AVU6740.pdf"
     },
     {
       "id": "61eeb6d6-9643-40e7-ae1f-a4519528ba83",
@@ -15757,7 +15817,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.142Z",
-      "atualizadoEm": "2026-07-05T00:32:57.114Z",
+      "atualizadoEm": "2026-07-12T20:28:28.121Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15765,7 +15825,8 @@
       "titulo": "Multa velocidade",
       "statusInfracao": "Paga",
       "statusDetran": "paga",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/J000235900 - AIT - AVU6740.pdf"
     },
     {
       "id": "74e4106a-ab7e-4ffc-a7b2-2e988e97137f",
@@ -15782,7 +15843,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.270Z",
-      "atualizadoEm": "2026-07-05T23:02:24.006Z",
+      "atualizadoEm": "2026-07-12T20:29:04.528Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15792,7 +15853,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "54483339E",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/54483339E - AIT - MLN0B87.pdf"
     },
     {
       "id": "08df5bd4-0a43-4af6-9997-d5f8acdecab8",
@@ -15809,7 +15871,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.288Z",
-      "atualizadoEm": "2026-07-05T23:02:24.435Z",
+      "atualizadoEm": "2026-07-12T20:29:04.992Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15819,7 +15881,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "54497851E",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/54497851E - AIT - MLN0B87.pdf"
     },
     {
       "id": "613d28bb-137f-48d5-8bbc-325934020c4b",
@@ -15836,7 +15899,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.307Z",
-      "atualizadoEm": "2026-07-05T23:02:24.809Z",
+      "atualizadoEm": "2026-07-12T20:29:05.557Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15846,7 +15909,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8797016267",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8797016267 - AIT - MLN0B87.pdf"
     },
     {
       "id": "acb8b73d-5493-4a00-864f-69027f97e3e9",
@@ -15863,7 +15927,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.328Z",
-      "atualizadoEm": "2026-07-05T23:02:25.107Z",
+      "atualizadoEm": "2026-07-12T20:29:05.994Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15873,7 +15937,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8797252345",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8797252345 - AIT - MLN0B87.pdf"
     },
     {
       "id": "9540d7e2-58b4-4e07-af31-fbe9cb5baf83",
@@ -15890,7 +15955,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.347Z",
-      "atualizadoEm": "2026-07-05T23:02:25.423Z",
+      "atualizadoEm": "2026-07-12T20:29:06.410Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15900,7 +15965,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8797269385",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8797269385 - AIT - MLN0B87.pdf"
     },
     {
       "id": "b37a313d-0e34-4b02-b7c1-c03721499187",
@@ -15917,7 +15983,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.370Z",
-      "atualizadoEm": "2026-07-05T23:02:25.726Z",
+      "atualizadoEm": "2026-07-12T20:29:06.847Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15927,7 +15993,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8749453332",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8749453332 - AIT - MLN0B87.pdf"
     },
     {
       "id": "793de137-5096-4843-9b68-1e489fcff95e",
@@ -15944,7 +16011,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.399Z",
-      "atualizadoEm": "2026-07-05T23:02:26.045Z",
+      "atualizadoEm": "2026-07-12T20:29:07.297Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15954,7 +16021,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R287057275",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R287057275 - AIT - MLN0B87.pdf"
     },
     {
       "id": "61a32f43-61eb-41b7-8af3-3dbd94222138",
@@ -15971,7 +16039,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.421Z",
-      "atualizadoEm": "2026-07-05T23:02:26.388Z",
+      "atualizadoEm": "2026-07-12T20:29:07.687Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -15981,7 +16049,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "54663798E",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/54663798E - AIT - MLN0B87.pdf"
     },
     {
       "id": "87eb857d-d194-4956-90b4-00617b9e8f03",
@@ -15998,7 +16067,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.442Z",
-      "atualizadoEm": "2026-07-05T23:02:26.714Z",
+      "atualizadoEm": "2026-07-12T20:29:08.050Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16008,7 +16077,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "E254120334",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/E254120334 - AIT - MLN0B87.pdf"
     },
     {
       "id": "28df977d-861b-4512-88ad-f2a499135663",
@@ -16025,7 +16095,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.461Z",
-      "atualizadoEm": "2026-07-05T23:02:27.027Z",
+      "atualizadoEm": "2026-07-12T20:29:08.438Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16035,7 +16105,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R334991382",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R334991382 - AIT - MLN0B87.pdf"
     },
     {
       "id": "99a1ae7d-4876-4715-8d89-587520a7c51b",
@@ -16052,7 +16123,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.485Z",
-      "atualizadoEm": "2026-07-05T23:02:27.323Z",
+      "atualizadoEm": "2026-07-12T20:29:08.936Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16062,7 +16133,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "0001002997",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/0001002997 - AIT - MLN0B87.pdf"
     },
     {
       "id": "ba613c39-f125-47e8-96c3-e7883a07d7d7",
@@ -16079,7 +16151,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.519Z",
-      "atualizadoEm": "2026-07-05T23:02:27.807Z",
+      "atualizadoEm": "2026-07-12T20:29:09.356Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16089,7 +16161,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "0001147405",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/0001147405 - AIT - MLN0B87.pdf"
     },
     {
       "id": "68bc0dec-17b7-4c20-b838-0adf3e33939a",
@@ -16106,7 +16179,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.552Z",
-      "atualizadoEm": "2026-07-05T23:02:28.150Z",
+      "atualizadoEm": "2026-07-12T20:29:09.759Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16116,7 +16189,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "0001189117",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/0001189117 - AIT - MLN0B87.pdf"
     },
     {
       "id": "2a468af0-0ab9-44dd-81ad-92d490065d8b",
@@ -16133,7 +16207,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.579Z",
-      "atualizadoEm": "2026-07-05T23:02:28.472Z",
+      "atualizadoEm": "2026-07-12T20:29:10.140Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16143,7 +16217,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T202313301",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/T202313301 - AIT - MLN0B87.pdf"
     },
     {
       "id": "a472e96e-a541-4ac5-972e-b2c2a66da087",
@@ -16160,7 +16235,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.598Z",
-      "atualizadoEm": "2026-07-05T23:02:29.136Z",
+      "atualizadoEm": "2026-07-12T20:29:10.628Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16170,7 +16245,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "0001701286",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/0001701286 - AIT - MLN0B87.pdf"
     },
     {
       "id": "c1491f46-bdaf-439d-a240-647fde88a413",
@@ -16187,7 +16263,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.617Z",
-      "atualizadoEm": "2026-07-05T23:02:29.697Z",
+      "atualizadoEm": "2026-07-12T20:29:11.049Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16197,7 +16273,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8749A96054",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8749A96054 - AIT - MLN0B87.pdf"
     },
     {
       "id": "3930eb10-1db1-419c-b5b8-d82b42302d00",
@@ -16214,7 +16291,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.639Z",
-      "atualizadoEm": "2026-07-05T23:02:30.033Z",
+      "atualizadoEm": "2026-07-12T20:29:11.841Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16224,7 +16301,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T469110097",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/T469110097 - AIT - MLN0B87.pdf"
     },
     {
       "id": "98f95d96-b19f-4656-b87b-84709f20c770",
@@ -16241,7 +16319,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.661Z",
-      "atualizadoEm": "2026-07-05T23:02:30.423Z",
+      "atualizadoEm": "2026-07-12T20:29:12.277Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16251,7 +16329,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8805168063",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8805168063 - AIT - MLN0B87.pdf"
     },
     {
       "id": "a3c6ddb4-e1d1-4a88-9310-1d4642d3b92d",
@@ -16268,7 +16347,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.681Z",
-      "atualizadoEm": "2026-07-05T23:02:30.830Z",
+      "atualizadoEm": "2026-07-12T20:29:12.754Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16278,7 +16357,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "C019009333",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/C019009333 - AIT - MLN0B87.pdf"
     },
     {
       "id": "ad9d2e2b-c343-49fe-910d-335a33bc3392",
@@ -16295,7 +16375,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.698Z",
-      "atualizadoEm": "2026-07-05T23:02:31.174Z",
+      "atualizadoEm": "2026-07-12T20:29:13.156Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16305,7 +16385,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8749C03851",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/8749C03851 - AIT - MLN0B87.pdf"
     },
     {
       "id": "228e68ce-f93e-467d-8942-5ce4e37ee9b4",
@@ -16322,7 +16403,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.715Z",
-      "atualizadoEm": "2026-07-05T23:02:31.508Z",
+      "atualizadoEm": "2026-07-12T20:29:13.529Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16332,7 +16413,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "T553938157",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/T553938157 - AIT - MLN0B87.pdf"
     },
     {
       "id": "9a8ed2aa-f9e2-412e-9a3e-4680f44dfb1a",
@@ -16349,7 +16431,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.734Z",
-      "atualizadoEm": "2026-07-05T23:02:31.980Z",
+      "atualizadoEm": "2026-07-12T20:29:13.956Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16359,7 +16441,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P08R80019D",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P08R80019D - AIT - MLN0B87.pdf"
     },
     {
       "id": "de6c7e1f-e316-4f8e-997e-ed6b44851621",
@@ -16376,7 +16459,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.750Z",
-      "atualizadoEm": "2026-07-05T23:02:32.418Z",
+      "atualizadoEm": "2026-07-12T20:29:14.462Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16386,7 +16469,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P09O9000GX",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P09O9000GX - AIT - MLN0B87.pdf"
     },
     {
       "id": "523d96fb-b02b-4cea-8905-2c0dd2fb1349",
@@ -16403,7 +16487,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:03.766Z",
-      "atualizadoEm": "2026-07-05T23:02:33.259Z",
+      "atualizadoEm": "2026-07-12T20:29:14.836Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -16413,7 +16497,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "P0CA1000LF",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/P0CA1000LF - AIT - MLN0B87.pdf"
     },
     {
       "id": "6c8355a6-c605-4f3b-bf4d-b115aa0642c8",
@@ -17331,7 +17416,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:05.626Z",
-      "atualizadoEm": "2026-07-05T23:10:45.203Z",
+      "atualizadoEm": "2026-07-12T20:32:11.329Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17341,7 +17426,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "J003891652",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/J003891652 - AIT - RYC7C32.pdf"
     },
     {
       "id": "a9cf2aa4-f33d-43bd-85a7-d59bf3288dc5",
@@ -17358,7 +17444,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:05:05.653Z",
-      "atualizadoEm": "2026-07-05T23:10:45.624Z",
+      "atualizadoEm": "2026-07-12T20:32:11.746Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17368,7 +17454,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "J003893752",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/J003893752 - AIT - RYC7C32.pdf"
     },
     {
       "id": "103cdd15-2693-4783-bd39-83f130b0cd95",
@@ -17665,12 +17752,13 @@
       "condutorConfirmado": false,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.256Z",
-      "atualizadoEm": "2026-07-05T22:40:40.968Z",
+      "atualizadoEm": "2026-07-12T20:31:58.421Z",
       "origem": "detran-sc",
       "revisarManual": true,
       "revisarMotivo": "Sem data de autuação no DETRAN — revisar manualmente",
       "titulo": "Multa velocidade",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/J002722271 - AIT - RLA1G81.pdf"
     },
     {
       "id": "c53126a5-f5bf-4630-9e67-dc088a7e2caa",
@@ -17687,12 +17775,13 @@
       "condutorConfirmado": false,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.276Z",
-      "atualizadoEm": "2026-07-05T22:40:40.994Z",
+      "atualizadoEm": "2026-07-12T20:31:59.517Z",
       "origem": "detran-sc",
       "revisarManual": true,
       "revisarMotivo": "Sem data de autuação no DETRAN — revisar manualmente",
       "titulo": "Multa velocidade",
-      "ativo": false
+      "ativo": false,
+      "pdfArquivo": "Débitos/J008489516 - AIT - RLA1G81.pdf"
     },
     {
       "id": "bb7c5cce-96d5-4ada-b63d-2ac89c01380c",
@@ -17709,7 +17798,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.294Z",
-      "atualizadoEm": "2026-07-05T23:12:32.728Z",
+      "atualizadoEm": "2026-07-12T20:31:59.949Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17719,7 +17808,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "8779E20475",
       "statusInfracao": "Advertida",
-      "statusDetran": "advertida"
+      "statusDetran": "advertida",
+      "pdfArquivo": "Débitos/8779E20475 - AIT - RLA1G81.pdf"
     },
     {
       "id": "5a2cab3b-04d3-4a19-99e9-5d5d988e1ccf",
@@ -17736,7 +17826,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.315Z",
-      "atualizadoEm": "2026-07-05T23:12:33.046Z",
+      "atualizadoEm": "2026-07-12T20:32:00.325Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17746,7 +17836,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "R668241322",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/R668241322 - AIT - RLA1G81.pdf"
     },
     {
       "id": "b61c917f-38be-4f24-8e4c-3b8c83293005",
@@ -17763,7 +17854,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.336Z",
-      "atualizadoEm": "2026-07-05T23:12:34.103Z",
+      "atualizadoEm": "2026-07-12T20:32:00.841Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17773,7 +17864,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "J000722467",
       "statusInfracao": "Justificada",
-      "statusDetran": "justificada"
+      "statusDetran": "justificada",
+      "pdfArquivo": "Débitos/J000722467 - AIT - RLA1G81.pdf"
     },
     {
       "id": "2e9025dc-f9cc-4447-8edb-d9fd02e5a42f",
@@ -17790,7 +17882,7 @@
       "condutorConfirmado": true,
       "condutorContrato": null,
       "cadastradoEm": "2026-06-28T19:56:34.357Z",
-      "atualizadoEm": "2026-07-05T23:12:34.339Z",
+      "atualizadoEm": "2026-07-12T20:32:01.194Z",
       "origem": "detran-sc",
       "revisarManual": false,
       "revisarMotivo": null,
@@ -17800,7 +17892,8 @@
       "convertidaEmDebito": false,
       "numeroAuto": "N001727766",
       "statusInfracao": "Paga",
-      "statusDetran": "paga"
+      "statusDetran": "paga",
+      "pdfArquivo": "Débitos/N001727766 - AIT - RLA1G81.pdf"
     },
     {
       "id": "8fbb67e0-851c-484f-b541-311825e2ed45",

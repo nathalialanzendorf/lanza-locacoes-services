@@ -1,6 +1,5 @@
 -- Schema inicial Lanza — espelha database/*.json como documentos JSONB.
--- Fonte canónica: packages/db/sql/001_initial_schema.sql
--- Executar com: npm run db:migrate  ou  npm run lanza -- postgres migrate
+-- Executar com: npm run db:migrate
 
 CREATE SCHEMA IF NOT EXISTS lanza;
 

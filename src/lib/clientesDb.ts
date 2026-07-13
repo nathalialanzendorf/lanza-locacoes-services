@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { ultimaTriagemPorCpf, type TriagemRegistro } from "./analiseCadastro/triagemDb.js";
@@ -100,16 +102,16 @@ function fillGaps(
 }
 
 export function loadClientesDb(): ClientesDb {
-  if (!fs.existsSync(DB_CLIENTES)) {
+  if (!jsonDocumentExists(DB_CLIENTES)) {
     return { descricao: DEFAULT_DESCRICAO, clientes: [] };
   }
-  return JSON.parse(fs.readFileSync(DB_CLIENTES, "utf8")) as ClientesDb;
+  return loadJsonDocument<ClientesDb>(DB_CLIENTES);
 }
 
 export function saveClientesDb(db: ClientesDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  fs.writeFileSync(DB_CLIENTES, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_CLIENTES, db, { description: DEFAULT_DESCRICAO });
 }
 
 export function isClienteAtivo(c: ClienteRegistro): boolean {

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -345,7 +346,7 @@ function resolverVersao(
 }
 
 export function loadContratosDb(): ContratosDb {
-  if (!fs.existsSync(DB_CONTRATOS)) {
+  if (!jsonDocumentExists(DB_CONTRATOS)) {
     return {
       descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
       atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -353,7 +354,7 @@ export function loadContratosDb(): ContratosDb {
       contratos: [],
     };
   }
-  const db = JSON.parse(fs.readFileSync(DB_CONTRATOS, "utf8")) as ContratosDb;
+  const db = loadJsonDocument<ContratosDb>(DB_CONTRATOS);
   if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
   return db;
 }
@@ -361,7 +362,7 @@ export function loadContratosDb(): ContratosDb {
 export function saveContratosDb(db: ContratosDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   db.schemaContrato = DEFAULT_SCHEMA;
-  fs.writeFileSync(DB_CONTRATOS, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_CONTRATOS, db);
 }
 
 function buildRegistro(

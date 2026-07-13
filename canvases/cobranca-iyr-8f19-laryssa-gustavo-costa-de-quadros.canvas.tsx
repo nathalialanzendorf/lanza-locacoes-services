@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "22/05/2026",
   "dataFim": "18/11/2026",
   "qtdDiasContrato": 180,
-  "dataAtual": "11/07/2026",
-  "qtdDiasLocado": 50,
+  "dataAtual": "12/07/2026",
+  "qtdDiasLocado": 51,
   "linhaEncerramento": null,
   "valorSemanal": 800,
   "valorDiaria": 150,
@@ -233,16 +233,16 @@ const dados = {
     "IYR-8F19"
   ],
   "resumoSemanal": {
-    "diaEscalonamento": 1,
-    "tituloEscalonamento": "lembrete",
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
     "vencimentosEmAbertoBr": [
       "10/07/2026"
     ],
     "dataBloqueioBr": "12/07/2026",
-    "totalReceber": 871.42,
-    "diasAtrasados": 2,
+    "totalReceber": 907.13,
+    "diasAtrasados": 3,
     "diasEmDia": 0,
-    "jurosMultaAcumulados": 71.42
+    "jurosMultaAcumulados": 107.13
   },
   "pagamentoSemanal": {
     "tabelas": [
@@ -268,9 +268,9 @@ const dados = {
           {
             "dataBr": "12/07/2026",
             "diaSemana": "Dom",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
           },
           {
             "dataBr": "13/07/2026",
@@ -308,18 +308,18 @@ const dados = {
             "totalDia": 114.29
           }
         ],
-        "subtotalJurosMulta": 71.42,
-        "total": 985.74
+        "subtotalJurosMulta": 107.13,
+        "total": 1021.45
       }
     ],
-    "totalGeral": 871.42,
-    "dataPagamentoBr": "11/07/2026"
+    "totalGeral": 907.13,
+    "dataPagamentoBr": "12/07/2026"
   },
   "mensagensWhatsApp": [
     {
       "tipo": "pagamento-semanal",
-      "titulo": "🔔 Lembrete de pagamento — IYR-8F19",
-      "texto": "🔔 *Lembrete de pagamento* — IYR-8F19\n\nOlá, Laryssa! Tudo bem? 😊\nPassando para lembrar que a *parcela semanal* da locação do seu PEUGEOT/2008 STYLE EAT6 está disponível para pagamento.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nSe você já efetuou o pagamento, é só desconsiderar esta mensagem.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "titulo": "🚨 Bloqueio programado — IYR-8F19",
+      "texto": "🚨 *Bloqueio programado* — IYR-8F19\n\nOlá, Laryssa!\nA *parcela semanal* da locação do seu PEUGEOT/2008 STYLE EAT6 segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "renegociacao",
@@ -354,7 +354,7 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — IYR-8F19",
-      "texto": "📊 *Cálculo do atraso semanal* — IYR-8F19\n\nOlá, Laryssa!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 STYLE EAT6:\n\nData bloqueio: 12/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 10/07/2026\nJuros e multa: R$ 71,42 (2 diárias)\n*Total semana: R$ 800,00*\n\n*Total a devido : R$ 871,42 (2 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — IYR-8F19\n\nOlá, Laryssa!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 STYLE EAT6:\n\nData bloqueio: 12/07/2026\nBase de cálculo: 12/07/2026\n\nVencimento em aberto: 10/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Total semana: R$ 800,00*\n\n*Total a devido : R$ 907,13 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",

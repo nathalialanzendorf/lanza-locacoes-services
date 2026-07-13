@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   isCategoriaInfracao,
@@ -354,7 +355,7 @@ function migrateLegacyIfNeeded(): void {
 
 export function loadClienteDespesasDb(): ClienteDespesasDb {
   migrateLegacyIfNeeded();
-  if (!fs.existsSync(DB_CLIENTE_DESPESAS)) {
+  if (!jsonDocumentExists(DB_CLIENTE_DESPESAS)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -362,14 +363,14 @@ export function loadClienteDespesasDb(): ClienteDespesasDb {
       clienteDespesas: [],
     };
   }
-  const raw = JSON.parse(fs.readFileSync(DB_CLIENTE_DESPESAS, "utf8")) as Record<string, unknown>;
+  const raw = loadJsonDocument<Record<string, unknown>>(DB_CLIENTE_DESPESAS);
   return normalizeRawDb(raw);
 }
 
 export function saveClienteDespesasDb(db: ClienteDespesasDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  fs.writeFileSync(DB_CLIENTE_DESPESAS, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_CLIENTE_DESPESAS, db, { description: DEFAULT_DESCRICAO });
 }
 
 /** @deprecated use loadInfracoesDb from ./infracoesDb.js (tabela dedicada) */

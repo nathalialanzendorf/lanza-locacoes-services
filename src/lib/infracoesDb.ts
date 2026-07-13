@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran } from "./detranSc/types.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
@@ -431,7 +432,7 @@ function aplicarCondutor(
 }
 
 export function loadInfracoesDb(): InfracoesDb {
-  if (!fs.existsSync(DB_INFRACOES)) {
+  if (!jsonDocumentExists(DB_INFRACOES)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -439,7 +440,7 @@ export function loadInfracoesDb(): InfracoesDb {
       infracoes: [],
     };
   }
-  const raw = JSON.parse(fs.readFileSync(DB_INFRACOES, "utf8")) as Record<string, unknown>;
+  const raw = loadJsonDocument<Record<string, unknown>>(DB_INFRACOES);
   const infracoes = (raw.infracoes ?? []) as InfracaoRegistro[];
   return {
     descricao: (raw.descricao as string) || DEFAULT_DESCRICAO,
@@ -453,7 +454,7 @@ export function saveInfracoesDb(db: InfracoesDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   if (!db.schemaInfracao) db.schemaInfracao = DEFAULT_SCHEMA;
-  fs.writeFileSync(DB_INFRACOES, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_INFRACOES, db, { description: DEFAULT_DESCRICAO });
 }
 
 export function findInfracaoByNumeroAuto(numeroAuto: string): InfracaoRegistro | null {

@@ -14,6 +14,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { REPO_ROOT } from "../repoRoot.js";
 import type { DadosLocatario, ResultadoFonte, StatusFonte } from "./tipos.js";
 import type { DadosLgpd, RelatorioTriagem } from "./relatorio.js";
@@ -108,7 +109,7 @@ function resolveClienteId(cpf: string): string | null {
 }
 
 export function loadTriagemDb(): TriagemDb {
-  if (!fs.existsSync(DB_TRIAGEM)) {
+  if (!jsonDocumentExists(DB_TRIAGEM)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: hojeIso(),
@@ -116,7 +117,7 @@ export function loadTriagemDb(): TriagemDb {
       triagens: [],
     };
   }
-  const db = JSON.parse(fs.readFileSync(DB_TRIAGEM, "utf8")) as TriagemDb;
+  const db = loadJsonDocument<TriagemDb>(DB_TRIAGEM);
   if (!Array.isArray(db.triagens)) db.triagens = [];
   if (!db.schemaTriagem) db.schemaTriagem = DEFAULT_SCHEMA;
   return db;
@@ -126,8 +127,7 @@ export function saveTriagemDb(db: TriagemDb): void {
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaTriagem = DEFAULT_SCHEMA;
-  fs.mkdirSync(path.dirname(DB_TRIAGEM), { recursive: true });
-  fs.writeFileSync(DB_TRIAGEM, JSON.stringify(db, null, 2) + "\n", "utf8");
+  saveJsonDocument(DB_TRIAGEM, db, { mkdir: true, trailingNewline: true });
 }
 
 function resumirFonte(f: ResultadoFonte): FonteResumo {

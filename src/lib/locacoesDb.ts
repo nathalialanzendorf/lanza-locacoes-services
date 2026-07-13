@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -148,7 +149,7 @@ export function resolveCondutor(
 }
 
 export function loadLocacoesDb(): LocacoesDb {
-  if (!fs.existsSync(DB_LOCACOES)) {
+  if (!jsonDocumentExists(DB_LOCACOES)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -156,7 +157,7 @@ export function loadLocacoesDb(): LocacoesDb {
       locacoes: [],
     };
   }
-  const db = JSON.parse(fs.readFileSync(DB_LOCACOES, "utf8")) as LocacoesDb;
+  const db = loadJsonDocument<LocacoesDb>(DB_LOCACOES);
   if (!db.schemaLocacao) db.schemaLocacao = DEFAULT_SCHEMA;
   if (!Array.isArray(db.locacoes)) db.locacoes = [];
   return db;
@@ -166,7 +167,7 @@ export function saveLocacoesDb(db: LocacoesDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaLocacao = DEFAULT_SCHEMA;
-  fs.writeFileSync(DB_LOCACOES, JSON.stringify(db, null, 2) + "\n", "utf8");
+  saveJsonDocument(DB_LOCACOES, db, { trailingNewline: true });
 }
 
 export type LocacaoInput = {

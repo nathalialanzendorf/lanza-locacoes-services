@@ -14,6 +14,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { REPO_ROOT } from "../repoRoot.js";
 
 export const DB_CLIENTE_ANALISE = path.join(REPO_ROOT, "database", "cliente-analise.json");
@@ -98,7 +99,7 @@ function normCpf(cpf: string): string {
 }
 
 export function loadClienteAnaliseDb(): ClienteAnaliseDb {
-  if (!fs.existsSync(DB_CLIENTE_ANALISE)) {
+  if (!jsonDocumentExists(DB_CLIENTE_ANALISE)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: hojeIso(),
@@ -106,7 +107,7 @@ export function loadClienteAnaliseDb(): ClienteAnaliseDb {
       registros: [],
     };
   }
-  const db = JSON.parse(fs.readFileSync(DB_CLIENTE_ANALISE, "utf8")) as ClienteAnaliseDb;
+  const db = loadJsonDocument<ClienteAnaliseDb>(DB_CLIENTE_ANALISE);
   if (!Array.isArray(db.registros)) db.registros = [];
   if (!db.schema) db.schema = DEFAULT_SCHEMA;
   return db;
@@ -116,8 +117,7 @@ export function saveClienteAnaliseDb(db: ClienteAnaliseDb): void {
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schema = DEFAULT_SCHEMA;
-  fs.mkdirSync(path.dirname(DB_CLIENTE_ANALISE), { recursive: true });
-  fs.writeFileSync(DB_CLIENTE_ANALISE, JSON.stringify(db, null, 2) + "\n", "utf8");
+  saveJsonDocument(DB_CLIENTE_ANALISE, db, { mkdir: true, trailingNewline: true });
 }
 
 /** Fonte normalizada para gravar uma linha (aceita ResultadoFonte ou FonteResumo). */

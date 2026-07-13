@@ -260,9 +260,21 @@ function jwtSemBearer(auth: string): string {
   return auth.replace(/^Bearer\s+/i, "").trim();
 }
 
+/** JWT plausível — evita aceitar lixo do storage e gravar token inválido no env. */
+function isLikelyJwt(auth: string): boolean {
+  const jwt = jwtSemBearer(auth);
+  const parts = jwt.split(".");
+  return (
+    parts.length === 3 &&
+    jwt.startsWith("eyJ") &&
+    jwt.length >= 80 &&
+    jwt.length <= 2000
+  );
+}
+
 /** Grava JWT/empresa/appVersion capturados no env da sessão e no utilizador (Windows). */
 function persistDetranScAuth(cred: Cred): void {
-  if (!cred.auth) return;
+  if (!cred.auth || !isLikelyJwt(cred.auth)) return;
   const jwt = jwtSemBearer(cred.auth);
   process.env.DETRAN_SC_AUTH = jwt;
   if (cred.empresa) process.env.DETRAN_SC_EMPRESA = cred.empresa;
@@ -556,7 +568,7 @@ async function main(): Promise<void> {
         sid = ps;
       }
 
-      // Fallback: se a rede ainda não trouxe o JWT, tenta achá-lo no storage.
+      // Fallback: storage só se ainda não temos JWT da rede (rede é autoritativa).
       if (!cred.auth) {
         const tok = await cdp
           .evaluate<string | null>(
@@ -564,7 +576,7 @@ async function main(): Promise<void> {
             ps,
           )
           .catch(() => null);
-        if (tok) {
+        if (tok && isLikelyJwt(tok)) {
           cred.auth = `Bearer ${tok}`;
           console.log(`  • JWT encontrado no storage (${host || "?"})`);
         }
@@ -572,14 +584,24 @@ async function main(): Promise<void> {
     }
 
     if (!sid) sid = sessaoPortal();
-    const loginPronto = cred.auth && (soToken ? !!(sid && sitekey) : true);
+    if (!cred.empresa) cred.empresa = process.env.DETRAN_SC_EMPRESA?.trim();
+    const loginPronto =
+      cred.auth &&
+      isLikelyJwt(cred.auth) &&
+      !!cred.empresa &&
+      (soToken ? !!(sid && sitekey) : true);
     if (loginPronto) break;
     await sleep(2500);
   }
 
-  if (!cred.auth) {
+  if (!cred.auth || !isLikelyJwt(cred.auth)) {
     throw new Error(
-      "✗ Não capturei o token (Authorization). Faça o login gov.br no portal e tente de novo.",
+      "✗ Não capturei um JWT válido (Authorization). Faça o login gov.br no portal, abra a consulta de veículo e tente de novo.",
+    );
+  }
+  if (!cred.empresa) {
+    throw new Error(
+      "✗ Não capturei X-Empresa. Abra a tela de consulta de veículo no portal (dispara a API) e tente de novo.",
     );
   }
   if (soToken && !sid) {
@@ -634,6 +656,9 @@ async function main(): Promise<void> {
     const renavam = String(v.renavam).replace(/\D/g, "");
     const placaApi = compactPlaca(v.placa);
     try {
+      const activeSid = sessaoPortal() ?? sid;
+      if (!activeSid) throw new Error("aba do portal DETRAN SC não encontrada");
+      sid = activeSid;
       await cdp.evaluate(DETRAN_BROWSER_HOOK, sid).catch(() => {});
 
       const browserRes = await cdp.evaluate<{

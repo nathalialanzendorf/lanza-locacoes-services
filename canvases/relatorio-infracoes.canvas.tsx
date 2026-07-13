@@ -68,25 +68,25 @@ type Bloco = {
 
 const dados = {
   "titulo": "Relatório de infrações",
-  "geradoEmBr": "11/07/2026",
+  "geradoEmBr": "13/07/2026",
   "fonte": "database/infracoes.json",
   "totalInfracoes": 191,
   "totalPlacas": 16,
   "totalGeral": 35617.91,
-  "totalCobravel": 4948.46,
+  "totalCobravel": 5241.93,
   "blocos": [
     {
       "id": "cliente",
       "titulo": "Com locatário vinculado",
       "descricao": "Infrações com cliente identificado em clientes.json — cobráveis do locatário.",
-      "qtd": 30,
-      "total": 4948.46,
+      "qtd": 31,
+      "total": 5241.93,
       "subgrupos": [
         {
           "id": "cobravel-aberto",
           "titulo": "Cobrável em aberto",
-          "qtd": 30,
-          "total": 4948.46,
+          "qtd": 31,
+          "total": 5241.93,
           "linhas": [
             {
               "placa": "BBV-6A91",
@@ -597,6 +597,23 @@ const dados = {
               "pagaDetran": "Não",
               "pagaLanza": "Não",
               "cobravel": true
+            },
+            {
+              "placa": "QJB-0I83",
+              "modelo": "VW/FOX CONNECT MB GNV",
+              "ano": "2018/2018",
+              "numeroAuto": "BC01212784",
+              "data": "25/05/2026 08:26:13",
+              "valor": 293.47,
+              "descricao": "AVANÇAR SINAL VERM, EXC OND. PERM LIVR CONV A DIR - Fisc Ele",
+              "status": "Em aberto",
+              "situacao": "Autuação notificada",
+              "vencimento": "27/07/2026",
+              "cliente": "Ronald Viana Junior",
+              "motivoCliente": "",
+              "pagaDetran": "Não",
+              "pagaLanza": "Não",
+              "cobravel": true
             }
           ]
         }
@@ -883,40 +900,6 @@ const dados = {
               "vencimento": "21/08/2026",
               "cliente": "Parceiro Felipe",
               "motivoCliente": "Veículo particular — débito do parceiro/dono",
-              "pagaDetran": "Não",
-              "pagaLanza": "Não",
-              "cobravel": false
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "pendente",
-      "titulo": "Sem vínculo / revisão",
-      "descricao": "Locatário não identificado · anterior ao início da locação · cliente não cadastrado · sem contrato na data.",
-      "qtd": 1,
-      "total": 293.47,
-      "subgrupos": [
-        {
-          "id": "nao-identificado",
-          "titulo": "Locatário não identificado (revisar)",
-          "qtd": 1,
-          "total": 293.47,
-          "linhas": [
-            {
-              "placa": "QJB-0I83",
-              "modelo": "VW/FOX CONNECT MB GNV",
-              "ano": "2018/2018",
-              "numeroAuto": "BC01212784",
-              "data": "25/05/2026 08:26:13",
-              "valor": 293.47,
-              "descricao": "AVANÇAR SINAL VERM, EXC OND. PERM LIVR CONV A DIR - Fisc Ele",
-              "status": "Em aberto",
-              "situacao": "Autuação notificada",
-              "vencimento": "27/07/2026",
-              "cliente": "—",
-              "motivoCliente": "Locatário não identificado — revisar manualmente",
               "pagaDetran": "Não",
               "pagaLanza": "Não",
               "cobravel": false

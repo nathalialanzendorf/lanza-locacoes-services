@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -149,7 +150,7 @@ function migrateLegacyDespesasIfNeeded(): void {
 
 export function loadParceiroDespesasDb(): ParceiroDespesasDb {
   migrateLegacyDespesasIfNeeded();
-  if (!fs.existsSync(DB_PARCEIRO_DESPESAS)) {
+  if (!jsonDocumentExists(DB_PARCEIRO_DESPESAS)) {
     return {
       descricao: DEFAULT_DESCRICAO,
       atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -157,17 +158,14 @@ export function loadParceiroDespesasDb(): ParceiroDespesasDb {
       parceiroDespesas: [],
     };
   }
-  const raw = JSON.parse(fs.readFileSync(DB_PARCEIRO_DESPESAS, "utf8")) as Record<
-    string,
-    unknown
-  >;
+  const raw = loadJsonDocument<Record<string, unknown>>(DB_PARCEIRO_DESPESAS);
   return normalizeRawDb(raw);
 }
 
 export function saveParceiroDespesasDb(db: ParceiroDespesasDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  fs.writeFileSync(DB_PARCEIRO_DESPESAS, JSON.stringify(db, null, 2), "utf8");
+  saveJsonDocument(DB_PARCEIRO_DESPESAS, db, { description: DEFAULT_DESCRICAO });
 }
 
 /** @deprecated use loadParceiroDespesasDb */

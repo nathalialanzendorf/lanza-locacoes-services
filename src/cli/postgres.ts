@@ -7,11 +7,16 @@ Subcomandos:
   migrate [--import-json] [--dry-run]
                               Cria schema lanza.json_stores; opcionalmente importa database/*.json
 
+Alternativa via pacote @lanza/db:
+  npm run db:check
+  npm run db:migrate -- --import-json
+
 Variáveis (persistentes do utilizador — ver .\\scripts\\set-postgres-user-env.ps1):
   PGHOST, PGPORT, PGDATABASE, PGUSER, PGSSLMODE
   PGPASSWORD                  (opcional — senha estática; senão usa token IAM)
   AWS_REGION, AWS_ROLE_ARN    (autenticação IAM no RDS)
   DATABASE_URL                (alternativa única às PG*)
+  LANZA_DB_BACKEND            file (padrão) | dual | postgres — backend dos *Db.ts
 
 Pré-requisitos:
   - Credenciais AWS locais (perfil/cadeia padrão) com permissão de assumir AWS_ROLE_ARN

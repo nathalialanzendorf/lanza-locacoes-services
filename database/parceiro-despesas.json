@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-07-11",
+  "atualizadoEm": "2026-07-12",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -4223,20 +4223,6 @@
       "rastreameSyncEm": "2026-07-09T00:10:13.162Z"
     },
     {
-      "id": "18df410a-6d09-412f-9e60-b8aee0aea46d",
-      "veiculoId": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
-      "placa": "QJB-0I83",
-      "categoria": "Outros",
-      "descricao": "Multa sem locatário — AVANÇAR SINAL VERM, EXC OND. PERM LIVR CONV A DIR - Fisc Ele (BC01212784)",
-      "data": "27/07/2026",
-      "valor": 293.47,
-      "competencia": "07/2026",
-      "origem": "detran-sc/infracao-sem-locatario/QJB0I83/BC01212784",
-      "rastreameManutencaoId": 435,
-      "rastreameHash": "4e06e7d2a530e3ef",
-      "rastreameSyncEm": "2026-07-09T00:10:13.354Z"
-    },
-    {
       "id": "eff8d4e3-ce4c-4db5-9b49-9539704f6c50",
       "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
       "placa": "OZC-0B50",
@@ -5678,6 +5664,17 @@
       "valor": 3,
       "competencia": "07/2026",
       "origem": "pedagio-digital/sem-locatario/QJB0I83/PED-45417261"
+    },
+    {
+      "id": "39833349-ac97-4e42-bb01-c1739d1e3012",
+      "veiculoId": "20025418-0fc3-4993-9a7b-40494862ad8d",
+      "placa": "FHG-0B73",
+      "categoria": "Seguro",
+      "descricao": "Seguro",
+      "data": "10/07/2026",
+      "valor": 79.89,
+      "competencia": "07/2026",
+      "origem": "Proteção Veicular/Comprovantes/2026/07 Julho/FHG0B73 - FIESTA.pdf"
     }
   ]
 }
