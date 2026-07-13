@@ -345,23 +345,20 @@ export function inferirCondutorInfracao(
 
   const placaFmt = formatPlacaHyphen(placa);
 
-  // Manutenção operacional (oficina) não isenta locatário com contrato vigente na data.
+  // Veículo em manutenção na data: locatário não estava com o carro → débito do parceiro.
   const manutencao = findManutencaoNaData(placaFmt, data);
   if (manutencao) {
-    const viaContrato = inferirCondutorContratoPlaca(placa, data, dataAutuacaoStr, prazoDias);
-    const manutAviso = `Veículo ${placaFmt} em manutenção (${manutencao.inicio}${manutencao.fim ? ` a ${manutencao.fim}` : ""})`;
     const obs = manutencao.observacao?.trim();
-    if (viaContrato.condutorId || viaContrato.condutorContrato) {
-      return {
-        ...viaContrato,
-        aviso: [manutAviso, viaContrato.aviso, obs].filter(Boolean).join("; "),
-      };
-    }
     return {
       condutorId: null,
       condutorContrato: null,
       clienteNome: null,
-      aviso: [manutAviso, "locatário não identificado", obs].filter(Boolean).join("; "),
+      aviso: [
+        `Veículo ${placaFmt} em manutenção (${manutencao.inicio}${manutencao.fim ? ` a ${manutencao.fim}` : ""}) — locatário não identificado`,
+        obs,
+      ]
+        .filter(Boolean)
+        .join("; "),
     };
   }
 

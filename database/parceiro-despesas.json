@@ -1,6 +1,6 @@
 {
   "descricao": "Débitos a cobrar dos parceiros/donos por veículo (IPVA, Licenciamento, Seguro, Rastreador, Manutenção, etc.). Consumido por relatorio-prestacao-contas.",
-  "atualizadoEm": "2026-07-12",
+  "atualizadoEm": "2026-07-13",
   "schemaParceiroDespesa": {
     "id": "uuid (despesa)",
     "veiculoId": "uuid -> veiculos.json (null se placa não cadastrada)",
@@ -5675,6 +5675,39 @@
       "valor": 79.89,
       "competencia": "07/2026",
       "origem": "Proteção Veicular/Comprovantes/2026/07 Julho/FHG0B73 - FIESTA.pdf"
+    },
+    {
+      "id": "6d4b0abc-95ad-4bf5-b248-737fd3dbcaa2",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Outros",
+      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J008779003)",
+      "data": "17/07/2026",
+      "valor": 130.16,
+      "competencia": "07/2026",
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779003"
+    },
+    {
+      "id": "40387ae0-9796-42c0-b3da-3223230d2b36",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Outros",
+      "descricao": "Multa sem locatário — TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20% (J008779092)",
+      "data": "17/07/2026",
+      "valor": 130.16,
+      "competencia": "07/2026",
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779092"
+    },
+    {
+      "id": "ee0c1170-a143-446f-b37f-cbef3434a904",
+      "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+      "placa": "OZC-0B50",
+      "categoria": "Outros",
+      "descricao": "Multa sem locatário — TRANS EM VELOC SUP À MÁX PERMITIDA EM MAIS DE 20% ATE 50% (J008779127)",
+      "data": "17/07/2026",
+      "valor": 195.23,
+      "competencia": "07/2026",
+      "origem": "detran-sc/infracao-sem-locatario/OZC0B50/J008779127"
     }
   ]
 }
