@@ -69,12 +69,12 @@ const dados = {
   "dataInicio": "20/06/2026",
   "dataFim": "18/09/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "11/07/2026",
-  "qtdDiasLocado": 21,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 23,
   "linhaEncerramento": null,
   "valorSemanal": 1000,
   "valorDiaria": 200,
-  "totalDebitos": 1142.86,
+  "totalDebitos": 2142.86,
   "infracoes": [],
   "totalInfracoes": 0,
   "infracoesPagas": [],
@@ -88,10 +88,17 @@ const dados = {
       "data": "06/07/2026",
       "categoria": "Locação semanal",
       "valor": 1000
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 13",
+      "placa": "RLA-1G81",
+      "data": "13/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 1000
     }
   ],
-  "totalParcelasEmAberto": 1000,
-  "totalSemanalCobrar": 1000,
+  "totalParcelasEmAberto": 2000,
+  "totalSemanalCobrar": 2000,
   "debitosDiversos": [
     {
       "descricao": "ATRASADO Pagamento troca data - Segunda 29",
@@ -112,10 +119,10 @@ const dados = {
       "06/07/2026"
     ],
     "dataBloqueioBr": "08/07/2026",
-    "totalReceber": 1342.84,
-    "diasAtrasados": 6,
-    "diasEmDia": 0,
-    "jurosMultaAcumulados": 342.84
+    "totalReceber": 1399.98,
+    "diasAtrasados": 7,
+    "diasEmDia": 1,
+    "jurosMultaAcumulados": 399.98
   },
   "pagamentoSemanal": {
     "tabelas": [
@@ -169,9 +176,9 @@ const dados = {
           {
             "dataBr": "12/07/2026",
             "diaSemana": "Dom",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 142.86
+            "situacao": "Atrasado",
+            "jurosMulta": 57.14,
+            "totalDia": 200
           },
           {
             "dataBr": "13/07/2026",
@@ -181,12 +188,12 @@ const dados = {
             "totalDia": 142.86
           }
         ],
-        "subtotalJurosMulta": 342.84,
-        "total": 1485.72
+        "subtotalJurosMulta": 399.98,
+        "total": 1542.86
       }
     ],
-    "totalGeral": 1342.84,
-    "dataPagamentoBr": "11/07/2026"
+    "totalGeral": 1399.98,
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -202,12 +209,12 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — RLA-1G81",
-      "texto": "📊 *Cálculo do atraso semanal* — RLA-1G81\n\nOlá, Ceres!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 ALLURE EAT6:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 342,84 (6 diárias)\n*Total semana: R$ 1.000,00*\n\n*Total a devido : R$ 1.342,84 (6 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — RLA-1G81\n\nOlá, Ceres!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 ALLURE EAT6:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 399,98 (7 diárias)\n*Total semana: R$ 1.000,00*\n\n*Total a devido : R$ 1.399,98 (7 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — RLA-1G81",
-      "texto": "📋 *Despesas em aberto* — RLA-1G81\n\nOlá, Ceres!\nSegue a listagem das despesas referente à locação do seu PEUGEOT/2008 ALLURE EAT6 que segue em aberto:\n\n• RLA-1G81 · 29/06/2026 · ATRASADO Pagamento troca data - Segunda 29 · R$ 142,86\n• RLA-1G81 · 06/07/2026 · ATRASADO Pagamento semanal - Segunda 06 · R$ 1.000,00\n\n*Total em aberto: R$ 1.142,86*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — RLA-1G81\n\nOlá, Ceres!\nSegue a listagem das despesas referente à locação do seu PEUGEOT/2008 ALLURE EAT6 que segue em aberto:\n\n• RLA-1G81 · 29/06/2026 · ATRASADO Pagamento troca data - Segunda 29 · R$ 142,86\n• RLA-1G81 · 06/07/2026 · ATRASADO Pagamento semanal - Segunda 06 · R$ 1.000,00\n• RLA-1G81 · 13/07/2026 · ATRASADO Pagamento semanal - Segunda 13 · R$ 1.000,00\n\n*Total em aberto: R$ 2.142,86*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []

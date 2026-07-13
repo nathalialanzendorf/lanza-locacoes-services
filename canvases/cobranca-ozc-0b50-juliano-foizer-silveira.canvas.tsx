@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "27/06/2026",
   "dataFim": "25/09/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "12/07/2026",
-  "qtdDiasLocado": 15,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 16,
   "linhaEncerramento": null,
   "valorSemanal": 800,
   "valorDiaria": 150,
@@ -179,10 +179,10 @@ const dados = {
       "11/07/2026"
     ],
     "dataBloqueioBr": "13/07/2026",
-    "totalReceber": 2828.52,
-    "diasAtrasados": 12,
+    "totalReceber": 2864.23,
+    "diasAtrasados": 13,
     "diasEmDia": 4,
-    "jurosMultaAcumulados": 428.52
+    "jurosMultaAcumulados": 464.23
   },
   "pagamentoSemanal": {
     "tabelas": [
@@ -324,9 +324,9 @@ const dados = {
           {
             "dataBr": "13/07/2026",
             "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
           },
           {
             "dataBr": "14/07/2026",
@@ -364,12 +364,12 @@ const dados = {
             "totalDia": 114.29
           }
         ],
-        "subtotalJurosMulta": 71.42,
-        "total": 985.74
+        "subtotalJurosMulta": 107.13,
+        "total": 1021.45
       }
     ],
-    "totalGeral": 2828.52,
-    "dataPagamentoBr": "12/07/2026"
+    "totalGeral": 2864.23,
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -400,7 +400,7 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — OZC-0B50",
-      "texto": "📊 *Cálculo do atraso semanal* — OZC-0B50\n\nOlá, Juliano!\nSegue cálculo do atraso da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 12/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 800,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 800,00*\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 71,42 (2 diárias)\n*Valor semana: R$ 800,00*\n\n*Total a devido : R$ 2.828,52 (12 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — OZC-0B50\n\nOlá, Juliano!\nSegue cálculo do atraso da locação do seu FORD/FOCUS SE 1.6 SEDAN GNV:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 27/06/2026\nJuros e multa: R$ 249,97 (7 diárias)\n*Total semana: R$ 800,00*\n\nVencimento em aberto: 04/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 800,00*\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Valor semana: R$ 800,00*\n\n*Total a devido : R$ 2.864,23 (13 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",

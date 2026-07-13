@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "24/03/2026",
   "dataFim": "22/06/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "11/07/2026",
-  "qtdDiasLocado": 109,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 111,
   "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
@@ -136,7 +136,7 @@ const dados = {
     "dataBloqueioBr": "10/07/2026",
     "totalReceber": 731.42,
     "diasAtrasados": 3,
-    "diasEmDia": 1,
+    "diasEmDia": 3,
     "jurosMultaAcumulados": 81.42
   },
   "pagamentoSemanal": {
@@ -208,7 +208,7 @@ const dados = {
       }
     ],
     "totalGeral": 731.42,
-    "dataPagamentoBr": "11/07/2026"
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -234,7 +234,7 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — IXT-7I93",
-      "texto": "📊 *Cálculo do atraso semanal* — IXT-7I93\n\nOlá, Tiago!\nSegue cálculo do atraso da locação do seu RENAULT/SANDERO 1.0 Flex:\n\nData bloqueio: 10/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 08/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 731,42 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — IXT-7I93\n\nOlá, Tiago!\nSegue cálculo do atraso da locação do seu RENAULT/SANDERO 1.0 Flex:\n\nData bloqueio: 10/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 08/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 731,42 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",

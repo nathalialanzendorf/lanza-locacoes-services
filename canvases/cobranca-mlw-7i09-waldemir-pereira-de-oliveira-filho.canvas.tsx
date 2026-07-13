@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "03/07/2026",
   "dataFim": "01/10/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "11/07/2026",
-  "qtdDiasLocado": 8,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 10,
   "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
@@ -147,7 +147,18 @@ const dados = {
   "placasEscopo": [
     "MLW-7I09"
   ],
-  "resumoSemanal": null,
+  "resumoSemanal": {
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
+    "vencimentosEmAbertoBr": [
+      "11/07/2026"
+    ],
+    "dataBloqueioBr": "13/07/2026",
+    "totalReceber": 731.42,
+    "diasAtrasados": 3,
+    "diasEmDia": 0,
+    "jurosMultaAcumulados": 81.42
+  },
   "pagamentoSemanal": {
     "tabelas": [
       {
@@ -165,16 +176,16 @@ const dados = {
           {
             "dataBr": "12/07/2026",
             "diaSemana": "Dom",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
           },
           {
             "dataBr": "13/07/2026",
             "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
           },
           {
             "dataBr": "14/07/2026",
@@ -212,14 +223,24 @@ const dados = {
             "totalDia": 92.86
           }
         ],
-        "subtotalJurosMulta": 27.14,
-        "total": 770.02
+        "subtotalJurosMulta": 81.42,
+        "total": 824.3
       }
     ],
-    "totalGeral": 677.14,
-    "dataPagamentoBr": "11/07/2026"
+    "totalGeral": 731.42,
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
+    {
+      "tipo": "pagamento-semanal",
+      "titulo": "🚨 Bloqueio programado — MLW-7I09",
+      "texto": "🚨 *Bloqueio programado* — MLW-7I09\n\nOlá, Waldemir!\nA *parcela semanal* da locação do seu HYUNDAI/HB20 1.0M COMFOR segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
+      "tipo": "semanal-atraso",
+      "titulo": "📊 Cálculo do atraso semanal — MLW-7I09",
+      "texto": "📊 *Cálculo do atraso semanal* — MLW-7I09\n\nOlá, Waldemir!\nSegue cálculo do atraso da locação do seu HYUNDAI/HB20 1.0M COMFOR:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 731,42 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — MLW-7I09",

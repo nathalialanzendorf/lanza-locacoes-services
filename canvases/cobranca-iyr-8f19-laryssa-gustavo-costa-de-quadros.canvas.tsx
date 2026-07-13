@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "22/05/2026",
   "dataFim": "18/11/2026",
   "qtdDiasContrato": 180,
-  "dataAtual": "12/07/2026",
-  "qtdDiasLocado": 51,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 52,
   "linhaEncerramento": null,
   "valorSemanal": 800,
   "valorDiaria": 150,
@@ -239,10 +239,10 @@ const dados = {
       "10/07/2026"
     ],
     "dataBloqueioBr": "12/07/2026",
-    "totalReceber": 907.13,
-    "diasAtrasados": 3,
+    "totalReceber": 942.84,
+    "diasAtrasados": 4,
     "diasEmDia": 0,
-    "jurosMultaAcumulados": 107.13
+    "jurosMultaAcumulados": 142.84
   },
   "pagamentoSemanal": {
     "tabelas": [
@@ -275,9 +275,9 @@ const dados = {
           {
             "dataBr": "13/07/2026",
             "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 114.29
+            "situacao": "Atrasado",
+            "jurosMulta": 35.71,
+            "totalDia": 150
           },
           {
             "dataBr": "14/07/2026",
@@ -308,12 +308,12 @@ const dados = {
             "totalDia": 114.29
           }
         ],
-        "subtotalJurosMulta": 107.13,
-        "total": 1021.45
+        "subtotalJurosMulta": 142.84,
+        "total": 1057.16
       }
     ],
-    "totalGeral": 907.13,
-    "dataPagamentoBr": "12/07/2026"
+    "totalGeral": 942.84,
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -354,7 +354,7 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — IYR-8F19",
-      "texto": "📊 *Cálculo do atraso semanal* — IYR-8F19\n\nOlá, Laryssa!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 STYLE EAT6:\n\nData bloqueio: 12/07/2026\nBase de cálculo: 12/07/2026\n\nVencimento em aberto: 10/07/2026\nJuros e multa: R$ 107,13 (3 diárias)\n*Total semana: R$ 800,00*\n\n*Total a devido : R$ 907,13 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — IYR-8F19\n\nOlá, Laryssa!\nSegue cálculo do atraso da locação do seu PEUGEOT/2008 STYLE EAT6:\n\nData bloqueio: 12/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 10/07/2026\nJuros e multa: R$ 142,84 (4 diárias)\n*Total semana: R$ 800,00*\n\n*Total a devido : R$ 942,84 (4 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",

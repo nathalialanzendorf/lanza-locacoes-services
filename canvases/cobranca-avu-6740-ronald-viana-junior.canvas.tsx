@@ -69,14 +69,22 @@ const dados = {
   "dataInicio": "24/05/2026",
   "dataFim": "22/08/2026",
   "qtdDiasContrato": 90,
-  "dataAtual": "11/07/2026",
-  "qtdDiasLocado": 48,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 50,
   "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
-  "totalDebitos": 108.56,
-  "infracoes": [],
-  "totalInfracoes": 0,
+  "totalDebitos": 1052.03,
+  "infracoes": [
+    {
+      "descricao": "Multa sinal - 25/05/2026 08:26",
+      "placa": "QJB-0I83",
+      "data": "25/05/2026 08:26:13",
+      "categoria": "Infração",
+      "valor": 293.47
+    }
+  ],
+  "totalInfracoes": 293.47,
   "infracoesPagas": [],
   "totalInfracoesPagas": 0,
   "manutencoes": [],
@@ -88,10 +96,17 @@ const dados = {
       "data": "09/07/2026 13:29",
       "categoria": "Locação semanal",
       "valor": 108.56
+    },
+    {
+      "descricao": "ATRASADO Pagamento semanal - Segunda 13",
+      "placa": "AVU-6740",
+      "data": "13/07/2026",
+      "categoria": "Locação semanal",
+      "valor": 650
     }
   ],
-  "totalParcelasEmAberto": 108.56,
-  "totalSemanalCobrar": 108.56,
+  "totalParcelasEmAberto": 758.56,
+  "totalSemanalCobrar": 758.56,
   "debitosDiversos": [],
   "totalDebitosDiversos": 0,
   "placasEscopo": [
@@ -106,7 +121,7 @@ const dados = {
     "dataBloqueioBr": "08/07/2026",
     "totalReceber": 758.56,
     "diasAtrasados": 4,
-    "diasEmDia": 2,
+    "diasEmDia": 4,
     "jurosMultaAcumulados": 108.56
   },
   "pagamentoSemanal": {
@@ -178,7 +193,7 @@ const dados = {
       }
     ],
     "totalGeral": 758.56,
-    "dataPagamentoBr": "11/07/2026"
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
@@ -187,14 +202,19 @@ const dados = {
       "texto": "🚨 *Bloqueio programado* — AVU-6740\n\nOlá, Ronald!\nA *parcela semanal* da locação do seu VW/GOL 1.0 segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
+      "tipo": "infracoes",
+      "titulo": "🚦 Notificação de infração — QJB-0I83",
+      "texto": "🚦 *Notificação de infração* — QJB-0I83\n\nOlá, Ronald! Recebemos uma notificação de infração referente ao seu VW/FOX CONNECT MB GNV - BRANCO:\n\n🚨 *Infração:* Multa sinal - 25/05/2026 08:26\n🗓️ *Data/hora:* 25/05/2026 às 08:26:13\n📍 *Local:* BALNEARIO CAMBORIU/SC\n💰 *Valor:* R$ 293,47\n\nConforme o contrato de locação, a *responsabilidade financeira* e a *indicação de condutor* (pontuação) são do locatário.\n\nPodemos agendar a regularização para quando? Assim você evita cobranças adicionais. 🙂\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+    },
+    {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — AVU-6740",
-      "texto": "📊 *Cálculo do atraso semanal* — AVU-6740\n\nOlá, Ronald!\nSegue cálculo do atraso da locação do seu VW/GOL 1.0:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 11/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 108,56 (4 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 758,56 (4 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — AVU-6740\n\nOlá, Ronald!\nSegue cálculo do atraso da locação do seu VW/GOL 1.0:\n\nData bloqueio: 08/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 06/07/2026\nJuros e multa: R$ 108,56 (4 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 758,56 (4 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",
       "titulo": "📋 Despesas em aberto — AVU-6740",
-      "texto": "📋 *Despesas em aberto* — AVU-6740\n\nOlá, Ronald!\nSegue a listagem das despesas referente à locação do seu VW/GOL 1.0 que segue em aberto:\n\n• AVU-6740 · 09/07/2026 13:29 · ATRASADO Multa atraso (4 dias) pagamento semanal - Segunda 06 · R$ 108,56\n\n*Total em aberto: R$ 108,56*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📋 *Despesas em aberto* — AVU-6740\n\nOlá, Ronald!\nSegue a listagem das despesas referente à locação do seu VW/GOL 1.0 que segue em aberto:\n\n• QJB-0I83 · 25/05/2026 08:26:13 · Multa sinal - 25/05/2026 08:26 · R$ 293,47\n• AVU-6740 · 09/07/2026 13:29 · ATRASADO Multa atraso (4 dias) pagamento semanal - Segunda 06 · R$ 108,56\n• AVU-6740 · 13/07/2026 · ATRASADO Pagamento semanal - Segunda 13 · R$ 650,00\n\n*Total em aberto: R$ 1.052,03*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     }
   ],
   "avisos": []

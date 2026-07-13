@@ -69,8 +69,8 @@ const dados = {
   "dataInicio": "29/05/2026",
   "dataFim": "25/11/2026",
   "qtdDiasContrato": 180,
-  "dataAtual": "12/07/2026",
-  "qtdDiasLocado": 44,
+  "dataAtual": "13/07/2026",
+  "qtdDiasLocado": 45,
   "linhaEncerramento": null,
   "valorSemanal": 650,
   "valorDiaria": 120,
@@ -106,16 +106,16 @@ const dados = {
     "RAH-4F54"
   ],
   "resumoSemanal": {
-    "diaEscalonamento": 1,
-    "tituloEscalonamento": "lembrete",
+    "diaEscalonamento": 3,
+    "tituloEscalonamento": "bloqueio programado",
     "vencimentosEmAbertoBr": [
       "11/07/2026"
     ],
     "dataBloqueioBr": "13/07/2026",
-    "totalReceber": 704.28,
-    "diasAtrasados": 2,
+    "totalReceber": 731.42,
+    "diasAtrasados": 3,
     "diasEmDia": 0,
-    "jurosMultaAcumulados": 54.28
+    "jurosMultaAcumulados": 81.42
   },
   "pagamentoSemanal": {
     "tabelas": [
@@ -141,9 +141,9 @@ const dados = {
           {
             "dataBr": "13/07/2026",
             "diaSemana": "Seg",
-            "situacao": "Em dia",
-            "jurosMulta": null,
-            "totalDia": 92.86
+            "situacao": "Atrasado",
+            "jurosMulta": 27.14,
+            "totalDia": 120
           },
           {
             "dataBr": "14/07/2026",
@@ -181,18 +181,18 @@ const dados = {
             "totalDia": 92.86
           }
         ],
-        "subtotalJurosMulta": 54.28,
-        "total": 797.16
+        "subtotalJurosMulta": 81.42,
+        "total": 824.3
       }
     ],
-    "totalGeral": 704.28,
-    "dataPagamentoBr": "12/07/2026"
+    "totalGeral": 731.42,
+    "dataPagamentoBr": "13/07/2026"
   },
   "mensagensWhatsApp": [
     {
       "tipo": "pagamento-semanal",
-      "titulo": "🔔 Lembrete de pagamento — RAH-4F54",
-      "texto": "🔔 *Lembrete de pagamento* — RAH-4F54\n\nOlá, Daniel! Tudo bem? 😊\nPassando para lembrar que a *parcela semanal* da locação do seu FIAT/MOBI LIKE está disponível para pagamento.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\nSe você já efetuou o pagamento, é só desconsiderar esta mensagem.\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "titulo": "🚨 Bloqueio programado — RAH-4F54",
+      "texto": "🚨 *Bloqueio programado* — RAH-4F54\n\nOlá, Daniel!\nA *parcela semanal* da locação do seu FIAT/MOBI LIKE segue em aberto.\nPor falta de compensação, o *bloqueio do veículo foi programado para as próximas horas*.\n\n💳 *Formas de pagamento*\n\n🔹 *PIX (CNPJ)*\n43.051.371/0001-05\n\n🔹 *Depósito via lotérica*\nFavorecido: Lanza Locações de Veiculos LTDA\nBanco: Caixa Econômica Federal\nAgência: 0410 • Operação: 1292\nConta: 576661724-7\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "manutencao",
@@ -202,7 +202,7 @@ const dados = {
     {
       "tipo": "semanal-atraso",
       "titulo": "📊 Cálculo do atraso semanal — RAH-4F54",
-      "texto": "📊 *Cálculo do atraso semanal* — RAH-4F54\n\nOlá, Daniel!\nSegue cálculo do atraso da locação do seu FIAT/MOBI LIKE:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 12/07/2026\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 54,28 (2 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 704,28 (2 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
+      "texto": "📊 *Cálculo do atraso semanal* — RAH-4F54\n\nOlá, Daniel!\nSegue cálculo do atraso da locação do seu FIAT/MOBI LIKE:\n\nData bloqueio: 13/07/2026\nBase de cálculo: 13/07/2026\n\nVencimento em aberto: 11/07/2026\nJuros e multa: R$ 81,42 (3 diárias)\n*Total semana: R$ 650,00*\n\n*Total a devido : R$ 731,42 (3 dias em atraso)*\n\n_Mensagem automática enviada pelo sistema Gerenciador de Locações Veiculares._\n"
     },
     {
       "tipo": "despesas-em-aberto",

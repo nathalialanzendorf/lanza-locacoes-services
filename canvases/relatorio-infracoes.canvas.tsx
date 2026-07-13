@@ -73,20 +73,20 @@ const dados = {
   "totalInfracoes": 191,
   "totalPlacas": 16,
   "totalGeral": 35617.91,
-  "totalCobravel": 5241.93,
+  "totalCobravel": 4786.38,
   "blocos": [
     {
       "id": "cliente",
       "titulo": "Com locatário vinculado",
       "descricao": "Infrações com cliente identificado em clientes.json — cobráveis do locatário.",
-      "qtd": 31,
-      "total": 5241.93,
+      "qtd": 28,
+      "total": 4786.38,
       "subgrupos": [
         {
           "id": "cobravel-aberto",
           "titulo": "Cobrável em aberto",
-          "qtd": 31,
-          "total": 5241.93,
+          "qtd": 28,
+          "total": 4786.38,
           "linhas": [
             {
               "placa": "BBV-6A91",
@@ -497,57 +497,6 @@ const dados = {
               "cobravel": true
             },
             {
-              "placa": "OZC-0B50",
-              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
-              "ano": "2013/2014",
-              "numeroAuto": "J008779003",
-              "data": "09/05/2026 23:33:00",
-              "valor": 130.16,
-              "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
-              "status": "Em aberto",
-              "situacao": "Autuação notificada",
-              "vencimento": "17/07/2026",
-              "cliente": "Laryssa (Gustavo) Costa de Quadros",
-              "motivoCliente": "",
-              "pagaDetran": "Não",
-              "pagaLanza": "Não",
-              "cobravel": true
-            },
-            {
-              "placa": "OZC-0B50",
-              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
-              "ano": "2013/2014",
-              "numeroAuto": "J008779092",
-              "data": "09/05/2026 23:43:00",
-              "valor": 130.16,
-              "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
-              "status": "Em aberto",
-              "situacao": "Autuação notificada",
-              "vencimento": "17/07/2026",
-              "cliente": "Laryssa (Gustavo) Costa de Quadros",
-              "motivoCliente": "",
-              "pagaDetran": "Não",
-              "pagaLanza": "Não",
-              "cobravel": true
-            },
-            {
-              "placa": "OZC-0B50",
-              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
-              "ano": "2013/2014",
-              "numeroAuto": "J008779127",
-              "data": "09/05/2026 23:47:00",
-              "valor": 195.23,
-              "descricao": "TRANS EM VELOC SUP À MÁX PERMITIDA EM MAIS DE 20% ATE 50%",
-              "status": "Em aberto",
-              "situacao": "Autuação notificada",
-              "vencimento": "17/07/2026",
-              "cliente": "Laryssa (Gustavo) Costa de Quadros",
-              "motivoCliente": "",
-              "pagaDetran": "Não",
-              "pagaLanza": "Não",
-              "cobravel": true
-            },
-            {
               "placa": "QJB-0I83",
               "modelo": "VW/FOX CONNECT MB GNV",
               "ano": "2018/2018",
@@ -900,6 +849,74 @@ const dados = {
               "vencimento": "21/08/2026",
               "cliente": "Parceiro Felipe",
               "motivoCliente": "Veículo particular — débito do parceiro/dono",
+              "pagaDetran": "Não",
+              "pagaLanza": "Não",
+              "cobravel": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pendente",
+      "titulo": "Sem vínculo / revisão",
+      "descricao": "Locatário não identificado · anterior ao início da locação · cliente não cadastrado · sem contrato na data.",
+      "qtd": 3,
+      "total": 455.55,
+      "subgrupos": [
+        {
+          "id": "nao-identificado",
+          "titulo": "Locatário não identificado (revisar)",
+          "qtd": 3,
+          "total": 455.55,
+          "linhas": [
+            {
+              "placa": "OZC-0B50",
+              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
+              "ano": "2013/2014",
+              "numeroAuto": "J008779003",
+              "data": "09/05/2026 23:33:00",
+              "valor": 130.16,
+              "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+              "status": "Em aberto",
+              "situacao": "Autuação notificada",
+              "vencimento": "17/07/2026",
+              "cliente": "—",
+              "motivoCliente": "Locatário não identificado — revisar manualmente",
+              "pagaDetran": "Não",
+              "pagaLanza": "Não",
+              "cobravel": false
+            },
+            {
+              "placa": "OZC-0B50",
+              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
+              "ano": "2013/2014",
+              "numeroAuto": "J008779092",
+              "data": "09/05/2026 23:43:00",
+              "valor": 130.16,
+              "descricao": "TRANSITAR EM VEL SUPERIOR À MÁXIMA PERMITIDA EM ATÉ 20%",
+              "status": "Em aberto",
+              "situacao": "Autuação notificada",
+              "vencimento": "17/07/2026",
+              "cliente": "—",
+              "motivoCliente": "Locatário não identificado — revisar manualmente",
+              "pagaDetran": "Não",
+              "pagaLanza": "Não",
+              "cobravel": false
+            },
+            {
+              "placa": "OZC-0B50",
+              "modelo": "FORD/FOCUS SE 1.6 SEDAN GNV",
+              "ano": "2013/2014",
+              "numeroAuto": "J008779127",
+              "data": "09/05/2026 23:47:00",
+              "valor": 195.23,
+              "descricao": "TRANS EM VELOC SUP À MÁX PERMITIDA EM MAIS DE 20% ATE 50%",
+              "status": "Em aberto",
+              "situacao": "Autuação notificada",
+              "vencimento": "17/07/2026",
+              "cliente": "—",
+              "motivoCliente": "Locatário não identificado — revisar manualmente",
               "pagaDetran": "Não",
               "pagaLanza": "Não",
               "cobravel": false
