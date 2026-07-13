@@ -1085,6 +1085,7 @@ export type ClienteDespesaPatch = Partial<
     | "situacao"
     | "limiteDefesa"
     | "condutorId"
+    | "condutorContrato"
     | "condutorConfirmado"
     | "condutorNaoIdentificado"
     | "paga"
@@ -1092,6 +1093,7 @@ export type ClienteDespesaPatch = Partial<
     | "rastreameMotoristaKey"
     | "rastreameRastreavelKey"
     | "rastreameDataIso"
+    | "rastreameTipo"
     | "veiculoId"
     | "ativo"
   >

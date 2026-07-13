@@ -29,7 +29,8 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
   let items = loadInfracoesDb().infracoes;
 
   if (opts.veiculoId?.trim()) {
-    items = items.filter((i) => i.veiculoId === opts.veiculoId.trim());
+    const veiculoId = opts.veiculoId.trim();
+    items = items.filter((i) => i.veiculoId === veiculoId);
   } else if (opts.placa?.trim()) {
     const v = findVeiculoByPlaca(opts.placa);
     if (!v) return { total: 0, items: [] };

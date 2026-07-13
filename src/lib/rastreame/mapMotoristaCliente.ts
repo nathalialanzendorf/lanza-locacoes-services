@@ -18,8 +18,9 @@ export type ClienteImportado = Record<string, unknown> & {
   id?: string;
   nome?: string;
   cpf?: string;
-  rastreameMotoristaKey?: string;
-  rastreameMotoristaId?: string | number;
+  rastreameMotoristaKey?: string | number;
+  rastreameMotoristaId?: string | number | null;
+  origemImportacao?: string;
 };
 
 function isoToBr(iso: string | undefined | null): string | null {

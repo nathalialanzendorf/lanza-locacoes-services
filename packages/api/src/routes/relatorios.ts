@@ -10,6 +10,7 @@ import {
 import * as cobrancasRel from "../services/relatorios/cobrancas.js";
 import * as encerramentoRel from "../services/relatorios/encerramento.js";
 import * as prestacaoRel from "../services/relatorios/prestacaoContas.js";
+import type { PrestacaoContasInput } from "../lib-imports.js";
 import { listarEscoposContratosAtivos } from "../services/relatorios/filtro.js";
 import * as infracoesRel from "../services/relatorios/infracoes.js";
 
@@ -126,7 +127,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     pattern: prestacao.regex,
     paramNames: prestacao.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody(ctx.req);
+      const body = await readJsonBody<PrestacaoContasInput>(ctx.req);
       const data = prestacaoRel.gerarPrestacaoContas(body);
       json(ctx.res, 200, { data });
     }),

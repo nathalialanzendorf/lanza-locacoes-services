@@ -144,7 +144,8 @@ async function pushOneCliente(
   if (!c.rastreameMotoristaKey) {
     if (inativo) return "ignorado";
 
-    const cnh = String(c.cnh?.numero ?? "");
+    const cnhObj = c.cnh as { numero?: string; numeroRegistro?: string } | undefined;
+    const cnh = String(cnhObj?.numero ?? cnhObj?.numeroRegistro ?? "");
     const existente = await findMotorista(cnh, c.nome ?? "");
     if (existente) {
       const key = motoristaKey(existente);
@@ -183,7 +184,7 @@ async function pushOneCliente(
     return "atualizado";
   }
 
-  await aplicarPutMotorista(c.rastreameMotoristaKey, c, payload);
+  await aplicarPutMotorista(String(c.rastreameMotoristaKey), c, payload);
   marcarClienteRastreameSyncOk(c.id, c.rastreameMotoristaKey, c.rastreameMotoristaId ?? undefined);
   return "atualizado";
 }
@@ -245,8 +246,5 @@ export async function replicarClienteNoRastreame(
 ): Promise<void> {
   if (c.ativo === false && !opts?.forcePush) return;
   if (!isSyncRastreameEligible(c)) return;
-  const acao = await pushOneCliente(c, { dryRun: opts?.dryRun ?? false, forcePush: opts?.forcePush });
-  if (acao === "erro") {
-    throw new Error(`Falha ao replicar ${c.nome} no Rastreame`);
-  }
+  await pushOneCliente(c, { dryRun: opts?.dryRun ?? false, forcePush: opts?.forcePush });
 }

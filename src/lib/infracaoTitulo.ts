@@ -100,7 +100,7 @@ function autoInfracaoEspelhoRastreame(auto?: string): boolean {
 export function infracaoEspelhoDuplicataRelatorio(reg: {
   origem?: string;
   autoInfracao?: string;
-  detranAutoInfracao?: string;
+  detranAutoInfracao?: string | null;
 }): boolean {
   const auto = String(reg.autoInfracao ?? "").trim();
   if (autoInfracaoEspelhoRastreame(auto)) return true;
@@ -115,7 +115,7 @@ export function infracaoIncluirListagemRelatorio(reg: {
   ativo?: boolean;
   origem?: string;
   autoInfracao?: string;
-  detranAutoInfracao?: string;
+  detranAutoInfracao?: string | null;
 }): boolean {
   if (reg.ativo === false) return false;
   if (!isCategoriaInfracao(reg.categoria)) return false;

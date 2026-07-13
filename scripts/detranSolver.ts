@@ -656,10 +656,11 @@ async function main(): Promise<void> {
     const renavam = String(v.renavam).replace(/\D/g, "");
     const placaApi = compactPlaca(v.placa);
     try {
-      const activeSid = sessaoPortal() ?? sid;
+      const portalSid = sessaoPortal();
+      const activeSid: string | undefined = portalSid ?? sid;
       if (!activeSid) throw new Error("aba do portal DETRAN SC não encontrada");
       sid = activeSid;
-      await cdp.evaluate(DETRAN_BROWSER_HOOK, sid).catch(() => {});
+      await cdp.evaluate(DETRAN_BROWSER_HOOK, activeSid).catch(() => {});
 
       const browserRes = await cdp.evaluate<{
         status: string;
@@ -678,7 +679,7 @@ async function main(): Promise<void> {
             appVersion: ${JSON.stringify(cred.appVersion ?? "")},
           });
         })()`,
-        sid,
+        activeSid,
         90_000,
       );
 

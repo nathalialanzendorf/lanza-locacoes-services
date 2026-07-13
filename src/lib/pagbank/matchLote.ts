@@ -539,7 +539,7 @@ export function montarLotePagBank(
     for (const av of plano.avisos) {
       if (/vencimento|próximo|Revisão manual|Idempotência/i.test(av)) motivo += ` | ${av}`;
     }
-    if (plano.idempotencia?.status !== "ok") {
+    if (plano.idempotencia && plano.idempotencia.status !== "ok") {
       motivo += ` | ⚠ ${plano.idempotencia.motivo}`;
     }
 

@@ -1,6 +1,7 @@
 import { badRequest, compileRoute, handleServiceError, json, notFound, readJsonBody, routeAsync, type RouteDef } from "../http.js";
 import * as contratosService from "../services/contratos.js";
 import * as contratosWrite from "../services/contratosWrite.js";
+import type { ContratoCriarRenovarInput } from "../services/contratosWrite.js";
 import * as contratosImportService from "../services/importacoes/contratos.js";
 import type { MotivoEncerramento } from "../lib-imports.js";
 
@@ -32,7 +33,7 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     pattern: criar.regex,
     paramNames: criar.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody(ctx.req);
+      const body = await readJsonBody<ContratoCriarRenovarInput>(ctx.req);
       const data = await contratosWrite.criarContrato(body);
       json(ctx.res, 201, { data });
     }),
@@ -44,7 +45,7 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     pattern: renovar.regex,
     paramNames: renovar.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody(ctx.req);
+      const body = await readJsonBody<ContratoCriarRenovarInput>(ctx.req);
       const data = await contratosWrite.renovarContrato(body);
       json(ctx.res, 201, { data });
     }),

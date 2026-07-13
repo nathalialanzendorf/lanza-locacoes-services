@@ -27,7 +27,9 @@ export function registerRastreameRoutes(routes: RouteDef[]): void {
     pattern: login.regex,
     paramNames: login.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody<{ save?: boolean }>(ctx.req).catch(() => ({}));
+      const body = await readJsonBody<{ save?: boolean }>(ctx.req).catch(
+        (): { save?: boolean } => ({}),
+      );
       const data = await rastreameService.loginRastreameApi(body.save === true);
       json(ctx.res, 200, data);
     }),

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { DetranScInfracao } from "./types.js";
 import { formatPlacaHyphen } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import {

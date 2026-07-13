@@ -16,11 +16,11 @@ export function loadJsonDocument<T>(filePath: string): T {
 
 export function saveJsonDocument(
   filePath: string,
-  data: Record<string, unknown>,
+  data: object,
   options?: SaveJsonDocumentOptions,
 ): void {
   const storeName = storeNameFromPath(filePath);
-  getJsonDocumentAdapter().save(storeName, filePath, data, options);
+  getJsonDocumentAdapter().save(storeName, filePath, data as Record<string, unknown>, options);
 }
 
 export async function loadJsonDocumentAsync<T>(filePath: string): Promise<T | null> {

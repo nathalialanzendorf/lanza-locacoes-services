@@ -316,10 +316,10 @@ export function upsertClienteFromRastreame(rawInput: UpsertMotoristaInput): Upse
       id: crypto.randomUUID(),
       nome: String(input.nome ?? "").trim(),
       rastreameMotoristaKey: input.rastreameMotoristaKey,
-      rastreameMotoristaId: input.rastreameMotoristaId ?? null,
+      rastreameMotoristaId: input.rastreameMotoristaId ?? undefined,
       rastreameSyncEm: ts,
       ativo: input.ativo !== false,
-      origemImportacao: input.origemImportacao ?? "rastreame",
+      origemImportacao: String(input.origemImportacao ?? "rastreame"),
       atualizadoEm: ts,
     };
     db.clientes.push(registro);
@@ -359,7 +359,8 @@ export function upsertClienteFromRastreame(rawInput: UpsertMotoristaInput): Upse
 
   merged.id = existente.id;
   merged.rastreameMotoristaKey = input.rastreameMotoristaKey;
-  merged.rastreameMotoristaId = input.rastreameMotoristaId ?? existente.rastreameMotoristaId ?? null;
+  merged.rastreameMotoristaId =
+    input.rastreameMotoristaId ?? existente.rastreameMotoristaId ?? undefined;
   merged.rastreameSyncEm = ts;
   merged.ativo = input.ativo !== false;
   if (input.nome && (!existente.nome || existente.origemImportacao === "rastreame")) {
@@ -428,7 +429,7 @@ export function marcarClienteRastreameSyncOk(
   }
   if (idx < 0) return null;
   const c = db.clientes[idx]!;
-  if (rastreameKey != null) c.rastreameMotoristaKey = rastreameKey;
+  if (rastreameKey != null) c.rastreameMotoristaKey = String(rastreameKey);
   if (rastreameId != null) c.rastreameMotoristaId = rastreameId;
   c.rastreameSyncEm = nowIso();
   db.clientes[idx] = c;

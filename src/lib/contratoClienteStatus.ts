@@ -117,8 +117,9 @@ async function resolverMotoristaKey(cliente: ClienteRegistro): Promise<string | 
     return String(cliente.rastreameMotoristaKey);
   }
 
-  const cnh = String(cliente.cnh?.numero ?? cliente.cnh?.numeroRegistro ?? "");
-  const porNomeCnh = await findMotorista(cnh, cliente.nome ?? "");
+  const cnh = cliente.cnh as { numero?: string; numeroRegistro?: string } | undefined;
+  const cnhNum = String(cnh?.numero ?? cnh?.numeroRegistro ?? "");
+  const porNomeCnh = await findMotorista(cnhNum, cliente.nome ?? "");
   if (porNomeCnh) {
     const key = String(porNomeCnh.key ?? porNomeCnh.id ?? "");
     if (key) return key;

@@ -50,7 +50,9 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
     pattern: confirmarParceiro.regex,
     paramNames: confirmarParceiro.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody<{ parceiroId?: string | null }>(ctx.req).catch(() => ({}));
+      const body = await readJsonBody<{ parceiroId?: string | null }>(ctx.req).catch(
+        (): { parceiroId?: string | null } => ({}),
+      );
       const data = infracoesService.confirmarParceiroInfracao(
         ctx.params.numeroAuto,
         body.parceiroId,
