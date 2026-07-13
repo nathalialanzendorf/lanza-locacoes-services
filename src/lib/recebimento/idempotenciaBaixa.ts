@@ -22,7 +22,7 @@ export type IdempotenciaBaixa = {
     dataAutuacao: string;
     valorMulta: number;
     pagaEm: string | null;
-    rastreameId?: number | null;
+    rastreameId?: string | number | null;
   };
 };
 

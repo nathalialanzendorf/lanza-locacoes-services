@@ -26,8 +26,11 @@ import {
 } from "../pagamentoSemanalCobranca.js";
 import { compactPlaca } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
-import { verificarIdempotenciaBaixa } from "./idempotenciaBaixa.js";
-export type { IdempotenciaBaixa, IdempotenciaStatus } from "./idempotenciaBaixa.js";
+import {
+  verificarIdempotenciaBaixa,
+  type IdempotenciaBaixa,
+} from "./idempotenciaBaixa.js";
+export type { IdempotenciaStatus } from "./idempotenciaBaixa.js";
 
 export type LinhaPlanoBaixa = {
   num: number;

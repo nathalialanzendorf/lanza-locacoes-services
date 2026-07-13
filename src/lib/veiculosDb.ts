@@ -188,7 +188,7 @@ function aplicarCamposCrv(v: VeiculoRegistro, input: UpsertRastreavelInput): boo
     const novo = input[f];
     if (novo == null || novo === "") continue;
     if (v[f] !== novo) {
-      v[f] = novo;
+      (v as Record<string, unknown>)[f] = novo;
       changed = true;
     }
   }
@@ -260,8 +260,7 @@ export function upsertVeiculoFromRastreame(input: UpsertRastreavelInput): Upsert
   if (input.marcaModelo && !v.marcaModelo) v.marcaModelo = input.marcaModelo;
   if (input.anoModelo && !v.anoModelo) v.anoModelo = input.anoModelo;
   if (input.ativo === false) v.ativo = false;
-  else if (input.ativo !== false && v.ativo === false && input.force) v.ativo = true;
-  else if (input.ativo !== false) v.ativo = true;
+  else v.ativo = true;
   v.rastreameSyncEm = ts;
   if (!v.origem) v.origem = "rastreame";
 

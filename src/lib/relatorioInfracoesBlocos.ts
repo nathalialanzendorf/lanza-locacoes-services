@@ -66,7 +66,7 @@ export type RelatorioInfracoesBlocosDados = {
   totalPlacas: number;
   totalGeral: number;
   totalCobravel: number;
-  blocos: BlocoInfracoesBloco[];
+  blocos: BlocoInfracoesRelatorio[];
 };
 
 type BlocoDef = {
@@ -146,7 +146,7 @@ function statusExibicao(reg: InfracaoRegistro): string {
 
 function mapaPagasLanza(): Map<string, boolean> {
   const map = new Map<string, boolean>();
-  for (const d of loadClienteDespesasDb().despesas ?? []) {
+  for (const d of loadClienteDespesasDb().clienteDespesas ?? []) {
     if (d.ativo === false) continue;
     const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
     if (!auto) continue;
