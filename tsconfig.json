@@ -9,6 +9,5 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "packages/**/*", "scripts/**/*"],
-  "files": ["src/pdf-parse.d.ts", "packages/db/src/types/vercel-peers.d.ts"]
+  "include": ["src/**/*", "packages/**/*", "scripts/**/*"]
 }

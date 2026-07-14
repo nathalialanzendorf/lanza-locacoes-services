@@ -8,13 +8,13 @@
 # Depois: feche e reabra terminais (ou reinicie o Cursor).
 
 param(
-  [string]$AwsAccountId = "366258938204",
-  [string]$AwsRegion = "sa-east-1",
-  [string]$AwsResourceArn = "arn:aws:rds:sa-east-1:366258938204:cluster:aws-postgres-lanza",
+  [string]$AwsAccountId = "154601375525",
+  [string]$AwsRegion = "us-east-1",
+  [string]$AwsResourceArn = "arn:aws:rds:us-east-1:154601375525:cluster:aws-pg-lanza-locacoes",
   [string]$AwsResourceType = "rds",
-  [string]$AwsRoleArn = "arn:aws:iam::366258938204:role/Vercel/access-postgres-lanza",
+  [string]$AwsRoleArn = "arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes",
   [string]$PgDatabase = "postgres",
-  [string]$PgHost = "aws-postgres-lanza.cluster-c1kgma8i0nvr.sa-east-1.rds.amazonaws.com",
+  [string]$PgHost = "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com",
   [string]$PgPort = "5432",
   [string]$PgSslMode = "require",
   [string]$PgUser = "postgres",

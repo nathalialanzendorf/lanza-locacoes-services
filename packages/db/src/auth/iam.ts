@@ -5,7 +5,7 @@ import type { PgConfig } from "../config.js";
 
 /** Gera token IAM para autenticação no RDS (válido ~15 min). */
 export async function getRdsIamAuthToken(config: PgConfig): Promise<string> {
-  const region = config.awsRegion ?? "sa-east-1";
+  const region = config.awsRegion ?? "us-east-1";
   const signer = new Signer({
     hostname: config.host,
     port: config.port,

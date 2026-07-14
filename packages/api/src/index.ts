@@ -1,3 +1,4 @@
+/// <reference path="./ambient.d.ts" />
 import { createApp, logStartup } from "./app.js";
 import { apiHost, apiPort } from "./config.js";
 

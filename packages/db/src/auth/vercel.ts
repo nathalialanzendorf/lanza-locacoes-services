@@ -26,7 +26,7 @@ export async function createVercelPostgresPool(
   const { getPgConfig, pgSslOptions } = await import("../config.js");
 
   const pg = { ...getPgConfig(), ...config };
-  const region = pg.awsRegion ?? "sa-east-1";
+  const region = pg.awsRegion ?? "us-east-1";
   const roleArn = pg.awsRoleArn;
 
   if (!roleArn) {
