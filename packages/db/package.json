@@ -15,7 +15,7 @@
     "@aws-sdk/credential-providers": "^3.758.0",
     "@aws-sdk/rds-signer": "^3.758.0",
     "@vercel/functions": "^2.0.0",
-    "@vercel/oidc-aws-credentials-provider": "^1.0.0",
+    "@vercel/oidc-aws-credentials-provider": "^3.3.0",
     "pg": "^8.14.1"
   },
   "devDependencies": {
@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@vercel/functions": ">=1.0.0",
-    "@vercel/oidc-aws-credentials-provider": ">=1.0.0"
+    "@vercel/oidc-aws-credentials-provider": ">=2.0.0"
   },
   "peerDependenciesMeta": {
     "@vercel/functions": {
