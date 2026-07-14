@@ -1,33 +1,20 @@
 import { Signer } from "@aws-sdk/rds-signer";
+import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
+import { attachDatabasePool } from "@vercel/functions";
+import pg from "pg";
 
-import type { PgConfig } from "../config.js";
+import { getPgConfig, pgSslOptions, type PgConfig } from "../config.js";
 
-import type { AwsCredentialIdentityProvider } from "@smithy/types";
-
-type VercelOidcModule = {
-  awsCredentialsProvider: (opts: {
-    roleArn: string;
-    clientConfig?: { region?: string };
-  }) => AwsCredentialIdentityProvider;
-};
-
-type VercelFunctionsModule = {
-  attachDatabasePool: (pool: import("pg").Pool) => void;
-};
+const { Pool } = pg;
 
 /**
- * Cria pool PostgreSQL para deploy na Vercel com OIDC + RDS IAM.
- * Requer peer deps: `@vercel/oidc-aws-credentials-provider` e `@vercel/functions`.
+ * Pool PostgreSQL na Vercel — OIDC + RDS IAM (padrão Vercel/AWS).
+ * Requer `@vercel/oidc-aws-credentials-provider`, `@vercel/functions` e `AWS_ROLE_ARN`.
  */
-export async function createVercelPostgresPool(
-  config?: Partial<PgConfig>,
-): Promise<import("pg").Pool> {
-  const { Pool } = await import("pg");
-  const { getPgConfig, pgSslOptions } = await import("../config.js");
-
-  const pg = { ...getPgConfig(), ...config };
-  const region = pg.awsRegion ?? "us-east-1";
-  const roleArn = pg.awsRoleArn;
+export function createVercelPostgresPool(config?: Partial<PgConfig>): pg.Pool {
+  const pgConfig = { ...getPgConfig(), ...config };
+  const region = pgConfig.awsRegion ?? "us-east-1";
+  const roleArn = pgConfig.awsRoleArn;
 
   if (!roleArn) {
     throw new Error(
@@ -35,37 +22,26 @@ export async function createVercelPostgresPool(
     );
   }
 
-  let oidc: VercelOidcModule;
-  let vercelFns: VercelFunctionsModule;
-  try {
-    oidc = (await import("@vercel/oidc-aws-credentials-provider")) as VercelOidcModule;
-    vercelFns = (await import("@vercel/functions")) as VercelFunctionsModule;
-  } catch {
-    throw new Error(
-      "Peer dependencies em falta para Vercel: instale @vercel/oidc-aws-credentials-provider e @vercel/functions.",
-    );
-  }
-
   const signer = new Signer({
-    hostname: pg.host,
-    port: pg.port,
-    username: pg.user,
+    hostname: pgConfig.host,
+    port: pgConfig.port,
+    username: pgConfig.user,
     region,
-    credentials: oidc.awsCredentialsProvider({
+    credentials: awsCredentialsProvider({
       roleArn,
       clientConfig: { region },
     }),
   });
 
   const pool = new Pool({
-    host: pg.host,
-    user: pg.user,
-    database: pg.database,
+    host: pgConfig.host,
+    user: pgConfig.user,
+    database: pgConfig.database,
     password: () => signer.getAuthToken(),
-    port: pg.port,
-    ssl: pgSslOptions(pg.sslMode),
+    port: pgConfig.port,
+    ssl: pgSslOptions(pgConfig.sslMode) ?? { rejectUnauthorized: false },
   });
 
-  vercelFns.attachDatabasePool(pool);
+  attachDatabasePool(pool);
   return pool;
 }

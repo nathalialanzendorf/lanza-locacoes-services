@@ -56,6 +56,7 @@ export class PostgresPool {
   }
 
   async getPool(): Promise<pg.Pool> {
+    if (vercelPoolOverride) return vercelPoolOverride;
     if (this.pool && Date.now() < this.passwordExpiresAt) return this.pool;
     if (this.pool) await this.pool.end();
     this.pool = await this.buildPool();
@@ -81,6 +82,16 @@ export class PostgresPool {
 
 /** Instância singleton para CLI e scripts locais. */
 let defaultPool: PostgresPool | null = null;
+/** Pool injetado na Vercel (OIDC) — tem prioridade sobre IAM local. */
+let vercelPoolOverride: pg.Pool | null = null;
+
+export function setVercelPostgresPool(pool: pg.Pool): void {
+  vercelPoolOverride = pool;
+}
+
+export function getVercelPostgresPool(): pg.Pool | null {
+  return vercelPoolOverride;
+}
 
 export function getDefaultPostgresPool(): PostgresPool {
   if (!defaultPool) defaultPool = new PostgresPool();
