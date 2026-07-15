@@ -19,6 +19,10 @@ despesas/**/Seguro/
 # Dependências da CLI TypeScript (raiz)
 /node_modules/
 
+# Frontend React (lanza-web)
+lanza-web/node_modules/
+lanza-web/dist/
+
 # Credenciais locais (Rastreame, etc.)
 .env
 
