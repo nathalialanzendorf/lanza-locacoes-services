@@ -1,5 +1,5 @@
-import { API_VERSION } from "../config.js";
-import { compileRoute, json, type RouteDef } from "../http.js";
+import { compileRoute, json, routeAsync, type RouteDef } from "../http.js";
+import { obterStatusSistema } from "../services/status.js";
 
 export function registerHealthRoutes(routes: RouteDef[]): void {
   const root = compileRoute("/");
@@ -18,12 +18,8 @@ export function registerHealthRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: regex,
     paramNames,
-    handler: (ctx) => {
-      json(ctx.res, 200, {
-        status: "ok",
-        service: "@lanza/api",
-        version: API_VERSION,
-      });
-    },
+    handler: routeAsync(async (ctx) => {
+      json(ctx.res, 200, await obterStatusSistema());
+    }),
   });
 }

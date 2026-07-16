@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
-import { API_VERSION, apiKey, corsOrigin } from "./config.js";
+import { API_VERSION, apiKey, resolveCorsOrigin } from "./config.js";
 import { json, matchRoute, type RouteDef } from "./http.js";
 import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
 import { registerClienteAnaliseRoutes } from "./routes/cliente-analise.js";
@@ -27,8 +27,12 @@ import { registerRelatoriosRoutes } from "./routes/relatorios.js";
 import { registerSyncRoutes } from "./routes/sync.js";
 import { registerVeiculosRoutes } from "./routes/veiculos.js";
 
-function applyCors(res: ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", corsOrigin());
+function applyCors(req: IncomingMessage, res: ServerResponse): void {
+  const origin = resolveCorsOrigin(req.headers.origin);
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    if (origin !== "*") res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
 }
@@ -72,7 +76,7 @@ export function createApp() {
   const routes = collectRoutes();
 
   return createServer(async (req, res) => {
-    applyCors(res);
+    applyCors(req, res);
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
