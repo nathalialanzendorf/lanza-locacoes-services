@@ -23,18 +23,20 @@
 
 ## Variáveis — projeto API (`lanza-locacoes`)
 
-| Variável | Valor sugerido |
-|----------|----------------|
-| `LANZA_DB_BACKEND` | `dual` (grava JSON + PostgreSQL) ou `postgres` |
-| `PGHOST` | host RDS (ex. `aws-postgres-lanza.cluster-….rds.amazonaws.com`) |
-| `PGUSER` | `postgres` |
+Valores exatos: **[docs/vercel-env-api.md](../docs/vercel-env-api.md)** ou `.\scripts\set-vercel-postgres-env.ps1`
+
+| Variável | Valor |
+|----------|-------|
+| `LANZA_DB_BACKEND` | `dual` ou `postgres` |
+| `PGHOST` | `aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com` |
+| `PGPORT` | `5432` |
 | `PGDATABASE` | `postgres` |
+| `PGUSER` | `postgres` |
 | `PGSSLMODE` | `require` |
-| `AWS_REGION` | `sa-east-1` |
-| `AWS_ROLE_ARN` | `arn:aws:iam::…:role/Vercel/access-postgres-lanza` |
+| `AWS_REGION` | `us-east-1` |
+| `AWS_ROLE_ARN` | `arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes` |
 | `LANZA_WEB_URL` | `https://lanzalocacoes.vercel.app` |
 | `LANZA_API_PUBLIC_URL` | `https://api.lanzalocacoes.vercel.app` |
-| `LANZA_API_CORS_ORIGIN` | *(opcional)* lista separada por vírgula; default já inclui o frontend |
 
 ## Variáveis — projeto Frontend (`lanza-web`)
 
