@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { API_VERSION, apiKey, resolveCorsOrigin } from "./config.js";
+import { getDbBackend } from "@lanza/db";
 import { json, matchRoute, type RouteDef } from "./http.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
@@ -125,8 +126,10 @@ export function createApp() {
 
 export function logStartup(port: number, host: string): void {
   const auth = apiKey() ? "LANZA_API_KEY ativa" : "sem LANZA_API_KEY (modo dev)";
+  const db = getDbBackend();
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);
+  console.log(`[@lanza/api] database: LANZA_DB_BACKEND=${db}`);
   console.log(
     `[@lanza/api] docs: http://${host}:${port}/api/docs | spec: /api/openapi.json`,
   );

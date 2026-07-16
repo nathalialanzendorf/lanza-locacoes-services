@@ -42,6 +42,7 @@ Set-UserEnv "PGHOST" $PgHost.Trim()
 Set-UserEnv "PGPORT" $PgPort.Trim()
 Set-UserEnv "PGSSLMODE" $PgSslMode.Trim()
 Set-UserEnv "PGUSER" $PgUser.Trim()
+Set-UserEnv "LANZA_DB_BACKEND" "dual"
 
 if ($Password.Trim()) {
   Set-UserEnv "PGPASSWORD" $Password.Trim()
@@ -54,5 +55,6 @@ if ($Password.Trim()) {
 Write-Host ""
 Write-Host "OK: variaveis PostgreSQL gravadas (utilizador + sessao atual)."
 Write-Host "    Autenticacao: $(if ($Password.Trim()) { 'senha estatica (PGPASSWORD)' } else { 'IAM (RDS Signer + AWS_ROLE_ARN)' })"
+Write-Host "    Backend:      LANZA_DB_BACKEND=dual (grava JSON + PostgreSQL)"
 Write-Host ""
 Write-Host "Testar: npm run lanza -- postgres check"

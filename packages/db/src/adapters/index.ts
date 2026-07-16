@@ -13,13 +13,23 @@ function env(name: string): string | undefined {
   return v != null && v.trim() !== "" ? v.trim().toLowerCase() : undefined;
 }
 
+function postgresConfigured(): boolean {
+  const hasHost = Boolean(env("PGHOST") ?? process.env.DATABASE_URL?.trim());
+  return hasHost && Boolean(env("AWS_ROLE_ARN") ?? process.env.AWS_ROLE_ARN?.trim());
+}
+
 /** Backend ativo: `file` (padrão), `postgres` ou `dual`. */
 export function getDbBackend(): DbBackend {
   if (cachedBackend) return cachedBackend;
-  const raw = env("LANZA_DB_BACKEND") ?? "file";
-  if (raw === "postgres" || raw === "dual") {
+  const raw = env("LANZA_DB_BACKEND");
+  if (raw === "postgres" || raw === "dual" || raw === "file") {
     cachedBackend = raw;
     return raw;
+  }
+  // Vercel com RDS configurado: dual por defeito (JSON + Postgres)
+  if (process.env.VERCEL && postgresConfigured()) {
+    cachedBackend = "dual";
+    return "dual";
   }
   cachedBackend = "file";
   return "file";
