@@ -47,15 +47,27 @@ export async function obterDbAdminStatus(): Promise<DbAdminStatus> {
 
   try {
     ensureVercelPool();
-    const repo = new JsonStoreRepository(getDefaultPostgresPool());
     await getDefaultPostgresPool().query("SELECT 1");
-    const stores = await repo.list();
-    return {
-      vercel: true,
-      postgres: { ok: true },
-      stores,
-      bootstrapAllowed: stores.length === 0,
-    };
+    try {
+      const stores = await new JsonStoreRepository(getDefaultPostgresPool()).list();
+      return {
+        vercel: true,
+        postgres: { ok: true },
+        stores,
+        bootstrapAllowed: stores.length === 0,
+      };
+    } catch (listErr) {
+      const msg = listErr instanceof Error ? listErr.message : String(listErr);
+      if (/does not exist/i.test(msg)) {
+        return {
+          vercel: true,
+          postgres: { ok: true, error: "schema pendente (lanza.json_stores)" },
+          stores: [],
+          bootstrapAllowed: true,
+        };
+      }
+      throw listErr;
+    }
   } catch (err) {
     return {
       vercel: true,
