@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { API_VERSION, apiKey, resolveCorsOrigin } from "./config.js";
 import { json, matchRoute, type RouteDef } from "./http.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
 import { registerClienteAnaliseRoutes } from "./routes/cliente-analise.js";
 import { registerClientesRoutes } from "./routes/clientes.js";
@@ -48,6 +49,7 @@ function collectRoutes(): RouteDef[] {
   const routes: RouteDef[] = [];
   registerHealthRoutes(routes);
   registerOpenApiRoutes(routes);
+  registerAdminRoutes(routes);
   registerMetaRoutes(routes);
   registerClientesRoutes(routes);
   registerVeiculosRoutes(routes);
