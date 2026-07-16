@@ -42,7 +42,7 @@ export async function obterStatusSistema(): Promise<SystemStatus> {
     service: "@lanza/api",
     version: API_VERSION,
     apiUrl: apiPublicUrl(),
-    frontendUrl: process.env.LANZA_WEB_URL?.trim() || "https://lanza-web-ten.vercel.app",
+    frontendUrl: process.env.LANZA_WEB_URL?.trim() || "https://lanzalocacoes.vercel.app",
     database: {
       backend,
       ...(postgres ? { postgres } : {}),

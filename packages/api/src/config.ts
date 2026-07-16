@@ -18,6 +18,7 @@ export function apiKey(): string | null {
 }
 
 const DEFAULT_FRONTEND_ORIGINS = [
+  "https://lanzalocacoes.vercel.app",
   "https://lanza-web-ten.vercel.app",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -46,7 +47,10 @@ export function resolveCorsOrigin(requestOrigin: string | undefined): string | n
   const allowed = corsOrigins();
   if (allowed.includes("*")) return "*";
   if (requestOrigin && allowed.includes(requestOrigin)) return requestOrigin;
-  if (requestOrigin && /^https:\/\/lanza-web[\w-]*\.vercel\.app$/.test(requestOrigin)) {
+  if (
+    requestOrigin &&
+    /^https:\/\/(lanzalocacoes|lanza-web)[\w-]*\.vercel\.app$/.test(requestOrigin)
+  ) {
     return requestOrigin;
   }
   return allowed[0] ?? null;
@@ -55,6 +59,7 @@ export function resolveCorsOrigin(requestOrigin: string | undefined): string | n
 export function apiPublicUrl(): string | undefined {
   const fromEnv = process.env.LANZA_API_PUBLIC_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  if (process.env.VERCEL) return "https://api.lanzalocacoes.vercel.app";
   const vercelUrl = process.env.VERCEL_URL?.trim();
   if (vercelUrl) return `https://${vercelUrl}`;
   return undefined;
