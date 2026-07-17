@@ -7,6 +7,7 @@ type Props = {
   children: ReactNode;
   onSubmit: () => void | Promise<void>;
   loading?: boolean;
+  submitDisabled?: boolean;
   submitLabel?: string;
   error?: string | null;
 };
@@ -16,6 +17,7 @@ export function FormCard({
   children,
   onSubmit,
   loading,
+  submitDisabled,
   submitLabel = LABEL.salvar,
   error,
 }: Props) {
@@ -29,7 +31,7 @@ export function FormCard({
       {title ? <h2 className="form-card__title">{title}</h2> : null}
       <div className="form-grid">{children}</div>
       {error ? <p className="form-card__error">{error}</p> : null}
-      <button type="submit" className="btn btn--primary" disabled={loading}>
+      <button type="submit" className="btn btn--primary" disabled={loading || submitDisabled}>
         {loading ? LABEL.processando : submitLabel}
       </button>
     </form>

@@ -71,7 +71,7 @@ export function ClientesListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/clientes/novo" importTo="/clientes/importar">
+      <ListToolbar addTo="/clientes/novo" importTo="/clientes/novo">
         <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)}>
           <option value="ativos">Só ativos</option>
           <option value="inativos">Só inativos</option>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
+import { DocUploadField } from "@/components/DocUploadField";
 import { Field, FormCard } from "@/components/FormCard";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -43,9 +44,11 @@ export function ClientesCadastroSection({ clienteId }: Props) {
   const [cnhValidade, setCnhValidade] = useState("");
   const [contato, setContato] = useState("");
   const [endereco, setEndereco] = useState<EnderecoForm>(enderecoVazio);
+  const [documentosLidos, setDocumentosLidos] = useState(false);
   const [carregando, setCarregando] = useState(editando);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   function popularFormulario(c: Record<string, unknown>) {
     if (typeof c.nome === "string") setNome(c.nome);
     if (typeof c.cpf === "string") setCpf(c.cpf);
@@ -75,6 +78,44 @@ export function ClientesCadastroSection({ clienteId }: Props) {
     }
   }
 
+  function marcarDocumentoLido() {
+    setDocumentosLidos(true);
+    setError(null);
+  }
+
+  function aplicarCnh(campos: Record<string, unknown>) {
+    marcarDocumentoLido();
+    if (typeof campos.nome === "string" && campos.nome.trim()) setNome(campos.nome.trim());
+    if (typeof campos.cpf === "string" && campos.cpf.trim()) setCpf(campos.cpf.trim());
+    const cnh = campos.cnh as Record<string, string> | undefined;
+    if (cnh?.numeroRegistro) setCnhNumero(cnh.numeroRegistro);
+    if (cnh?.categoria) setCnhCategoria(cnh.categoria);
+    if (cnh?.validade) setCnhValidade(cnh.validade);
+  }
+
+  function aplicarComprovante(campos: Record<string, unknown>) {
+    marcarDocumentoLido();
+    if (typeof campos.titular === "string" && campos.titular.trim() && !nome.trim()) {
+      setNome(campos.titular.trim());
+    }
+    const tel = campos.telefone;
+    const email = campos.email;
+    if (typeof tel === "string" && tel.trim()) setContato(tel.trim());
+    else if (typeof email === "string" && email.trim()) setContato(email.trim());
+
+    const end = campos.endereco as Record<string, string | null | undefined> | undefined;
+    if (!end) return;
+    setEndereco((prev) => ({
+      cep: end.cep ?? prev.cep,
+      logradouro: end.logradouro ?? prev.logradouro,
+      numero: end.numero ?? prev.numero,
+      complemento: end.complemento ?? prev.complemento,
+      bairro: end.bairro ?? prev.bairro,
+      cidade: end.cidade ?? prev.cidade,
+      uf: end.uf ?? prev.uf,
+    }));
+  }
+
   useEffect(() => {
     if (!clienteId) return;
     let cancelado = false;
@@ -99,6 +140,14 @@ export function ClientesCadastroSection({ clienteId }: Props) {
   }, [clienteId]);
 
   async function gravar() {
+    if (!nome.trim()) {
+      setError(
+        editando
+          ? "Informe o nome do cliente."
+          : "Envie os documentos ou preencha o nome manualmente antes de salvar.",
+      );
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -130,7 +179,11 @@ export function ClientesCadastroSection({ clienteId }: Props) {
         contato: contato.trim() || undefined,
         telefone: contato.trim() || undefined,
         endereco: enderecoPayload,
-        ...(editando ? {} : { origemImportacao: "web-cadastro" }),
+        ...(editando
+          ? {}
+          : {
+              origemImportacao: documentosLidos ? "web-importar-documento" : "web-cadastro",
+            }),
       };
 
       if (editando) {
@@ -160,13 +213,38 @@ export function ClientesCadastroSection({ clienteId }: Props) {
     <>
       <CadastroBackLink to="/clientes" />
       <FormCard
-        title={editando ? "Editar cliente" : "Novo cliente"}
+        title={editando ? "Editar cliente" : "Cadastro de cliente"}
         onSubmit={gravar}
         loading={loading}
         error={error}
       >
+        {!editando ? (
+          <>
+            <p className="form-section-title">Importar</p>
+            <DocUploadField
+              label="CNH (PDF)"
+              tipo="cnh"
+              hint="Envie a CNH — os campos abaixo serão preenchidos automaticamente."
+              disabled={loading}
+              onParsed={({ campos }) => aplicarCnh(campos)}
+              onError={setError}
+            />
+            <DocUploadField
+              label="Comprovante de residência (PDF)"
+              tipo="comprovante-residencia"
+              hint="Boleto ou comprovante com endereço — confira se o titular é o locatário."
+              disabled={loading}
+              onParsed={({ campos }) => aplicarComprovante(campos)}
+              onError={setError}
+            />
+          </>
+        ) : null}
+
+        <p className="form-section-title">
+          {editando ? "Dados do cliente" : documentosLidos ? "Dados extraídos — confira e edite" : "Dados do cliente"}
+        </p>
         <Field label="Nome">
-          <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
+          <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
         </Field>
         <Field label="CPF">
           <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} />
