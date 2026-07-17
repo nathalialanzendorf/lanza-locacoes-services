@@ -52,6 +52,10 @@ export function rastreameEspelhoGlobal(): boolean {
   return true;
 }
 
+function runtimeReadOnly(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
 export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
   const envRaw = process.env.LANZA_RASTREAME_ESPELHO?.trim();
   if (envRaw && parseBoolEnv(envRaw) != null) {
@@ -60,13 +64,17 @@ export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
 
   const cfg = readConfigFile();
   if (typeof cfg.rastreameEspelho === "boolean") {
-    return { ativo: cfg.rastreameEspelho, origem: "config", editavelViaApi: true };
+    return {
+      ativo: cfg.rastreameEspelho,
+      origem: "config",
+      editavelViaApi: !runtimeReadOnly(),
+    };
   }
 
   return {
     ativo: rastreameEspelhoGlobal(),
     origem: "default",
-    editavelViaApi: !process.env.VERCEL,
+    editavelViaApi: !runtimeReadOnly(),
   };
 }
 
@@ -81,6 +89,12 @@ export function resolveSyncRastreame(perCall?: boolean): boolean {
 }
 
 export function gravarRastreameEspelhoConfig(ativo: boolean): RastreameEspelhoConfig {
+  if (runtimeReadOnly()) {
+    throw new Error(
+      "Configuração não pode ser gravada em ficheiro na Vercel (filesystem só leitura). Defina LANZA_RASTREAME_ESPELHO nas variáveis de ambiente do projeto.",
+    );
+  }
+
   const atual = obterRastreameEspelhoConfig();
   if (!atual.editavelViaApi) {
     throw new Error(
