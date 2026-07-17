@@ -961,6 +961,47 @@ code {
   font-size: 0.95rem;
 }
 
+.form-section {
+  grid-column: 1 / -1;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-2, #f8fafc);
+}
+
+.form-section .form-section-title {
+  margin: 0 0 0.35rem;
+}
+
+.form-section__lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.form-section .form-grid {
+  margin-bottom: 0;
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+.field--wide {
+  grid-column: span 2;
+}
+
+.doc-upload-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+
+.doc-upload-row .doc-upload {
+  margin-bottom: 0;
+  height: 100%;
+}
+
 .rastreame-espelho {
   display: flex;
   flex-wrap: wrap;

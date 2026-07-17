@@ -42,16 +42,37 @@ export function Field({
   label,
   children,
   hint,
+  span,
 }: {
   label: string;
   children: ReactNode;
   hint?: string;
+  span?: "full" | "wide";
 }) {
+  const spanClass = span === "full" ? "field--full" : span === "wide" ? "field--wide" : undefined;
   return (
-    <label className="field">
+    <label className={["field", spanClass].filter(Boolean).join(" ")}>
       <span className="field__label">{label}</span>
       {children}
       {hint ? <span className="field__hint">{hint}</span> : null}
     </label>
+  );
+}
+
+export function FormSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="form-section">
+      <h3 className="form-section-title">{title}</h3>
+      {hint ? <p className="form-section__lead">{hint}</p> : null}
+      {children}
+    </section>
   );
 }

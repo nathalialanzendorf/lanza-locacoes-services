@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { DocUploadField } from "@/components/DocUploadField";
-import { Field, FormCard } from "@/components/FormCard";
+import { Field, FormCard, FormSection } from "@/components/FormCard";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 
@@ -213,85 +213,109 @@ export function ClientesCadastroSection({ clienteId }: Props) {
     <>
       <CadastroBackLink to="/clientes" />
       <FormCard
-        title={editando ? "Editar cliente" : "Cadastro de cliente"}
+        title={editando ? "Editar cliente" : "Novo cliente"}
         onSubmit={gravar}
         loading={loading}
         error={error}
       >
         {!editando ? (
-          <>
-            <p className="form-section-title">Importar</p>
-            <DocUploadField
-              label="CNH (PDF)"
-              tipo="cnh"
-              hint="Envie a CNH — os campos abaixo serão preenchidos automaticamente."
-              disabled={loading}
-              onParsed={({ campos }) => aplicarCnh(campos)}
-              onError={setError}
-            />
-            <DocUploadField
-              label="Comprovante de residência (PDF)"
-              tipo="comprovante-residencia"
-              hint="Boleto ou comprovante com endereço — confira se o titular é o locatário."
-              disabled={loading}
-              onParsed={({ campos }) => aplicarComprovante(campos)}
-              onError={setError}
-            />
-          </>
+          <FormSection
+            title="Importar"
+            hint="Envie a CNH e o comprovante de residência. Os campos abaixo são preenchidos automaticamente e podem ser editados."
+          >
+            <div className="doc-upload-row">
+              <DocUploadField
+                label="CNH (PDF)"
+                tipo="cnh"
+                disabled={loading}
+                onParsed={({ campos }) => aplicarCnh(campos)}
+                onError={setError}
+              />
+              <DocUploadField
+                label="Comprovante de residência"
+                tipo="comprovante-residencia"
+                hint="Confira se o titular é o locatário."
+                disabled={loading}
+                onParsed={({ campos }) => aplicarComprovante(campos)}
+                onError={setError}
+              />
+            </div>
+          </FormSection>
         ) : null}
 
-        <p className="form-section-title">
-          {editando ? "Dados do cliente" : documentosLidos ? "Dados extraídos — confira e edite" : "Dados do cliente"}
-        </p>
-        <Field label="Nome">
-          <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
-        </Field>
-        <Field label="CPF">
-          <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} />
-        </Field>
-        <Field label="Contato (telefone ou e-mail)">
-          <input className="input" value={contato} onChange={(e) => setContato(e.target.value)} />
-        </Field>
-        <Field label="CNH — nº registro">
-          <input className="input" value={cnhNumero} onChange={(e) => setCnhNumero(e.target.value)} />
-        </Field>
-        <Field label="CNH — categoria">
-          <input className="input" value={cnhCategoria} onChange={(e) => setCnhCategoria(e.target.value)} />
-        </Field>
-        <Field label="CNH — validade">
-          <input className="input" value={cnhValidade} onChange={(e) => setCnhValidade(e.target.value)} />
-        </Field>
+        <FormSection
+          title="Identificação"
+          hint={
+            !editando && documentosLidos
+              ? "Dados extraídos dos documentos — confira antes de salvar."
+              : undefined
+          }
+        >
+          <div className="form-grid">
+            <Field label="Nome" span="wide">
+              <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
+            </Field>
+            <Field label="CPF">
+              <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+            </Field>
+            <Field label="Contato (telefone ou e-mail)" span="wide">
+              <input className="input" value={contato} onChange={(e) => setContato(e.target.value)} />
+            </Field>
+          </div>
+        </FormSection>
 
-        <p className="form-section-title">Endereço (comprovante)</p>
-        <Field label="CEP">
-          <input className="input" value={endereco.cep} onChange={(e) => setEndereco({ ...endereco, cep: e.target.value })} />
-        </Field>
-        <Field label="Logradouro">
-          <input
-            className="input"
-            value={endereco.logradouro}
-            onChange={(e) => setEndereco({ ...endereco, logradouro: e.target.value })}
-          />
-        </Field>
-        <Field label="Número">
-          <input className="input" value={endereco.numero} onChange={(e) => setEndereco({ ...endereco, numero: e.target.value })} />
-        </Field>
-        <Field label="Complemento">
-          <input
-            className="input"
-            value={endereco.complemento}
-            onChange={(e) => setEndereco({ ...endereco, complemento: e.target.value })}
-          />
-        </Field>
-        <Field label="Bairro">
-          <input className="input" value={endereco.bairro} onChange={(e) => setEndereco({ ...endereco, bairro: e.target.value })} />
-        </Field>
-        <Field label="Cidade">
-          <input className="input" value={endereco.cidade} onChange={(e) => setEndereco({ ...endereco, cidade: e.target.value })} />
-        </Field>
-        <Field label="UF">
-          <input className="input" value={endereco.uf} onChange={(e) => setEndereco({ ...endereco, uf: e.target.value })} />
-        </Field>
+        <FormSection title="CNH">
+          <div className="form-grid">
+            <Field label="Nº registro">
+              <input className="input" value={cnhNumero} onChange={(e) => setCnhNumero(e.target.value)} />
+            </Field>
+            <Field label="Categoria">
+              <input className="input" value={cnhCategoria} onChange={(e) => setCnhCategoria(e.target.value)} />
+            </Field>
+            <Field label="Validade">
+              <input
+                className="input"
+                value={cnhValidade}
+                onChange={(e) => setCnhValidade(e.target.value)}
+                placeholder="DD/MM/AAAA"
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Endereço">
+          <div className="form-grid">
+            <Field label="CEP">
+              <input className="input" value={endereco.cep} onChange={(e) => setEndereco({ ...endereco, cep: e.target.value })} />
+            </Field>
+            <Field label="Número">
+              <input className="input" value={endereco.numero} onChange={(e) => setEndereco({ ...endereco, numero: e.target.value })} />
+            </Field>
+            <Field label="UF">
+              <input className="input" value={endereco.uf} onChange={(e) => setEndereco({ ...endereco, uf: e.target.value })} maxLength={2} />
+            </Field>
+            <Field label="Logradouro" span="full">
+              <input
+                className="input"
+                value={endereco.logradouro}
+                onChange={(e) => setEndereco({ ...endereco, logradouro: e.target.value })}
+              />
+            </Field>
+            <Field label="Complemento" span="wide">
+              <input
+                className="input"
+                value={endereco.complemento}
+                onChange={(e) => setEndereco({ ...endereco, complemento: e.target.value })}
+              />
+            </Field>
+            <Field label="Bairro">
+              <input className="input" value={endereco.bairro} onChange={(e) => setEndereco({ ...endereco, bairro: e.target.value })} />
+            </Field>
+            <Field label="Cidade" span="wide">
+              <input className="input" value={endereco.cidade} onChange={(e) => setEndereco({ ...endereco, cidade: e.target.value })} />
+            </Field>
+          </div>
+        </FormSection>
       </FormCard>
     </>
   );
