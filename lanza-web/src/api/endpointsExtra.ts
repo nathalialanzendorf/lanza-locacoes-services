@@ -53,6 +53,15 @@ export const lanzaApiExtra = {
       method: "POST",
       body: { nome },
     }),
+  atualizarParceiro: (id: string, nome: string) =>
+    apiRequest<DataEnvelope<import("./types").Parceiro>>(`/api/parceiros/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: { nome },
+    }),
+  removerParceiro: (id: string) =>
+    apiRequest<DataEnvelope<import("./types").Parceiro>>(`/api/parceiros/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 
   configRastreameEspelho: () =>
     apiRequest<import("./types").RastreameEspelhoConfig>("/api/config/rastreame-espelho"),

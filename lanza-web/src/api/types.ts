@@ -21,7 +21,18 @@ export type Cliente = {
   id: string;
   nome?: string;
   cpf?: string;
-  cnh?: string;
+  cnh?: string | { numeroRegistro?: string; categoria?: string; validade?: string };
+  contato?: string;
+  telefone?: string;
+  endereco?: {
+    cep?: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    uf?: string;
+  };
   ativo?: boolean;
   rastreameMotoristaKey?: string | number | null;
   analiseCadastro?: { aprovado?: boolean | null; dataConsulta?: string };
@@ -31,6 +42,11 @@ export type Veiculo = {
   id: string;
   placa?: string;
   marcaModelo?: string;
+  anoModelo?: string;
+  chassi?: string;
+  renavam?: string;
+  cor?: string;
+  parceiroNome?: string;
   ativo?: boolean;
   ufRegistro?: string;
   clienteVinculadoId?: string | null;

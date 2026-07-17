@@ -311,6 +311,31 @@ code {
   margin-bottom: 1rem;
 }
 
+.list-toolbar {
+  justify-content: space-between;
+}
+
+.list-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.cadastro-back {
+  margin: 0 0 1rem;
+}
+
+.btn--danger {
+  color: var(--danger, #b42318);
+  border-color: var(--danger-border, #fda29b);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #fef3f2;
+}
+
 .infracao-desc {
   display: inline-block;
   max-width: 18rem;
