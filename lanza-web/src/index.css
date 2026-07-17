@@ -675,46 +675,32 @@ code {
 
 .row-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  align-items: center;
-}
-
-.btn--icon {
-  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border-radius: 0.45rem;
-  color: #52525b;
-  background: #fff;
-  border: 1px solid var(--border);
-  text-decoration: none;
 }
 
-.btn--icon:hover:not(:disabled) {
-  background: #f4f4f5;
-  color: var(--text);
-  border-color: #d4d4d8;
+.row-actions__icon {
+  display: block;
+  flex-shrink: 0;
 }
 
-.btn--icon-danger:hover:not(:disabled) {
+.data-table th.col-acoes,
+.data-table td.col-acoes {
+  width: 5.75rem;
+  min-width: 5.75rem;
+  white-space: nowrap;
+  text-align: center;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: -6px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.data-table th.col-acoes {
   background: #fafafa;
-  color: #09090b;
-  border-color: #a1a1aa;
-}
-
-.btn--icon-ok:hover:not(:disabled) {
-  background: #f4f4f5;
-  color: #09090b;
-  border-color: #a1a1aa;
-}
-
-.btn--icon:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .btn--danger {
@@ -748,6 +734,46 @@ code {
 
 .btn--ghost {
   background: transparent;
+}
+
+.btn.btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  min-width: 2.125rem;
+  padding: 0;
+  line-height: 0;
+  border-radius: 0.45rem;
+  color: #18181b;
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.btn.btn--icon:hover:not(:disabled) {
+  background: #f4f4f5;
+  color: #09090b;
+  border-color: #a1a1aa;
+}
+
+.btn.btn--icon.btn--icon-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.btn.btn--icon.btn--icon-ok:hover:not(:disabled) {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.btn.btn--icon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .checkbox-label {

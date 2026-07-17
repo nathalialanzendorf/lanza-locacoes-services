@@ -90,6 +90,7 @@ export function VeiculosListSection() {
           {
             key: "acoes",
             header: "Ações",
+            className: "col-acoes",
             render: (v) => (
               <RowActions
                 editTo={`/veiculos/${v.id}/editar`}

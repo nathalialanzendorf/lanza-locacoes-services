@@ -152,6 +152,7 @@ export function MovimentacaoListSection() {
           {
             key: "acoes",
             header: "Ações",
+            className: "col-acoes",
             render: (l) => (
               <RowActions
                 editTo={`/movimentacao/${l.id}/editar`}

@@ -14,7 +14,7 @@ export function RowActions({ editTo, onDelete, deleting, deleteLabel = LABEL.exc
   return (
     <div className="row-actions">
       <Link to={editTo} className="btn btn--icon" aria-label={LABEL.editar} title={LABEL.editar}>
-        <IconEdit />
+        <IconEdit className="row-actions__icon" />
       </Link>
       <button
         type="button"
@@ -24,7 +24,7 @@ export function RowActions({ editTo, onDelete, deleting, deleteLabel = LABEL.exc
         aria-label={deleteLabel}
         title={deleteLabel}
       >
-        <IconTrash />
+        <IconTrash className="row-actions__icon" />
       </button>
     </div>
   );

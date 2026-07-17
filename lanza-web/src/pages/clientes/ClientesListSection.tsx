@@ -127,6 +127,7 @@ export function ClientesListSection() {
           {
             key: "acoes",
             header: "Ações",
+            className: "col-acoes",
             render: (c) => (
               <RowActions
                 editTo={`/clientes/${c.id}/editar`}

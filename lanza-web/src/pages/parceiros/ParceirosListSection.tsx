@@ -108,6 +108,7 @@ export function ParceirosListSection() {
           {
             key: "acoes",
             header: "Ações",
+            className: "col-acoes",
             render: (p) => (
               <RowActions
                 editTo={`/parceiros/${p.id}/editar`}
