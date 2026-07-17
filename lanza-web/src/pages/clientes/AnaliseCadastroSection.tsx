@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/DataTable";
-import { Field, FormCard } from "@/components/FormCard";
+import { DocUploadField } from "@/components/DocUploadField";
 import { DateInput } from "@/components/DateInput";
+import { Field, FormCard, FormSection } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RowDecisaoActions } from "@/components/RowDecisaoActions";
 import { lanzaApi } from "@/api/endpoints";
@@ -20,11 +21,45 @@ export function AnaliseCadastroSection() {
   const [nome, setNome] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [baseLegal, setBaseLegal] = useState("consentimento do locatário");
+  const [documentosLidos, setDocumentosLidos] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
 
+  function marcarDocumentoLido() {
+    setDocumentosLidos(true);
+    setError(null);
+  }
+
+  function aplicarCnh(campos: Record<string, unknown>) {
+    marcarDocumentoLido();
+    if (typeof campos.nome === "string" && campos.nome.trim()) setNome(campos.nome.trim());
+    if (typeof campos.cpf === "string" && campos.cpf.trim()) setCpf(campos.cpf.trim());
+    const nasc =
+      typeof campos.dataNascimento === "string"
+        ? campos.dataNascimento
+        : typeof campos.nascimento === "string"
+          ? campos.nascimento
+          : "";
+    if (nasc.trim()) setNascimento(nasc.trim());
+  }
+
+  function aplicarComprovante(campos: Record<string, unknown>) {
+    marcarDocumentoLido();
+    if (typeof campos.titular === "string" && campos.titular.trim() && !nome.trim()) {
+      setNome(campos.titular.trim());
+    }
+  }
+
   async function executar() {
+    if (!cpf.trim() || !nome.trim() || !nascimento.trim()) {
+      setError("Envie os documentos ou preencha CPF, nome e nascimento antes de executar.");
+      return;
+    }
+    if (!baseLegal.trim()) {
+      setError("Informe a base legal (LGPD).");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -63,21 +98,61 @@ export function AnaliseCadastroSection() {
         submitLabel="Executar triagem (background)"
         error={error}
       >
-        <Field label="CPF">
-          <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} required />
-        </Field>
-        <Field label="Nome completo">
-          <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
-        </Field>
-        <Field label="Nascimento">
-          <DateInput value={nascimento} onChange={setNascimento} required disabled={loading} />
-        </Field>
-        <Field label="Base legal (LGPD)">
-          <input className="input" value={baseLegal} onChange={(e) => setBaseLegal(e.target.value)} required />
-        </Field>
-        <p className="field__hint">
-          Consulta BNMP, PF SINIC e TJSC via Chrome no servidor — requer operador no ambiente da API.
-        </p>
+        <FormSection
+          title="Importar"
+          hint="Envie a CNH e o comprovante de residência. Os campos abaixo são preenchidos automaticamente e podem ser editados."
+        >
+          <div className="doc-upload-row">
+            <DocUploadField
+              label="CNH (PDF)"
+              tipo="cnh"
+              disabled={loading}
+              onParsed={({ campos }) => aplicarCnh(campos)}
+              onError={setError}
+            />
+            <DocUploadField
+              label="Comprovante de residência"
+              tipo="comprovante-residencia"
+              hint="Confira se o titular é o locatário."
+              disabled={loading}
+              onParsed={({ campos }) => aplicarComprovante(campos)}
+              onError={setError}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Identificação"
+          hint={documentosLidos ? "Dados extraídos dos documentos — confira antes de executar." : undefined}
+        >
+          <div className="form-grid">
+            <Field label="Nome completo" span="wide">
+              <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} disabled={loading} />
+            </Field>
+            <Field label="CPF">
+              <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} disabled={loading} />
+            </Field>
+            <Field label="Nascimento">
+              <DateInput value={nascimento} onChange={setNascimento} disabled={loading} />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection title="Base legal (LGPD)">
+          <div className="form-grid">
+            <Field label="Fundamentação" span="full">
+              <input
+                className="input"
+                value={baseLegal}
+                onChange={(e) => setBaseLegal(e.target.value)}
+                disabled={loading}
+              />
+            </Field>
+          </div>
+          <p className="field__hint">
+            Consulta BNMP, PF SINIC e TJSC via Chrome no servidor — requer operador no ambiente da API.
+          </p>
+        </FormSection>
       </FormCard>
 
       <ResultPanel title="Job / resultado" data={result} />
