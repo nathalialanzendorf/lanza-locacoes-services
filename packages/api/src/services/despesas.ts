@@ -14,6 +14,7 @@ import {
   type ClienteDespesaInput,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
+  resolveSyncRastreame,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -97,7 +98,7 @@ export async function criarDespesa(
   }
 
   const r = await gravarClienteDespesa(veiculoId, input, {
-    syncRastreame: opts?.syncRastreame !== false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   return {
     data: r.registro,
@@ -113,7 +114,7 @@ export async function atualizarDespesa(
   opts?: SyncOpts,
 ) {
   const r = await editarClienteDespesa(idOrAuto, patch, {
-    syncRastreame: opts?.syncRastreame !== false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   if (!r) {
     throw new HttpError(404, "Despesa não encontrada");
@@ -126,7 +127,7 @@ export async function atualizarDespesa(
 
 export async function removerDespesa(idOrAuto: string, opts?: SyncOpts) {
   const item = await excluirClienteDespesa(idOrAuto, {
-    syncRastreame: opts?.syncRastreame !== false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");
@@ -140,7 +141,7 @@ export async function confirmarCondutorDespesa(
   opts?: SyncOpts,
 ) {
   const item = await confirmarCondutorClienteDespesa(autoInfracao, condutorId, {
-    syncRastreame: opts?.syncRastreame !== false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");

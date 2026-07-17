@@ -1,3 +1,4 @@
+/// <reference path="../types/vercel-peers.d.ts" />
 import { Signer } from "@aws-sdk/rds-signer";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { attachDatabasePool } from "@vercel/functions";

@@ -6,6 +6,7 @@ import path from "node:path";
 import pdfParse from "pdf-parse";
 import { REPO_ROOT } from "../lib/repoRoot.js";
 import { readLanzaPaths } from "../lib/lanzaPaths.js";
+import { parseCrlvText } from "../lib/documentosParse.js";
 
 const DBV = path.join(REPO_ROOT, "database", "veiculos.json");
 const VEIC_DIR = path.join(REPO_ROOT, "veiculos");
@@ -87,93 +88,6 @@ async function extractPdfText(filePath: string): Promise<string> {
   const buf = fs.readFileSync(filePath);
   const data = await pdfParse(buf);
   return data.text || "";
-}
-
-function lineBlocks(text: string): string[] {
-  return text.replace(/\r/g, "\n").split("\n").map((ln) => ln.trim());
-}
-
-function nextMeaningful(lines: string[], start: number): string | null {
-  const skip = new Set(["", "-", ".", "..."]);
-  for (let j = start; j < Math.min(start + 8, lines.length); j++) {
-    const s = lines[j]?.trim() || "";
-    if (s && !skip.has(s)) return s;
-  }
-  return null;
-}
-
-function findLineValue(lines: string[], ...labels: string[]): string | null {
-  for (let i = 0; i < lines.length; i++) {
-    const u = lines[i]!.toUpperCase();
-    for (const lab of labels) {
-      if (u.includes(lab.toUpperCase()) && lines[i]!.length < 80) {
-        const v = nextMeaningful(lines, i + 1);
-        if (v) return v;
-      }
-    }
-  }
-  return null;
-}
-
-function parseCrlv(text: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const lines = lineBlocks(text);
-  const raw = lines.join("\n");
-
-  let m = raw.match(/CHASSI\s*[:\s]*([A-HJ-NPR-Z0-9]{17})/i);
-  if (!m) m = raw.match(/\b([A-HJ-NPR-Z0-9]{17})\b/);
-  if (m && m[1]!.length === 17) out.chassi = m[1]!.toUpperCase();
-
-  m = raw.match(/RENAVAM\s*[:\s]*(\d{10,11})\b/i);
-  if (m) out.renavam = m[1]!;
-
-  m = raw.match(
-    /PLACA\s*[:\s]*([A-Z]{3}[\dA-Z][A-Z0-9]{4}|[A-Z]{3}\d{4})\b/i,
-  );
-  if (m) out.placa_doc = formatPlacaHyphen(m[1]!);
-
-  let mm = findLineValue(
-    lines,
-    "MARCA / MODELO",
-    "MARCA/MODELO",
-    "MARCA E MODELO",
-    "MARCAMODELO",
-  );
-  if (mm) {
-    mm = mm.replace(/\s+/g, " ").trim();
-    if (mm.includes("/") || /[A-Z]{2,}/i.test(mm)) {
-      out.marcaModelo = /^[\x00-\x7f]+$/.test(mm) ? mm.toUpperCase() : mm;
-    }
-  }
-
-  const am = findLineValue(lines, "ANO MODELO", "ANO/MODELO", "ANO DO MODELO");
-  if (am) {
-    const amClean = am.replace(/\s+/g, "");
-    let m2 = amClean.match(/(\d{4})\/(\d{4})/);
-    if (!m2) m2 = am.match(/(\d{4})\s*\/\s*(\d{4})/);
-    if (m2) out.anoModelo = `${m2[1]}/${m2[2]}`;
-  }
-
-  let cor = findLineValue(
-    lines,
-    "COR PREDOMINANTE",
-    "COR",
-    "COR DO VEÍCULO",
-    "COR DO VEICULO",
-  );
-  if (cor) {
-    cor = cor.replace(/\s+/g, " ").trim();
-    if (cor.length < 40 && !/^\d+$/.test(cor)) out.cor = cor.toUpperCase();
-  }
-
-  if (!out.marcaModelo) {
-    m = raw.match(/([A-Z]{2,15})\s*\/\s*([A-Z0-9][A-Z0-9\s.\-]{2,40})/i);
-    if (m && m[0]!.length < 60) {
-      out.marcaModelo = `${m[1]!.toUpperCase()}/${m[2]!.toUpperCase().trim()}`;
-    }
-  }
-
-  return out;
 }
 
 function mergeIntoVeiculo(
@@ -288,7 +202,14 @@ export async function sincronizarVeiculosCrlv(
       });
       continue;
     }
-    const parsed = parseCrlv(text);
+    const parsedRaw = parseCrlvText(text);
+    const parsed: Record<string, string> = {};
+    if (parsedRaw.placa) parsed.placa_doc = parsedRaw.placa;
+    if (parsedRaw.marcaModelo) parsed.marcaModelo = parsedRaw.marcaModelo;
+    if (parsedRaw.anoModelo) parsed.anoModelo = parsedRaw.anoModelo;
+    if (parsedRaw.chassi) parsed.chassi = parsedRaw.chassi;
+    if (parsedRaw.renavam) parsed.renavam = parsedRaw.renavam;
+    if (parsedRaw.cor) parsed.cor = parsedRaw.cor;
     if (!Object.keys(parsed).length) {
       erros.push({ placa, motivo: `nenhum campo extraído de ${path.basename(pdf)}` });
       continue;

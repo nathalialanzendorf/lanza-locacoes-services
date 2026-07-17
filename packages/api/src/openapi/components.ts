@@ -1,6 +1,13 @@
 /** Componentes reutilizáveis do documento OpenAPI. */
 export const openApiComponents = {
   securitySchemes: {
+    BearerAuth: {
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT",
+      description:
+        "Token obtido em `POST /api/auth/login` ou `POST /api/auth/register`. Requer `LANZA_JWT_SECRET` no servidor.",
+    },
     ApiKeyAuth: {
       type: "apiKey",
       in: "header",

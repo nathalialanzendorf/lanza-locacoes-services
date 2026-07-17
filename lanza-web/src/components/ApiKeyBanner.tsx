@@ -1,18 +1,22 @@
 import { useState } from "react";
 import { getStoredApiKey, setStoredApiKey } from "@/api/client";
 
-export function ApiKeyBanner() {
-  const [open, setOpen] = useState(false);
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function ApiKeyBanner({ open, onClose }: Props) {
   const [value, setValue] = useState(getStoredApiKey);
   const hasKey = Boolean(getStoredApiKey().trim());
 
+  if (!open) return null;
+
   function save() {
     setStoredApiKey(value);
-    setOpen(false);
+    onClose();
     window.location.reload();
   }
-
-  if (!open && hasKey) return null;
 
   return (
     <div className="api-key-banner">
@@ -23,24 +27,23 @@ export function ApiKeyBanner() {
           Ela é guardada apenas no seu navegador.
         </p>
       </div>
-      {open || !hasKey ? (
-        <div className="api-key-banner__form">
-          <input
-            type="password"
-            placeholder="X-API-Key"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            autoComplete="off"
-          />
-          <button type="button" className="btn btn--primary" onClick={save}>
-            Guardar
-          </button>
-        </div>
-      ) : (
-        <button type="button" className="btn btn--ghost" onClick={() => setOpen(true)}>
-          Alterar chave
+      <div className="api-key-banner__form">
+        <input
+          type="password"
+          placeholder="X-API-Key"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          autoComplete="off"
+        />
+        <button type="button" className="btn btn--primary" onClick={save}>
+          Guardar
         </button>
-      )}
+        {hasKey ? (
+          <button type="button" className="btn btn--ghost" onClick={onClose}>
+            Cancelar
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

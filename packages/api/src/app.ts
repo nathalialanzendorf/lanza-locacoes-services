@@ -1,14 +1,17 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
-import { API_VERSION, apiKey, resolveCorsOrigin } from "./config.js";
+import { API_VERSION, apiKey, authRequired, jwtSecret, resolveCorsOrigin } from "./config.js";
 import { getDbBackend } from "@lanza/db";
 import { json, matchRoute, type RouteDef } from "./http.js";
 import { registerAdminRoutes } from "./routes/admin.js";
+import { registerAuthRoutes } from "./routes/auth.js";
 import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
 import { registerClienteAnaliseRoutes } from "./routes/cliente-analise.js";
 import { registerClientesRoutes } from "./routes/clientes.js";
+import { registerConfigRoutes } from "./routes/config.js";
 import { registerContratosRoutes } from "./routes/contratos.js";
 import { registerDespesasRoutes } from "./routes/despesas.js";
+import { registerDocumentosRoutes } from "./routes/documentos.js";
 import { registerFipeRoutes } from "./routes/fipe.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerInicioLocacoesRoutes } from "./routes/inicio-locacoes.js";
@@ -28,6 +31,14 @@ import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
 import { registerRelatoriosRoutes } from "./routes/relatorios.js";
 import { registerSyncRoutes } from "./routes/sync.js";
 import { registerVeiculosRoutes } from "./routes/veiculos.js";
+import { verifyAccessToken, extractBearerToken } from "./services/auth.js";
+
+/** Rotas públicas de autenticação (sem JWT nem API key). */
+export const AUTH_PUBLIC_PATHS = new Set([
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/status",
+]);
 
 function applyCors(req: IncomingMessage, res: ServerResponse): void {
   const origin = resolveCorsOrigin(req.headers.origin);
@@ -35,23 +46,36 @@ function applyCors(req: IncomingMessage, res: ServerResponse): void {
     res.setHeader("Access-Control-Allow-Origin", origin);
     if (origin !== "*") res.setHeader("Vary", "Origin");
   }
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
 }
 
-function isAuthorized(req: IncomingMessage): boolean {
+async function isAuthorized(req: IncomingMessage, pathname: string): Promise<boolean> {
+  if (AUTH_PUBLIC_PATHS.has(pathname)) return true;
+
+  const token = extractBearerToken(req);
+  if (token && jwtSecret()) {
+    const payload = await verifyAccessToken(token);
+    if (payload) return true;
+  }
+
   const expected = apiKey();
-  if (!expected) return true;
-  const provided = String(req.headers["x-api-key"] ?? "").trim();
-  return provided === expected;
+  if (expected) {
+    const provided = String(req.headers["x-api-key"] ?? "").trim();
+    if (provided === expected) return true;
+  }
+
+  return !authRequired();
 }
 
 function collectRoutes(): RouteDef[] {
   const routes: RouteDef[] = [];
   registerHealthRoutes(routes);
   registerOpenApiRoutes(routes);
+  registerAuthRoutes(routes);
   registerAdminRoutes(routes);
   registerMetaRoutes(routes);
+  registerConfigRoutes(routes);
   registerClientesRoutes(routes);
   registerVeiculosRoutes(routes);
   registerInicioLocacoesRoutes(routes);
@@ -60,6 +84,7 @@ function collectRoutes(): RouteDef[] {
   registerLocacoesRoutes(routes);
   registerRecebimentosRoutes(routes);
   registerRelatoriosRoutes(routes);
+  registerDocumentosRoutes(routes);
   registerSyncRoutes(routes);
   registerImportacoesRoutes(routes);
   registerAnaliseCadastroRoutes(routes);
@@ -95,7 +120,7 @@ export function createApp() {
       if (
         pathname.startsWith("/api") &&
         !OPENAPI_PUBLIC_PATHS.has(pathname) &&
-        !isAuthorized(req)
+        !(await isAuthorized(req, pathname))
       ) {
         json(res, 401, { error: "Não autorizado" });
         return;
@@ -125,7 +150,10 @@ export function createApp() {
 }
 
 export function logStartup(port: number, host: string): void {
-  const auth = apiKey() ? "LANZA_API_KEY ativa" : "sem LANZA_API_KEY (modo dev)";
+  const parts: string[] = [];
+  if (jwtSecret()) parts.push("LANZA_JWT_SECRET ativa");
+  if (apiKey()) parts.push("LANZA_API_KEY ativa");
+  const auth = parts.length ? parts.join(" · ") : "sem autenticação (modo dev)";
   const db = getDbBackend();
   console.log(`[@lanza/api] v${API_VERSION} em http://${host}:${port}`);
   console.log(`[@lanza/api] ${auth}`);

@@ -42,18 +42,79 @@ export function useContratos(params?: {
   });
 }
 
-export function useDespesasCliente(params?: { emAberto?: boolean }) {
+export function useDespesasCliente(params?: {
+  emAberto?: boolean;
+  clienteId?: string;
+  placa?: string;
+  categoria?: string;
+}) {
   return useQuery({
     queryKey: ["despesas-cliente", params],
     queryFn: () => lanzaApi.listarDespesasCliente(params),
   });
 }
 
-export function useLocacoes(abertas?: boolean) {
+export function useDespesasParceiro(params?: {
+  emAberto?: boolean;
+  placa?: string;
+  categoria?: string;
+  competencia?: string;
+}) {
   return useQuery({
-    queryKey: ["locacoes", { abertas }],
-    queryFn: () => lanzaApi.listarLocacoes(
-      abertas === undefined ? undefined : { abertas },
-    ),
+    queryKey: ["despesas-parceiro", params],
+    queryFn: () => lanzaApi.listarDespesasParceiro(params),
+  });
+}
+
+export function useLocacoes(params?: { abertas?: boolean; placa?: string; situacao?: string }) {
+  return useQuery({
+    queryKey: ["locacoes", params],
+    queryFn: () => lanzaApi.listarLocacoes(params),
+  });
+}
+
+export function useParceiros() {
+  return useQuery({
+    queryKey: ["parceiros"],
+    queryFn: () => lanzaApi.listarParceiros(),
+  });
+}
+
+export function useVinculosParceiro(params?: { veiculoId?: string; parceiroId?: string }) {
+  return useQuery({
+    queryKey: ["parceiros-vinculos", params],
+    queryFn: () => lanzaApi.listarVinculosParceiro(params),
+  });
+}
+
+export function useInfracoes(params?: {
+  placa?: string;
+  emAberto?: boolean;
+  semCondutor?: boolean;
+  ativo?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["infracoes", params],
+    queryFn: () => lanzaApi.listarInfracoes(params),
+  });
+}
+
+export function useSyncMeta() {
+  return useQuery({
+    queryKey: ["sync-meta"],
+    queryFn: () => lanzaApi.metaSync(),
+    staleTime: 60_000,
+  });
+}
+
+export function useSyncJobs(limit = 25) {
+  return useQuery({
+    queryKey: ["sync-jobs", limit],
+    queryFn: () => lanzaApi.listarSyncJobs(limit),
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.jobs ?? [];
+      const active = jobs.some((j) => j.status === "pending" || j.status === "running");
+      return active ? 3000 : false;
+    },
   });
 }

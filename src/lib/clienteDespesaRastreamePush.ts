@@ -7,6 +7,7 @@ import {
   isSyncRastreameEligible,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
+import { resolveSyncRastreame } from "./rastreameEspelhoConfig.js";
 
 export type ClienteDespesaPushOpts = {
   /** Default true — replica no Rastreame após persistir localmente. */
@@ -24,7 +25,7 @@ export async function pushClienteDespesaRegistrosNoRastreame(
   regs: ClienteDespesaRegistro[],
   opts?: ClienteDespesaPushOpts,
 ): Promise<ClienteDespesaRegistro[]> {
-  if (opts?.syncRastreame === false) {
+  if (!resolveSyncRastreame(opts?.syncRastreame)) {
     return regs.map(recarregarClienteDespesa);
   }
 

@@ -64,3 +64,24 @@ export function apiPublicUrl(): string | undefined {
   if (vercelUrl) return `https://${vercelUrl}`;
   return undefined;
 }
+
+export function jwtSecret(): string | null {
+  const secret = process.env.LANZA_JWT_SECRET?.trim();
+  return secret || null;
+}
+
+/** Duração do token JWT (ex.: 7d, 24h, 3600). Default: 7 dias. */
+export function jwtExpiresIn(): string {
+  return process.env.LANZA_JWT_EXPIRES_IN?.trim() || "7d";
+}
+
+/** Permite registo público mesmo com utilizadores existentes. */
+export function allowPublicRegister(): boolean {
+  const raw = process.env.LANZA_ALLOW_REGISTER?.trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "sim";
+}
+
+/** Autenticação obrigatória (JWT ou API key). */
+export function authRequired(): boolean {
+  return Boolean(jwtSecret() || apiKey());
+}

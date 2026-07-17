@@ -1,5 +1,7 @@
 import { API_VERSION, apiPublicUrl } from "../config.js";
 import { getDbBackend, getVercelPostgresPool, pgQuery } from "@lanza/db";
+import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "@lanza/storage";
+import { obterRastreameEspelhoConfig } from "../lib-imports.js";
 
 export type SystemStatus = {
   status: "ok" | "degraded";
@@ -11,6 +13,12 @@ export type SystemStatus = {
     backend: string;
     postgres?: { ok: boolean; error?: string };
   };
+  storage?: {
+    ativo: boolean;
+    backend: string;
+    prefix: string;
+  };
+  rastreameEspelho?: ReturnType<typeof obterRastreameEspelhoConfig>;
 };
 
 async function pingPostgres(): Promise<{ ok: boolean; error?: string }> {
@@ -47,5 +55,15 @@ export async function obterStatusSistema(): Promise<SystemStatus> {
       backend,
       ...(postgres ? { postgres } : {}),
     },
+    storage: {
+      ativo: isStorageActive(),
+      backend: isBlobConfigured()
+        ? "vercel-blob"
+        : localMirrorRoot()
+          ? "local-mirror"
+          : "desativado",
+      prefix: storagePrefix(),
+    },
+    rastreameEspelho: obterRastreameEspelhoConfig(),
   };
 }

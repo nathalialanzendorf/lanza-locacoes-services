@@ -33,6 +33,7 @@ import {
   vincularMotoristaRastreavel,
 } from "./rastreame/motorista.js";
 import { replicarClienteNoRastreame } from "./rastreame/motoristasSync.js";
+import { rastreameEspelhoGlobal } from "./rastreameEspelhoConfig.js";
 import {
   findVeiculoById,
   findVeiculoByPlaca,
@@ -156,6 +157,10 @@ async function garantirMotoristaNoRastreame(
     return { key: null, aviso: "motorista não encontrado no Rastreame (dry-run)" };
   }
 
+  if (!rastreameEspelhoGlobal()) {
+    return { key: null, aviso: "Espelho Rastreame desativado — só gravação local" };
+  }
+
   try {
     await replicarClienteNoRastreame({ ...cliente, ativo: true });
     const atualizado = findClienteById(cliente.id) ?? cliente;
@@ -214,13 +219,6 @@ export async function ativarClienteDoContrato(
   let rastreame: StatusClienteResult["rastreame"] = "ignorado";
   let vinculo: StatusClienteResult["vinculo"] = "ignorado";
 
-  const { key: motoristaKey, aviso: avisoMotorista } = await garantirMotoristaNoRastreame(
-    atualizado,
-    opts,
-  );
-  if (avisoMotorista) avisos.push(avisoMotorista);
-  atualizado = findClienteById(atualizado.id) ?? atualizado;
-
   if (veiculo && rastreavelKey) {
     const loc = vincularClienteVeiculoLocal(atualizado.id, veiculo, rastreavelKey);
     atualizado = loc.cliente ?? atualizado;
@@ -228,6 +226,23 @@ export async function ativarClienteDoContrato(
   } else {
     avisos.push("veículo sem rastreameRastreavelKey — vínculo local/remoto não aplicado");
   }
+
+  if (!rastreameEspelhoGlobal()) {
+    return {
+      cliente: findClienteById(atualizado.id) ?? atualizado,
+      local,
+      rastreame: "ignorado",
+      vinculo,
+      aviso: avisos.length ? avisos.join("; ") : "Espelho Rastreame desativado",
+    };
+  }
+
+  const { key: motoristaKey, aviso: avisoMotorista } = await garantirMotoristaNoRastreame(
+    atualizado,
+    opts,
+  );
+  if (avisoMotorista) avisos.push(avisoMotorista);
+  atualizado = findClienteById(atualizado.id) ?? atualizado;
 
   if (motoristaKey) {
     try {
@@ -308,18 +323,20 @@ export async function desativarClienteDoContrato(
     avisos.push("veículo não encontrado — desvínculo local não aplicado");
   }
 
-  if (motoristaKey && rastreavelKey) {
-    try {
-      await desvincularMotoristaRastreavel(motoristaKey, rastreavelKey);
-      vinculo = "desvinculado";
-    } catch (e) {
-      if (vinculo !== "desvinculado") vinculo = "erro";
-      avisos.push(`Rastreame desvincular: ${e instanceof Error ? e.message : String(e)}`);
+  if (rastreameEspelhoGlobal()) {
+    if (motoristaKey && rastreavelKey) {
+      try {
+        await desvincularMotoristaRastreavel(motoristaKey, rastreavelKey);
+        vinculo = "desvinculado";
+      } catch (e) {
+        if (vinculo !== "desvinculado") vinculo = "erro";
+        avisos.push(`Rastreame desvincular: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } else if (!rastreavelKey) {
+      avisos.push("veículo sem rastreameRastreavelKey — desvínculo Rastreame não aplicado");
+    } else if (!motoristaKey) {
+      avisos.push("cliente sem rastreameMotoristaKey — desvínculo Rastreame não aplicado");
     }
-  } else if (!rastreavelKey) {
-    avisos.push("veículo sem rastreameRastreavelKey — desvínculo Rastreame não aplicado");
-  } else if (!motoristaKey) {
-    avisos.push("cliente sem rastreameMotoristaKey — desvínculo Rastreame não aplicado");
   }
 
   if (outroAtivo) {
@@ -347,7 +364,7 @@ export async function desativarClienteDoContrato(
   atualizado = editarCliente(atualizado.id, { ativo: false }) ?? atualizado;
   let rastreame: StatusClienteResult["rastreame"] = "ignorado";
 
-  if (motoristaKey) {
+  if (motoristaKey && rastreameEspelhoGlobal()) {
     try {
       await inativarMotorista(motoristaKey);
       rastreame = "inativado";

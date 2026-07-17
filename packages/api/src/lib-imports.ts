@@ -200,6 +200,22 @@ export {
 } from "../../../src/lib/importarClientesCnh.js";
 
 export {
+  lerDocumentoUpload,
+  type DocTipoUpload,
+  type CnhParseResult,
+  type ComprovanteParseResult,
+  type CrlvParseResult,
+} from "../../../src/lib/documentosParse.js";
+
+export {
+  gravarRastreameEspelhoConfig,
+  obterRastreameEspelhoConfig,
+  rastreameEspelhoGlobal,
+  resolveSyncRastreame,
+  type RastreameEspelhoConfig,
+} from "../../../src/lib/rastreameEspelhoConfig.js";
+
+export {
   listarMarcas,
   listarModelos,
   listarAnos,
@@ -311,6 +327,7 @@ export {
   validarParcelas,
   type RenegociacaoInput,
   type ParcelaRenegociacao,
+  type ResumoDebito,
 } from "../../../src/lib/rastreame/renegociacao.js";
 
 export { formatPlacaHyphen, placasIguais, compactPlaca } from "../../../src/lib/placa.js";

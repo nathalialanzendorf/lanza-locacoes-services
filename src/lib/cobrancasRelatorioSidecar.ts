@@ -694,6 +694,12 @@ function resolverPlacaPrincipal(
 ): string {
   if (filtro.placa) return formatPlacaHyphen(filtro.placa);
 
+  // Escopo por cliente: placa do contrato ativo (ou mais recente), não a do único alvo do lote.
+  if (filtro.clienteId) {
+    const ultimo = ultimoContratoPorCliente(filtro.clienteId);
+    if (ultimo?.placa) return formatPlacaHyphen(ultimo.placa);
+  }
+
   const placasLote = [...new Set(itemsLote.map((i) => formatPlacaHyphen(i.alvo.placa)))];
   if (placasLote.length === 1) return placasLote[0]!;
   if (placasLote.length > 1) {
@@ -702,11 +708,6 @@ function resolverPlacaPrincipal(
       return c?.clienteId === filtro.clienteId;
     });
     if (comContrato.length === 1) return comContrato[0]!;
-  }
-
-  if (filtro.clienteId) {
-    const ultimo = ultimoContratoPorCliente(filtro.clienteId);
-    if (ultimo?.placa) return formatPlacaHyphen(ultimo.placa);
   }
 
   const contagem = new Map<string, number>();
@@ -1038,16 +1039,30 @@ export function listarEscoposSidecar(results: LoteCobrancaResult[]): FiltroAlvos
   return escopos;
 }
 
+/** Prefixo de arquivo/canvas: um relatório por cliente (sem placa no slug). */
+function basenameSidecarCobranca(
+  sidecar: CobrancaRelatorioSidecar,
+  escopo: FiltroAlvosCobranca,
+): string {
+  const clienteSlug = slug(sidecar.cliente);
+  const placaSlug = slug(sidecar.placa);
+  if (escopo.clienteId != null && escopo.placa == null) {
+    return `cobranca-${clienteSlug}`;
+  }
+  if (escopo.placa != null && escopo.clienteId == null) {
+    return `cobranca-${placaSlug}`;
+  }
+  return `cobranca-${placaSlug}-${clienteSlug}`;
+}
+
 function salvarSidecarUnico(
   sidecar: CobrancaRelatorioSidecar,
   dir: string,
+  escopo: FiltroAlvosCobranca,
 ): string[] {
-  const placaSlug = slug(sidecar.placa);
-  const clienteSlug = slug(sidecar.cliente);
-  const arquivo = path.join(
-    dir,
-    `cobranca-${placaSlug}-${clienteSlug}-${dataArquivoBr()}.json`,
-  );
+  const basename = basenameSidecarCobranca(sidecar, escopo);
+  const data = dataArquivoBr();
+  const arquivo = path.join(dir, `${basename}-${data}.json`);
   fs.writeFileSync(arquivo, JSON.stringify(sidecar, null, 2), "utf8");
 
   const paths = [arquivo];
@@ -1064,7 +1079,7 @@ function salvarSidecarUnico(
     const tipoSlug = slug(msg.tipo);
     const whatsappPath = path.join(
       dir,
-      `cobranca-${placaSlug}-${clienteSlug}-${dataArquivoBr()}-whatsapp-${tipoSlug}${sufixo}.txt`,
+      `${basename}-${data}-whatsapp-${tipoSlug}${sufixo}.txt`,
     );
     fs.writeFileSync(whatsappPath, ensureRodapeWhatsApp(msg.texto), "utf8");
     paths.push(whatsappPath);
@@ -1101,7 +1116,7 @@ export function salvarCobrancasSidecar(
       opts?.tiposSolicitados,
     );
     if (!sidecar) continue;
-    paths.push(...salvarSidecarUnico(sidecar, dir));
+    paths.push(...salvarSidecarUnico(sidecar, dir, escopo));
   }
   return paths;
 }

@@ -6,6 +6,7 @@ import { buildOpenApiDocument } from "../openapi/index.js";
 import {
   REPO_ROOT,
   RELATORIOS_SYNC_DIR,
+  obterRastreameEspelhoConfig,
   readLanzaPaths,
 } from "../lib-imports.js";
 
@@ -48,6 +49,7 @@ export function obterMeta() {
     },
     repoRoot: REPO_ROOT,
     paths: readLanzaPaths(),
+    rastreameEspelho: obterRastreameEspelhoConfig(),
     database: {
       clientes: dbTimestamp("clientes.json"),
       veiculos: dbTimestamp("veiculos.json"),

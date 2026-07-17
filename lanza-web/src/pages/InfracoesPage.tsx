@@ -1,0 +1,234 @@
+import { useMemo, useState } from "react";
+import { DataTable } from "@/components/DataTable";
+import { PageHeader, QueryError } from "@/components/PageHeader";
+import { ResultPanel } from "@/components/ResultPanel";
+import { useClientes, useInfracoes } from "@/api/hooks";
+import { lanzaApi } from "@/api/endpoints";
+import { LanzaApiError } from "@/api/client";
+import { formatBrl, formatPlaca } from "@/lib/format";
+import type { Infracao } from "@/api/types";
+
+function valorInfracao(i: Infracao): number {
+  return Number(i.valorMulta ?? i.valor) || 0;
+}
+
+function condutorLabel(
+  i: Infracao,
+  nomes: Map<string, string>,
+): { text: string; className: string } {
+  if (i.debitoParceiroConfirmado) {
+    return { text: "Débito parceiro", className: "badge badge--muted" };
+  }
+  if (i.condutorId) {
+    const nome = nomes.get(i.condutorId);
+    return {
+      text: nome ?? i.condutorId.slice(0, 8),
+      className: i.condutorConfirmado ? "badge badge--ok" : "badge badge--warn",
+    };
+  }
+  if (i.condutorNaoIdentificado) {
+    return { text: "Não identificado", className: "badge badge--muted" };
+  }
+  if (i.revisarManual) {
+    return { text: "Revisar", className: "badge badge--warn" };
+  }
+  return { text: "Sem condutor", className: "badge badge--danger" };
+}
+
+function situacaoLabel(i: Infracao): { text: string; className: string } {
+  if (i.quitadaDetran) {
+    return { text: "Quitada DETRAN", className: "badge badge--ok" };
+  }
+  const raw = i.situacao ?? i.status ?? "";
+  if (/quitad|pago|paga/i.test(raw)) {
+    return { text: raw, className: "badge badge--ok" };
+  }
+  if (/aberto|notificad|autua/i.test(raw)) {
+    return { text: raw || "Em aberto", className: "badge badge--warn" };
+  }
+  return { text: raw || "—", className: "badge badge--muted" };
+}
+
+export function InfracoesPage() {
+  const [emAberto, setEmAberto] = useState(true);
+  const [semCondutor, setSemCondutor] = useState(false);
+  const [placa, setPlaca] = useState("");
+  const [atribuirLoading, setAtribuirLoading] = useState(false);
+  const [atribuirResult, setAtribuirResult] = useState<unknown>(null);
+  const [atribuirError, setAtribuirError] = useState<string | null>(null);
+
+  const query = useInfracoes({
+    emAberto,
+    semCondutor: semCondutor || undefined,
+    placa: placa.trim() || undefined,
+    ativo: true,
+  });
+  const clientesQuery = useClientes();
+
+  const nomesCondutor = useMemo(
+    () =>
+      new Map(
+        (clientesQuery.data?.items ?? [])
+          .filter((c) => c.nome)
+          .map((c) => [c.id, c.nome!]),
+      ),
+    [clientesQuery.data],
+  );
+
+  const total = useMemo(
+    () => (query.data?.items ?? []).reduce((sum, i) => sum + valorInfracao(i), 0),
+    [query.data],
+  );
+
+  const loading = query.isLoading || clientesQuery.isLoading;
+
+  async function atribuirCondutores(dryRun: boolean) {
+    setAtribuirLoading(true);
+    setAtribuirError(null);
+    try {
+      const r = await lanzaApi.atribuirCondutoresInfracoes({
+        dryRun,
+        placa: placa.trim() || undefined,
+      });
+      setAtribuirResult(r);
+    } catch (err) {
+      setAtribuirError(err instanceof LanzaApiError ? err.message : "Falha ao atribuir condutores.");
+    } finally {
+      setAtribuirLoading(false);
+    }
+  }
+
+  return (
+    <PageHeader
+      title="Infrações"
+      description="Multas sincronizadas do DETRAN SC — autuação, condutor e situação de cobrança."
+      actions={
+        !loading ? (
+          <span className="badge badge--muted">
+            {query.data?.total ?? 0} registo{(query.data?.total ?? 0) === 1 ? "" : "s"} ·{" "}
+            {formatBrl(total)}
+          </span>
+        ) : null
+      }
+    >
+      <div className="despesas-toolbar">
+        <input
+          className="input"
+          placeholder="Filtrar placa"
+          value={placa}
+          onChange={(e) => setPlaca(e.target.value)}
+        />
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={emAberto}
+            onChange={(e) => setEmAberto(e.target.checked)}
+          />
+          Só em aberto
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={semCondutor}
+            onChange={(e) => setSemCondutor(e.target.checked)}
+          />
+          Sem condutor
+        </label>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          disabled={atribuirLoading}
+          onClick={() => void atribuirCondutores(true)}
+        >
+          Preview atribuir condutores
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={atribuirLoading}
+          onClick={() => void atribuirCondutores(false)}
+        >
+          Atribuir condutores
+        </button>
+      </div>
+
+      {atribuirError ? <p className="form-card__error">{atribuirError}</p> : null}
+      <ResultPanel title="Atribuição de condutores" data={atribuirResult} />
+
+      {query.isError ? (
+        <QueryError
+          message={
+            query.error instanceof LanzaApiError
+              ? query.error.message
+              : "Falha ao listar infrações."
+          }
+        />
+      ) : null}
+
+      <DataTable
+        loading={loading}
+        rows={query.data?.items ?? []}
+        keyFn={(i) => i.id}
+        emptyMessage="Nenhuma infração encontrada para os filtros selecionados."
+        columns={[
+          {
+            key: "auto",
+            header: "Auto",
+            render: (i) => <strong>{i.numeroAuto}</strong>,
+          },
+          {
+            key: "placa",
+            header: "Placa",
+            render: (i) => formatPlaca(i.veiculoId),
+          },
+          {
+            key: "desc",
+            header: "Descrição",
+            render: (i) => (
+              <span className="infracao-desc" title={i.descricao}>
+                {i.descricao ?? "—"}
+              </span>
+            ),
+          },
+          {
+            key: "data",
+            header: "Autuação",
+            render: (i) => i.dataAutuacao?.slice(0, 16) ?? "—",
+          },
+          {
+            key: "valor",
+            header: "Valor",
+            className: "num",
+            render: (i) => formatBrl(valorInfracao(i)),
+          },
+          {
+            key: "situacao",
+            header: "Situação",
+            render: (i) => {
+              const s = situacaoLabel(i);
+              return <span className={s.className}>{s.text}</span>;
+            },
+          },
+          {
+            key: "condutor",
+            header: "Condutor",
+            render: (i) => {
+              const c = condutorLabel(i, nomesCondutor);
+              return <span className={c.className}>{c.text}</span>;
+            },
+          },
+          {
+            key: "despesa",
+            header: "Despesa",
+            render: (i) =>
+              i.clienteDespesaId ? (
+                <span className="badge badge--ok">Vinculada</span>
+              ) : (
+                <span className="badge badge--muted">—</span>
+              ),
+          },
+        ]}
+      />
+    </PageHeader>
+  );
+}

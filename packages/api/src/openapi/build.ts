@@ -21,7 +21,7 @@ export function buildOpenApiDocument(): OpenApiDocument {
         "",
         "Documentação interativa: [`/api/docs`](/api/docs).",
         "",
-        "Autenticação opcional via header `X-API-Key` quando `LANZA_API_KEY` está definida.",
+        "Autenticação: header `Authorization: Bearer <token>` (login em `/api/auth/login`) ou `X-API-Key` quando `LANZA_API_KEY` está definida.",
       ].join("\n"),
     },
     servers: [
@@ -50,15 +50,19 @@ export function buildOpenApiDocument(): OpenApiDocument {
       { name: "Rastreame", description: "API remota motoristas/gastos" },
       { name: "PagBank", description: "Extrato e match de créditos" },
       { name: "Pedágio Digital", description: "Portal pedagiodigital.com" },
+      { name: "Autenticação", description: "Login, registo e sessão do painel web" },
     ],
     paths: buildOpenApiPaths(),
     components: openApiComponents as unknown as Record<string, unknown>,
-    security: [{ ApiKeyAuth: [] }],
+    security: [{ BearerAuth: [] }, { ApiKeyAuth: [] }],
   };
 }
 
-/** Rotas públicas (sem API key) relacionadas à documentação. */
+/** Rotas públicas (sem API key) relacionadas à documentação e autenticação. */
 export const OPENAPI_PUBLIC_PATHS = new Set([
   "/api/openapi.json",
   "/api/docs",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/status",
 ]);

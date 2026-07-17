@@ -10,6 +10,7 @@ import * as cnhService from "../services/importacoes/cnh.js";
 import * as crlvService from "../services/importacoes/crlv.js";
 import * as contratosImportService from "../services/importacoes/contratos.js";
 import * as rastreameClientesService from "../services/importacoes/rastreameClientes.js";
+import * as documentoService from "../services/importacoes/documento.js";
 
 export function registerImportacoesRoutes(routes: RouteDef[]): void {
   const preview = compileRoute("/api/importacoes/cnh/preview");
@@ -57,6 +58,18 @@ export function registerImportacoesRoutes(routes: RouteDef[]): void {
         () => ({}),
       );
       const data = await contratosImportService.executarImportacaoContratos(body);
+      json(ctx.res, 200, { data });
+    }),
+  });
+
+  const documento = compileRoute("/api/importacoes/documento/ler");
+  routes.push({
+    method: "POST",
+    pattern: documento.regex,
+    paramNames: documento.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<documentoService.LerDocumentoInput>(ctx.req);
+      const data = await documentoService.lerDocumento(body);
       json(ctx.res, 200, { data });
     }),
   });

@@ -1,68 +1,38 @@
-import { useState } from "react";
-import { DataTable } from "@/components/DataTable";
-import { PageHeader, QueryError } from "@/components/PageHeader";
-import { useDespesasCliente } from "@/api/hooks";
-import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { PageHeader } from "@/components/PageHeader";
+import { DespesasClienteSection } from "@/pages/DespesasClienteSection";
+import { DespesasParceiroSection } from "@/pages/DespesasParceiroSection";
 
 export function DespesasPage() {
-  const [emAberto, setEmAberto] = useState(true);
-  const query = useDespesasCliente({ emAberto });
-
   return (
     <PageHeader
-      title="Débitos do cliente"
-      description="Despesas cobráveis do locatário (multas, pedágio, semanal, etc.)."
-      actions={
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={emAberto}
-            onChange={(e) => setEmAberto(e.target.checked)}
-          />
-          Só em aberto
-        </label>
-      }
+      title="Despesas"
+      description="Débitos cobráveis do locatário e despesas de parceiro (IPVA, seguro, rastreador, etc.)."
     >
-      {query.isError ? (
-        <QueryError
-          message={
-            query.error instanceof LanzaApiError
-              ? query.error.message
-              : "Falha ao listar débitos."
+      <nav className="tabs" aria-label="Tipo de despesa">
+        <NavLink
+          to="/despesas/cliente"
+          className={({ isActive }) =>
+            isActive ? "tabs__link tabs__link--active" : "tabs__link"
           }
-        />
-      ) : null}
+        >
+          Cliente
+        </NavLink>
+        <NavLink
+          to="/despesas/parceiro"
+          className={({ isActive }) =>
+            isActive ? "tabs__link tabs__link--active" : "tabs__link"
+          }
+        >
+          Parceiro
+        </NavLink>
+      </nav>
 
-      <DataTable
-        loading={query.isLoading}
-        rows={query.data?.items ?? []}
-        keyFn={(d) => d.id}
-        columns={[
-          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
-          { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
-          {
-            key: "placa",
-            header: "Placa",
-            render: (d) => formatPlaca(d.placa),
-          },
-          {
-            key: "valor",
-            header: "Valor",
-            className: "num",
-            render: (d) => formatBrl(Number(d.valorMulta) || 0),
-          },
-          {
-            key: "paga",
-            header: "Paga",
-            render: (d) => (
-              <span className={d.paga ? "badge badge--ok" : "badge badge--warn"}>
-                {d.paga ? "Sim" : "Não"}
-              </span>
-            ),
-          },
-        ]}
-      />
+      <Routes>
+        <Route index element={<Navigate to="cliente" replace />} />
+        <Route path="cliente" element={<DespesasClienteSection />} />
+        <Route path="parceiro" element={<DespesasParceiroSection />} />
+      </Routes>
     </PageHeader>
   );
 }

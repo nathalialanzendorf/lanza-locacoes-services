@@ -17,6 +17,7 @@ import {
 } from "../clienteDespesasDb.js";
 import { placasIguais } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
+import { rastreameEspelhoGlobal } from "../rastreameEspelhoConfig.js";
 import {
   fetchAllGastos,
   fetchGastoById,
@@ -492,6 +493,11 @@ export async function pushRecebimentosToRastreame(
     erros: [] as string[],
   };
 
+  if (!rastreameEspelhoGlobal()) {
+    result.erros.push("Espelho Rastreame desativado (LANZA_RASTREAME_ESPELHO / lanza_paths.json)");
+    return result;
+  }
+
   const db = loadClienteDespesasDb();
   const clientes = loadClientes();
   const motoristas = await listMotoristas();
@@ -551,6 +557,7 @@ export async function replicarClienteDespesaNoRastreame(
   reg: ClienteDespesaRegistro,
   opts?: { dryRun?: boolean },
 ): Promise<void> {
+  if (!rastreameEspelhoGlobal()) return;
   if (!isSyncRastreameEligible(reg) && reg.ativo !== false) return;
   const clientes = loadClientes();
   const motoristas = await listMotoristas();

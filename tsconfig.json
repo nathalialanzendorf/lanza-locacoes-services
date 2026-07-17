@@ -9,5 +9,5 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "packages/**/*", "scripts/**/*"]
+  "include": ["src/**/*", "src/*.d.ts", "packages/**/*", "scripts/**/*"]
 }

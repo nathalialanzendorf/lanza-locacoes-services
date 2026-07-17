@@ -16,12 +16,30 @@ export function registerRenegociacaoRoutes(routes: RouteDef[]): void {
     pattern: resumo.regex,
     paramNames: resumo.paramNames,
     handler: routeAsync(async (ctx) => {
-      const motoristaKey = ctx.query.get("motoristaKey");
-      const rastreavelKey = ctx.query.get("rastreavelKey");
-      if (!motoristaKey || !rastreavelKey) {
-        return badRequest(ctx, 'Queries "motoristaKey" e "rastreavelKey" são obrigatórias');
+      const motoristaKey = ctx.query.get("motoristaKey") ?? undefined;
+      const rastreavelKey = ctx.query.get("rastreavelKey") ?? undefined;
+      const clienteId = ctx.query.get("clienteId") ?? undefined;
+      const placa = ctx.query.get("placa") ?? undefined;
+      const apenasVencidosRaw = ctx.query.get("apenasVencidos");
+      const apenasVencidos =
+        apenasVencidosRaw == null || apenasVencidosRaw === ""
+          ? true
+          : ["true", "1", "sim"].includes(apenasVencidosRaw.trim().toLowerCase());
+
+      if (!((motoristaKey && rastreavelKey) || (clienteId && placa))) {
+        return badRequest(
+          ctx,
+          'Informe "motoristaKey" + "rastreavelKey" ou "clienteId" + "placa"',
+        );
       }
-      const data = await renegService.resumoRenegociacao(motoristaKey, rastreavelKey);
+
+      const data = await renegService.resumoRenegociacao({
+        motoristaKey,
+        rastreavelKey,
+        clienteId,
+        placa,
+        apenasVencidos,
+      });
       json(ctx.res, 200, data);
     }),
   });

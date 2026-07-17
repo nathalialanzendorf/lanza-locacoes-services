@@ -13,6 +13,7 @@ import * as prestacaoRel from "../services/relatorios/prestacaoContas.js";
 import type { PrestacaoContasInput } from "../lib-imports.js";
 import { listarEscoposContratosAtivos } from "../services/relatorios/filtro.js";
 import * as infracoesRel from "../services/relatorios/infracoes.js";
+import * as documentos from "../services/documentos.js";
 
 export function registerRelatoriosRoutes(routes: RouteDef[]): void {
   const meta = compileRoute("/api/relatorios/cobrancas/meta");
@@ -69,7 +70,16 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         return;
       }
       const data = cobrancasRel.gerarCobrancas(body);
-      json(ctx.res, 200, { data });
+      const paths = [
+        ...data.arquivos.loteConsolidado,
+        ...data.arquivos.sidecars,
+        ...data.arquivos.canvas,
+      ];
+      const blob = await documentos.espelharArquivosLocais(
+        documentos.filtrarArquivosExistentes(paths),
+        "relatorios/cobrancas",
+      );
+      json(ctx.res, 200, { data, blob });
     }),
   });
 
@@ -81,7 +91,11 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<cobrancasRel.GerarCobrancaPlacaInput>(ctx.req);
       const data = cobrancasRel.gerarCobrancaPlaca(body);
-      json(ctx.res, 200, { data });
+      const blob = await documentos.espelharArquivosLocais(
+        documentos.filtrarArquivosExistentes(data.arquivos),
+        "relatorios/cobrancas",
+      );
+      json(ctx.res, 200, { data, blob });
     }),
   });
 
@@ -97,7 +111,11 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         ...body,
         salvar: salvar ?? body.salvar,
       });
-      json(ctx.res, 200, { data });
+      const blob = await documentos.espelharArquivosLocais(
+        documentos.filtrarArquivosExistentes(data.arquivos),
+        "relatorios/cobrancas",
+      );
+      json(ctx.res, 200, { data, blob });
     }),
   });
 
@@ -117,7 +135,12 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<encerramentoRel.GerarEncerramentoInput>(ctx.req);
       const data = encerramentoRel.gerarEncerramento(body);
-      json(ctx.res, 200, { data });
+      const paths = [data.arquivos?.txt, data.arquivos?.json];
+      const blob = await documentos.espelharArquivosLocais(
+        documentos.filtrarArquivosExistentes(paths),
+        "relatorios/encerramento",
+      );
+      json(ctx.res, 200, { data, blob });
     }),
   });
 
@@ -129,7 +152,15 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<PrestacaoContasInput>(ctx.req);
       const data = prestacaoRel.gerarPrestacaoContas(body);
-      json(ctx.res, 200, { data });
+      const paths = [
+        data.dadosPath,
+        ...data.arquivos.map((a) => a.arquivoTxt),
+      ];
+      const blob = await documentos.espelharArquivosLocais(
+        documentos.filtrarArquivosExistentes(paths),
+        "relatorios/prestacao-contas",
+      );
+      json(ctx.res, 200, { data, blob });
     }),
   });
 }

@@ -23,6 +23,7 @@ export type Cliente = {
   cpf?: string;
   cnh?: string;
   ativo?: boolean;
+  rastreameMotoristaKey?: string | number | null;
   analiseCadastro?: { aprovado?: boolean | null; dataConsulta?: string };
 };
 
@@ -33,6 +34,7 @@ export type Veiculo = {
   ativo?: boolean;
   ufRegistro?: string;
   clienteVinculadoId?: string | null;
+  rastreameRastreavelKey?: string | number | null;
 };
 
 export type Contrato = {
@@ -49,30 +51,223 @@ export type Contrato = {
 export type ClienteDespesa = {
   id: string;
   clienteId?: string;
+  veiculoId?: string;
   placa?: string;
   categoria?: string;
   descricao?: string;
   valorMulta?: number;
   paga?: boolean;
   ativo?: boolean;
+  situacao?: string;
+  autoInfracao?: string;
+  condutorId?: string | null;
+  rastreameId?: string | number | null;
+};
+
+export type AnaliseCadastroItem = {
+  id: string;
+  cpf?: string;
+  nome?: string;
+  dataConsulta?: string;
+  alertaGeral?: boolean;
+  resumo?: string;
+  aprovado?: boolean | null;
+};
+
+export type PagBankPlano = {
+  pagbank: { id: string; valor: number; dataBr: string; descricao: string; nomePagador?: string | null };
+  clienteQuery: string;
+  confianca: string;
+  motivo: string;
+  revisaoManual: boolean;
+  jaBaixado?: boolean;
+  plano: PlanoBaixa;
+};
+
+export type PagBankLote = {
+  intervalo: { initialDate: string; finalDate: string };
+  planos: PagBankPlano[];
+  semMatch: unknown[];
+  totalCreditos?: number;
+};
+
+export type PrestacaoVeiculoInput = {
+  placa: string;
+  ganho?: { valor: number; descricao?: string };
+  devidoMesAnterior?: number;
+  descontoManutencao?: { valor: number; descricao?: string };
+};
+
+export type ParceiroDespesa = {
+  id: string;
+  veiculoId?: string | null;
+  placa?: string;
+  categoria?: string;
+  descricao?: string;
+  data?: string;
+  valor?: number;
+  competencia?: string;
+  baixa?: string;
+};
+
+export type Infracao = {
+  id: string;
+  numeroAuto: string;
+  veiculoId?: string;
+  descricao?: string;
+  dataAutuacao?: string;
+  localInfracao?: string;
+  valor?: number;
+  valorMulta?: number;
+  situacao?: string;
+  status?: string;
+  limiteDefesa?: string;
+  dataLimiteDefesa?: string;
+  quitadaDetran?: boolean;
+  condutorId?: string | null;
+  condutorConfirmado?: boolean;
+  condutorNaoIdentificado?: boolean;
+  debitoParceiroConfirmado?: boolean;
+  revisarManual?: boolean;
+  clienteDespesaId?: string | null;
+  ativo?: boolean;
 };
 
 export type Locacao = {
   id: string;
   tipo?: string;
+  situacao?: string;
   clienteId?: string;
   veiculoId?: string;
   placa?: string;
   inicio?: string;
   fim?: string | null;
+  condutor?: string | null;
+  tipoLocacao?: string | null;
+  observacao?: string | null;
+};
+
+export type CobrancaTipo = {
+  id: string;
+  rotulo: string;
+};
+
+export type CobrancasMeta = {
+  tipos: CobrancaTipo[];
+  modosPlaca: string[];
+  outDirPadrao: string;
+};
+
+export type LinhaPlanoBaixa = {
+  num: number;
+  operacao: string;
+  rastreavel: string;
+  autoInfracao: string | null;
+  patch?: Record<string, unknown>;
+};
+
+export type PlanoBaixa = {
+  cliente: unknown;
+  linhas: LinhaPlanoBaixa[];
+};
+
+export type Parceiro = {
+  id: string;
+  nome: string;
+};
+
+export type VinculoParceiro = {
+  id: string;
+  veiculoId: string;
+  parceiroId: string;
+};
+
+export type RastreameEspelhoConfig = {
+  ativo: boolean;
+  origem: "env" | "config" | "default";
+  editavelViaApi: boolean;
 };
 
 export type Health = {
-  status: string;
+  status: "ok" | "degraded";
   service: string;
   version: string;
+  apiUrl?: string;
+  frontendUrl?: string;
+  database?: {
+    backend: string;
+    postgres?: { ok: boolean; error?: string };
+  };
+  rastreameEspelho?: RastreameEspelhoConfig;
 };
 
 export type ApiError = {
   error: string;
+};
+
+export type SyncCatalogEntry = {
+  id: string;
+  rotulo: string;
+  destino: string;
+  interativo: boolean;
+  nota?: string;
+};
+
+export type SyncMeta = {
+  syncs: SyncCatalogEntry[];
+  ordemCompleto: string[];
+};
+
+export type SyncJob = {
+  id: string;
+  sync: string;
+  status: "pending" | "running" | "completed" | "failed";
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  input?: unknown;
+  result?: unknown;
+  error?: string;
+};
+
+export type RenegociacaoDebito = {
+  id: string | number;
+  info: string;
+  total: number;
+  data?: string;
+  tipo?: string;
+};
+
+export type RenegociacaoResumo = {
+  motoristaKey: string;
+  rastreavelKey: string;
+  clienteId?: string;
+  placa?: string;
+  total: number;
+  soma: number;
+  debitos: RenegociacaoDebito[];
+  gastosIds: Array<string | number>;
+  apenasVencidos?: boolean;
+};
+
+export type RenegociacaoParcela = {
+  numero: number;
+  totalParcelas: number;
+  valor: number;
+  data: string;
+};
+
+export type RenegociacaoInput = {
+  negociacaoCodigo: string;
+  gastosIds: Array<string | number>;
+  motoristaKey: string;
+  rastreavelKey: string;
+  parcelas: RenegociacaoParcela[];
+};
+
+export type RenegociacaoPreview = {
+  debitos: Array<{ id: string | number; total: number; info: string }>;
+  totalDebitos: number;
+  parcelas: RenegociacaoParcela[];
+  validacao: { ok: boolean; soma: number; diff: number };
 };

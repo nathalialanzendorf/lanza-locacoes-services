@@ -8,6 +8,7 @@ import path from "node:path";
 import { listarMarcas, resolverFipeVeiculo } from "../fipe/index.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
+import { rastreameEspelhoGlobal } from "../rastreameEspelhoConfig.js";
 import {
   aplicarFipeVeiculo,
   editarVeiculo,
@@ -340,6 +341,11 @@ export async function pushRastreaveisToRastreame(
     erros: [] as string[],
   };
 
+  if (!rastreameEspelhoGlobal()) {
+    result.erros.push("Espelho Rastreame desativado (LANZA_RASTREAME_ESPELHO / lanza_paths.json)");
+    return result;
+  }
+
   const db = loadVeiculosDb();
   const parceiros = loadParceiroPorVeiculo();
   const rastreaveis = await fetchAllRastreaveis();
@@ -441,6 +447,7 @@ export async function replicarVeiculoNoRastreame(
   v: VeiculoRegistro,
   opts?: { dryRun?: boolean },
 ): Promise<void> {
+  if (!rastreameEspelhoGlobal()) return;
   if (!isSyncRastreameEligible(v) && v.ativo !== false) return;
   const parceiros = loadParceiroPorVeiculo();
   const rastreaveis = await fetchAllRastreaveis();

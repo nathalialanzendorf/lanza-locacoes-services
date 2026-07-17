@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import pdfParse from "pdf-parse";
-
+import { extrairTextoDocumento, parseCnhText } from "./documentosParse.js";
 import { extrairLocatarioDocx } from "./contratoExtrair.js";
 import { docxPlainText } from "./docxPlain.js";
 import { defaultContratosDir, readLanzaPaths } from "./lanzaPaths.js";
@@ -159,31 +158,24 @@ export async function parseCnhArquivo(filePath: string): Promise<CnhTextoParse |
   const ext = path.extname(filePath).toLowerCase();
   if (ext !== ".pdf") return null;
 
-  let text = "";
+  let buffer: Buffer;
   try {
-    const data = await pdfParse(fs.readFileSync(filePath));
-    text = data.text || "";
+    buffer = fs.readFileSync(filePath);
   } catch {
     return null;
   }
 
+  const { text } = await extrairTextoDocumento(buffer, filePath);
   if (text.length < 80) return null;
 
-  const out: CnhTextoParse = { cnh: {} };
-  const cpfM = text.match(/\b(\d{3}\.\d{3}\.\d{3}-\d{2})\b/);
-  if (cpfM) out.cpf = cpfM[1];
+  const parsed = parseCnhText(text);
+  if (!parsed.cpf && !parsed.cnh?.numeroRegistro) return null;
 
-  const regM = text.match(/(?:REGISTRO|N[°º]\s*REGISTRO)\s*[:\s]*(\d{11})/i);
-  if (regM) out.cnh!.numeroRegistro = regM[1];
-
-  const catM = text.match(/\bCategoria\s*[:\s]*([ABCDE]{1,2})\b/i);
-  if (catM) out.cnh!.categoria = catM[1]!.toUpperCase();
-
-  const valM = text.match(/Validade\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
-  if (valM) out.cnh!.validade = valM[1];
-
-  if (!out.cpf && !out.cnh?.numeroRegistro) return null;
-  return out;
+  return {
+    nome: parsed.nome,
+    cpf: parsed.cpf,
+    cnh: parsed.cnh,
+  };
 }
 
 export type ClienteFromCnh = Record<string, unknown> & {

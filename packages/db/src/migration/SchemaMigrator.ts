@@ -1,24 +1,30 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import type { PostgresPool } from "../client/PostgresPool.js";
-import { INITIAL_SCHEMA_SQL } from "../paths.js";
+import { SQL_DIR } from "../paths.js";
 
 /**
- * Aplica migrações SQL do pacote (schema `lanza`, tabela `json_stores`).
+ * Aplica migrações SQL do pacote (ficheiros `packages/db/sql/*.sql` por ordem).
  */
 export class SchemaMigrator {
-  constructor(
-    private readonly pool: PostgresPool,
-    private readonly schemaPath: string = INITIAL_SCHEMA_SQL,
-  ) {}
+  constructor(private readonly pool: PostgresPool) {}
 
   async migrate(dryRun = false): Promise<void> {
-    const sql = fs.readFileSync(this.schemaPath, "utf8");
-    if (dryRun) {
-      console.log(`[dry-run] Executaria schema (${this.schemaPath}, ${sql.length} bytes)`);
-      return;
+    const files = fs
+      .readdirSync(SQL_DIR)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
+
+    for (const file of files) {
+      const schemaPath = path.join(SQL_DIR, file);
+      const sql = fs.readFileSync(schemaPath, "utf8");
+      if (dryRun) {
+        console.log(`[dry-run] Executaria ${file} (${schemaPath}, ${sql.length} bytes)`);
+        continue;
+      }
+      await this.pool.query(sql);
     }
-    await this.pool.query(sql);
   }
 }
 

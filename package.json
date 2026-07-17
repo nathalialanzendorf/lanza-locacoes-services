@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:api": "tsc --noEmit -p packages/api",
     "typecheck:db": "tsc --noEmit -p packages/db",
+    "typecheck:storage": "tsc --noEmit -p packages/storage",
     "db:check": "npm run check -w @lanza/db",
     "db:migrate": "npm run migrate -w @lanza/db",
     "api:dev": "npm run dev -w @lanza/api",
@@ -22,8 +23,9 @@
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.11",
     "@types/node": "^22.10.0",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/pg": "^8.11.11",
     "@types/ws": "^8.18.1",
     "playwright-core": "^1.61.1",
     "tsx": "^4.19.2",
@@ -31,9 +33,11 @@
     "ws": "^8.21.0"
   },
   "dependencies": {
-    "@lanza/db": "workspace:*",
     "@aws-sdk/credential-providers": "^3.758.0",
     "@aws-sdk/rds-signer": "^3.758.0",
+    "@lanza/db": "workspace:*",
+    "@lanza/storage": "file:packages/storage",
+    "@vercel/blob": "^0.27.0",
     "@vercel/functions": "^2.0.0",
     "@vercel/oidc-aws-credentials-provider": "^3.3.0",
     "@xmldom/xmldom": "^0.8.10",
