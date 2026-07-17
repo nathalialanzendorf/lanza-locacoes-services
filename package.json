@@ -29,7 +29,6 @@
     "@types/ws": "^8.18.1",
     "playwright-core": "^1.61.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
     "ws": "^8.21.0"
   },
   "dependencies": {
@@ -41,8 +40,10 @@
     "@vercel/functions": "^2.0.0",
     "@vercel/oidc-aws-credentials-provider": "^3.3.0",
     "@xmldom/xmldom": "^0.8.10",
+    "jose": "^5.10.0",
     "pdf-parse": "^1.1.1",
     "pg": "^8.14.1",
-    "pizzip": "^3.1.7"
+    "pizzip": "^3.1.7",
+    "typescript": "^5.7.2"
   }
 }
