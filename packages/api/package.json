@@ -8,7 +8,8 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@lanza/db": "file:../db",
-    "@lanza/storage": "file:../storage"
+    "@lanza/db": "workspace:*",
+    "@lanza/storage": "workspace:*",
+    "jose": "^5.10.0"
   }
 }
