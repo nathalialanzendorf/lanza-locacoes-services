@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -125,11 +126,11 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
             </select>
           </Field>
         ) : null}
-        <Field label="Início" hint="DD/MM/AAAA">
-          <input className="input" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+        <Field label="Início">
+          <DateInput value={inicio} onChange={setInicio} required disabled={loading} />
         </Field>
-        <Field label="Fim (opcional)" hint="DD/MM/AAAA">
-          <input className="input" value={fim} onChange={(e) => setFim(e.target.value)} />
+        <Field label="Fim (opcional)">
+          <DateInput value={fim} onChange={setFim} disabled={loading} />
         </Field>
         <Field label="Cliente">
           <ClienteSelect

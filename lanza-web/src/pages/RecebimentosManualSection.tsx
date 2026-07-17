@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Field, FormCard } from "@/components/FormCard";
+import { DateInput } from "@/components/DateInput";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -82,8 +83,8 @@ export function RecebimentosManualSection() {
         <Field label="Valor recebido (R$)">
           <input className="input" type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} required />
         </Field>
-        <Field label="Data do crédito" hint="DD/MM/AAAA">
-          <input className="input" value={dataBr} onChange={(e) => setDataBr(e.target.value)} required />
+        <Field label="Data do crédito">
+          <DateInput value={dataBr} onChange={setDataBr} required disabled={loadingPlano} />
         </Field>
         <Field label="Veículo (opcional)">
           <VeiculoSelect

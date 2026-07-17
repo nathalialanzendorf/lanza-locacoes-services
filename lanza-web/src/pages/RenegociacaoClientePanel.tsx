@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Field, FormCard } from "@/components/FormCard";
+import { DateInput } from "@/components/DateInput";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -322,13 +323,8 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
                   onChange={(e) => setNumParcelas(e.target.value)}
                 />
               </Field>
-              <Field label="1ª parcela" hint="YYYY-MM-DD">
-                <input
-                  className="input"
-                  type="date"
-                  value={primeiraParcela}
-                  onChange={(e) => setPrimeiraParcela(e.target.value)}
-                />
+              <Field label="1ª parcela">
+                <DateInput value={primeiraParcela} onChange={setPrimeiraParcela} format="iso" />
               </Field>
               <Field label="Intervalo (dias)">
                 <input

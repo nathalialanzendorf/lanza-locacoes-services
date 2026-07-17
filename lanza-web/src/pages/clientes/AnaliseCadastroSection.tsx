@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/DataTable";
 import { Field, FormCard } from "@/components/FormCard";
+import { DateInput } from "@/components/DateInput";
 import { ResultPanel } from "@/components/ResultPanel";
 import { RowDecisaoActions } from "@/components/RowDecisaoActions";
 import { lanzaApi } from "@/api/endpoints";
@@ -68,8 +69,8 @@ export function AnaliseCadastroSection() {
         <Field label="Nome completo">
           <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
         </Field>
-        <Field label="Nascimento" hint="DD/MM/AAAA">
-          <input className="input" value={nascimento} onChange={(e) => setNascimento(e.target.value)} required />
+        <Field label="Nascimento">
+          <DateInput value={nascimento} onChange={setNascimento} required disabled={loading} />
         </Field>
         <Field label="Base legal (LGPD)">
           <input className="input" value={baseLegal} onChange={(e) => setBaseLegal(e.target.value)} required />

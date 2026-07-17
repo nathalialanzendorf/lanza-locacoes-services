@@ -482,6 +482,15 @@ code {
   resize: vertical;
 }
 
+.input--date {
+  min-height: 2.5rem;
+}
+
+.input--date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+}
+
 .form-card {
   background: var(--surface);
   border: 1px solid var(--border);

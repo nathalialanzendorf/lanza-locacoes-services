@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
+import { DateInput } from "@/components/DateInput";
 import { DocUploadField } from "@/components/DocUploadField";
 import { Field, FormCard, FormSection } from "@/components/FormCard";
 import { lanzaApi } from "@/api/endpoints";
@@ -273,12 +274,7 @@ export function ClientesCadastroSection({ clienteId }: Props) {
               <input className="input" value={cnhCategoria} onChange={(e) => setCnhCategoria(e.target.value)} />
             </Field>
             <Field label="Validade">
-              <input
-                className="input"
-                value={cnhValidade}
-                onChange={(e) => setCnhValidade(e.target.value)}
-                placeholder="DD/MM/AAAA"
-              />
+              <DateInput value={cnhValidade} onChange={setCnhValidade} disabled={loading} />
             </Field>
           </div>
         </FormSection>

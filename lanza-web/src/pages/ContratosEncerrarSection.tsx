@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CadastroBackLink } from "@/components/CadastroBackLink";
+import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -39,8 +40,8 @@ export function ContratosEncerrarSection() {
         <Field label="ID ou pasta do contrato">
           <input className="input" value={idOuPasta} onChange={(e) => setIdOuPasta(e.target.value)} required />
         </Field>
-        <Field label="Data encerramento" hint="DD/MM/AAAA">
-          <input className="input" value={dataEncerramento} onChange={(e) => setDataEncerramento(e.target.value)} required />
+        <Field label="Data encerramento">
+          <DateInput value={dataEncerramento} onChange={setDataEncerramento} required disabled={loading} />
         </Field>
         <Field label="Motivo">
           <select className="select" value={motivo} onChange={(e) => setMotivo(e.target.value)}>

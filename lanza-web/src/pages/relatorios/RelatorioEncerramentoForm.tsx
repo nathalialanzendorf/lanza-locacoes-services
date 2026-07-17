@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Field, FormCard } from "@/components/FormCard";
+import { DateInput } from "@/components/DateInput";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -105,13 +106,8 @@ export function RelatorioEncerramentoForm() {
               required
             />
           </Field>
-          <Field label="Data de encerramento" hint="DD/MM/AAAA">
-            <input
-              className="input"
-              value={dataEncerramento}
-              onChange={(e) => setDataEncerramento(e.target.value)}
-              required
-            />
+          <Field label="Data de encerramento">
+            <DateInput value={dataEncerramento} onChange={setDataEncerramento} required disabled={loading} />
           </Field>
           <Field label="Semanas pagas (opcional)">
             <input

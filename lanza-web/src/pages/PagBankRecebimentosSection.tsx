@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Field, FormCard } from "@/components/FormCard";
+import { DateInput } from "@/components/DateInput";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -80,11 +81,11 @@ export function PagBankRecebimentosSection() {
         submitLabel="Buscar créditos e montar planos"
         error={error}
       >
-        <Field label="Início" hint="DD/MM/AAAA (opcional)">
-          <input className="input" value={inicio} onChange={(e) => setInicio(e.target.value)} />
+        <Field label="Início">
+          <DateInput value={inicio} onChange={setInicio} disabled={loading} />
         </Field>
-        <Field label="Fim" hint="DD/MM/AAAA (opcional)">
-          <input className="input" value={fim} onChange={(e) => setFim(e.target.value)} />
+        <Field label="Fim">
+          <DateInput value={fim} onChange={setFim} disabled={loading} />
         </Field>
       </FormCard>
 
