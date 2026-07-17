@@ -14,6 +14,7 @@
     "typecheck:api": "tsc --noEmit -p packages/api",
     "typecheck:db": "tsc --noEmit -p packages/db",
     "typecheck:storage": "tsc --noEmit -p packages/storage",
+    "verify:vercel": "node scripts/verify-vercel-deploy.mjs",
     "db:check": "npm run check -w @lanza/db",
     "db:migrate": "npm run migrate -w @lanza/db",
     "api:dev": "npm run dev -w @lanza/api",
