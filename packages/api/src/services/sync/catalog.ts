@@ -1,6 +1,7 @@
 export type SyncId =
   | "motoristas"
   | "rastreaveis"
+  | "rastreaveis-enviar"
   | "fipe"
   | "recebimentos"
   | "pedagios"
@@ -17,6 +18,7 @@ export const SYNC_IDS: readonly SyncId[] = [
   "detran-rs",
   "motoristas",
   "rastreaveis",
+  "rastreaveis-enviar",
   "fipe",
   "recebimentos",
   "seguro",
@@ -28,11 +30,12 @@ export const SYNC_COMPLETO_ORDEM: readonly SyncId[] = [
   "infracoes",
   "ipva-licenciamento",
   "detran-rs",
-  "motoristas",
   "rastreaveis",
   "fipe",
-  "recebimentos",
   "seguro",
+  "motoristas",
+  "rastreaveis-enviar",
+  "recebimentos",
   "manutencao",
 ];
 
@@ -82,18 +85,27 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "motoristas",
-    rotulo: "Motoristas Rastreame",
+    rotulo: "Clientes → Rastreame (enviar)",
     destino: "clientes.json → Rastreame",
     interativo: false,
     direcao: "enviar",
+    nota: "Apenas envio — não busca dados do Rastreame.",
   },
   {
     id: "rastreaveis",
-    rotulo: "Rastreáveis Rastreame",
+    rotulo: "Rastreáveis Rastreame (buscar)",
     destino: "Rastreame → veiculos.json",
     interativo: false,
     direcao: "buscar",
-    nota: "Único sync Rastreame que puxa dados (pull)",
+    nota: "Pull de rastreáveis. Não inclui FIPE — use o sync FIPE à parte.",
+  },
+  {
+    id: "rastreaveis-enviar",
+    rotulo: "Rastreáveis → Rastreame (enviar)",
+    destino: "veiculos.json → Rastreame",
+    interativo: false,
+    direcao: "enviar",
+    nota: "Push de veículos ativos. Inativos não são enviados ao Rastreame.",
   },
   {
     id: "fipe",
@@ -105,10 +117,11 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "recebimentos",
-    rotulo: "Gastos gerais Rastreame",
+    rotulo: "Gastos gerais → Rastreame (enviar)",
     destino: "cliente-despesas.json → Rastreame",
     interativo: false,
     direcao: "enviar",
+    nota: "Apenas envio — não busca gastos do Rastreame.",
   },
   {
     id: "seguro",
@@ -120,18 +133,22 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "manutencao",
-    rotulo: "Manutenção parceiro → Rastreame",
-    destino: "Rastreame (tela Manutenção)",
+    rotulo: "Manutenção → Rastreame (enviar)",
+    destino: "parceiro-despesas.json → Rastreame (Manutenção)",
     interativo: false,
     direcao: "enviar",
+    nota: "Apenas envio de despesas de parceiro.",
   },
 ];
 
 export function normalizarSyncId(raw: string): SyncId | null {
   const k = raw.trim().toLowerCase();
   if (k === "gastos-gerais" || k === "sync-recebimentos") return "recebimentos";
-  if (k === "sync-motoristas") return "motoristas";
+  if (k === "sync-cliente" || k === "sync-motoristas") return "motoristas";
   if (k === "sync-rastreaveis") return "rastreaveis";
+  if (k === "rastreaveis-enviar" || k === "sync-rastreaveis-push" || k === "rastreaveis-push") {
+    return "rastreaveis-enviar";
+  }
   if (k === "sync-fipe" || k === "atualizar-fipe-veiculos") return "fipe";
   if (k === "sync-pedagios") return "pedagios";
   if (k === "sync-infracoes") return "infracoes";

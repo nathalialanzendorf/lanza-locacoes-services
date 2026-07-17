@@ -1,4 +1,17 @@
-import type { SyncCatalogEntry } from "@/api/types";
+import type { SyncCatalogEntry, SyncDirecao } from "@/api/types";
+
+/** Syncs Rastreame que só enviam (fallback se a API não enviar `direcao`). */
+const ENVIAR_SYNC_IDS = new Set([
+  "motoristas",
+  "rastreaveis-enviar",
+  "recebimentos",
+  "manutencao",
+]);
+
+export function direcaoEfetiva(sync: SyncCatalogEntry): SyncDirecao {
+  if (sync.direcao === "enviar" || sync.direcao === "buscar") return sync.direcao;
+  return ENVIAR_SYNC_IDS.has(sync.id) ? "enviar" : "buscar";
+}
 
 const BUSCAR_ORDEM = [
   "pedagios",
@@ -10,14 +23,14 @@ const BUSCAR_ORDEM = [
   "seguro",
 ] as const;
 
-const ENVIAR_ORDEM = ["motoristas", "recebimentos", "manutencao"] as const;
+const ENVIAR_ORDEM = ["motoristas", "rastreaveis-enviar", "recebimentos", "manutencao"] as const;
 
 export function ordenarSyncsPorDirecao(
   syncs: SyncCatalogEntry[],
   direcao: "buscar" | "enviar",
 ): SyncCatalogEntry[] {
   const ordem = direcao === "buscar" ? BUSCAR_ORDEM : ENVIAR_ORDEM;
-  const filtrados = syncs.filter((s) => (s.direcao ?? "buscar") === direcao);
+  const filtrados = syncs.filter((s) => direcaoEfetiva(s) === direcao);
   const map = new Map(filtrados.map((s) => [s.id, s]));
   const ordered: SyncCatalogEntry[] = [];
   for (const id of ordem) {

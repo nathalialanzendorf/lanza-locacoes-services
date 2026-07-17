@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
@@ -62,9 +61,6 @@ export function DespesasClienteListSection() {
           <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
           Só em aberto
         </label>
-        <Link to="/despesas/cliente/renegociacao" className="btn btn--ghost btn--sm">
-          Renegociar débitos
-        </Link>
         {!query.isLoading ? (
           <span className="badge badge--muted">
             {query.data?.total ?? 0} lançamento{(query.data?.total ?? 0) === 1 ? "" : "s"} · {formatBrl(total)}

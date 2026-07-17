@@ -98,8 +98,12 @@ export type SyncInput = SyncBaseOpts &
   SyncManutencaoOpts;
 
 function aplicarDirecaoSync(sync: SyncId, input: SyncInput): SyncInput {
-  if (input.pullOnly === true || input.pushOnly === true) return input;
   const d = syncDirecaoDefaults(sync);
+  // Syncs Rastreame de envio: sempre push-only, mesmo se o cliente pedir pull.
+  if (d.pushOnly && !d.pullOnly) {
+    return { ...input, pullOnly: false, pushOnly: true };
+  }
+  if (input.pullOnly === true || input.pushOnly === true) return input;
   return { ...input, ...d };
 }
 
@@ -469,6 +473,8 @@ export async function executarSync(syncRaw: string, input: SyncInput = {}) {
     case "motoristas":
       return { sync, ...(await runMotoristas(opts)) };
     case "rastreaveis":
+      return { sync, ...(await runRastreaveis(opts)) };
+    case "rastreaveis-enviar":
       return { sync, ...(await runRastreaveis(opts)) };
     case "fipe":
       return { sync, ...(await runFipe(opts)) };

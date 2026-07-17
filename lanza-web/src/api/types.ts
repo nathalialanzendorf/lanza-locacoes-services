@@ -6,6 +6,32 @@ export type Resumo = {
   despesasParceiro: { emAberto: number; valorEmAberto: number };
   infracoes: { emAberto: number; semCliente: number; semCondutor?: number };
   locacoes: { abertas: number };
+  recebimentos?: DashboardRecebimentos;
+};
+
+export type DashboardRecebimentoLinha = {
+  clienteId: string | null;
+  clienteNome: string | null;
+  placa: string;
+  valor: number;
+  vencimentoBr?: string | null;
+  vencimentosBr?: string[];
+  diasAtraso?: number | null;
+};
+
+export type DashboardRecebimentosTotais = {
+  venceHoje: number;
+  atrasado: number;
+  semanal: number;
+  caucao: number;
+  renegociacao: number;
+};
+
+export type DashboardRecebimentos = {
+  dataReferenciaBr: string;
+  venceHoje: DashboardRecebimentoLinha[];
+  atrasados: DashboardRecebimentoLinha[];
+  totais: DashboardRecebimentosTotais;
 };
 
 export type ListEnvelope<T> = {

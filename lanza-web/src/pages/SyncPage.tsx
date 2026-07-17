@@ -12,6 +12,7 @@ import type { SyncCatalogEntry, SyncDirecao, SyncJob } from "@/api/types";
 const SKILL_ALIASES: Record<string, string> = {
   motoristas: "sync-cliente",
   rastreaveis: "sync-veículo",
+  "rastreaveis-enviar": "sync-veículo (enviar)",
   fipe: "sync-fipe",
   infracoes: "sync-infracoes",
   "ipva-licenciamento": "sync-ipva-licenciamento",
@@ -229,7 +230,7 @@ export function SyncPage() {
         <>
           <SyncSection
             titulo="Buscar dados"
-            descricao="Puxa informações para o database local (DETRAN, pedágio, FIPE, seguro). Rastreáveis: pull do Rastreame."
+            descricao="Puxa informações para o database local (DETRAN, pedágio, FIPE). Rastreáveis: pull do Rastreame (sem FIPE)."
             syncs={syncsBuscar}
             direcao="buscar"
             runningId={runningId}
@@ -237,7 +238,7 @@ export function SyncPage() {
           />
           <SyncSection
             titulo="Enviar dados"
-            descricao="Espelha o database local no Rastreame (motoristas, gastos gerais, manutenção)."
+            descricao="Espelha o database local no Rastreame (motoristas, rastreáveis, gastos gerais, manutenção)."
             syncs={syncsEnviar}
             direcao="enviar"
             runningId={runningId}

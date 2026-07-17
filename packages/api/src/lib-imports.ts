@@ -128,6 +128,13 @@ export {
   jurosMultaDiario,
 } from "../../../src/lib/pagamentoSemanalCobranca.js";
 
+export {
+  obterDashboardRecebimentos,
+  type DashboardRecebimentos,
+  type DashboardRecebimentoLinha,
+  type DashboardRecebimentosTotais,
+} from "../../../src/lib/dashboardRecebimentos.js";
+
 export { compararDataBrAsc } from "../../../src/lib/contratoExtrair.js";
 
 export { dataVencimentoSemanalBr } from "../../../src/lib/pagamentoSemanal.js";

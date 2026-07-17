@@ -9,6 +9,7 @@ import {
   loadLocacoesDb,
   loadParceiroDespesasDb,
   loadVeiculosDb,
+  obterDashboardRecebimentos,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -75,5 +76,6 @@ export function obterResumo() {
       semCondutor: infracoesSemCliente.length,
     },
     locacoes: { abertas: locacoesAbertas.length },
+    recebimentos: obterDashboardRecebimentos(),
   };
 }

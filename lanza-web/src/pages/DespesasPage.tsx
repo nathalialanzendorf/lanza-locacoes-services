@@ -1,5 +1,6 @@
-import { NavLink, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
+import { PageTabs } from "@/components/PageTabs";
 import { DespesasClienteListSection } from "@/pages/despesas/DespesasClienteListSection";
 import { DespesaClienteCadastroSection } from "@/pages/despesas/DespesaClienteCadastroSection";
 import { DespesaClienteRenegociacaoSection } from "@/pages/despesas/DespesaClienteRenegociacaoSection";
@@ -11,27 +12,23 @@ export function DespesasPage() {
   return (
     <PageHeader
       title="Despesas"
-      description="Débitos cobráveis do locatário e despesas de parceiro (IPVA, seguro, rastreador, etc.)."
+      description="Débitos do locatário, renegociação no Rastreame e despesas de parceiro."
     >
-      <nav className="tabs" aria-label="Tipo de despesa">
-        <NavLink
-          to="/despesas/cliente"
-          className={({ isActive }) => (isActive ? "tabs__link tabs__link--active" : "tabs__link")}
-        >
-          Cliente
-        </NavLink>
-        <NavLink
-          to="/despesas/parceiro"
-          className={({ isActive }) => (isActive ? "tabs__link tabs__link--active" : "tabs__link")}
-        >
-          Parceiro
-        </NavLink>
-      </nav>
+      <PageTabs
+        ariaLabel="Despesas"
+        tabs={[
+          { to: "/despesas/cliente", label: "Cliente" },
+          { to: "/despesas/renegociacao", label: "Renegociar débitos", end: true },
+          { to: "/despesas/parceiro", label: "Parceiro" },
+        ]}
+      />
 
       <Routes>
         <Route index element={<Navigate to="cliente" replace />} />
         <Route path="cliente/*" element={<DespesasClienteRoutes />} />
+        <Route path="renegociacao" element={<DespesaClienteRenegociacaoSection />} />
         <Route path="parceiro/*" element={<DespesasParceiroRoutes />} />
+        <Route path="cliente/renegociacao" element={<Navigate to="/despesas/renegociacao" replace />} />
       </Routes>
     </PageHeader>
   );
@@ -42,7 +39,6 @@ function DespesasClienteRoutes() {
     <Routes>
       <Route index element={<DespesasClienteListSection />} />
       <Route path="novo" element={<DespesaClienteCadastroSection />} />
-      <Route path="renegociacao" element={<DespesaClienteRenegociacaoSection />} />
       <Route path=":id/editar" element={<DespesaClienteCadastroRoute />} />
       <Route path="*" element={<Navigate to="/despesas/cliente" replace />} />
     </Routes>
