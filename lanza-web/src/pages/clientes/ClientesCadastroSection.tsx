@@ -43,7 +43,7 @@ export function ClientesCadastroSection({ clienteId }: Props) {
   const [cnhNumero, setCnhNumero] = useState("");
   const [cnhCategoria, setCnhCategoria] = useState("");
   const [cnhValidade, setCnhValidade] = useState("");
-  const [contato, setContato] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [endereco, setEndereco] = useState<EnderecoForm>(enderecoVazio);
   const [documentosLidos, setDocumentosLidos] = useState(false);
   const [carregando, setCarregando] = useState(editando);
@@ -53,8 +53,8 @@ export function ClientesCadastroSection({ clienteId }: Props) {
   function popularFormulario(c: Record<string, unknown>) {
     if (typeof c.nome === "string") setNome(c.nome);
     if (typeof c.cpf === "string") setCpf(c.cpf);
-    const cont = c.contato ?? c.telefone;
-    if (typeof cont === "string") setContato(cont);
+    const tel = c.telefone ?? c.contato;
+    if (typeof tel === "string") setTelefone(tel);
 
     const cnh = c.cnh;
     if (cnh && typeof cnh === "object" && !Array.isArray(cnh)) {
@@ -100,9 +100,7 @@ export function ClientesCadastroSection({ clienteId }: Props) {
       setNome(campos.titular.trim());
     }
     const tel = campos.telefone;
-    const email = campos.email;
-    if (typeof tel === "string" && tel.trim()) setContato(tel.trim());
-    else if (typeof email === "string" && email.trim()) setContato(email.trim());
+    if (typeof tel === "string" && tel.trim()) setTelefone(tel.trim());
 
     const end = campos.endereco as Record<string, string | null | undefined> | undefined;
     if (!end) return;
@@ -177,8 +175,8 @@ export function ClientesCadastroSection({ clienteId }: Props) {
         nome: nome.trim(),
         cpf: cpf.trim() || undefined,
         cnh: cnhPayload,
-        contato: contato.trim() || undefined,
-        telefone: contato.trim() || undefined,
+        contato: telefone.trim() || undefined,
+        telefone: telefone.trim() || undefined,
         endereco: enderecoPayload,
         ...(editando
           ? {}
@@ -259,8 +257,16 @@ export function ClientesCadastroSection({ clienteId }: Props) {
             <Field label="CPF">
               <input className="input" value={cpf} onChange={(e) => setCpf(e.target.value)} />
             </Field>
-            <Field label="Contato (telefone ou e-mail)" span="wide">
-              <input className="input" value={contato} onChange={(e) => setContato(e.target.value)} />
+            <Field label="Telefone" span="wide">
+              <input
+                className="input"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                placeholder="(00) 00000-0000"
+              />
             </Field>
           </div>
         </FormSection>
