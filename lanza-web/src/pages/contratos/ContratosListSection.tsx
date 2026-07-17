@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -11,6 +12,8 @@ import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca } from "@/lib/format";
 import type { Contrato } from "@/api/types";
+
+type FiltroStatus = "ativo" | "encerrado" | "todos";
 
 function terminoContrato(contrato: Contrato): string {
   if (contrato.dataEncerramento?.trim()) return contrato.dataEncerramento;
@@ -28,12 +31,21 @@ function veiculoUuid(contrato: Contrato, placaParaId: Map<string, string>): stri
 
 export function ContratosListSection() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState<"ativo" | "encerrado" | "">("ativo");
+  const [status, setStatus] = useState<FiltroStatus>("ativo");
+  const [clienteId, setClienteId] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const query = useContratos({ status: status || undefined });
+  const query = useContratos({
+    status: status === "todos" ? undefined : status,
+    clienteId: clienteId || undefined,
+    veiculoId: veiculoId || undefined,
+  });
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
   const veiculosQuery = useVeiculos();
+
+  const rows = query.data?.items ?? [];
+  const temFiltro = status !== "ativo" || Boolean(clienteId || veiculoId);
 
   const parceiroPorVeiculoId = useMemo(() => {
     const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
@@ -54,9 +66,9 @@ export function ContratosListSection() {
   }, [veiculosQuery.data]);
 
   function parceiroDoContrato(contrato: Contrato): string {
-    const veiculoId = veiculoUuid(contrato, placaParaVeiculoId);
-    if (!veiculoId) return "—";
-    return parceiroPorVeiculoId.get(veiculoId) ?? "—";
+    const id = veiculoUuid(contrato, placaParaVeiculoId);
+    if (!id) return "—";
+    return parceiroPorVeiculoId.get(id) ?? "—";
   }
 
   async function excluir(contrato: Contrato) {
@@ -79,11 +91,28 @@ export function ContratosListSection() {
   return (
     <>
       <ListToolbar addTo="/contratos/cadastrar">
-        <select className="select" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+        <select
+          className="select"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as FiltroStatus)}
+          aria-label="Status"
+        >
           <option value="ativo">Ativos</option>
           <option value="encerrado">Encerrados</option>
-          <option value="">Todos</option>
+          <option value="todos">Todos</option>
         </select>
+        <VeiculoSelect
+          value={veiculoId}
+          onChange={setVeiculoId}
+          valueField="id"
+          emptyLabel="Todos os veículos"
+        />
+        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+        {!query.isLoading ? (
+          <span className="badge badge--muted">
+            {rows.length} contrato{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
         <Link to="/contratos/encerrar" className="btn btn--ghost btn--sm">
           Encerrar contrato
         </Link>
@@ -95,8 +124,9 @@ export function ContratosListSection() {
       ) : null}
       <DataTable
         loading={query.isLoading || loadingExtra}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(c) => c.id}
+        emptyMessage={temFiltro ? "Nenhum contrato corresponde aos filtros." : "Nenhum contrato registado."}
         columns={[
           {
             key: "placa",

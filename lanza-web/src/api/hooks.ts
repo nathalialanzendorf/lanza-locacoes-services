@@ -35,6 +35,8 @@ export function useVeiculos(params?: { ativo?: boolean; placa?: string }) {
 export function useContratos(params?: {
   status?: "ativo" | "encerrado";
   placa?: string;
+  clienteId?: string;
+  veiculoId?: string;
 }) {
   return useQuery({
     queryKey: ["contratos", params],
