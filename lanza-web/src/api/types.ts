@@ -68,6 +68,8 @@ export type Veiculo = {
   id: string;
   placa?: string;
   marcaModelo?: string;
+  marca?: string;
+  modelo?: string;
   anoModelo?: string;
   chassi?: string;
   renavam?: string;

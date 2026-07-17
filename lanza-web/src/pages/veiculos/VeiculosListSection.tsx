@@ -11,27 +11,75 @@ import { LanzaApiError } from "@/api/client";
 import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
 import type { Veiculo } from "@/api/types";
 
+type Filtro = "ativos" | "inativos" | "todos";
+
+function normPlaca(placa?: string | null): string {
+  return (placa ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function marcaDoVeiculo(veiculo: Veiculo): string {
+  if (veiculo.marca?.trim()) return veiculo.marca.trim();
+  const mm = veiculo.marcaModelo ?? "";
+  const slash = mm.indexOf("/");
+  return slash >= 0 ? mm.slice(0, slash).trim() : mm.trim();
+}
+
+function modeloDoVeiculo(veiculo: Veiculo): string {
+  if (veiculo.modelo?.trim()) return veiculo.modelo.trim();
+  const mm = veiculo.marcaModelo ?? "";
+  const slash = mm.indexOf("/");
+  return slash >= 0 ? mm.slice(slash + 1).trim() : "";
+}
+
 export function VeiculosListSection() {
   const qc = useQueryClient();
-  const [filtro, setFiltro] = useState<"ativos" | "todos">("ativos");
+  const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [placa, setPlaca] = useState("");
+  const [marca, setMarca] = useState("");
+  const [modelo, setModelo] = useState("");
+  const [parceiroId, setParceiroId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const query = useVeiculos({
-    ativo: filtro === "ativos" ? true : undefined,
-    placa: placa.trim() || undefined,
-  });
+  const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
+  const query = useVeiculos({ ativo });
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
 
-  const parceiroPorVeiculoId = useMemo(() => {
+  const parceirosOrdenados = useMemo(
+    () =>
+      [...(parceirosQuery.data?.items ?? [])].sort((a, b) =>
+        a.nome.localeCompare(b.nome, "pt-BR"),
+      ),
+    [parceirosQuery.data],
+  );
+
+  const { parceiroPorVeiculoId, parceiroIdPorVeiculoId } = useMemo(() => {
     const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
-    const map = new Map<string, string>();
+    const parceiroPorVeiculoId = new Map<string, string>();
+    const parceiroIdPorVeiculoId = new Map<string, string>();
     for (const v of vinculosQuery.data?.items ?? []) {
+      parceiroIdPorVeiculoId.set(v.veiculoId, v.parceiroId);
       const nome = nomes.get(v.parceiroId);
-      if (nome) map.set(v.veiculoId, nome);
+      if (nome) parceiroPorVeiculoId.set(v.veiculoId, nome);
     }
-    return map;
+    return { parceiroPorVeiculoId, parceiroIdPorVeiculoId };
   }, [parceirosQuery.data, vinculosQuery.data]);
+
+  const rows = useMemo(() => {
+    const items = query.data?.items ?? [];
+    const qPlaca = normPlaca(placa);
+    const qMarca = marca.trim().toLowerCase();
+    const qModelo = modelo.trim().toLowerCase();
+
+    return items.filter((v) => {
+      if (qPlaca && !normPlaca(v.placa).includes(qPlaca)) return false;
+      if (qMarca && !marcaDoVeiculo(v).toLowerCase().includes(qMarca)) return false;
+      if (qModelo && !modeloDoVeiculo(v).toLowerCase().includes(qModelo)) return false;
+      if (parceiroId && parceiroIdPorVeiculoId.get(v.id) !== parceiroId) return false;
+      return true;
+    });
+  }, [query.data, placa, marca, modelo, parceiroId, parceiroIdPorVeiculoId]);
+
+  const temFiltroTexto = Boolean(placa.trim() || marca.trim() || modelo.trim() || parceiroId);
 
   function parceiroDoVeiculo(veiculo: Veiculo): string {
     return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
@@ -63,10 +111,41 @@ export function VeiculosListSection() {
           value={placa}
           onChange={(e) => setPlaca(e.target.value)}
         />
-        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)}>
-          <option value="ativos">Só ativos</option>
+        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
+          <option value="ativos">Ativos</option>
+          <option value="inativos">Inativos</option>
           <option value="todos">Todos</option>
         </select>
+        <input
+          className="input"
+          placeholder="Filtrar marca"
+          value={marca}
+          onChange={(e) => setMarca(e.target.value)}
+        />
+        <input
+          className="input"
+          placeholder="Filtrar modelo"
+          value={modelo}
+          onChange={(e) => setModelo(e.target.value)}
+        />
+        <select
+          className="select"
+          value={parceiroId}
+          onChange={(e) => setParceiroId(e.target.value)}
+          aria-label="Parceiro"
+        >
+          <option value="">Todos os parceiros</option>
+          {parceirosOrdenados.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nome}
+            </option>
+          ))}
+        </select>
+        {!query.isLoading ? (
+          <span className="badge badge--muted">
+            {rows.length} veículo{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
       </ListToolbar>
       {query.isError ? (
         <QueryError
@@ -75,8 +154,11 @@ export function VeiculosListSection() {
       ) : null}
       <DataTable
         loading={query.isLoading || loadingExtra}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(v) => v.id}
+        emptyMessage={
+          temFiltroTexto ? "Nenhum veículo corresponde aos filtros." : "Nenhum veículo registado."
+        }
         columns={[
           { key: "placa", header: "Placa", render: (v) => <strong>{formatPlaca(v.placa)}</strong> },
           { key: "marcaModelo", header: "Marca / modelo", render: (v) => v.marcaModelo ?? "—" },
