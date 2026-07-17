@@ -8,6 +8,8 @@ import {
   formatPlacaHyphen,
   isVeiculoAtivo,
   loadVeiculosDb,
+  loadVeiculosDbAsync,
+  placasIguais,
   saveVeiculosDb,
   type VeiculoPatch,
   type VeiculoRegistro,
@@ -24,13 +26,28 @@ export function listarVeiculos(opts: ListarVeiculosOpts = {}): {
   total: number;
   items: VeiculoRegistro[];
 } {
+  return filtrarVeiculos(loadVeiculosDb().veiculos, opts);
+}
+
+export async function listarVeiculosAsync(opts: ListarVeiculosOpts = {}): Promise<{
+  total: number;
+  items: VeiculoRegistro[];
+}> {
+  const db = await loadVeiculosDbAsync();
+  return filtrarVeiculos(db.veiculos, opts);
+}
+
+function filtrarVeiculos(
+  veiculos: VeiculoRegistro[],
+  opts: ListarVeiculosOpts,
+): { total: number; items: VeiculoRegistro[] } {
   if (opts.placa?.trim()) {
-    const um = findVeiculoByPlaca(opts.placa);
+    const um = veiculos.find((v) => placasIguais(v.placa, opts.placa!));
     const items = um ? [um] : [];
     return { total: items.length, items };
   }
 
-  let items = loadVeiculosDb().veiculos;
+  let items = veiculos;
 
   if (opts.ativo === true) {
     items = items.filter(isVeiculoAtivo);
@@ -45,6 +62,13 @@ export function obterVeiculo(idOuPlaca: string): VeiculoRegistro | null {
   const byId = findVeiculoById(idOuPlaca);
   if (byId) return byId;
   return findVeiculoByPlaca(idOuPlaca);
+}
+
+export async function obterVeiculoAsync(idOuPlaca: string): Promise<VeiculoRegistro | null> {
+  const db = await loadVeiculosDbAsync();
+  const byId = db.veiculos.find((v) => v.id === idOuPlaca);
+  if (byId) return byId;
+  return db.veiculos.find((v) => placasIguais(v.placa, idOuPlaca)) ?? null;
 }
 
 export function atualizarVeiculo(

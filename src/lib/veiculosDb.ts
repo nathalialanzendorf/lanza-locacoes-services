@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -69,6 +69,13 @@ export function loadVeiculosDb(): VeiculosDb {
     return { descricao: DEFAULT_DESCRICAO, veiculos: [] };
   }
   return loadJsonDocument<VeiculosDb>(DB_VEICULOS);
+}
+
+export async function loadVeiculosDbAsync(): Promise<VeiculosDb> {
+  return loadJsonDocumentForApi<VeiculosDb>(DB_VEICULOS, {
+    descricao: DEFAULT_DESCRICAO,
+    veiculos: [],
+  });
 }
 
 export function saveVeiculosDb(db: VeiculosDb): void {

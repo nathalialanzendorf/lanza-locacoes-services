@@ -18,17 +18,18 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       if (ctx.query.has("ativo") && ativo === undefined) {
-        return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+        badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+        return;
       }
       const placa = ctx.query.get("placa");
-      json(ctx.res, 200, veiculosService.listarVeiculos({
+      json(ctx.res, 200, await veiculosService.listarVeiculosAsync({
         ativo,
         placa: placa ?? undefined,
       }));
-    },
+    }),
   });
 
   routes.push({
@@ -47,11 +48,11 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = veiculosService.obterVeiculo(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await veiculosService.obterVeiculoAsync(ctx.params.id);
       if (!item) return notFound(ctx, "Veículo");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({

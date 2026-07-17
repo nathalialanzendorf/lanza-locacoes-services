@@ -18,6 +18,7 @@ export type { ClienteImportado } from "../../../src/lib/rastreame/mapMotoristaCl
 
 export {
   loadVeiculosDb,
+  loadVeiculosDbAsync,
   saveVeiculosDb,
   editarVeiculo,
   excluirVeiculo,

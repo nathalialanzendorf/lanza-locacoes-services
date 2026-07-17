@@ -11,10 +11,16 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
   }
 
   exists(storeName: string, _filePath: string): boolean {
+    if (process.env.VERCEL) return false;
     return awaitSync(this.stores.exists(storeName));
   }
 
   load<T>(storeName: string, filePath: string): T {
+    if (process.env.VERCEL) {
+      throw new Error(
+        `PostgresJsonDocumentAdapter.load("${storeName}") não pode ser síncrono na Vercel — use loadAsync ou loadJsonDocumentForApi`,
+      );
+    }
     const data = awaitSync(this.loadAsync<T>(storeName, filePath));
     if (data == null) {
       throw new Error(`Store PostgreSQL ausente: ${storeName}`);
@@ -28,6 +34,10 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): void {
+    if (process.env.VERCEL) {
+      void this.saveAsync(storeName, filePath, data, options);
+      return;
+    }
     awaitSync(this.saveAsync(storeName, filePath, data, options));
   }
 

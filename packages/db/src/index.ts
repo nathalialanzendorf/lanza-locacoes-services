@@ -37,6 +37,7 @@ export { migratePostgres, type MigrateOptions } from "./migration/migrate.js";
 export {
   jsonDocumentExists,
   loadJsonDocument,
+  loadJsonDocumentForApi,
   saveJsonDocument,
   loadJsonDocumentAsync,
   saveJsonDocumentAsync,

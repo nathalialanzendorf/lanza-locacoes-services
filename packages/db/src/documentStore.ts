@@ -1,17 +1,48 @@
 import {
+  FileJsonDocumentAdapter,
+  getDbBackend,
   getJsonDocumentAdapter,
   storeNameFromPath,
   type SaveJsonDocumentOptions,
 } from "./adapters/index.js";
 
+/** Na Vercel com Postgres, leituras síncronas via `awaitSync` bloqueiam o event loop. */
+function vercelSyncReadsFileOnly(): boolean {
+  return Boolean(process.env.VERCEL) && getDbBackend() !== "file";
+}
+
+function fileAdapter(): FileJsonDocumentAdapter {
+  return new FileJsonDocumentAdapter();
+}
+
 export function jsonDocumentExists(filePath: string): boolean {
   const storeName = storeNameFromPath(filePath);
+  if (vercelSyncReadsFileOnly()) {
+    return fileAdapter().exists(storeName, filePath);
+  }
   return getJsonDocumentAdapter().exists(storeName, filePath);
 }
 
 export function loadJsonDocument<T>(filePath: string): T {
   const storeName = storeNameFromPath(filePath);
+  if (vercelSyncReadsFileOnly()) {
+    return fileAdapter().load<T>(storeName, filePath);
+  }
   return getJsonDocumentAdapter().load<T>(storeName, filePath);
+}
+
+/** Leitura assíncrona para rotas HTTP — usa Postgres quando backend ≠ file. */
+export async function loadJsonDocumentForApi<T>(
+  filePath: string,
+  whenMissing: T,
+): Promise<T> {
+  const storeName = storeNameFromPath(filePath);
+  if (getDbBackend() === "file") {
+    if (!jsonDocumentExists(filePath)) return whenMissing;
+    return loadJsonDocument<T>(filePath);
+  }
+  const data = await getJsonDocumentAdapter().loadAsync<T>(storeName, filePath);
+  return data ?? whenMissing;
 }
 
 export function saveJsonDocument(

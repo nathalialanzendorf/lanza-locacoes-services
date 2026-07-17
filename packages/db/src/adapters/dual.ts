@@ -23,16 +23,14 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
 
   exists(storeName: string, filePath: string): boolean {
     if (isVercelRuntime()) {
-      return this.postgres.exists(storeName, filePath) || this.file.exists(storeName, filePath);
+      // Postgres síncrono usa awaitSync e bloqueia o event loop na Vercel.
+      return this.file.exists(storeName, filePath);
     }
     return this.file.exists(storeName, filePath) || this.postgres.exists(storeName, filePath);
   }
 
   load<T>(storeName: string, filePath: string): T {
     if (isVercelRuntime()) {
-      if (this.postgres.exists(storeName, filePath)) {
-        return this.postgres.load<T>(storeName, filePath);
-      }
       return this.file.load<T>(storeName, filePath);
     }
     if (this.file.exists(storeName, filePath)) {
