@@ -7,7 +7,12 @@
     "skipLibCheck": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@lanza/db": ["packages/db/src/index.ts"],
+      "@lanza/storage": ["packages/storage/src/index.ts"]
+    }
   },
   "include": ["src/**/*", "src/*.d.ts", "packages/**/*", "scripts/**/*"]
 }
