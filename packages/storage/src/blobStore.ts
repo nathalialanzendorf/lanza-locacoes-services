@@ -1,5 +1,3 @@
-import { del, get, list, put } from "@vercel/blob";
-
 import { blobReadWriteToken, isBlobConfigured } from "./config.js";
 import {
   deleteLocalMirror,
@@ -9,6 +7,17 @@ import {
   putLocalMirror,
 } from "./localStore.js";
 import type { ListBlobsResult, StoredBlob } from "./types.js";
+
+type BlobModule = typeof import("@vercel/blob");
+
+let blobModulePromise: Promise<BlobModule> | null = null;
+
+async function blobModule(): Promise<BlobModule> {
+  if (!blobModulePromise) {
+    blobModulePromise = import("@vercel/blob");
+  }
+  return blobModulePromise;
+}
 
 function tokenOrThrow(): string {
   const token = blobReadWriteToken();
@@ -23,6 +32,7 @@ export async function putBytes(
 ): Promise<StoredBlob> {
   const contentType = opts?.contentType;
   if (isBlobConfigured()) {
+    const { put } = await blobModule();
     const result = await put(pathname, body, {
       access: "private",
       token: tokenOrThrow(),
@@ -70,6 +80,7 @@ export async function putJson(
 
 export async function getBytes(pathname: string): Promise<Buffer | null> {
   if (isBlobConfigured()) {
+    const { get } = await blobModule();
     const result = await get(pathname, { token: tokenOrThrow(), access: "private" });
     if (!result) return null;
     if (result.statusCode !== 200) return null;
@@ -91,6 +102,7 @@ export async function listBlobs(opts: {
   cursor?: string;
 }): Promise<ListBlobsResult> {
   if (isBlobConfigured()) {
+    const { list } = await blobModule();
     const result = await list({
       prefix: opts.prefix,
       limit: opts.limit ?? 100,
@@ -126,6 +138,7 @@ export async function listBlobs(opts: {
 
 export async function deleteBlob(pathname: string): Promise<boolean> {
   if (isBlobConfigured()) {
+    const { del } = await blobModule();
     const listed = await listBlobs({ prefix: pathname, limit: 1 });
     const hit = listed.blobs.find((b) => b.pathname === pathname);
     if (!hit) return false;
