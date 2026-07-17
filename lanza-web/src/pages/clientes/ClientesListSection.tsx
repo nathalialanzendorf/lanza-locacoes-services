@@ -35,10 +35,18 @@ function veiculoDoContrato(contrato: Contrato): string {
 export function ClientesListSection() {
   const qc = useQueryClient();
   const [filtro, setFiltro] = useState<Filtro>("ativos");
+  const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useClientes(ativo);
   const contratosQuery = useContratos({ status: "ativo" });
+
+  const rows = useMemo(() => {
+    const items = query.data?.items ?? [];
+    const q = nome.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((c) => (c.nome ?? "").toLowerCase().includes(q));
+  }, [query.data, nome]);
 
   const { porClienteId, porCpf } = useMemo(() => {
     const porClienteId = new Map<string, Contrato>();
@@ -72,11 +80,22 @@ export function ClientesListSection() {
   return (
     <>
       <ListToolbar addTo="/clientes/novo">
-        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)}>
-          <option value="ativos">Só ativos</option>
-          <option value="inativos">Só inativos</option>
+        <input
+          className="input"
+          placeholder="Filtrar nome"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+        />
+        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
+          <option value="ativos">Ativos</option>
+          <option value="inativos">Inativos</option>
           <option value="todos">Todos</option>
         </select>
+        {!query.isLoading ? (
+          <span className="badge badge--muted">
+            {rows.length} cliente{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
       </ListToolbar>
       {query.isError ? (
         <QueryError
@@ -85,7 +104,7 @@ export function ClientesListSection() {
       ) : null}
       <DataTable
         loading={query.isLoading || contratosQuery.isLoading}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(c) => c.id}
         columns={[
           { key: "nome", header: "Nome", render: (c) => c.nome ?? "—" },
