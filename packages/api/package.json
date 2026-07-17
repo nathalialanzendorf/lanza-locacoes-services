@@ -6,10 +6,5 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts"
-  },
-  "dependencies": {
-    "@lanza/db": "file:../db",
-    "@lanza/storage": "file:../storage",
-    "jose": "^5.10.0"
   }
 }

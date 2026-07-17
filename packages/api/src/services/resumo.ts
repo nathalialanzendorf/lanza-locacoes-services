@@ -58,6 +58,13 @@ export function obterResumo() {
     0,
   );
 
+  let recebimentos;
+  try {
+    recebimentos = obterDashboardRecebimentos();
+  } catch (err) {
+    console.error("[resumo] falha ao calcular recebimentos:", err);
+  }
+
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
     veiculos: { total: veiculos.length, ativos: veiculosAtivos.length },
@@ -76,6 +83,6 @@ export function obterResumo() {
       semCondutor: infracoesSemCliente.length,
     },
     locacoes: { abertas: locacoesAbertas.length },
-    recebimentos: obterDashboardRecebimentos(),
+    ...(recebimentos ? { recebimentos } : {}),
   };
 }

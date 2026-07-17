@@ -23,8 +23,6 @@
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.11.11",
     "@types/ws": "^8.18.1",
     "playwright-core": "^1.61.1",
@@ -32,6 +30,8 @@
     "ws": "^8.21.0"
   },
   "dependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pdf-parse": "^1.1.5",
     "@aws-sdk/credential-providers": "^3.758.0",
     "@aws-sdk/rds-signer": "^3.758.0",
     "@lanza/db": "workspace:*",

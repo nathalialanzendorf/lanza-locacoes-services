@@ -4,7 +4,14 @@ import { useResumo } from "@/api/hooks";
 import { formatBrl } from "@/lib/format";
 import { semClienteDeResumo } from "@/lib/clienteCampo";
 import { LanzaApiError } from "@/api/client";
-import type { DashboardRecebimentoLinha } from "@/api/types";
+import type { DashboardRecebimentoLinha, DashboardRecebimentos } from "@/api/types";
+
+const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
+  dataReferenciaBr: "—",
+  venceHoje: [],
+  atrasados: [],
+  totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
+};
 
 function RecebimentosTable({
   titulo,
@@ -53,7 +60,8 @@ function RecebimentosTable({
 
 export function DashboardPage() {
   const resumo = useResumo();
-  const rec = resumo.data?.recebimentos;
+  const rec = resumo.data?.recebimentos ?? RECEBIMENTOS_VAZIO;
+  const apiSemRecebimentos = Boolean(resumo.data && !resumo.data.recebimentos);
 
   return (
     <PageHeader
@@ -126,8 +134,17 @@ export function DashboardPage() {
         />
       </div>
 
-      {rec ? (
+      {resumo.isLoading ? (
+        <p className="field__hint">A carregar recebimentos…</p>
+      ) : (
         <>
+          {apiSemRecebimentos ? (
+            <p className="form-card__error dashboard-api-aviso">
+              A API em produção ainda não expõe recebimentos no resumo — redeploy pendente ou
+              versão antiga. Os totais abaixo ficam vazios até o backend atualizar.
+            </p>
+          ) : null}
+
           <section className="dashboard-recebimentos-resumo">
             <h2 className="form-card__title">Recebimentos — {rec.dataReferenciaBr}</h2>
             <div className="stat-grid stat-grid--compact">
@@ -173,9 +190,7 @@ export function DashboardPage() {
             }}
           />
         </>
-      ) : resumo.isLoading ? (
-        <p className="field__hint">A carregar recebimentos…</p>
-      ) : null}
+      )}
     </PageHeader>
   );
 }
