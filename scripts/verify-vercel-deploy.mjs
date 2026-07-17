@@ -6,6 +6,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 
@@ -42,6 +43,19 @@ function isIgnored(relPosix, patterns) {
 }
 
 async function main() {
+  for (const script of ["typecheck:storage", "typecheck:api"]) {
+    console.log(`[verify:vercel] npm run ${script} ...`);
+    const tsc = spawnSync("npm", ["run", script], {
+      cwd: root,
+      stdio: "inherit",
+      shell: true,
+    });
+    if (tsc.status !== 0) {
+      console.error(`[verify:vercel] FALHA — ${script}`);
+      process.exit(tsc.status ?? 1);
+    }
+  }
+
   const patterns = loadIgnorePatterns();
   console.log("[verify:vercel] entry:", path.relative(root, entry));
   console.log("[verify:vercel] .vercelignore:", patterns.join(", ") || "(vazio)");

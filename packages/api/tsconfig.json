@@ -7,5 +7,5 @@
       "@lanza/storage": ["../storage/src/index.ts"]
     }
   },
-  "include": ["src/**/*", "../storage/src/vercel-blob.d.ts"]
+  "include": ["src/**/*"]
 }

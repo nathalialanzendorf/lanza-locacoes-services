@@ -25,6 +25,10 @@ function tokenOrThrow(): string {
   return token;
 }
 
+function bodyByteLength(body: Buffer | string): number {
+  return typeof body === "string" ? Buffer.byteLength(body, "utf8") : body.length;
+}
+
 export async function putBytes(
   pathname: string,
   body: Buffer | string,
@@ -34,18 +38,17 @@ export async function putBytes(
   if (isBlobConfigured()) {
     const { put } = await blobModule();
     const result = await put(pathname, body, {
-      access: "private",
+      access: "public",
       token: tokenOrThrow(),
       contentType,
       addRandomSuffix: false,
-      allowOverwrite: opts?.allowOverwrite ?? true,
     });
     return {
       pathname: result.pathname,
       url: result.url,
       downloadUrl: result.downloadUrl,
-      size: result.size,
-      uploadedAt: result.uploadedAt.toISOString(),
+      size: bodyByteLength(body),
+      uploadedAt: new Date().toISOString(),
       contentType: result.contentType,
       backend: "vercel-blob",
     };
@@ -78,14 +81,28 @@ export async function putJson(
   });
 }
 
+async function fetchBlobByPathname(pathname: string): Promise<Buffer | null> {
+  const { list } = await blobModule();
+  const token = tokenOrThrow();
+  const listed = await list({
+    prefix: pathname,
+    limit: 20,
+    token,
+  });
+  const hit = listed.blobs.find((b) => b.pathname === pathname);
+  if (!hit) return null;
+  const res = await fetch(hit.downloadUrl);
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function getBytes(pathname: string): Promise<Buffer | null> {
   if (isBlobConfigured()) {
-    const { get } = await blobModule();
-    const result = await get(pathname, { token: tokenOrThrow(), access: "private" });
-    if (!result) return null;
-    if (result.statusCode !== 200) return null;
-    const arr = await result.arrayBuffer();
-    return Buffer.from(arr);
+    try {
+      return await fetchBlobByPathname(pathname);
+    } catch {
+      return null;
+    }
   }
   if (localMirrorEnabled()) return getLocalMirror(pathname);
   return null;
@@ -110,20 +127,12 @@ export async function listBlobs(opts: {
       token: tokenOrThrow(),
     });
     return {
-      blobs: result.blobs.map((b: {
-        pathname: string;
-        url: string;
-        downloadUrl?: string;
-        size: number;
-        uploadedAt: Date;
-        contentType?: string;
-      }) => ({
+      blobs: result.blobs.map((b) => ({
         pathname: b.pathname,
         url: b.url,
         downloadUrl: b.downloadUrl,
         size: b.size,
         uploadedAt: b.uploadedAt.toISOString(),
-        contentType: b.contentType,
         backend: "vercel-blob" as const,
       })),
       cursor: result.cursor,
