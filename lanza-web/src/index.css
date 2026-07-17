@@ -327,6 +327,10 @@ code {
   margin: 0 0 1rem;
 }
 
+.muted {
+  color: var(--muted);
+}
+
 .btn--danger {
   color: var(--danger, #b42318);
   border-color: var(--danger-border, #fda29b);
