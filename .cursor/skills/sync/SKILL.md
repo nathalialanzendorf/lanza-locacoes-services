@@ -26,15 +26,16 @@ Skill **meta**: dispara **todas** as integrações de sync em **agentes paralelo
 | 3 | DETRAN RS | `sync-detran-rs` → `sync-manutencao --categoria IPVA` |
 | 4 | `sync-cliente` | `sync-motoristas` |
 | 5 | `sync-veiculo` | `sync-rastreaveis` |
-| 6 | `sync-recebimentos` | `sync-gastos-gerais` (pull + push) |
-| 7 | `sync-seguro` | `sync-seguro --ano 2026` → `sync-manutencao --categoria Seguro` |
+| 6 | `sync-fipe` | `sync-fipe` |
+| 7 | `sync-recebimentos` | `sync-gastos-gerais` (pull + push) |
+| 8 | `sync-seguro` | `sync-seguro --ano 2026` → `sync-manutencao --categoria Seguro` |
 
 Ano do seguro: ler `seguroComprovantesDir` em `config/lanza_paths.json` (padrão `--ano 2026`).
 
 ## Fluxo do agente (obrigatório)
 
-1. **Anunciar** ao utilizador que serão **7 agentes em paralelo** (lista acima).
-2. **Lançar os 7 agentes numa única mensagem** — cada um com `run_in_background: true`, `subagent_type: shell`, prompts em [reference.md](reference.md).
+1. **Anunciar** ao utilizador que serão **8 agentes em paralelo** (lista acima).
+2. **Lançar os 8 agentes numa única mensagem** — cada um com `run_in_background: true`, `subagent_type: shell`, prompts em [reference.md](reference.md).
 3. **Ordem de arranque** (todos na mesma mensagem): agente 1 (Pedágio) primeiro na lista — sessão BFF expira em minutos; demais na sequência da tabela.
 4. **Não bloquear** em confirmação de condutor (`condutorConfirmado: false`) — executar sync e **reportar** pendentes no resumo final.
 5. **Aguardar** conclusão dos agentes; **consolidar** num único resumo (template abaixo).
@@ -56,6 +57,7 @@ Se o utilizador pedir **apenas um domínio** (ex.: "sync só Rastreame"), lança
 | DETRAN RS | | placas RS; 401 token? |
 | Motoristas | | push/pull |
 | Rastreáveis | | push/pull; erros placa |
+| FIPE | | frota ativa; falhas marca/modelo |
 | Gastos gerais | | push/pull |
 | Seguro | | boletos; manutenção |
 
@@ -76,6 +78,6 @@ Se o utilizador pedir **apenas um domínio** (ex.: "sync só Rastreame"), lança
 
 ## Skills relacionadas
 
-Filhas: `sync-pedagios`, `sync-infracoes`, `sync-ipva-licenciamento`, `sync-cliente`, `sync-veiculo`, `sync-recebimentos`, `sync-seguro`.
+Filhas: `sync-pedagios`, `sync-infracoes`, `sync-ipva-licenciamento`, `sync-cliente`, `sync-veiculo`, `sync-fipe`, `sync-recebimentos`, `sync-seguro`.
 
 Prompts copy-paste dos agentes: [reference.md](reference.md).

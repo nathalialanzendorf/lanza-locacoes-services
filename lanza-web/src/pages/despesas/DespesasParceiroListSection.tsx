@@ -48,7 +48,7 @@ export function DespesasParceiroListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/despesas/parceiro/novo" addLabel="Adicionar despesa">
+      <ListToolbar addTo="/despesas/parceiro/novo">
         <input className="input" placeholder="Filtrar placa" value={placa} onChange={(e) => setPlaca(e.target.value)} />
         <input
           className="input"

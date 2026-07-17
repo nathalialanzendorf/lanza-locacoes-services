@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -6,20 +6,61 @@ import { DataTable } from "@/components/DataTable";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useContratos } from "@/api/hooks";
+import { useContratos, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca } from "@/lib/format";
 import type { Contrato } from "@/api/types";
+
+function terminoContrato(contrato: Contrato): string {
+  if (contrato.dataEncerramento?.trim()) return contrato.dataEncerramento;
+  if (contrato.dataFimPrevista?.trim()) return contrato.dataFimPrevista;
+  return contrato.dataFim ?? "—";
+}
+
+function veiculoUuid(contrato: Contrato, placaParaId: Map<string, string>): string | undefined {
+  const idSnapshot = contrato.veiculo?.id;
+  if (idSnapshot) return idSnapshot;
+  const placa = contrato.placa ?? contrato.veiculo?.placa;
+  if (!placa) return undefined;
+  return placaParaId.get(placa.trim().toUpperCase());
+}
 
 export function ContratosListSection() {
   const qc = useQueryClient();
   const [status, setStatus] = useState<"ativo" | "encerrado" | "">("ativo");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const query = useContratos({ status: status || undefined });
+  const parceirosQuery = useParceiros();
+  const vinculosQuery = useVinculosParceiro();
+  const veiculosQuery = useVeiculos();
+
+  const parceiroPorVeiculoId = useMemo(() => {
+    const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
+    const map = new Map<string, string>();
+    for (const v of vinculosQuery.data?.items ?? []) {
+      const nome = nomes.get(v.parceiroId);
+      if (nome) map.set(v.veiculoId, nome);
+    }
+    return map;
+  }, [parceirosQuery.data, vinculosQuery.data]);
+
+  const placaParaVeiculoId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const v of veiculosQuery.data?.items ?? []) {
+      if (v.placa) map.set(v.placa.trim().toUpperCase(), v.id);
+    }
+    return map;
+  }, [veiculosQuery.data]);
+
+  function parceiroDoContrato(contrato: Contrato): string {
+    const veiculoId = veiculoUuid(contrato, placaParaVeiculoId);
+    if (!veiculoId) return "—";
+    return parceiroPorVeiculoId.get(veiculoId) ?? "—";
+  }
 
   async function excluir(contrato: Contrato) {
-    const label = contrato.pasta ?? contrato.placa ?? contrato.id;
+    const label = contrato.clienteNome ?? formatPlaca(contrato.placa) ?? contrato.id;
     if (!window.confirm(`Excluir o contrato "${label}"? Esta ação não pode ser desfeita.`)) return;
     setExcluindoId(contrato.id);
     try {
@@ -32,9 +73,12 @@ export function ContratosListSection() {
     }
   }
 
+  const loadingExtra =
+    parceirosQuery.isLoading || vinculosQuery.isLoading || veiculosQuery.isLoading;
+
   return (
     <>
-      <ListToolbar addTo="/contratos/novo" addLabel="Adicionar contrato">
+      <ListToolbar addTo="/contratos/cadastrar">
         <select className="select" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
           <option value="ativo">Ativos</option>
           <option value="encerrado">Encerrados</option>
@@ -50,12 +94,30 @@ export function ContratosListSection() {
         />
       ) : null}
       <DataTable
-        loading={query.isLoading}
+        loading={query.isLoading || loadingExtra}
         rows={query.data?.items ?? []}
         keyFn={(c) => c.id}
         columns={[
-          { key: "pasta", header: "Pasta", render: (c) => c.pasta ?? c.id },
-          { key: "placa", header: "Placa", render: (c) => formatPlaca(c.placa) },
+          {
+            key: "placa",
+            header: "Placa",
+            render: (c) => <strong>{formatPlaca(c.placa ?? c.veiculo?.placa)}</strong>,
+          },
+          {
+            key: "marcaModelo",
+            header: "Marca / modelo",
+            render: (c) => c.veiculo?.marcaModelo ?? "—",
+          },
+          {
+            key: "ano",
+            header: "Ano",
+            render: (c) => c.veiculo?.anoModelo ?? "—",
+          },
+          {
+            key: "parceiro",
+            header: "Parceiro",
+            render: (c) => parceiroDoContrato(c),
+          },
           {
             key: "status",
             header: "Status",
@@ -66,7 +128,7 @@ export function ContratosListSection() {
             ),
           },
           { key: "inicio", header: "Início", render: (c) => c.dataInicio ?? "—" },
-          { key: "fim", header: "Fim", render: (c) => c.dataFim ?? "—" },
+          { key: "termino", header: "Término", render: (c) => terminoContrato(c) },
           {
             key: "acoes",
             header: "Ações",

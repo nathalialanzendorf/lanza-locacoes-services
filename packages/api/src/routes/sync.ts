@@ -32,7 +32,7 @@ function parseSyncInput(body: Record<string, unknown>): SyncInput {
     pushOnly: body.pushOnly === true,
     forcePull: body.forcePull === true,
     forcePush: body.forcePush === true,
-    noFipe: body.noFipe === true,
+    faltantes: body.faltantes === true,
     motoristaKey: typeof body.motoristaKey === "string" ? body.motoristaKey : undefined,
     ticket: typeof body.ticket === "string" ? body.ticket : undefined,
     captcha: typeof body.captcha === "string" ? body.captcha : undefined,

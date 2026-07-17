@@ -34,8 +34,6 @@ const nav = [
 
   { to: "/despesas", label: "Despesas" },
 
-  { to: "/infracoes", label: "Infrações" },
-
   { to: "/relatorios", label: "Relatórios" },
 
 ];

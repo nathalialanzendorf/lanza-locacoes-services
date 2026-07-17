@@ -72,7 +72,7 @@ export function ParceirosListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/parceiros/novo" addLabel="Adicionar parceiro">
+      <ListToolbar addTo="/parceiros/novo">
         <input
           className="input"
           placeholder="Filtrar por nome"

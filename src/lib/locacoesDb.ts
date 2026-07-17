@@ -47,8 +47,8 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   id: "uuid",
   veiculoId: "uuid -> veiculos.json (null se placa não cadastrada)",
   placa: "Placa do veículo (ABC-1D23)",
-  clienteId: "uuid -> clientes.json (null quando reserva/manutenção sem condutor)",
-  condutorNome: "Nome do condutor/locatário (null se sem condutor)",
+  clienteId: "uuid -> clientes.json (null quando reserva/manutenção sem cliente)",
+  condutorNome: "Nome do cliente/locatário (null se sem cliente)",
   contratoId: "uuid -> contratos.json (opcional; vincula ao contrato de locação)",
   situacao: "reserva | manutencao | locado",
   inicio: "DD/MM/AAAA — início do período",
@@ -177,6 +177,9 @@ export type LocacaoInput = {
   situacao: SituacaoLocacao;
   inicio: string;
   fim?: string | null;
+  /** uuid, CPF ou nome do cliente (legado: condutor) */
+  clienteId?: string | null;
+  /** @deprecated use clienteId */
   condutor?: string | null;
   contratoId?: string | null;
   tipoLocacao?: TipoLocacao | null;
@@ -216,7 +219,8 @@ export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
   const ts = nowIso();
 
   const { id: veiculoId, placa } = resolveVeiculo(input.placa);
-  const condutor = resolveCondutor(input.condutor);
+  const refCliente = input.clienteId ?? input.condutor;
+  const condutor = resolveCondutor(refCliente);
   const sub = input.substituiPlaca ? resolveVeiculo(input.substituiPlaca) : null;
   // Valores (tipo/cobrado/pago) valem para `locado` e `reserva` (diária paga ao
   // parceiro do veículo reserva). `manutencao` é veículo parado, sem valores.
@@ -224,8 +228,8 @@ export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
 
   const avisos: string[] = [];
   if (!veiculoId) avisos.push("placa não cadastrada em veiculos.json");
-  if (input.condutor && !condutor.id) {
-    avisos.push("condutor não encontrado em clientes.json (gravado só pelo nome)");
+  if (refCliente && !condutor.id) {
+    avisos.push("cliente não encontrado em clientes.json (gravado só pelo nome)");
   }
 
   const base: Omit<LocacaoRegistro, "id" | "cadastradoEm"> = {

@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
-import { DocUploadField } from "@/components/DocUploadField";
-import { matchParceiroIdPorNome, ParceiroSelect } from "@/components/EntitySelects";
+import { ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
-import { ResultPanel } from "@/components/ResultPanel";
-import { useParceiros, useVinculosParceiro } from "@/api/hooks";
+import { useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 
@@ -20,7 +18,6 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
   const qc = useQueryClient();
   const editando = Boolean(veiculoId);
 
-  const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro(
     veiculoId ? { veiculoId } : undefined,
   );
@@ -37,22 +34,6 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
   const [carregando, setCarregando] = useState(editando);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<unknown>(null);
-
-  function aplicarCrlv(campos: Record<string, unknown>) {
-    if (typeof campos.placa === "string") setPlaca(campos.placa);
-    if (typeof campos.marcaModelo === "string") setMarcaModelo(campos.marcaModelo);
-    if (typeof campos.anoModelo === "string") setAnoModelo(campos.anoModelo);
-    if (typeof campos.chassi === "string") setChassi(campos.chassi);
-    if (typeof campos.renavam === "string") setRenavam(campos.renavam);
-    if (typeof campos.cor === "string") setCor(campos.cor);
-    if (typeof campos.ufRegistro === "string") setUfRegistro(campos.ufRegistro);
-    if (typeof campos.proprietarioNome === "string" && campos.proprietarioNome.trim()) {
-      const id = matchParceiroIdPorNome(parceirosQuery.data?.items, campos.proprietarioNome.trim());
-      if (id) setParceiroId(id);
-    }
-  }
-
   function popularFormulario(v: Record<string, unknown>) {
     if (typeof v.placa === "string") setPlaca(v.placa);
     if (typeof v.marcaModelo === "string") setMarcaModelo(v.marcaModelo);
@@ -107,14 +88,15 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
         ufRegistro: ufRegistro.trim() || undefined,
         parceiroId: parceiroId.trim() || undefined,
         ativo,
-        ...(editando ? {} : { origem: "web-upload-crlv" }),
+        ...(editando ? {} : { origem: "web-cadastro" }),
       };
 
-      const r = editando
-        ? await lanzaApi.atualizarVeiculo(veiculoId!, body)
-        : await lanzaApi.criarVeiculo(body);
+      if (editando) {
+        await lanzaApi.atualizarVeiculo(veiculoId!, body);
+      } else {
+        await lanzaApi.criarVeiculo(body);
+      }
 
-      setResult(r);
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
       void qc.invalidateQueries({ queryKey: ["parceiros"] });
       navigate("/veiculos");
@@ -141,17 +123,8 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
         title={editando ? "Editar veículo" : "Novo veículo"}
         onSubmit={submit}
         loading={loading}
-        submitLabel={editando ? "Salvar alterações" : "Gravar veículo"}
         error={error}
       >
-        <DocUploadField
-          label="CRLV (PDF)"
-          tipo="crlv"
-          hint="Envie o PDF do CRLV para preencher placa, modelo, chassi e proprietário."
-          disabled={loading}
-          onParsed={({ campos }) => aplicarCrlv(campos)}
-          onError={setError}
-        />
         <Field label="Placa">
           <input className="input" value={placa} onChange={(e) => setPlaca(e.target.value)} required />
         </Field>
@@ -193,7 +166,6 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
           </label>
         </Field>
       </FormCard>
-      <ResultPanel title="Veículo gravado" data={result} />
     </>
   );
 }

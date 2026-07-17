@@ -66,10 +66,22 @@ Execute sync-veiculo in repo d:\Dropbox\Aworklanza.
 
 npx tsx src/run.ts sync-rastreaveis
 
-Return: exit code, push/pull, FIPE, erros (ex. placa sem dispositivo no Rastreame).
+Return: exit code, push/pull, erros (ex. placa sem dispositivo no Rastreame).
+FIPE é sync separado (agente 6).
 ```
 
-### Agente 6 — Gastos gerais (`sync-recebimentos`)
+### Agente 6 — FIPE (`sync-fipe`)
+
+```
+Execute sync-fipe in repo d:\Dropbox\Aworklanza.
+
+npx tsx src/run.ts sync-fipe
+
+Preferível após sync-rastreaveis se houve pull com veículos novos.
+Return: exit code, sucesso/falhas por placa, erros marca/modelo FIPE.
+```
+
+### Agente 7 — Gastos gerais (`sync-recebimentos`)
 
 ```
 Execute sync-recebimentos in repo d:\Dropbox\Aworklanza.
@@ -79,7 +91,7 @@ npx tsx src/run.ts sync-gastos-gerais
 Return: exit code, push/pull (novos/atualizados/baixados/ignorados), erros.
 ```
 
-### Agente 7 — Seguro (`sync-seguro`)
+### Agente 8 — Seguro (`sync-seguro`)
 
 ```
 Execute sync-seguro in repo d:\Dropbox\Aworklanza.
@@ -97,10 +109,11 @@ Return: exit codes, boletos novos/atualizados, placas sem veículo, push manuten
 |----------------------|---------|
 | só pedágio | 1 |
 | só DETRAN / multas / IPVA | 2 + 3 |
-| só Rastreame | 4 + 5 + 6 |
-| só seguro | 7 |
+| só Rastreame | 4 + 5 + 6 + 7 |
+| só FIPE | 6 |
+| só seguro | 8 |
 | sync externo (Pedágio + DETRAN) | 1 + 2 + 3 |
-| sync Rastreame + seguro | 4 + 5 + 6 + 7 |
+| sync Rastreame + seguro | 4 + 5 + 6 + 7 + 8 |
 
 ## Conflitos de escrita
 

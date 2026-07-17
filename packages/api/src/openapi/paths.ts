@@ -554,7 +554,7 @@ function pathsSync(): OpenApiPaths {
       post: op("post", "Sync", "Executar um sync por nome", {
         operationId: "executarSync",
         description:
-          "Nomes: pedagios, infracoes, ipva-licenciamento, detran-rs, motoristas, rastreaveis, recebimentos, seguro, manutencao.",
+          "Nomes: pedagios, infracoes, ipva-licenciamento, detran-rs, motoristas, rastreaveis, fipe, recebimentos, seguro, manutencao.",
         parameters: [pathParam("nome")],
         requestBody: syncBody,
         requestBodyRequired: false,

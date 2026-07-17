@@ -22,12 +22,13 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const semCondutor = parseAtivoQuery(ctx.query.get("semCondutor"));
+      const semCliente = parseAtivoQuery(ctx.query.get("semCliente"));
       json(ctx.res, 200, infracoesService.listarInfracoes({
         placa: ctx.query.get("placa") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         emAberto,
         ativo,
-        semCondutor: semCondutor === true ? true : undefined,
+        semCliente: semCliente === true || semCondutor === true ? true : undefined,
       }));
     },
   });
@@ -79,7 +80,7 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
     }),
   });
 
-  const atribuir = compileRoute("/api/infracoes/atribuir-condutores");
+  const atribuir = compileRoute("/api/infracoes/atribuir-clientes");
   routes.push({
     method: "POST",
     pattern: atribuir.regex,
@@ -92,7 +93,28 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
           prazoDias?: number;
           incluirPedagios?: boolean;
         }>(ctx.req).catch(() => ({}));
-        const data = await infracoesService.atribuirCondutoresInfracoes(body);
+        const data = await infracoesService.atribuirClientesInfracoes(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const atribuirLegado = compileRoute("/api/infracoes/atribuir-condutores");
+  routes.push({
+    method: "POST",
+    pattern: atribuirLegado.regex,
+    paramNames: atribuirLegado.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          dryRun?: boolean;
+          placa?: string;
+          prazoDias?: number;
+          incluirPedagios?: boolean;
+        }>(ctx.req).catch(() => ({}));
+        const data = await infracoesService.atribuirClientesInfracoes(body);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);

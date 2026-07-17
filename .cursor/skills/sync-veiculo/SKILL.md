@@ -16,6 +16,8 @@ npx tsx src/run.ts sync-rastreaveis
 npx tsx src/run.ts sync-rastreaveis --dry-run --push-only
 ```
 
+**FIPE** é sync separado — skill **`sync-fipe`**: `npx tsx src/run.ts sync-fipe`
+
 ## Idempotência
 
 - **Pull:** `rastreameRastreavelKey` → `placa`.
@@ -24,8 +26,9 @@ npx tsx src/run.ts sync-rastreaveis --dry-run --push-only
 
 ## Inativação só local
 
-- Veículos com `ativo === false` **não** são enviados ao Rastreame (push pula inativos; nunca empurramos inativação). O pull continua atualizando o local independente do status. O passo FIPE também ignora inativos. Ver regra em `.cursor/rules/lanza-tools.mdc`.
+- Veículos com `ativo === false` **não** são enviados ao Rastreame (push pula inativos; nunca empurramos inativação). O pull continua atualizando o local independente do status. Ver regra em `.cursor/rules/lanza-tools.mdc`.
 
 ## Skills relacionadas
 
+- **sync-fipe** — atualizar campos FIPE após pull de rastreáveis
 - **cadastro-veiculo**, **rastreame-site**

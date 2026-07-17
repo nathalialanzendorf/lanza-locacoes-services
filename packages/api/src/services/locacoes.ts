@@ -79,7 +79,7 @@ export function atualizarLocacao(id: string, patch: Partial<LocacaoInput>) {
     situacao: patch.situacao ?? atual.situacao,
     inicio: patch.inicio ?? atual.inicio,
     fim: patch.fim !== undefined ? patch.fim : atual.fim,
-    condutor: patch.condutor !== undefined ? patch.condutor : atual.condutorNome,
+    condutor: patch.clienteId !== undefined ? patch.clienteId : patch.condutor !== undefined ? patch.condutor : atual.clienteId ?? atual.condutorNome,
     contratoId: patch.contratoId !== undefined ? patch.contratoId : atual.contratoId,
     tipoLocacao: patch.tipoLocacao !== undefined ? patch.tipoLocacao : atual.tipoLocacao,
     valorCobrado: patch.valorCobrado !== undefined ? patch.valorCobrado : atual.valorCobrado,

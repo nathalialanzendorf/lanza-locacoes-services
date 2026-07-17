@@ -100,7 +100,6 @@ export function DespesaParceiroCadastroSection({ despesaId }: Props) {
         title={editando ? "Editar despesa parceiro" : "Nova despesa parceiro"}
         onSubmit={submit}
         loading={loading}
-        submitLabel={editando ? "Salvar alterações" : "Gravar"}
         error={error}
       >
         <Field label="Veículo">

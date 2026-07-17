@@ -135,12 +135,12 @@ export async function removerDespesa(idOrAuto: string, opts?: SyncOpts) {
   return item;
 }
 
-export async function confirmarCondutorDespesa(
+export async function confirmarClienteDespesa(
   autoInfracao: string,
-  condutorId?: string | null,
+  clienteId?: string | null,
   opts?: SyncOpts,
 ) {
-  const item = await confirmarCondutorClienteDespesa(autoInfracao, condutorId, {
+  const item = await confirmarCondutorClienteDespesa(autoInfracao, clienteId, {
     syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   if (!item) {
@@ -148,6 +148,9 @@ export async function confirmarCondutorDespesa(
   }
   return item;
 }
+
+/** @deprecated use confirmarClienteDespesa */
+export const confirmarCondutorDespesa = confirmarClienteDespesa;
 
 /** Resolve placa a partir do veiculoId (útil para o frontend). */
 export function placaDoVeiculoId(veiculoId: string): string | null {

@@ -113,7 +113,6 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
         title={editando ? "Editar parceiro" : "Novo parceiro"}
         onSubmit={submit}
         loading={loading}
-        submitLabel={editando ? "Salvar alterações" : "Gravar parceiro"}
         error={error}
       >
         <DocUploadField

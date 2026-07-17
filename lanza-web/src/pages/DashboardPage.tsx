@@ -2,6 +2,7 @@ import { StatCard } from "@/components/StatCard";
 import { PageHeader, QueryError } from "@/components/PageHeader";
 import { useResumo } from "@/api/hooks";
 import { formatBrl } from "@/lib/format";
+import { semClienteDeResumo } from "@/lib/clienteCampo";
 import { LanzaApiError } from "@/api/client";
 
 export function DashboardPage() {
@@ -81,7 +82,7 @@ export function DashboardPage() {
           value={resumo.data ? `${resumo.data.infracoes.emAberto}` : "—"}
           hint={
             resumo.data
-              ? `${resumo.data.infracoes.semCondutor} sem condutor`
+              ? `${semClienteDeResumo(resumo.data.infracoes)} sem cliente`
               : undefined
           }
           tone="warn"

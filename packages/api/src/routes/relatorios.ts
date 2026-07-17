@@ -69,16 +69,23 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         json(ctx.res, 200, { listagens });
         return;
       }
-      const data = cobrancasRel.gerarCobrancas(body);
-      const paths = [
-        ...data.arquivos.loteConsolidado,
-        ...data.arquivos.sidecars,
-        ...data.arquivos.canvas,
-      ];
-      const blob = await documentos.espelharArquivosLocais(
-        documentos.filtrarArquivosExistentes(paths),
-        "relatorios/cobrancas",
-      );
+      const armazenar = body.armazenarServidor === true;
+      const data = cobrancasRel.gerarCobrancas({
+        ...body,
+        salvar: armazenar,
+      });
+      let blob = null;
+      if (armazenar) {
+        const paths = [
+          ...data.arquivos.loteConsolidado,
+          ...data.arquivos.sidecars,
+          ...data.arquivos.canvas,
+        ];
+        blob = await documentos.espelharArquivosLocais(
+          documentos.filtrarArquivosExistentes(paths),
+          "relatorios/cobrancas",
+        );
+      }
       json(ctx.res, 200, { data, blob });
     }),
   });
@@ -134,12 +141,19 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     paramNames: encerramento.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<encerramentoRel.GerarEncerramentoInput>(ctx.req);
-      const data = encerramentoRel.gerarEncerramento(body);
-      const paths = [data.arquivos?.txt, data.arquivos?.json];
-      const blob = await documentos.espelharArquivosLocais(
-        documentos.filtrarArquivosExistentes(paths),
-        "relatorios/encerramento",
-      );
+      const armazenar = body.armazenarServidor === true;
+      const data = encerramentoRel.gerarEncerramento({
+        ...body,
+        salvar: armazenar,
+      });
+      let blob = null;
+      if (armazenar) {
+        const paths = [data.arquivos?.txt, data.arquivos?.json];
+        blob = await documentos.espelharArquivosLocais(
+          documentos.filtrarArquivosExistentes(paths),
+          "relatorios/encerramento",
+        );
+      }
       json(ctx.res, 200, { data, blob });
     }),
   });
@@ -150,16 +164,19 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     pattern: prestacao.regex,
     paramNames: prestacao.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody<PrestacaoContasInput>(ctx.req);
+      const body = await readJsonBody<PrestacaoContasInput & { armazenarServidor?: boolean }>(ctx.req);
       const data = prestacaoRel.gerarPrestacaoContas(body);
-      const paths = [
-        data.dadosPath,
-        ...data.arquivos.map((a) => a.arquivoTxt),
-      ];
-      const blob = await documentos.espelharArquivosLocais(
-        documentos.filtrarArquivosExistentes(paths),
-        "relatorios/prestacao-contas",
-      );
+      let blob = null;
+      if (body.armazenarServidor === true) {
+        const paths = [
+          data.dadosPath,
+          ...data.arquivos.map((a) => a.arquivoTxt),
+        ];
+        blob = await documentos.espelharArquivosLocais(
+          documentos.filtrarArquivosExistentes(paths),
+          "relatorios/prestacao-contas",
+        );
+      }
       json(ctx.res, 200, { data, blob });
     }),
   });

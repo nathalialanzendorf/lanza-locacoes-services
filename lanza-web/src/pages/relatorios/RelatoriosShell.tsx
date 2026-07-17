@@ -6,7 +6,7 @@ export function RelatoriosShell() {
   return (
     <PageHeader
       title="Relatórios"
-      description="Cobranças, prestação de contas e encerramento de contrato."
+      description="Cobranças, prestação de contas, encerramento de contrato e infrações DETRAN."
     >
       <PageTabs
         ariaLabel="Relatórios"
@@ -14,6 +14,7 @@ export function RelatoriosShell() {
           { to: "/relatorios/cobrancas", label: "Cobranças", end: true },
           { to: "/relatorios/prestacao-contas", label: "Prestação de contas" },
           { to: "/relatorios/encerramento", label: "Encerramento" },
+          { to: "/relatorios/infracoes", label: "Infrações" },
         ]}
       />
       <Outlet />

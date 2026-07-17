@@ -46,7 +46,6 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         if (typeof l.inicio === "string") setInicio(l.inicio);
         if (typeof l.fim === "string") setFim(l.fim);
         if (typeof l.clienteId === "string") setClienteId(l.clienteId);
-        else if (typeof l.condutor === "string") setClienteId(l.condutor);
         if (typeof l.observacao === "string") setObservacao(l.observacao);
       })
       .catch((err) => {
@@ -70,7 +69,7 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         situacao,
         inicio: inicio.trim(),
         fim: fim.trim() || null,
-        condutor: clienteId.trim() || null,
+        clienteId: clienteId.trim() || null,
         tipoLocacao: situacao === "locado" ? tipoLocacao : null,
         observacao: observacao.trim() || null,
       };
@@ -105,7 +104,6 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         title={editando ? "Editar movimentação" : "Nova movimentação"}
         onSubmit={submit}
         loading={loading}
-        submitLabel={editando ? "Salvar alterações" : "Gravar"}
         error={error}
       >
         <Field label="Veículo">
@@ -133,12 +131,12 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         <Field label="Fim (opcional)" hint="DD/MM/AAAA">
           <input className="input" value={fim} onChange={(e) => setFim(e.target.value)} />
         </Field>
-        <Field label="Cliente (condutor)">
+        <Field label="Cliente">
           <ClienteSelect
             value={clienteId}
             onChange={setClienteId}
             disabled={loading}
-            emptyLabel="— Sem condutor —"
+            emptyLabel="— Sem cliente —"
           />
         </Field>
         <Field label="Observação">

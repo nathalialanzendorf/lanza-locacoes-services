@@ -68,6 +68,7 @@ export type GerarCobrancasInput = {
   diaOverride?: number;
   dataPagamentoBr?: string;
   salvar?: boolean;
+  armazenarServidor?: boolean;
   outDir?: string;
   canvasInfracoes?: VarianteCanvasInfracoes;
   gerarCanvas?: boolean;

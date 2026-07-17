@@ -1,23 +1,40 @@
 import { useState } from "react";
 import { Field, FormCard } from "@/components/FormCard";
+import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
+import {
+  downloadArquivoTexto,
+  downloadPdfViaImpressao,
+  textoEncerramento,
+  type RelatorioModoEntrega,
+} from "@/lib/relatorioDownload";
+
+type EncerramentoPayload = {
+  data?: unknown;
+  whatsapp?: string;
+  texto?: string;
+  avisos?: string[];
+  arquivos?: unknown;
+};
+
+function normalizarEncerramento(r: EncerramentoPayload & { data?: EncerramentoPayload }): EncerramentoPayload {
+  if (r.texto != null || r.whatsapp != null) return r;
+  if (r.data && typeof r.data === "object" && ("texto" in r.data || "whatsapp" in r.data)) {
+    return r.data as EncerramentoPayload;
+  }
+  return r;
+}
 
 export function RelatorioEncerramentoForm() {
   const [pastaContrato, setPastaContrato] = useState("");
   const [dataEncerramento, setDataEncerramento] = useState("");
   const [semanasPagas, setSemanasPagas] = useState("");
-  const [salvar, setSalvar] = useState(true);
+  const [armazenarServidor, setArmazenarServidor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    data?: unknown;
-    whatsapp?: string;
-    texto?: string;
-    avisos?: string[];
-    arquivos?: unknown;
-  } | null>(null);
+  const [result, setResult] = useState<EncerramentoPayload | null>(null);
 
   const [idOuPasta, setIdOuPasta] = useState("");
   const [motivo, setMotivo] = useState("devolvido");
@@ -26,19 +43,32 @@ export function RelatorioEncerramentoForm() {
   const [encerrarResult, setEncerrarResult] = useState<unknown>(null);
   const [encerrarError, setEncerrarError] = useState<string | null>(null);
 
-  async function calcular() {
+  const paramsValidos = Boolean(pastaContrato.trim() && dataEncerramento.trim());
+
+  async function entregar(modo: RelatorioModoEntrega) {
     setLoading(true);
     setError(null);
+    if (modo !== "visualizar") setResult(null);
     try {
-      const r = await lanzaApi.gerarEncerramento({
+      const bruto = await lanzaApi.gerarEncerramento({
         pastaContrato: pastaContrato.trim(),
         dataEncerramento: dataEncerramento.trim(),
         semanasPagas: semanasPagas.trim() ? Number(semanasPagas) : undefined,
-        salvar,
+        armazenarServidor,
       });
-      setResult(r);
+      const payload = normalizarEncerramento(bruto as EncerramentoPayload & { data?: EncerramentoPayload });
+      const texto = textoEncerramento(payload);
+      if (!texto.trim()) throw new Error("Relatório vazio.");
+      const nome = `encerramento-${dataEncerramento.replace(/\//g, "-")}`;
+      if (modo === "visualizar") {
+        setResult(payload);
+      } else if (modo === "txt") {
+        downloadArquivoTexto(nome, texto);
+      } else {
+        downloadPdfViaImpressao(nome, texto);
+      }
     } catch (err) {
-      setError(err instanceof LanzaApiError ? err.message : "Falha ao calcular encerramento.");
+      setError(err instanceof LanzaApiError ? err.message : err instanceof Error ? err.message : "Falha ao calcular encerramento.");
     } finally {
       setLoading(false);
     }
@@ -64,48 +94,48 @@ export function RelatorioEncerramentoForm() {
 
   return (
     <>
-      <FormCard
-        title="Calcular acerto final"
-        onSubmit={calcular}
+      <section className="form-card">
+        <h2 className="form-card__title">Calcular acerto final</h2>
+        <div className="form-grid">
+          <Field label="Pasta do contrato" hint="Ex.: 17.07.2026 - Nome Cliente">
+            <input
+              className="input"
+              value={pastaContrato}
+              onChange={(e) => setPastaContrato(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Data de encerramento" hint="DD/MM/AAAA">
+            <input
+              className="input"
+              value={dataEncerramento}
+              onChange={(e) => setDataEncerramento(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Semanas pagas (opcional)">
+            <input
+              className="input"
+              type="number"
+              min={0}
+              value={semanasPagas}
+              onChange={(e) => setSemanasPagas(e.target.value)}
+            />
+          </Field>
+        </div>
+        {error ? <p className="form-card__error">{error}</p> : null}
+      </section>
+
+      <RelatorioEntrega
         loading={loading}
-        submitLabel="Calcular relatório"
-        error={error}
-      >
-        <Field label="Pasta do contrato" hint="Ex.: 17.07.2026 - Nome Cliente">
-          <input
-            className="input"
-            value={pastaContrato}
-            onChange={(e) => setPastaContrato(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Data de encerramento" hint="DD/MM/AAAA">
-          <input
-            className="input"
-            value={dataEncerramento}
-            onChange={(e) => setDataEncerramento(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Semanas pagas (opcional)">
-          <input
-            className="input"
-            type="number"
-            min={0}
-            value={semanasPagas}
-            onChange={(e) => setSemanasPagas(e.target.value)}
-          />
-        </Field>
-        <Field label="Gravar ficheiros">
-          <label className="checkbox-label">
-            <input type="checkbox" checked={salvar} onChange={(e) => setSalvar(e.target.checked)} />
-            Salvar TXT/JSON em relatorios/
-          </label>
-        </Field>
-      </FormCard>
+        disabled={!paramsValidos}
+        armazenarServidor={armazenarServidor}
+        onArmazenarServidorChange={setArmazenarServidor}
+        onEntrega={(modo) => void entregar(modo)}
+      />
 
       <ResultPanel
-        title="Resultado do cálculo"
+        title="Visualização"
         whatsapp={result?.whatsapp}
         texto={result?.texto}
         data={result?.data}

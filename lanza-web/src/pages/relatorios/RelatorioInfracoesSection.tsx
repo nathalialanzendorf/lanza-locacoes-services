@@ -1,38 +1,44 @@
 import { useMemo, useState } from "react";
 import { DataTable } from "@/components/DataTable";
-import { PageHeader, QueryError } from "@/components/PageHeader";
+import { QueryError } from "@/components/PageHeader";
 import { ResultPanel } from "@/components/ResultPanel";
 import { useClientes, useInfracoes } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatBrl, formatPlaca } from "@/lib/format";
+import {
+  clienteConfirmadoDe,
+  clienteIdDe,
+  clienteNaoIdentificadoDe,
+} from "@/lib/clienteCampo";
 import type { Infracao } from "@/api/types";
 
 function valorInfracao(i: Infracao): number {
   return Number(i.valorMulta ?? i.valor) || 0;
 }
 
-function condutorLabel(
+function clienteLabel(
   i: Infracao,
   nomes: Map<string, string>,
 ): { text: string; className: string } {
   if (i.debitoParceiroConfirmado) {
     return { text: "Débito parceiro", className: "badge badge--muted" };
   }
-  if (i.condutorId) {
-    const nome = nomes.get(i.condutorId);
+  const id = clienteIdDe(i);
+  if (id) {
+    const nome = nomes.get(id);
     return {
-      text: nome ?? i.condutorId.slice(0, 8),
-      className: i.condutorConfirmado ? "badge badge--ok" : "badge badge--warn",
+      text: nome ?? id.slice(0, 8),
+      className: clienteConfirmadoDe(i) ? "badge badge--ok" : "badge badge--warn",
     };
   }
-  if (i.condutorNaoIdentificado) {
+  if (clienteNaoIdentificadoDe(i)) {
     return { text: "Não identificado", className: "badge badge--muted" };
   }
   if (i.revisarManual) {
     return { text: "Revisar", className: "badge badge--warn" };
   }
-  return { text: "Sem condutor", className: "badge badge--danger" };
+  return { text: "Sem cliente", className: "badge badge--danger" };
 }
 
 function situacaoLabel(i: Infracao): { text: string; className: string } {
@@ -49,9 +55,9 @@ function situacaoLabel(i: Infracao): { text: string; className: string } {
   return { text: raw || "—", className: "badge badge--muted" };
 }
 
-export function InfracoesPage() {
+export function RelatorioInfracoesSection() {
   const [emAberto, setEmAberto] = useState(true);
-  const [semCondutor, setSemCondutor] = useState(false);
+  const [semCliente, setSemCliente] = useState(false);
   const [placa, setPlaca] = useState("");
   const [atribuirLoading, setAtribuirLoading] = useState(false);
   const [atribuirResult, setAtribuirResult] = useState<unknown>(null);
@@ -59,13 +65,13 @@ export function InfracoesPage() {
 
   const query = useInfracoes({
     emAberto,
-    semCondutor: semCondutor || undefined,
+    semCliente: semCliente || undefined,
     placa: placa.trim() || undefined,
     ativo: true,
   });
   const clientesQuery = useClientes();
 
-  const nomesCondutor = useMemo(
+  const nomesCliente = useMemo(
     () =>
       new Map(
         (clientesQuery.data?.items ?? [])
@@ -82,35 +88,33 @@ export function InfracoesPage() {
 
   const loading = query.isLoading || clientesQuery.isLoading;
 
-  async function atribuirCondutores(dryRun: boolean) {
+  async function atribuirClientes(dryRun: boolean) {
     setAtribuirLoading(true);
     setAtribuirError(null);
     try {
-      const r = await lanzaApi.atribuirCondutoresInfracoes({
+      const r = await lanzaApi.atribuirClientesInfracoes({
         dryRun,
         placa: placa.trim() || undefined,
       });
       setAtribuirResult(r);
     } catch (err) {
-      setAtribuirError(err instanceof LanzaApiError ? err.message : "Falha ao atribuir condutores.");
+      setAtribuirError(err instanceof LanzaApiError ? err.message : "Falha ao atribuir clientes.");
     } finally {
       setAtribuirLoading(false);
     }
   }
 
   return (
-    <PageHeader
-      title="Infrações"
-      description="Multas sincronizadas do DETRAN SC — autuação, condutor e situação de cobrança."
-      actions={
-        !loading ? (
+    <>
+      {!loading ? (
+        <p className="relatorio-infracoes__resumo">
           <span className="badge badge--muted">
             {query.data?.total ?? 0} registo{(query.data?.total ?? 0) === 1 ? "" : "s"} ·{" "}
             {formatBrl(total)}
           </span>
-        ) : null
-      }
-    >
+        </p>
+      ) : null}
+
       <div className="despesas-toolbar">
         <input
           className="input"
@@ -129,31 +133,31 @@ export function InfracoesPage() {
         <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={semCondutor}
-            onChange={(e) => setSemCondutor(e.target.checked)}
+            checked={semCliente}
+            onChange={(e) => setSemCliente(e.target.checked)}
           />
-          Sem condutor
+          Sem cliente
         </label>
         <button
           type="button"
           className="btn btn--ghost"
           disabled={atribuirLoading}
-          onClick={() => void atribuirCondutores(true)}
+          onClick={() => void atribuirClientes(true)}
         >
-          Preview atribuir condutores
+          Preview atribuir clientes
         </button>
         <button
           type="button"
           className="btn btn--primary"
           disabled={atribuirLoading}
-          onClick={() => void atribuirCondutores(false)}
+          onClick={() => void atribuirClientes(false)}
         >
-          Atribuir condutores
+          Atribuir clientes
         </button>
       </div>
 
       {atribuirError ? <p className="form-card__error">{atribuirError}</p> : null}
-      <ResultPanel title="Atribuição de condutores" data={atribuirResult} />
+      <ResultPanel title="Atribuição de clientes" data={atribuirResult} />
 
       {query.isError ? (
         <QueryError
@@ -210,10 +214,10 @@ export function InfracoesPage() {
             },
           },
           {
-            key: "condutor",
-            header: "Condutor",
+            key: "cliente",
+            header: "Cliente",
             render: (i) => {
-              const c = condutorLabel(i, nomesCondutor);
+              const c = clienteLabel(i, nomesCliente);
               return <span className={c.className}>{c.text}</span>;
             },
           },
@@ -229,6 +233,6 @@ export function InfracoesPage() {
           },
         ]}
       />
-    </PageHeader>
+    </>
   );
 }

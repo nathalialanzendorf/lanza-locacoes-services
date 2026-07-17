@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useVeiculos } from "@/api/hooks";
+import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
@@ -20,6 +20,22 @@ export function VeiculosListSection() {
     ativo: filtro === "ativos" ? true : undefined,
     placa: placa.trim() || undefined,
   });
+  const parceirosQuery = useParceiros();
+  const vinculosQuery = useVinculosParceiro();
+
+  const parceiroPorVeiculoId = useMemo(() => {
+    const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
+    const map = new Map<string, string>();
+    for (const v of vinculosQuery.data?.items ?? []) {
+      const nome = nomes.get(v.parceiroId);
+      if (nome) map.set(v.veiculoId, nome);
+    }
+    return map;
+  }, [parceirosQuery.data, vinculosQuery.data]);
+
+  function parceiroDoVeiculo(veiculo: Veiculo): string {
+    return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
+  }
 
   async function excluir(veiculo: Veiculo) {
     const label = formatPlaca(veiculo.placa ?? veiculo.id);
@@ -36,9 +52,11 @@ export function VeiculosListSection() {
     }
   }
 
+  const loadingExtra = parceirosQuery.isLoading || vinculosQuery.isLoading;
+
   return (
     <>
-      <ListToolbar addTo="/veiculos/novo" addLabel="Adicionar veículo">
+      <ListToolbar addTo="/veiculos/novo" importTo="/veiculos/importar">
         <input
           className="input"
           placeholder="Filtrar placa"
@@ -56,15 +74,16 @@ export function VeiculosListSection() {
         />
       ) : null}
       <DataTable
-        loading={query.isLoading}
+        loading={query.isLoading || loadingExtra}
         rows={query.data?.items ?? []}
         keyFn={(v) => v.id}
         columns={[
           { key: "placa", header: "Placa", render: (v) => <strong>{formatPlaca(v.placa)}</strong> },
-          { key: "modelo", header: "Marca / modelo", render: (v) => v.marcaModelo ?? "—" },
-          { key: "uf", header: "UF", render: (v) => v.ufRegistro ?? "SC" },
+          { key: "marcaModelo", header: "Marca / modelo", render: (v) => v.marcaModelo ?? "—" },
+          { key: "ano", header: "Ano", render: (v) => v.anoModelo ?? "—" },
+          { key: "parceiro", header: "Parceiro", render: (v) => parceiroDoVeiculo(v) },
           {
-            key: "ativo",
+            key: "status",
             header: "Status",
             render: (v) => <span className={statusClass(v.ativo)}>{statusLabel(v.ativo)}</span>,
           },

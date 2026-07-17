@@ -21,10 +21,17 @@ type CriarDespesaBody = {
   syncRastreame?: boolean;
 };
 
-type ConfirmarCondutorBody = {
+type ConfirmarClienteBody = {
+  clienteId?: string | null;
+  /** @deprecated use clienteId */
   condutorId?: string | null;
   syncRastreame?: boolean;
 };
+
+function clienteIdDoBody(body: ConfirmarClienteBody): string | null | undefined {
+  if (body.clienteId !== undefined) return body.clienteId;
+  return body.condutorId;
+}
 
 export function registerDespesasRoutes(routes: RouteDef[]): void {
   const list = compileRoute("/api/despesas");
@@ -112,23 +119,33 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     }),
   });
 
-  const confirmar = compileRoute("/api/despesas/:id/confirmar-condutor");
-  routes.push({
-    method: "POST",
-    pattern: confirmar.regex,
-    paramNames: confirmar.paramNames,
-    handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody<ConfirmarCondutorBody>(ctx.req);
+  const confirmarHandler = routeAsync(async (ctx) => {
+      const body = await readJsonBody<ConfirmarClienteBody>(ctx.req);
       const syncRastreame = parseSyncRastreameBody(
         body.syncRastreame,
         parseSyncRastreameQuery(ctx.query.get("syncRastreame")),
       );
-      const data = await despesasService.confirmarCondutorDespesa(
+      const data = await despesasService.confirmarClienteDespesa(
         ctx.params.id,
-        body.condutorId,
+        clienteIdDoBody(body),
         { syncRastreame },
       );
       json(ctx.res, 200, { data });
-    }),
+    });
+
+  const confirmar = compileRoute("/api/despesas/:id/confirmar-cliente");
+  routes.push({
+    method: "POST",
+    pattern: confirmar.regex,
+    paramNames: confirmar.paramNames,
+    handler: confirmarHandler,
+  });
+
+  const confirmarLegado = compileRoute("/api/despesas/:id/confirmar-condutor");
+  routes.push({
+    method: "POST",
+    pattern: confirmarLegado.regex,
+    paramNames: confirmarLegado.paramNames,
+    handler: confirmarHandler,
   });
 }

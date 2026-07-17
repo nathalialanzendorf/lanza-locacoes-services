@@ -51,7 +51,8 @@ Comandos:
   pedagio-digital register --placa PLACA [--modelo X] | veiculos | passagens --placa PLACA [--status aberto|pago]
   sync-gastos-gerais [--dry-run] [--pull-only] [--push-only] [--force-pull] [--motorista KEY]  (alias: sync-recebimentos)
   sync-manutencao [--placa PLACA] [--categoria CAT] [--dry-run]  (despesa parceiro → tela Manutenção)
-  sync-rastreaveis [--dry-run] [--pull-only] [--push-only] [--force-pull] [--no-fipe]
+  sync-rastreaveis [--dry-run] [--pull-only] [--push-only] [--force-pull] [--fipe]
+  sync-fipe [--placa PLACA] [--faltantes] [--dry-run]
   sync-motoristas [--dry-run] [--pull-only] [--push-only] [--force-pull]
   renegociar-debitos resumo --motorista <key> --rastreavel <key>
   renegociar-debitos <entrada.json> [--execute]
@@ -212,6 +213,9 @@ Comandos:
       break;
     case "sync-rastreaveis":
       await (await import("./cli/syncRastreaveis.js")).main(rest);
+      break;
+    case "sync-fipe":
+      await (await import("./cli/syncFipe.js")).main(rest);
       break;
     case "sync-motoristas":
       await (await import("./cli/syncMotoristas.js")).main(rest);

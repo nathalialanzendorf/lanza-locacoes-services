@@ -105,7 +105,7 @@ export const lanzaApi = {
   listarInfracoes: (params?: {
     placa?: string;
     emAberto?: boolean;
-    semCondutor?: boolean;
+    semCliente?: boolean;
     ativo?: boolean;
   }) => apiRequest<ListEnvelope<Infracao>>("/api/infracoes", { params }),
 

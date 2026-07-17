@@ -38,7 +38,7 @@ export function obterResumo() {
   const despesasParceiroAbertas = despesasParceiro.filter((d) => !String(d.baixa ?? "").trim());
 
   const infracoesAbertas = infracoes.filter(infracaoEmAberto);
-  const infracoesSemCondutor = infracoes.filter(
+  const infracoesSemCliente = infracoes.filter(
     (i) =>
       infracaoEmAberto(i) &&
       !i.condutorId &&
@@ -71,7 +71,8 @@ export function obterResumo() {
     },
     infracoes: {
       emAberto: infracoesAbertas.length,
-      semCondutor: infracoesSemCondutor.length,
+      semCliente: infracoesSemCliente.length,
+      semCondutor: infracoesSemCliente.length,
     },
     locacoes: { abertas: locacoesAbertas.length },
   };

@@ -10,6 +10,7 @@ import { HttpError } from "../../http.js";
 
 export type GerarEncerramentoInput = EncerramentoInput & {
   salvar?: boolean;
+  armazenarServidor?: boolean;
   outTxt?: string;
   outJson?: string;
   semJson?: boolean;

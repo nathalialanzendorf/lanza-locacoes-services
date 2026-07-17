@@ -7,6 +7,7 @@ import { ResultPanel } from "@/components/ResultPanel";
 import { useRastreameEspelho } from "@/hooks/useRastreameEspelho";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
+import { LABEL } from "@/lib/labels";
 
 export function ClientesImportLoteSection() {
   const qc = useQueryClient();
@@ -55,13 +56,7 @@ export function ClientesImportLoteSection() {
         title="Importar clientes (CNH em lote)"
         onSubmit={importarCnh}
         loading={loading}
-        submitLabel={
-          dryRun
-            ? "Simular importação"
-            : espelhoRastreame
-              ? "Importar (Lanza + espelho Rastreame)"
-              : "Importar (só Lanza)"
-        }
+        submitLabel={dryRun ? "Simular" : LABEL.importar}
         error={error}
       >
         <Field label="Raiz documentos" hint="Pasta Aluguel Carros (opcional — usa config)">
@@ -73,7 +68,7 @@ export function ClientesImportLoteSection() {
         </label>
       </FormCard>
       <button type="button" className="btn btn--ghost" disabled={loading} onClick={() => void previewCnh()}>
-        Preview pastas CNH
+        {LABEL.consultar}
       </button>
       <ResultPanel title="Resultado" data={result} />
     </>

@@ -31,12 +31,14 @@ import {
   sincronizarVeiculoDetranRs,
   syncMotoristas,
   syncRastreaveis,
+  preencherFipeFaltante,
   syncRecebimentos,
   ufRegistroDaPlaca,
   type DetranRsConsultaVeiculo,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
-import { normalizarSyncId, SYNC_COMPLETO_ORDEM, type SyncId } from "./catalog.js";
+import * as fipeService from "../fipe.js";
+import { normalizarSyncId, syncDirecaoDefaults, SYNC_COMPLETO_ORDEM, type SyncId } from "./catalog.js";
 
 export type SyncBaseOpts = {
   dryRun?: boolean;
@@ -54,8 +56,11 @@ export type SyncRecebimentosOpts = SyncRastreameOpts & {
   motoristaKey?: string;
 };
 
-export type SyncRastreaveisOpts = SyncRastreameOpts & {
-  noFipe?: boolean;
+export type SyncRastreaveisOpts = SyncRastreameOpts;
+
+export type SyncFipeOpts = SyncBaseOpts & {
+  /** Só veículos ativos sem FIPE (default API: frota ativa completa). */
+  faltantes?: boolean;
 };
 
 export type SyncDetranScOpts = SyncBaseOpts & {
@@ -86,10 +91,17 @@ export type SyncInput = SyncBaseOpts &
   SyncRastreameOpts &
   SyncRecebimentosOpts &
   SyncRastreaveisOpts &
+  SyncFipeOpts &
   SyncDetranScOpts &
   SyncPedagiosOpts &
   SyncSeguroOpts &
   SyncManutencaoOpts;
+
+function aplicarDirecaoSync(sync: SyncId, input: SyncInput): SyncInput {
+  if (input.pullOnly === true || input.pushOnly === true) return input;
+  const d = syncDirecaoDefaults(sync);
+  return { ...input, ...d };
+}
 
 function readJsonFile(jsonPath: string): unknown {
   const p = path.resolve(jsonPath);
@@ -128,9 +140,19 @@ async function runRastreaveis(opts: SyncRastreaveisOpts) {
     pull: !opts.pushOnly,
     push: !opts.pullOnly,
     forcePull: opts.forcePull,
-    fipe: !opts.noFipe,
+    fipe: false,
   });
-  return { push: r.push, pull: r.pull, fipe: r.fipe };
+  return { push: r.push, pull: r.pull };
+}
+
+async function runFipe(opts: SyncFipeOpts) {
+  if (opts.placa?.trim()) {
+    return fipeService.atualizarFipeVeiculo(opts.placa.trim());
+  }
+  if (opts.faltantes) {
+    return preencherFipeFaltante({ dryRun: opts.dryRun });
+  }
+  return fipeService.atualizarFipeFrota();
 }
 
 async function runRecebimentos(opts: SyncRecebimentosOpts) {
@@ -441,32 +463,35 @@ export async function executarSync(syncRaw: string, input: SyncInput = {}) {
   if (!sync) {
     throw new HttpError(400, `Sync desconhecido: ${syncRaw}`);
   }
+  const opts = aplicarDirecaoSync(sync, input);
 
   switch (sync) {
     case "motoristas":
-      return { sync, ...(await runMotoristas(input)) };
+      return { sync, ...(await runMotoristas(opts)) };
     case "rastreaveis":
-      return { sync, ...(await runRastreaveis(input)) };
+      return { sync, ...(await runRastreaveis(opts)) };
+    case "fipe":
+      return { sync, ...(await runFipe(opts)) };
     case "recebimentos":
-      return { sync, ...(await runRecebimentos(input)) };
+      return { sync, ...(await runRecebimentos(opts)) };
     case "pedagios":
-      return { sync, ...(await runPedagios(input)) };
+      return { sync, ...(await runPedagios(opts)) };
     case "infracoes":
-      return { sync, ...(await runInfracoes(input)) };
+      return { sync, ...(await runInfracoes(opts)) };
     case "ipva-licenciamento":
-      return { sync, ...(await runIpvaLicenciamento(input)) };
+      return { sync, ...(await runIpvaLicenciamento(opts)) };
     case "detran-rs":
-      return { sync, ...(await runDetranRs(input)) };
+      return { sync, ...(await runDetranRs(opts)) };
     case "seguro":
-      return { sync, ...(await runSeguro(input)) };
+      return { sync, ...(await runSeguro(opts)) };
     case "manutencao":
-      return { sync, ...(await runManutencao(input)) };
+      return { sync, ...(await runManutencao(opts)) };
     default:
       throw new HttpError(400, `Sync não implementado: ${sync}`);
   }
 }
 
-export type SyncCompletoInput = {
+export type SyncCompletoInput = SyncInput & {
   syncs?: string[];
   opcoes?: Partial<Record<SyncId, SyncInput>>;
   async?: boolean;
@@ -484,7 +509,11 @@ export async function executarSyncCompleto(input: SyncCompletoInput = {}) {
   const resultados: Array<{ sync: SyncId; ok: boolean; data?: unknown; error?: string }> = [];
 
   for (const sync of ordem) {
-    const opts = { ...(input.opcoes?.[sync] ?? {}) };
+    const { syncs: _s, opcoes: _o, async: _a, ...global } = input;
+    const opts = aplicarDirecaoSync(sync, {
+      ...global,
+      ...(input.opcoes?.[sync] ?? {}),
+    });
     try {
       const data = await executarSync(sync, opts);
       resultados.push({ sync, ok: true, data });

@@ -5,23 +5,14 @@ import { ResultPanel } from "@/components/ResultPanel";
 import { useSyncJobs, useSyncMeta } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import type { SyncCatalogEntry, SyncJob } from "@/api/types";
-
-const SYNC_PRIORIDADE = [
-  "motoristas",
-  "pedagios",
-  "infracoes",
-  "ipva-licenciamento",
-  "rastreaveis",
-  "seguro",
-  "recebimentos",
-  "detran-rs",
-  "manutencao",
-] as const;
+import { bodySyncGlobal, opcoesSyncCompleto, ordenarSyncsPorDirecao } from "@/lib/syncUi";
+import { LABEL } from "@/lib/labels";
+import type { SyncCatalogEntry, SyncDirecao, SyncJob } from "@/api/types";
 
 const SKILL_ALIASES: Record<string, string> = {
   motoristas: "sync-cliente",
   rastreaveis: "sync-veículo",
+  fipe: "sync-fipe",
   infracoes: "sync-infracoes",
   "ipva-licenciamento": "sync-ipva-licenciamento",
   pedagios: "sync-pedagios",
@@ -44,17 +35,72 @@ function statusBadge(status: SyncJob["status"]) {
   }
 }
 
-function ordenarSyncs(syncs: SyncCatalogEntry[]): SyncCatalogEntry[] {
-  const map = new Map(syncs.map((s) => [s.id, s]));
-  const ordered: SyncCatalogEntry[] = [];
-  for (const id of SYNC_PRIORIDADE) {
-    const item = map.get(id);
-    if (item) ordered.push(item);
-  }
-  for (const s of syncs) {
-    if (!ordered.some((o) => o.id === s.id)) ordered.push(s);
-  }
-  return ordered;
+type SyncCardProps = {
+  sync: SyncCatalogEntry;
+  direcao: SyncDirecao;
+  running: boolean;
+  disabled: boolean;
+  onExecutar: () => void;
+};
+
+function SyncCard({ sync, direcao, running, disabled, onExecutar }: SyncCardProps) {
+  const acao = direcao === "enviar" ? "Enviar" : "Buscar";
+
+  return (
+    <article className="sync-card">
+      <header className="sync-card__head">
+        <h3>{sync.rotulo}</h3>
+        <code className="sync-card__skill">{SKILL_ALIASES[sync.id] ?? sync.id}</code>
+      </header>
+      <p className="sync-card__destino">{sync.destino}</p>
+      {sync.nota ? <p className="sync-card__nota">{sync.nota}</p> : null}
+      <div className="sync-card__badges">
+        <span className={direcao === "enviar" ? "badge badge--warn" : "badge badge--ok"}>{acao}</span>
+        {sync.interativo ? (
+          <span className="badge badge--muted">Interativo</span>
+        ) : (
+          <span className="badge badge--muted">Automático</span>
+        )}
+      </div>
+      <button type="button" className="btn btn--primary sync-card__btn" disabled={disabled} onClick={onExecutar}>
+        {running ? LABEL.processando : acao}
+      </button>
+    </article>
+  );
+}
+
+type SyncSectionProps = {
+  titulo: string;
+  descricao: string;
+  syncs: SyncCatalogEntry[];
+  direcao: SyncDirecao;
+  runningId: string | null;
+  onExecutar: (id: string) => void;
+};
+
+function SyncSection({ titulo, descricao, syncs, direcao, runningId, onExecutar }: SyncSectionProps) {
+  if (syncs.length === 0) return null;
+
+  return (
+    <section className="sync-section">
+      <header className="sync-section__head">
+        <h2 className="form-card__title">{titulo}</h2>
+        <p className="field__hint">{descricao}</p>
+      </header>
+      <div className="sync-grid">
+        {syncs.map((s) => (
+          <SyncCard
+            key={s.id}
+            sync={s}
+            direcao={direcao}
+            running={runningId === s.id}
+            disabled={runningId !== null}
+            onExecutar={() => onExecutar(s.id)}
+          />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function SyncPage() {
@@ -70,18 +116,12 @@ export function SyncPage() {
   const jobsQuery = useSyncJobs();
   const jobs = jobsQuery.data?.jobs ?? [];
 
-  const syncs = useMemo(
-    () => ordenarSyncs(metaQuery.data?.syncs ?? []),
-    [metaQuery.data],
-  );
+  const syncs = metaQuery.data?.syncs ?? [];
+  const syncsBuscar = useMemo(() => ordenarSyncsPorDirecao(syncs, "buscar"), [syncs]);
+  const syncsEnviar = useMemo(() => ordenarSyncsPorDirecao(syncs, "enviar"), [syncs]);
 
-  const bodyOpts = useMemo(
-    () => ({
-      dryRun,
-      placa: placa.trim() || undefined,
-    }),
-    [dryRun, placa],
-  );
+  const globalOpts = useMemo(() => ({ dryRun, placa }), [dryRun, placa]);
+  const usarAsync = asyncMode && !dryRun;
 
   async function disparar(label: string, fn: () => Promise<unknown>) {
     setRunningId(label);
@@ -99,19 +139,30 @@ export function SyncPage() {
   }
 
   function executarSync(id: string) {
-    void disparar(id, () => lanzaApi.executarSync(id, bodyOpts, { async: asyncMode }));
+    void disparar(id, () => lanzaApi.executarSync(id, bodySyncGlobal(globalOpts), { async: usarAsync }));
   }
 
   function executarCompleto() {
     void disparar("completo", () =>
-      lanzaApi.executarSyncCompleto(bodyOpts, { async: asyncMode }),
+      lanzaApi.executarSyncCompleto(
+        {
+          ...bodySyncGlobal(globalOpts),
+          opcoes: opcoesSyncCompleto(syncs, globalOpts),
+        },
+        { async: usarAsync },
+      ),
     );
+  }
+
+  function toggleDryRun(checked: boolean) {
+    setDryRun(checked);
+    if (checked) setAsyncMode(false);
   }
 
   return (
     <PageHeader
       title="Sincronizações"
-      description="Aciona os syncs Lanza (Rastreame, DETRAN, Pedágio, seguro). Syncs longos correm em background."
+      description="Buscar dados de fontes externas ou enviar alterações locais ao Rastreame."
     >
       <section className="form-card sync-options">
         <h2 className="form-card__title">Opções globais</h2>
@@ -122,21 +173,32 @@ export function SyncPage() {
             <span className="field__hint">Infrações, IPVA e pedágio — uma placa</span>
           </label>
           <label className="field checkbox-label">
-            <input type="checkbox" checked={asyncMode} onChange={(e) => setAsyncMode(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={asyncMode}
+              disabled={dryRun}
+              onChange={(e) => setAsyncMode(e.target.checked)}
+            />
             Executar em background (recomendado)
           </label>
           <label className="field checkbox-label">
-            <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
+            <input type="checkbox" checked={dryRun} onChange={(e) => toggleDryRun(e.target.checked)} />
             Dry-run (simular, não grava)
           </label>
         </div>
+        {dryRun ? (
+          <p className="field__hint sync-dryrun-hint">
+            Dry-run executa em modo síncrono e exibe o resultado JSON abaixo — nada é gravado.
+          </p>
+        ) : null}
       </section>
 
       <section className="sync-completo">
         <div>
           <h2 className="form-card__title">Sync completo</h2>
           <p className="field__hint">
-            Equivalente à skill <code>sync</code> — pedágios primeiro, depois DETRAN, Rastreame e seguro.
+            Busca (DETRAN, pedágio, FIPE, rastreáveis…) e envia (motoristas, gastos, manutenção) na ordem
+            definida.
           </p>
         </div>
         <button
@@ -145,7 +207,7 @@ export function SyncPage() {
           disabled={runningId !== null}
           onClick={executarCompleto}
         >
-          {runningId === "completo" ? "A iniciar…" : "Executar /sync completo"}
+          {runningId === "completo" ? LABEL.processando : "Executar sync completo"}
         </button>
       </section>
 
@@ -161,37 +223,30 @@ export function SyncPage() {
 
       {error ? <p className="form-card__error">{error}</p> : null}
 
-      <div className="sync-grid">
-        {metaQuery.isLoading ? (
-          <p className="field__hint">A carregar syncs…</p>
-        ) : (
-          syncs.map((s) => (
-            <article key={s.id} className="sync-card">
-              <header className="sync-card__head">
-                <h3>{s.rotulo}</h3>
-                <code className="sync-card__skill">{SKILL_ALIASES[s.id] ?? s.id}</code>
-              </header>
-              <p className="sync-card__destino">→ {s.destino}</p>
-              {s.nota ? <p className="sync-card__nota">{s.nota}</p> : null}
-              {s.interativo ? (
-                <span className="badge badge--warn">Interativo (captcha/sessão)</span>
-              ) : (
-                <span className="badge badge--muted">Automático</span>
-              )}
-              <button
-                type="button"
-                className="btn btn--primary sync-card__btn"
-                disabled={runningId !== null}
-                onClick={() => executarSync(s.id)}
-              >
-                {runningId === s.id ? "A iniciar…" : "Executar"}
-              </button>
-            </article>
-          ))
-        )}
-      </div>
+      {metaQuery.isLoading ? (
+        <p className="field__hint">A carregar syncs…</p>
+      ) : (
+        <>
+          <SyncSection
+            titulo="Buscar dados"
+            descricao="Puxa informações para o database local (DETRAN, pedágio, FIPE, seguro). Rastreáveis: pull do Rastreame."
+            syncs={syncsBuscar}
+            direcao="buscar"
+            runningId={runningId}
+            onExecutar={executarSync}
+          />
+          <SyncSection
+            titulo="Enviar dados"
+            descricao="Espelha o database local no Rastreame (motoristas, gastos gerais, manutenção)."
+            syncs={syncsEnviar}
+            direcao="enviar"
+            runningId={runningId}
+            onExecutar={executarSync}
+          />
+        </>
+      )}
 
-      <ResultPanel title="Última resposta" data={lastResult} />
+      <ResultPanel title={dryRun ? "Resultado (dry-run)" : "Última resposta"} data={lastResult} />
 
       <section className="form-card">
         <h2 className="form-card__title">Jobs recentes</h2>

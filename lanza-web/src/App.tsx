@@ -16,7 +16,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 
 import { DespesasPage } from "@/pages/DespesasPage";
 
-import { InfracoesPage } from "@/pages/InfracoesPage";
+import { RelatorioInfracoesSection } from "@/pages/relatorios/RelatorioInfracoesSection";
 
 import { LoginPage } from "@/pages/LoginPage";
 
@@ -101,7 +101,7 @@ export default function App() {
 
                 <Route path="despesas/*" element={<DespesasPage />} />
 
-                <Route path="infracoes" element={<InfracoesPage />} />
+                <Route path="infracoes" element={<Navigate to="/relatorios/infracoes" replace />} />
 
                 <Route path="movimentacao/*" element={<MovimentacaoPage />} />
 
@@ -118,6 +118,8 @@ export default function App() {
                   <Route path="prestacao-contas" element={<RelatorioPrestacaoContasForm />} />
 
                   <Route path="encerramento" element={<RelatorioEncerramentoForm />} />
+
+                  <Route path="infracoes" element={<RelatorioInfracoesSection />} />
 
                 </Route>
 

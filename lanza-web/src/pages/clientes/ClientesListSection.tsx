@@ -1,16 +1,15 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useClientes } from "@/api/hooks";
+import { useClientes, useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { statusClass, statusLabel } from "@/lib/format";
-import type { Cliente } from "@/api/types";
+import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
+import type { Cliente, Contrato } from "@/api/types";
 
 type Filtro = "todos" | "ativos" | "inativos";
 
@@ -23,12 +22,38 @@ function formatCnh(cnh: Cliente["cnh"]): string {
   return "—";
 }
 
+function normCpf(cpf?: string | null): string {
+  return (cpf ?? "").replace(/\D/g, "");
+}
+
+function veiculoDoContrato(contrato: Contrato): string {
+  const placa = formatPlaca(contrato.placa ?? contrato.veiculo?.placa);
+  const modelo = contrato.veiculo?.marcaModelo?.trim();
+  return modelo ? `${placa} — ${modelo}` : placa;
+}
+
 export function ClientesListSection() {
   const qc = useQueryClient();
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useClientes(ativo);
+  const contratosQuery = useContratos({ status: "ativo" });
+
+  const { porClienteId, porCpf } = useMemo(() => {
+    const porClienteId = new Map<string, Contrato>();
+    const porCpf = new Map<string, Contrato>();
+    for (const c of contratosQuery.data?.items ?? []) {
+      if (c.clienteId) porClienteId.set(c.clienteId, c);
+      const cpf = normCpf(c.cpf);
+      if (cpf) porCpf.set(cpf, c);
+    }
+    return { porClienteId, porCpf };
+  }, [contratosQuery.data]);
+
+  function contratoAtivo(cliente: Cliente): Contrato | undefined {
+    return porClienteId.get(cliente.id) ?? porCpf.get(normCpf(cliente.cpf));
+  }
 
   async function excluir(cliente: Cliente) {
     const nome = cliente.nome ?? cliente.id;
@@ -46,15 +71,12 @@ export function ClientesListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/clientes/novo" addLabel="Adicionar cliente">
+      <ListToolbar addTo="/clientes/novo" importTo="/clientes/importar">
         <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)}>
           <option value="ativos">Só ativos</option>
           <option value="inativos">Só inativos</option>
           <option value="todos">Todos</option>
         </select>
-        <Link to="/clientes/importar-lote" className="btn btn--ghost btn--sm">
-          Importar lote CNH
-        </Link>
       </ListToolbar>
       {query.isError ? (
         <QueryError
@@ -62,7 +84,7 @@ export function ClientesListSection() {
         />
       ) : null}
       <DataTable
-        loading={query.isLoading}
+        loading={query.isLoading || contratosQuery.isLoading}
         rows={query.data?.items ?? []}
         keyFn={(c) => c.id}
         columns={[
@@ -70,7 +92,25 @@ export function ClientesListSection() {
           { key: "cpf", header: "CPF", render: (c) => c.cpf ?? "—" },
           { key: "cnh", header: "CNH", render: (c) => formatCnh(c.cnh) },
           {
-            key: "ativo",
+            key: "contratoAtivo",
+            header: "Contrato ativo",
+            render: (c) => {
+              const tem = Boolean(contratoAtivo(c));
+              return (
+                <span className={tem ? "badge badge--ok" : "badge badge--muted"}>{tem ? "Sim" : "Não"}</span>
+              );
+            },
+          },
+          {
+            key: "veiculoContrato",
+            header: "Veículo",
+            render: (c) => {
+              const contrato = contratoAtivo(c);
+              return contrato ? veiculoDoContrato(contrato) : "—";
+            },
+          },
+          {
+            key: "status",
             header: "Status",
             render: (c) => <span className={statusClass(c.ativo)}>{statusLabel(c.ativo)}</span>,
           },

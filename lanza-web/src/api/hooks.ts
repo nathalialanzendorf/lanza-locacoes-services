@@ -90,7 +90,7 @@ export function useVinculosParceiro(params?: { veiculoId?: string; parceiroId?: 
 export function useInfracoes(params?: {
   placa?: string;
   emAberto?: boolean;
-  semCondutor?: boolean;
+  semCliente?: boolean;
   ativo?: boolean;
 }) {
   return useQuery({

@@ -50,7 +50,7 @@ npx tsx src/run.ts atualizar-fipe-veiculos [--placa PLACA]
 
 - A resolução é **heurística** (pontuação por tokens de modelo, cilindrada, portas, ano). Em divergência, refine `marcaModelo`/`fipeModelo` no JSON ou ajuste `EXTRAS_BY_PLACA` em `src/lib/fipe/resolverVeiculo.ts` e rode de novo.
 - `fipeGet` usa `rejectUnauthorized: false` (compatível com ambientes com interceptação TLS).
-- **Veículos inativos (`ativo === false`) são ignorados** na resolução em lote (passo FIPE do `sync-rastreaveis` e `atualizar-fipe-veiculos` sem `--placa`). Não fazemos consulta externa para frota inativa — ver regra "Veículos inativos" em `.cursor/rules/lanza-tools.mdc`. Para forçar um inativo específico, use `atualizar-fipe-veiculos --placa PLACA`.
+- **Veículos inativos (`ativo === false`) são ignorados** na resolução em lote (`sync-fipe` e `atualizar-fipe-veiculos` sem `--placa`). Não fazemos consulta externa para frota inativa — ver regra "Veículos inativos" em `.cursor/rules/lanza-tools.mdc`. Para forçar um inativo específico, use `sync-fipe --placa PLACA`.
 
 ## Extensão
 

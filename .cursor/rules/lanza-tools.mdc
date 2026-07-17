@@ -13,7 +13,7 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 |------|--------|
 | Cadastro / contrato | `cadastro-cliente`, `cadastro-veiculo`, `cadastro-despesa`, `cadastro-recebimento`, `cadastro-contrato`, `cadastro-movimentacao` |
 | Relatórios | `relatorio-encerramento-contrato`, `relatorio-prestacao-contas`, `relatorio-analise-cadastro` |
-| Sync | **`sync`** (orquestração paralela), `sync-infracoes`, `sync-ipva-licenciamento`, `sync-pedagios`, `sync-cliente`, `sync-veiculo`, `sync-recebimentos`, `sync-seguro` |
+| Sync | **`sync`** (orquestração paralela), `sync-infracoes`, `sync-ipva-licenciamento`, `sync-pedagios`, `sync-cliente`, `sync-veiculo`, `sync-fipe`, `sync-recebimentos`, `sync-seguro` |
 | Análise de cadastro | `relatorio-analise-cadastro` (antecedentes criminais / processos — fontes gratuitas) |
 | Outros | `renegociar-debitos` |
 
@@ -91,7 +91,7 @@ Fluxos de **negócio** — o agente segue a skill quando o utilizador pede a aç
 ## Veículos inativos — sem consultas externas
 
 - **Veículo inativo (`ativo === false`) NÃO recebe consultas a serviços externos:** **FIPE**, **Pedágio Digital** e **DETRAN SC**. Não cobrar, não cadastrar placa, não buscar valor FIPE, não consultar débitos/infrações.
-- Mesmo `sync-veiculo`/`sync-cliente` (que sincronizam ativos e inativos para o Rastreame) **pulam o enriquecimento externo** de inativos: o passo FIPE do `sync-rastreaveis` só resolve veículos ativos.
+- Mesmo `sync-veiculo`/`sync-cliente` (que sincronizam ativos e inativos para o Rastreame) **pulam o enriquecimento externo** de inativos. FIPE corre em **`sync-fipe`** (só veículos ativos).
 - Exceção: consulta **manual** dirigida a uma placa específica (ex.: `atualizar-fipe-veiculos --placa PLACA`) é honrada mesmo se o veículo estiver inativo — é um pedido explícito do utilizador.
 - Motivo: evitar erros/ruído (ex.: marca FIPE não encontrada) e chamadas inúteis para frota que não está mais em locação.
 
@@ -104,7 +104,8 @@ enquanto outro corre:
 1. **Pedágio Digital** (`sync-pedagios`) — sessão do BFF expira em **minutos**; vai **primeiro**.
 2. **DETRAN SC** (`sync-infracoes`, `sync-ipva-licenciamento`) — token Bearer dura algumas horas, mas o **captcha é por placa** (uso único).
 3. **Rastreame** (`sync-motoristas`, `sync-rastreaveis`, `sync-recebimentos`, `sync-manutencao`) — credenciais estáveis.
-4. **Os demais sem token** (ex.: `sync-seguro`, baseado em PDFs locais) — por último.
+4. **FIPE** (`sync-fipe`) — após rastreáveis se importou veículos novos; só frota ativa.
+5. **Os demais sem token** (ex.: `sync-seguro`, baseado em PDFs locais) — por último.
 
 - **Rodar em paralelo:** lançar os comandos concorrentemente (não sequencial), respeitando essa ordem de prioridade no arranque, porque os tokens curtos (Pedágio) não podem esperar os syncs longos (Rastreame ~50s) terminarem.
 - DETRAN/Pedágio podem precisar de credenciais frescas (token/sessão capturados no navegador); ver a secção "Set de variáveis de ambiente" abaixo.
@@ -117,6 +118,7 @@ enquanto outro corre:
 
 - **Rodar todos os syncs / sync completo / `/sync`** → skill **`sync`** (7 agentes paralelos; ver `.cursor/skills/sync/`).
 - **Sync multas / infrações DETRAN** → skill **`sync-infracoes`** (lê tool DETRAN, corre `npx tsx src/run.ts sync-infracoes …`).
+- **Sync FIPE frota** → **`sync-fipe`** (`npx tsx src/run.ts sync-fipe`); separado de **`sync-veiculo`** / `sync-rastreaveis`.
 - **Sync IPVA / licenciamento DETRAN** → **SC**: skill **`sync-ipva-licenciamento`**; **RS** (`ufRegistro="RS"`): CLI **`sync-detran-rs`** (tool `.cursor/tools/detran-rs/`).
 - **Sync pedágios / passagens em aberto** → skill **`sync-pedagios`** (lê tool Pedágio Digital, corre `npx tsx src/run.ts sync-pedagios …`).
 - **Motorista / gastos Rastreame** → skill de cadastro correspondente + tool Rastreame.

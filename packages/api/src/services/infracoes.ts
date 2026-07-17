@@ -14,6 +14,8 @@ export type ListarInfracoesOpts = {
   placa?: string;
   veiculoId?: string;
   emAberto?: boolean;
+  semCliente?: boolean;
+  /** @deprecated use semCliente */
   semCondutor?: boolean;
   ativo?: boolean;
 };
@@ -49,7 +51,8 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
     items = items.filter((i) => !infracaoEmAberto(i));
   }
 
-  if (opts.semCondutor === true) {
+  const semCliente = opts.semCliente === true || opts.semCondutor === true;
+  if (semCliente) {
     items = items.filter(
       (i) => !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado,
     );
@@ -74,7 +77,7 @@ export function vincularDespesaInfracao(numeroAuto: string, clienteDespesaId: st
   return item;
 }
 
-export async function atribuirCondutoresInfracoes(opts: {
+export async function atribuirClientesInfracoes(opts: {
   dryRun?: boolean;
   placa?: string;
   prazoDias?: number;
@@ -82,6 +85,9 @@ export async function atribuirCondutoresInfracoes(opts: {
 }) {
   return reconciliarCondutores(opts);
 }
+
+/** @deprecated use atribuirClientesInfracoes */
+export const atribuirCondutoresInfracoes = atribuirClientesInfracoes;
 
 export function infracoesPorVeiculo(veiculoId: string) {
   const v = findVeiculoById(veiculoId);

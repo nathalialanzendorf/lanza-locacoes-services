@@ -1,5 +1,7 @@
 import type { FormEvent, ReactNode } from "react";
 
+import { LABEL } from "@/lib/labels";
+
 type Props = {
   title?: string;
   children: ReactNode;
@@ -14,7 +16,7 @@ export function FormCard({
   children,
   onSubmit,
   loading,
-  submitLabel = "Enviar",
+  submitLabel = LABEL.salvar,
   error,
 }: Props) {
   async function handleSubmit(e: FormEvent) {
@@ -28,7 +30,7 @@ export function FormCard({
       <div className="form-grid">{children}</div>
       {error ? <p className="form-card__error">{error}</p> : null}
       <button type="submit" className="btn btn--primary" disabled={loading}>
-        {loading ? "A processar…" : submitLabel}
+        {loading ? LABEL.processando : submitLabel}
       </button>
     </form>
   );

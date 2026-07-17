@@ -34,7 +34,7 @@ export type SyncRastreaveisOpts = {
   pull?: boolean;
   push?: boolean;
   forcePull?: boolean;
-  /** Resolver FIPE dos veículos novos/sem FIPE após o pull (default: true). */
+  /** Resolver FIPE dos veículos novos/sem FIPE após o pull (default: false — use sync-fipe). */
   fipe?: boolean;
 };
 
@@ -429,7 +429,7 @@ export async function syncRastreaveis(
 ): Promise<SyncRastreaveisResult> {
   const pull = opts.pull !== false;
   const push = opts.push !== false;
-  const fipe = opts.fipe !== false;
+  const fipe = opts.fipe === true;
   const out: SyncRastreaveisResult = {
     pull: { novos: 0, atualizados: 0, inativados: 0, ignorados: 0, erros: [] },
     push: { criados: 0, atualizados: 0, inativados: 0, ignorados: 0, erros: [] },

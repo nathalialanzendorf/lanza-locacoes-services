@@ -340,6 +340,41 @@ code {
   flex: 1;
 }
 
+.list-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.data-fields {
+  display: grid;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .data-fields {
+    grid-template-columns: minmax(8rem, auto) 1fr;
+  }
+}
+
+.data-fields__row {
+  display: contents;
+}
+
+.data-fields dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.data-fields dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+
 .cadastro-back {
   margin: 0 0 1rem;
 }
@@ -507,6 +542,32 @@ code {
   font-size: 0.82rem;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.sync-section {
+  margin-bottom: 1.5rem;
+}
+
+.sync-section__head {
+  margin-bottom: 0.75rem;
+}
+
+.sync-section__head .form-card__title {
+  margin-bottom: 0.25rem;
+}
+
+.sync-dryrun-hint {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  background: var(--surface-2, #f4f4f5);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.sync-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .sync-options {
@@ -881,4 +942,19 @@ code {
 
 .rastreame-espelho__status.is-off {
   color: var(--muted);
+}
+
+.relatorio-entrega__check {
+  margin-bottom: 0.25rem;
+}
+
+.relatorio-entrega__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.relatorio-infracoes__resumo {
+  margin: 0 0 1rem;
 }

@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+
+import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { DocUploadField } from "@/components/DocUploadField";
-import { matchParceiroIdPorNome, ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { matchParceiroIdPorNome, ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
-import { ResultPanel } from "@/components/ResultPanel";
 import { useParceiros } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 
-export function VeiculosToolsSection() {
+export function VeiculosImportarSection() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const parceirosQuery = useParceiros();
-  const [placaFipe, setPlacaFipe] = useState("");
+
   const [placa, setPlaca] = useState("");
   const [marcaModelo, setMarcaModelo] = useState("");
   const [anoModelo, setAnoModelo] = useState("");
@@ -20,12 +23,9 @@ export function VeiculosToolsSection() {
   const [cor, setCor] = useState("");
   const [ufRegistro, setUfRegistro] = useState("SC");
   const [parceiroId, setParceiroId] = useState("");
-  const [loadingFipe, setLoadingFipe] = useState(false);
-  const [loadingCrlv, setLoadingCrlv] = useState(false);
-  const [loadingPastas, setLoadingPastas] = useState(false);
+  const [atualizarFipe, setAtualizarFipe] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<unknown>(null);
-  const [atualizarFipeAposGravar, setAtualizarFipeAposGravar] = useState(true);
 
   function aplicarCrlv(campos: Record<string, unknown>) {
     if (typeof campos.placa === "string") setPlaca(campos.placa);
@@ -41,33 +41,15 @@ export function VeiculosToolsSection() {
     }
   }
 
-  async function atualizarFipe() {
-    if (!placaFipe.trim()) {
-      setError("Selecione o veículo para atualizar FIPE.");
-      return;
-    }
-    setLoadingFipe(true);
-    setError(null);
-    try {
-      const r = await lanzaApi.atualizarFipeVeiculo(placaFipe.trim());
-      setResult(r);
-      void qc.invalidateQueries({ queryKey: ["veiculos"] });
-    } catch (err) {
-      setError(err instanceof LanzaApiError ? err.message : "Falha ao atualizar FIPE.");
-    } finally {
-      setLoadingFipe(false);
-    }
-  }
-
-  async function gravarCrlvUpload() {
+  async function salvar() {
     if (!placa.trim()) {
       setError("Placa obrigatória — envie o CRLV ou informe manualmente.");
       return;
     }
-    setLoadingCrlv(true);
+    setLoading(true);
     setError(null);
     try {
-      const r = await lanzaApi.criarVeiculo({
+      await lanzaApi.criarVeiculo({
         placa: placa.trim(),
         marcaModelo: marcaModelo.trim() || undefined,
         anoModelo: anoModelo.trim() || undefined,
@@ -76,70 +58,36 @@ export function VeiculosToolsSection() {
         cor: cor.trim() || undefined,
         ufRegistro: ufRegistro.trim() || undefined,
         parceiroId: parceiroId.trim() || undefined,
-        origem: "web-upload-crlv-fipe",
+        origem: "web-importar-crlv",
       });
-      let fipeResult: unknown = null;
-      if (atualizarFipeAposGravar) {
+
+      if (atualizarFipe) {
         try {
-          fipeResult = await lanzaApi.atualizarFipeVeiculo(placa.trim());
-        } catch (fipeErr) {
-          fipeResult = {
-            aviso: fipeErr instanceof LanzaApiError ? fipeErr.message : "FIPE não atualizado",
-          };
+          await lanzaApi.atualizarFipeVeiculo(placa.trim());
+        } catch {
+          /* FIPE opcional após importação */
         }
       }
-      setResult({ veiculo: r, fipe: fipeResult });
+
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
       void qc.invalidateQueries({ queryKey: ["parceiros"] });
+      navigate("/veiculos");
     } catch (err) {
-      setError(err instanceof LanzaApiError ? err.message : "Falha ao gravar dados do CRLV.");
+      setError(err instanceof LanzaApiError ? err.message : "Falha ao salvar veículo.");
     } finally {
-      setLoadingCrlv(false);
+      setLoading(false);
     }
   }
-
-  async function importarCrlvPastas() {
-    setLoadingPastas(true);
-    setError(null);
-    try {
-      const r = await lanzaApi.importarCrlv({ placa: placa.trim() || undefined });
-      setResult(r);
-      void qc.invalidateQueries({ queryKey: ["veiculos"] });
-    } catch (err) {
-      setError(err instanceof LanzaApiError ? err.message : "Falha ao importar CRLV das pastas.");
-    } finally {
-      setLoadingPastas(false);
-    }
-  }
-
-  const busy = loadingFipe || loadingCrlv || loadingPastas;
 
   return (
     <>
-      <FormCard
-        title="Atualizar FIPE"
-        onSubmit={atualizarFipe}
-        loading={loadingFipe}
-        submitLabel="Consultar FIPE"
-        error={error}
-      >
-        <Field label="Veículo" hint="Veículo já cadastrado no Lanza">
-          <VeiculoSelect value={placaFipe} onChange={setPlacaFipe} required disabled={busy} />
-        </Field>
-      </FormCard>
-
-      <FormCard
-        title="CRLV — upload (PDF)"
-        onSubmit={gravarCrlvUpload}
-        loading={loadingCrlv}
-        submitLabel="Gravar no Lanza"
-        error={busy && !loadingCrlv ? null : error}
-      >
+      <CadastroBackLink to="/veiculos" />
+      <FormCard title="Importar CRLV" onSubmit={salvar} loading={loading} error={error}>
         <DocUploadField
-          label="Enviar CRLV"
+          label="CRLV (PDF)"
           tipo="crlv"
-          hint="PDF com texto (CRLV digital). Confira os campos antes de gravar."
-          disabled={busy}
+          hint="Envie o PDF do CRLV para preencher os campos automaticamente."
+          disabled={loading}
           onParsed={({ campos }) => aplicarCrlv(campos)}
           onError={setError}
         />
@@ -173,40 +121,15 @@ export function VeiculosToolsSection() {
           <ParceiroSelect
             value={parceiroId}
             onChange={setParceiroId}
-            disabled={busy}
+            disabled={loading}
             emptyLabel="— Sem parceiro —"
           />
         </Field>
         <label className="field checkbox-label">
-          <input
-            type="checkbox"
-            checked={atualizarFipeAposGravar}
-            onChange={(e) => setAtualizarFipeAposGravar(e.target.checked)}
-          />
-          Atualizar FIPE após gravar
+          <input type="checkbox" checked={atualizarFipe} onChange={(e) => setAtualizarFipe(e.target.checked)} />
+          Consultar FIPE após salvar
         </label>
       </FormCard>
-
-      <div className="despesas-toolbar">
-        <VeiculoSelect
-          value={placa}
-          onChange={setPlaca}
-          allowEmpty
-          emptyLabel="Todas as placas (importação)"
-          disabled={busy}
-        />
-        <button
-          type="button"
-          className="btn btn--ghost"
-          disabled={busy}
-          onClick={() => void importarCrlvPastas()}
-        >
-          {loadingPastas ? "A importar…" : "Importar CRLV das pastas (Dropbox)"}
-        </button>
-      </div>
-
-      <ResultPanel title="Resultado" data={result} />
     </>
   );
 }
-
