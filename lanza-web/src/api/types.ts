@@ -62,6 +62,16 @@ export type Contrato = {
   pasta?: string;
   dataInicio?: string;
   dataFim?: string;
+  cpf?: string | null;
+};
+
+/** Resposta completa de GET /api/contratos/:id */
+export type ContratoDetalhe = Contrato & {
+  pastaContrato?: string;
+  cpf?: string | null;
+  clienteNome?: string;
+  dataFimPrevista?: string;
+  dataEncerramento?: string | null;
 };
 
 export type ClienteDespesa = {
@@ -159,6 +169,7 @@ export type Locacao = {
   inicio?: string;
   fim?: string | null;
   condutor?: string | null;
+  condutorNome?: string | null;
   tipoLocacao?: string | null;
   observacao?: string | null;
 };

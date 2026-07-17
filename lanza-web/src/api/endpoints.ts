@@ -46,6 +46,7 @@ export const lanzaApi = {
     cor?: string;
     ativo?: boolean;
     parceiroNome?: string;
+    parceiroId?: string;
     ufRegistro?: string;
     origem?: string;
   }) => apiRequest<{ data: Veiculo; acao: string }>("/api/veiculos", { method: "POST", body }),

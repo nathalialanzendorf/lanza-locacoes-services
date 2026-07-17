@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/DataTable";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
+import { RowDecisaoActions } from "@/components/RowDecisaoActions";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import type { AnaliseCadastroItem } from "@/api/types";
@@ -105,16 +106,7 @@ export function AnaliseCadastroSection() {
             render: (a) => {
               if (a.aprovado === true) return <span className="badge badge--ok">Aprovado</span>;
               if (a.aprovado === false) return <span className="badge badge--danger">Reprovado</span>;
-              return (
-                <span className="row-actions">
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => void decidir(a, true)}>
-                    Aprovar
-                  </button>
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => void decidir(a, false)}>
-                    Reprovar
-                  </button>
-                </span>
-              );
+              return <RowDecisaoActions onApprove={() => void decidir(a, true)} onReject={() => void decidir(a, false)} />;
             },
           },
         ]}

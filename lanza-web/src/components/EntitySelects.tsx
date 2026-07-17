@@ -1,0 +1,173 @@
+import type { ReactNode } from "react";
+import { useMemo } from "react";
+
+import { useClientes, useParceiros, useVeiculos } from "@/api/hooks";
+import { formatPlaca } from "@/lib/format";
+import type { Cliente, Parceiro, Veiculo } from "@/api/types";
+
+type SelectBaseProps = {
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  disabled?: boolean;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
+  className?: string;
+  id?: string;
+};
+
+function SelectShell({
+  value,
+  onChange,
+  required,
+  disabled,
+  allowEmpty = true,
+  emptyLabel = "— Selecionar —",
+  className = "select",
+  id,
+  loading,
+  children,
+}: SelectBaseProps & { loading?: boolean; children: ReactNode }) {
+  return (
+    <select
+      id={id}
+      className={className}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      disabled={disabled || loading}
+    >
+      {allowEmpty ? <option value="">{loading ? "A carregar…" : emptyLabel}</option> : null}
+      {children}
+    </select>
+  );
+}
+
+function clienteValue(c: Cliente, field: "id" | "cpf" | "nome"): string {
+  if (field === "id") return c.id;
+  if (field === "cpf") return c.cpf?.trim() ?? "";
+  return c.nome?.trim() ?? c.id;
+}
+
+function clienteLabel(c: Cliente): string {
+  const nome = c.nome?.trim() || c.id.slice(0, 8);
+  return c.cpf?.trim() ? `${nome} · ${c.cpf}` : nome;
+}
+
+export type ClienteSelectProps = SelectBaseProps & {
+  valueField?: "id" | "cpf" | "nome";
+  ativo?: boolean;
+};
+
+export function ClienteSelect({ valueField = "id", ativo, ...props }: ClienteSelectProps) {
+  const query = useClientes(ativo);
+  const items = useMemo(() => {
+    const list = [...(query.data?.items ?? [])].sort((a, b) =>
+      (a.nome ?? a.id).localeCompare(b.nome ?? b.id, "pt-BR"),
+    );
+    if (valueField === "cpf") return list.filter((c) => c.cpf?.trim());
+    if (valueField === "nome") return list.filter((c) => c.nome?.trim());
+    return list;
+  }, [query.data, valueField]);
+
+  return (
+    <SelectShell {...props} loading={query.isLoading}>
+      {items.map((c) => (
+        <option key={c.id} value={clienteValue(c, valueField)}>
+          {clienteLabel(c)}
+        </option>
+      ))}
+    </SelectShell>
+  );
+}
+
+function veiculoValue(v: Veiculo, field: "id" | "placa"): string {
+  if (field === "id") return v.id;
+  return v.placa?.trim() ?? v.id;
+}
+
+function veiculoLabel(v: Veiculo): string {
+  const placa = formatPlaca(v.placa ?? v.id);
+  return v.marcaModelo?.trim() ? `${placa} · ${v.marcaModelo}` : placa;
+}
+
+export type VeiculoSelectProps = SelectBaseProps & {
+  valueField?: "id" | "placa";
+  ativo?: boolean;
+  clienteId?: string;
+};
+
+export function VeiculoSelect({
+  valueField = "placa",
+  ativo,
+  clienteId,
+  ...props
+}: VeiculoSelectProps) {
+  const query = useVeiculos({ ativo });
+  const items = useMemo(() => {
+    let list = query.data?.items ?? [];
+    if (clienteId?.trim()) {
+      list = list.filter((v) => v.clienteVinculadoId === clienteId.trim());
+    }
+    return [...list].sort((a, b) => (a.placa ?? a.id).localeCompare(b.placa ?? b.id, "pt-BR"));
+  }, [query.data, clienteId]);
+
+  return (
+    <SelectShell {...props} loading={query.isLoading}>
+      {items.map((v) => (
+        <option key={v.id} value={veiculoValue(v, valueField)}>
+          {veiculoLabel(v)}
+        </option>
+      ))}
+    </SelectShell>
+  );
+}
+
+export type ParceiroSelectProps = SelectBaseProps;
+
+export function ParceiroSelect(props: ParceiroSelectProps) {
+  const query = useParceiros();
+  const items = useMemo(
+    () => [...(query.data?.items ?? [])].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [query.data],
+  );
+
+  return (
+    <SelectShell {...props} loading={query.isLoading}>
+      {items.map((p: Parceiro) => (
+        <option key={p.id} value={p.id}>
+          {p.nome}
+        </option>
+      ))}
+    </SelectShell>
+  );
+}
+
+export function matchParceiroIdPorNome(parceiros: Parceiro[] | undefined, nome: string): string {
+  const alvo = nome.trim().toLowerCase();
+  if (!alvo) return "";
+  const exato = parceiros?.find((p) => p.nome.trim().toLowerCase() === alvo);
+  if (exato) return exato.id;
+  const parcial = parceiros?.filter((p) => {
+    const n = p.nome.trim().toLowerCase();
+    return n.includes(alvo) || alvo.includes(n);
+  });
+  return parcial?.length === 1 ? parcial[0]!.id : "";
+}
+
+export function matchVeiculoSelectValue(
+  veiculos: Veiculo[] | undefined,
+  ref: string | undefined,
+  valueField: "id" | "placa",
+): string {
+  if (!ref?.trim() || !veiculos?.length) return ref?.trim() ?? "";
+  const r = ref.trim();
+  const byId = veiculos.find((v) => v.id === r);
+  if (byId) return valueField === "id" ? byId.id : (byId.placa ?? byId.id);
+  const placaNorm = r.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  const byPlaca = veiculos.find(
+    (v) => (v.placa ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase() === placaNorm,
+  );
+  if (byPlaca) return valueField === "id" ? byPlaca.id : (byPlaca.placa ?? byPlaca.id);
+  return valueField === "placa" ? r : "";
+}

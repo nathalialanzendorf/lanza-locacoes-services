@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Field, FormCard } from "@/components/FormCard";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -9,7 +10,7 @@ import { formatBrl } from "@/lib/format";
 
 export function RecebimentosManualSection() {
   const { ativo: espelhoRastreame } = useRastreameEspelho();
-  const [clienteQuery, setClienteQuery] = useState("");
+  const [clienteId, setClienteId] = useState("");
   const [valor, setValor] = useState("");
   const [dataBr, setDataBr] = useState("");
   const [placa, setPlaca] = useState("");
@@ -28,7 +29,7 @@ export function RecebimentosManualSection() {
     setExecResult(null);
     try {
       const r = await lanzaApi.montarPlanoRecebimento({
-        clienteQuery: clienteQuery.trim(),
+        clienteQuery: clienteId.trim(),
         valor: Number(valor),
         dataBr: dataBr.trim(),
         placa: placa.trim() || undefined,
@@ -75,8 +76,8 @@ export function RecebimentosManualSection() {
         submitLabel="Montar plano"
         error={planoError}
       >
-        <Field label="Cliente" hint="CPF, nome ou id">
-          <input className="input" value={clienteQuery} onChange={(e) => setClienteQuery(e.target.value)} required />
+        <Field label="Cliente">
+          <ClienteSelect value={clienteId} onChange={setClienteId} required disabled={loadingPlano} />
         </Field>
         <Field label="Valor recebido (R$)">
           <input className="input" type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} required />
@@ -84,8 +85,14 @@ export function RecebimentosManualSection() {
         <Field label="Data do crédito" hint="DD/MM/AAAA">
           <input className="input" value={dataBr} onChange={(e) => setDataBr(e.target.value)} required />
         </Field>
-        <Field label="Placa (opcional)">
-          <input className="input" value={placa} onChange={(e) => setPlaca(e.target.value)} />
+        <Field label="Veículo (opcional)">
+          <VeiculoSelect
+            value={placa}
+            onChange={setPlaca}
+            clienteId={clienteId || undefined}
+            disabled={loadingPlano}
+            emptyLabel="— Qualquer veículo —"
+          />
         </Field>
       </FormCard>
 

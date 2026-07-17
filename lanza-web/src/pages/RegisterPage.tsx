@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LanzaApiError } from "@/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { BrandMark } from "@/components/BrandMark";
 
 export function RegisterPage() {
   const { register, registerAllowed } = useAuth();
@@ -56,7 +57,7 @@ export function RegisterPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-card__brand">
-          <span className="brand__mark">L</span>
+          <BrandMark variant="auth" />
           <div>
             <strong>Lanza</strong>
             <span className="auth-card__subtitle">Criar conta</span>

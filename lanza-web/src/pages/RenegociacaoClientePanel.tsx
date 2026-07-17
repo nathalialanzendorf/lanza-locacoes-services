@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Field, FormCard } from "@/components/FormCard";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
-import { useClientes, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
+import { formatBrl } from "@/lib/format";
 import type { RenegociacaoInput, RenegociacaoParcela, RenegociacaoPreview, RenegociacaoResumo } from "@/api/types";
 
 type Props = {
@@ -55,8 +55,6 @@ function formatDataDebito(data?: string): string {
 
 export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial = "" }: Props) {
   const qc = useQueryClient();
-  const clientesQuery = useClientes(true);
-  const veiculosQuery = useVeiculos({ ativo: true });
 
   const [clienteId, setClienteId] = useState(clienteIdInicial);
   const [placa, setPlaca] = useState(placaInicial);
@@ -79,11 +77,6 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
   const [loadingExec, setLoadingExec] = useState(false);
   const [execError, setExecError] = useState<string | null>(null);
   const [execResult, setExecResult] = useState<unknown>(null);
-
-  const veiculosCliente = useMemo(() => {
-    if (!clienteId) return veiculosQuery.data?.items ?? [];
-    return (veiculosQuery.data?.items ?? []).filter((v) => v.clienteVinculadoId === clienteId);
-  }, [clienteId, veiculosQuery.data]);
 
   const totalSelecionado = useMemo(() => {
     if (!resumo) return 0;
@@ -222,43 +215,29 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
         error={resumoError}
       >
         <Field label="Cliente">
-          <select
-            className="input"
+          <ClienteSelect
             value={clienteId}
-            onChange={(e) => {
-              setClienteId(e.target.value);
+            onChange={(v) => {
+              setClienteId(v);
               setResumo(null);
               setPreview(null);
             }}
+            ativo
             required
-          >
-            <option value="">— Selecionar —</option>
-            {(clientesQuery.data?.items ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome ?? c.id}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
-        <Field label="Placa">
-          <select
-            className="input"
+        <Field label="Veículo">
+          <VeiculoSelect
             value={placa}
-            onChange={(e) => {
-              setPlaca(e.target.value);
+            onChange={(v) => {
+              setPlaca(v);
               setResumo(null);
               setPreview(null);
             }}
+            clienteId={clienteId || undefined}
+            ativo
             required
-          >
-            <option value="">— Selecionar —</option>
-            {veiculosCliente.map((v) => (
-              <option key={v.id} value={v.placa ?? v.id}>
-                {formatPlaca(v.placa ?? v.id)}
-                {v.marcaModelo ? ` · ${v.marcaModelo}` : ""}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
         <label className="field checkbox-label">
           <input

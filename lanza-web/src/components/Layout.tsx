@@ -9,6 +9,7 @@ import { getApiBaseUrl } from "@/api/client";
 import { useAuth } from "@/context/AuthContext";
 
 import { ApiKeyBanner } from "./ApiKeyBanner";
+import { BrandMark } from "./BrandMark";
 import { RastreameEspelhoToggle } from "./RastreameEspelhoToggle";
 
 
@@ -60,17 +61,11 @@ export function Layout() {
       <aside className="sidebar">
 
         <div className="brand">
-
-          <span className="brand__mark">L</span>
-
+          <BrandMark variant="sidebar" />
           <div>
-
             <strong>Lanza</strong>
-
             <span className="brand__sub">Painel operacional</span>
-
           </div>
-
         </div>
 
 

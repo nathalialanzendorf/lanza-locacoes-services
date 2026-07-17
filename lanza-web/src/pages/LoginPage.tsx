@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LanzaApiError } from "@/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { BrandMark } from "@/components/BrandMark";
 
 export function LoginPage() {
   const { login, registerAllowed } = useAuth();
@@ -34,7 +35,7 @@ export function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-card__brand">
-          <span className="brand__mark">L</span>
+          <BrandMark variant="auth" />
           <div>
             <strong>Lanza</strong>
             <span className="auth-card__subtitle">Painel operacional</span>

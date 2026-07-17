@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
@@ -33,6 +34,7 @@ export function ContratosEncerrarSection() {
 
   return (
     <>
+      <CadastroBackLink to="/contratos" />
       <FormCard title="Efetivar encerramento" onSubmit={submit} loading={loading} submitLabel="Encerrar contrato" error={error}>
         <Field label="ID ou pasta do contrato">
           <input className="input" value={idOuPasta} onChange={(e) => setIdOuPasta(e.target.value)} required />

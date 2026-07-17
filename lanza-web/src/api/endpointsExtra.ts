@@ -147,6 +147,20 @@ export const lanzaApiExtra = {
 
   removerContrato: (id: string) =>
     apiRequest<{ data: unknown }>(`/api/contratos/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  obterContrato: (id: string) =>
+    apiRequest<DataEnvelope<import("./types").ContratoDetalhe>>(`/api/contratos/${encodeURIComponent(id)}`),
+
+  obterParceiroDespesa: (id: string) =>
+    apiRequest<DataEnvelope<import("./types").ParceiroDespesa>>(`/api/parceiro-despesas/${encodeURIComponent(id)}`),
+  atualizarParceiroDespesa: (id: string, patch: Record<string, unknown>) =>
+    apiRequest<{ data: import("./types").ParceiroDespesa }>(`/api/parceiro-despesas/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+  removerParceiroDespesa: (id: string) =>
+    apiRequest<{ data: import("./types").ParceiroDespesa }>(`/api/parceiro-despesas/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 };
 
 import type { Veiculo } from "./types";
