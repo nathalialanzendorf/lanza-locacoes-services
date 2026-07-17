@@ -1,6 +1,6 @@
 import { API_VERSION, apiPublicUrl } from "../config.js";
 import { getDbBackend, getVercelPostgresPool, pgQuery } from "@lanza/db";
-import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "@lanza/storage";
+import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "../lib-imports.js";
 import { obterRastreameEspelhoConfig } from "../lib-imports.js";
 
 export type SystemStatus = {

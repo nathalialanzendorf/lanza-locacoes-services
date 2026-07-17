@@ -1,5 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
-  "buildCommand": "npm run typecheck:api && npm run typecheck:db && npm run typecheck:storage"
+  "installCommand": "npm install"
 }

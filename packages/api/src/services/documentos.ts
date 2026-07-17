@@ -17,7 +17,7 @@ import {
   storagePrefix,
   type MirrorLocalFilesResult,
   type StoredBlob,
-} from "@lanza/storage";
+} from "../lib-imports.js";
 import { getDbBackend, pgQuery } from "@lanza/db";
 
 import { HttpError } from "../http.js";

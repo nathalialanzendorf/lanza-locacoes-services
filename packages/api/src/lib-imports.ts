@@ -135,6 +135,27 @@ export {
   type DashboardRecebimentosTotais,
 } from "../../../src/lib/dashboardRecebimentos.js";
 
+export {
+  blobKey,
+  blobReadWriteToken,
+  deleteBlob,
+  getBytes,
+  getText,
+  headBlob,
+  isBlobConfigured,
+  isStorageActive,
+  listBlobs,
+  localMirrorRoot,
+  mirrorLocalFilesToBlob,
+  putBytes,
+  putJson,
+  putText,
+  storagePrefix,
+  type ListBlobsResult,
+  type MirrorLocalFilesResult,
+  type StoredBlob,
+} from "../../../packages/storage/src/index.js";
+
 export { compararDataBrAsc } from "../../../src/lib/contratoExtrair.js";
 
 export { dataVencimentoSemanalBr } from "../../../src/lib/pagamentoSemanal.js";

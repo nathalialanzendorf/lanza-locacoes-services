@@ -3,6 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
+      "@lanza/db": ["../db/src/index.ts"],
       "@lanza/storage": ["../storage/src/index.ts"]
     }
   },
