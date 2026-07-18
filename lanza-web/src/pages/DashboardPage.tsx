@@ -418,6 +418,8 @@ export function DashboardPage() {
               linhas={rec.atrasados}
               colunaVeiculo="Veículo"
               clientes={clientes}
+              mostrarAcaoRecebimento
+              dataReferenciaBr={rec.dataReferenciaBr}
               colunasExtra={[
                 { header: "Vencimento", render: vencimentoRecebimentoLinha },
                 { header: "Alerta", render: alertaAtrasoRecebimento },
