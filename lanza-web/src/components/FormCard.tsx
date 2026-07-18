@@ -4,6 +4,7 @@ import { LABEL } from "@/lib/labels";
 
 type Props = {
   title?: string;
+  className?: string;
   children: ReactNode;
   onSubmit: () => void | Promise<void>;
   loading?: boolean;
@@ -14,6 +15,7 @@ type Props = {
 
 export function FormCard({
   title,
+  className,
   children,
   onSubmit,
   loading,
@@ -27,7 +29,7 @@ export function FormCard({
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit}>
+    <form className={["form-card", className].filter(Boolean).join(" ")} onSubmit={handleSubmit}>
       {title ? <h2 className="form-card__title">{title}</h2> : null}
       <div className="form-grid">{children}</div>
       {error ? <p className="form-card__error">{error}</p> : null}

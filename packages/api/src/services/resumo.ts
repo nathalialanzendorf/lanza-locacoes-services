@@ -9,8 +9,6 @@ import {
   loadContratosDbAsync,
   loadInfracoesDb,
   loadInfracoesDbAsync,
-  loadLocacoesDb,
-  loadLocacoesDbAsync,
   loadParceiroDespesasDb,
   loadParceiroDespesasDbAsync,
   loadVeiculosDb,
@@ -19,16 +17,14 @@ import {
   type ClienteRegistro,
   type ContratoRegistro,
   type InfracaoRegistro,
-  type LocacaoRegistro,
   type ParceiroDespesaRegistro,
   type VeiculoRegistro,
+  contratoAtivoOperacional,
   despesaClienteAbertaDashboard,
   obterDashboardRecebimentos,
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
-  listarEscoposContratosAtivosCobranca,
-  locacaoEmAberto,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -43,18 +39,8 @@ type ResumoStores = {
   despesasCliente: ClienteDespesaRegistro[];
   despesasParceiro: ParceiroDespesaRegistro[];
   infracoes: InfracaoRegistro[];
-  locacoes: LocacaoRegistro[];
   cobrancasCtx: CobrancasDbContext;
 };
-
-function contarLocacoesAbertas(
-  locacoes: LocacaoRegistro[],
-  cobrancasCtx: CobrancasDbContext,
-): number {
-  const registradas = locacoes.filter((l) => locacaoEmAberto(l)).length;
-  if (registradas > 0) return registradas;
-  return listarEscoposContratosAtivosCobranca(cobrancasCtx).length;
-}
 
 function montarResumo(
   clientes: ClienteRegistro[],
@@ -63,11 +49,11 @@ function montarResumo(
   stores: ResumoStores,
   recebimentos?: ReturnType<typeof obterDashboardRecebimentos>,
 ) {
-  const { despesasCliente, despesasParceiro, infracoes, locacoes, cobrancasCtx } = stores;
+  const { despesasCliente, despesasParceiro, infracoes, cobrancasCtx } = stores;
 
   const clientesAtivos = clientes.filter(isClienteAtivo);
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
-  const contratosAtivos = contratos.filter((c) => c.status === "ativo");
+  const contratosAtivos = contratos.filter((c) => contratoAtivoOperacional(c));
 
   const despesasClienteAbertas = despesasCliente.filter((d) =>
     despesaClienteAbertaDashboard(d, cobrancasCtx),
@@ -83,8 +69,6 @@ function montarResumo(
       !i.debitoParceiroConfirmado &&
       !i.condutorNaoIdentificado,
   );
-
-  const locacoesAbertas = contarLocacoesAbertas(locacoes, cobrancasCtx);
 
   const totalClienteAberto = despesasClienteAbertas.reduce(
     (s, d) => s + (Number(d.valorMulta) || 0),
@@ -112,22 +96,21 @@ function montarResumo(
       semCliente: infracoesSemCliente.length,
       semCondutor: infracoesSemCliente.length,
     },
-    locacoes: { abertas: locacoesAbertas },
     ...(recebimentos ? { recebimentos } : {}),
   };
 }
 
 export function obterResumo() {
+  const cobrancasCtx = loadCobrancasDbContextSync();
   const stores: ResumoStores = {
     despesasCliente: loadClienteDespesasDb().clienteDespesas,
     despesasParceiro: loadParceiroDespesasDb().parceiroDespesas,
     infracoes: loadInfracoesDb().infracoes,
-    locacoes: loadLocacoesDb().locacoes,
-    cobrancasCtx: loadCobrancasDbContextSync(),
+    cobrancasCtx,
   };
   let recebimentos;
   try {
-    recebimentos = obterDashboardRecebimentos(stores.cobrancasCtx);
+    recebimentos = obterDashboardRecebimentos(cobrancasCtx);
   } catch (err) {
     console.error("[resumo] falha ao calcular recebimentos:", err);
   }
@@ -148,7 +131,6 @@ export async function obterResumoAsync() {
     clienteDespesasDb,
     parceiroDespesasDb,
     infracoesDb,
-    locacoesDb,
     cobrancasCtx,
   ] = await Promise.all([
     loadClientesDbAsync(),
@@ -157,7 +139,6 @@ export async function obterResumoAsync() {
     loadClienteDespesasDbAsync(),
     loadParceiroDespesasDbAsync(),
     loadInfracoesDbAsync(),
-    loadLocacoesDbAsync(),
     loadCobrancasDbContextAsync(),
   ]);
 
@@ -165,7 +146,6 @@ export async function obterResumoAsync() {
     despesasCliente: clienteDespesasDb.clienteDespesas,
     despesasParceiro: parceiroDespesasDb.parceiroDespesas,
     infracoes: infracoesDb.infracoes,
-    locacoes: locacoesDb.locacoes,
     cobrancasCtx,
   };
 

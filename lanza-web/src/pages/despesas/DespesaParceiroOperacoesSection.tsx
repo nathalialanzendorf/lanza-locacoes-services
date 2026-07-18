@@ -55,7 +55,7 @@ export function DespesaParceiroOperacoesSection() {
       <CadastroBackLink to="/despesas/parceiro" />
       <FormCard title="Baixa de despesa" onSubmit={baixa} loading={loading} submitLabel="Dar baixa" error={error}>
         <Field label="Veículo">
-          <VeiculoSelect value={baixaPlaca} onChange={setBaixaPlaca} required disabled={loading} />
+          <VeiculoSelect value={baixaPlaca} onChange={setBaixaPlaca} required variant="cadastro" disabled={loading} />
         </Field>
         <Field label="Categoria">
           <input className="input" value={baixaCat} onChange={(e) => setBaixaCat(e.target.value)} required />

@@ -70,7 +70,24 @@ export function IconRenovar({ className, title = "Renovar" }: IconProps) {
   );
 }
 
-export function IconInativar({ className, title = "Inativar" }: IconProps) {
+export function IconHabilitar({ className, title = "Habilitar" }: IconProps) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden={!title}>
+      {title ? <title>{title}</title> : null}
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M8 12.5 10.5 15 16 9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Registo ativo/inativo — desabilitar (círculo com traço). */
+export function IconDesabilitar({ className, title = "Desabilitar" }: IconProps) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden={!title}>
       {title ? <title>{title}</title> : null}
@@ -78,6 +95,11 @@ export function IconInativar({ className, title = "Inativar" }: IconProps) {
       <path d="M8 12h8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
     </svg>
   );
+}
+
+/** @deprecated Preferir `IconDesabilitar`. */
+export function IconInativar(props: IconProps) {
+  return <IconDesabilitar {...props} title={props.title ?? "Inativar"} />;
 }
 
 export function IconEncerrar({ className, title = "Encerrar" }: IconProps) {

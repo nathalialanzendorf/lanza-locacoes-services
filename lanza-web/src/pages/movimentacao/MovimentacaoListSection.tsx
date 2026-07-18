@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -165,17 +165,16 @@ export function MovimentacaoListSection() {
           </label>
           <label className="field">
             <span className="field__label">Tipo</span>
-            <select
-              className="select"
+            <NativeSelect
               value={situacao}
-              onChange={(e) => setSituacao(e.target.value)}
+              onChange={setSituacao}
+              variant="filtro"
               aria-label="Tipo"
             >
-              <SelectEmptyOption />
               <option value="locado">Locado</option>
               <option value="reserva">Reserva</option>
               <option value="manutencao">Manutenção</option>
-            </select>
+            </NativeSelect>
           </label>
           <RelatorioPeriodoFiltro
             value={periodo}

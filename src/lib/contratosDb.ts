@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
+import { parseDataBrOuIsoDia } from "./dataBr.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -150,6 +151,22 @@ export type EncerrarContratoDbOpts = {
   motivoEncerramento: MotivoEncerramento;
   quebraContrato?: boolean;
 };
+
+/** Contrato ainda em vigência operacional (ativo, sem encerramento, fim previsto não passou). */
+export function contratoAtivoOperacional(
+  c: ContratoRegistro,
+  ref: Date = new Date(),
+): boolean {
+  if (c.status !== "ativo") return false;
+  if (String(c.dataEncerramento ?? "").trim()) return false;
+  const fimStr = String(c.dataFimPrevista ?? "").trim();
+  if (!fimStr) return true;
+  const fim = parseDataBrOuIsoDia(fimStr);
+  if (!fim) return true;
+  const fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999);
+  const refDia = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), 12, 0, 0, 0);
+  return refDia <= fimDia;
+}
 
 function nowIso(): string {
   return new Date().toISOString();

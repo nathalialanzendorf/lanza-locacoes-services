@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -146,16 +147,17 @@ export function ContratosListSection() {
           </label>
           <label className="field">
             <span className="field__label">Status</span>
-            <select
-              className="select"
+            <NativeSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value as FiltroStatus)}
+              onChange={(v) => setStatus(v as FiltroStatus)}
+              variant="filtro"
+              allowEmpty={false}
               aria-label="Status"
             >
               <option value="ativo">Ativos</option>
               <option value="encerrado">Encerrados</option>
-              <option value="todos">Todos</option>
-            </select>
+              <option value="todos">{SELECT_LABEL_TODOS}</option>
+            </NativeSelect>
           </label>
           <RelatorioPeriodoFiltro
             value={periodo}
@@ -225,6 +227,7 @@ export function ContratosListSection() {
             className: "col-acoes",
             render: (c) => (
               <RowActions
+                variant="contrato"
                 editTo={`/contratos/${c.id}/editar`}
                 renovarTo={c.status === "ativo" ? `/contratos/renovar?id=${encodeURIComponent(c.id)}` : undefined}
                 encerrarTo={c.status === "ativo" ? `/contratos/encerrar?id=${encodeURIComponent(c.id)}` : undefined}

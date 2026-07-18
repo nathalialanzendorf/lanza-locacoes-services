@@ -61,7 +61,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "infracoes",
-    rotulo: "Infrações DETRAN SC",
+    rotulo: "Infrações ← DETRAN SC",
     destino: "infracoes.json + cliente-despesas.json",
     interativo: true,
     direcao: "buscar",
@@ -69,7 +69,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "ipva-licenciamento",
-    rotulo: "IPVA e licenciamento DETRAN SC",
+    rotulo: "IPVA e licenciamento ← DETRAN SC",
     destino: "parceiro-despesas.json",
     interativo: true,
     direcao: "buscar",
@@ -77,7 +77,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "detran-rs",
-    rotulo: "DETRAN RS (IPVA/lic. + resumo infrações)",
+    rotulo: "Infrações, IPVA e licenciamento ← DETRAN RS",
     destino: "parceiro-despesas.json",
     interativo: false,
     direcao: "buscar",

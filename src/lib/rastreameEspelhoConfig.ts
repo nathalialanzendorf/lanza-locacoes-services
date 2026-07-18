@@ -52,6 +52,14 @@ export function rastreameEspelhoGlobal(): boolean {
   return true;
 }
 
+/**
+ * Cliente (motorista) e ciclo de vida de contrato sempre replicam no Rastreame,
+ * independentemente de `rastreameEspelho` (despesas, veículos e syncs em lote).
+ */
+export function rastreameClienteContratoObrigatorio(): boolean {
+  return true;
+}
+
 function runtimeReadOnly(): boolean {
   return Boolean(process.env.VERCEL);
 }

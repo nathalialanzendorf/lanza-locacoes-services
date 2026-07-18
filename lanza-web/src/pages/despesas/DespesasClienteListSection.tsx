@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -79,29 +80,29 @@ export function DespesasClienteListSection() {
           valueField="id"
           variant="filtro"
         />
-        <select
-          className="select"
+        <NativeSelect
           value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
+          onChange={setCategoria}
+          variant="filtro"
           aria-label="Categoria"
         >
-          <SelectEmptyOption />
           {CATEGORIAS.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
           ))}
-        </select>
-        <select
-          className="select"
+        </NativeSelect>
+        <NativeSelect
           value={pagamento}
-          onChange={(e) => setPagamento(e.target.value as FiltroPagamento)}
+          onChange={(v) => setPagamento(v as FiltroPagamento)}
+          variant="filtro"
+          allowEmpty={false}
           aria-label="Pagamento"
         >
           <option value="em_aberto">Em aberto</option>
           <option value="pago">Pago</option>
-          <option value="todos">Todos</option>
-        </select>
+          <option value="todos">{SELECT_LABEL_TODOS}</option>
+        </NativeSelect>
         <input
           className="input"
           placeholder="Competência (MM/AAAA)"

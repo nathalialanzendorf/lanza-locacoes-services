@@ -10,6 +10,8 @@ import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
 import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
+import { NativeSelect } from "@/components/EntitySelects";
 import type { Parceiro } from "@/api/types";
 
 type Filtro = "ativos" | "inativos" | "todos";
@@ -24,7 +26,7 @@ export function ParceirosListSection() {
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const parceirosQuery = useParceiros(ativo);
   const vinculosQuery = useVinculosParceiro();
@@ -68,17 +70,31 @@ export function ParceirosListSection() {
 
   const erro = parceirosQuery.error ?? vinculosQuery.error ?? veiculosQuery.error ?? null;
 
-  async function inativar(parceiro: ParceiroLinha) {
-    if (!window.confirm(`Inativar o parceiro "${parceiro.nome}"?`)) return;
-    setInativandoId(parceiro.id);
+  async function desabilitar(parceiro: ParceiroLinha) {
+    if (!window.confirm(`Desabilitar o parceiro "${parceiro.nome}"?`)) return;
+    setTogglingAtivoId(parceiro.id);
     try {
       await lanzaApi.atualizarParceiro(parceiro.id, { ativo: false });
       void qc.invalidateQueries({ queryKey: ["parceiros"] });
       void qc.invalidateQueries({ queryKey: ["resumo"] });
     } catch (err) {
-      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar parceiro.");
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao desabilitar parceiro.");
     } finally {
-      setInativandoId(null);
+      setTogglingAtivoId(null);
+    }
+  }
+
+  async function habilitar(parceiro: ParceiroLinha) {
+    if (!window.confirm(`Habilitar o parceiro "${parceiro.nome}"?`)) return;
+    setTogglingAtivoId(parceiro.id);
+    try {
+      await lanzaApi.atualizarParceiro(parceiro.id, { ativo: true });
+      void qc.invalidateQueries({ queryKey: ["parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao habilitar parceiro.");
+    } finally {
+      setTogglingAtivoId(null);
     }
   }
 
@@ -105,11 +121,17 @@ export function ParceirosListSection() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
-        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
+        <NativeSelect
+          value={filtro}
+          onChange={(v) => setFiltro(v as Filtro)}
+          variant="filtro"
+          allowEmpty={false}
+          aria-label="Status"
+        >
           <option value="ativos">Ativos</option>
           <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
+          <option value="todos">{SELECT_LABEL_TODOS}</option>
+        </NativeSelect>
         {!loading ? (
           <span className="badge badge--muted">
             {linhas.length} parceiro{linhas.length === 1 ? "" : "s"}
@@ -154,10 +176,13 @@ export function ParceirosListSection() {
             render: (p) => (
               <RowActions
                 editTo={`/parceiros/${p.id}/editar`}
-                onInativar={
-                  registroAtivo(p.ativo) ? () => void inativar(p) : undefined
+                onDesabilitar={
+                  registroAtivo(p.ativo) ? () => void desabilitar(p) : undefined
                 }
-                inactivating={inativandoId === p.id}
+                onHabilitar={
+                  registroAtivo(p.ativo) ? undefined : () => void habilitar(p)
+                }
+                togglingAtivo={togglingAtivoId === p.id}
                 deleting={excluindoId === p.id}
                 onDelete={() => void excluir(p)}
               />

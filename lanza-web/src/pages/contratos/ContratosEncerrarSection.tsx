@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
 import { QueryError } from "@/components/PageHeader";
@@ -231,16 +231,18 @@ export function ContratosEncerrarSection() {
           <DateInput value={dataEncerramento} onChange={setDataEncerramento} required disabled={loading} />
         </Field>
         <Field label="Motivo do encerramento">
-          <select
-            className="select"
+          <NativeSelect
             value={motivo}
-            onChange={(e) => setMotivo(e.target.value as MotivoEncerramento)}
+            onChange={(v) => setMotivo(v as MotivoEncerramento)}
+            variant="cadastro"
+            allowEmpty={false}
             disabled={loading}
+            aria-label="Motivo do encerramento"
           >
             <option value="devolvido">Devolvido</option>
             <option value="recuperado">Recuperado</option>
             <option value="troca">Troca de veículo</option>
-          </select>
+          </NativeSelect>
         </Field>
         <Field label="Quebra de contrato">
           <label className="checkbox-label">

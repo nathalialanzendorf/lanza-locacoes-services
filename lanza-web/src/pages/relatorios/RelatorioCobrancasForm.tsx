@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { Field } from "@/components/FormCard";
 import { CobrancasVisualizacao } from "@/components/relatorios/CobrancasVisualizacao";
 import {
@@ -120,34 +121,35 @@ export function RelatorioCobrancasForm() {
             />
           </Field>
           <Field label="Tipo de cobrança">
-            <select
-              className="select"
+            <NativeSelect
               value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
+              onChange={setTipo}
+              variant="filtro"
+              loading={meta.isLoading}
               disabled={loading || meta.isLoading}
               aria-label="Tipo de cobrança"
             >
-              <SelectEmptyOption loading={meta.isLoading} />
               {opcoes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.rotulo}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </Field>
           <RelatorioPeriodoFiltro value={periodo} onChange={setPeriodo} disabled={loading} />
           <Field label="Situação">
-            <select
-              className="select"
+            <NativeSelect
               value={situacao}
-              onChange={(e) => setSituacao(e.target.value as FiltroSituacao)}
+              onChange={(v) => setSituacao(v as FiltroSituacao)}
+              variant="filtro"
+              allowEmpty={false}
               disabled={loading}
               aria-label="Situação"
             >
               <option value="em_aberto">Em aberto</option>
               <option value="pago">Pago</option>
-              <option value="todos">Todas</option>
-            </select>
+              <option value="todos">{SELECT_LABEL_TODOS}</option>
+            </NativeSelect>
           </Field>
         </div>
         <label className="field checkbox-label relatorio-entrega__check">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
+import { AtivoIconToggle } from "@/components/AtivoIconToggle";
 import { DocUploadField } from "@/components/DocUploadField";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -129,10 +130,13 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
           <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
         </Field>
         {editando ? (
-          <label className="field checkbox-label">
-            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
-            Parceiro ativo
-          </label>
+          <AtivoIconToggle
+            label="Status"
+            ativo={ativo}
+            onChange={setAtivo}
+            disabled={loading}
+            hint="Parceiro ativo na operação"
+          />
         ) : null}
         {!editando ? (
           <>

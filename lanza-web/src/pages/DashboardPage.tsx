@@ -205,6 +205,9 @@ export function DashboardPage() {
           value={resumo.data ? `${resumo.data.contratos.ativos}` : "—"}
           hint={resumo.data ? `${resumo.data.contratos.total} no total` : undefined}
         />
+      </div>
+
+      <div className="stat-grid stat-grid--pendencias">
         <StatCard
           title="Débitos cliente em aberto"
           value={
@@ -237,10 +240,6 @@ export function DashboardPage() {
               : undefined
           }
           tone="warn"
-        />
-        <StatCard
-          title="Locações abertas"
-          value={resumo.data ? `${resumo.data.locacoes.abertas}` : "—"}
         />
       </div>
 

@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { SelectEmptyOption, VeiculoSelect } from "@/components/EntitySelects";
+import { VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -21,7 +22,7 @@ export function VeiculosListSection() {
   const [veiculoId, setVeiculoId] = useState("");
   const [parceiroId, setParceiroId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useVeiculos({ ativo });
   const parceirosQuery = useParceiros();
@@ -66,18 +67,33 @@ export function VeiculosListSection() {
     return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
   }
 
-  async function inativar(veiculo: Veiculo) {
+  async function desabilitar(veiculo: Veiculo) {
     const label = formatPlaca(veiculo.placa ?? veiculo.id);
-    if (!window.confirm(`Inativar o veículo ${label}?`)) return;
-    setInativandoId(veiculo.id);
+    if (!window.confirm(`Desabilitar o veículo ${label}?`)) return;
+    setTogglingAtivoId(veiculo.id);
     try {
       await lanzaApi.atualizarVeiculo(veiculo.id, { ativo: false });
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
       void qc.invalidateQueries({ queryKey: ["resumo"] });
     } catch (err) {
-      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar veículo.");
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao desabilitar veículo.");
     } finally {
-      setInativandoId(null);
+      setTogglingAtivoId(null);
+    }
+  }
+
+  async function habilitar(veiculo: Veiculo) {
+    const label = formatPlaca(veiculo.placa ?? veiculo.id);
+    if (!window.confirm(`Habilitar o veículo ${label}?`)) return;
+    setTogglingAtivoId(veiculo.id);
+    try {
+      await lanzaApi.atualizarVeiculo(veiculo.id, { ativo: true });
+      void qc.invalidateQueries({ queryKey: ["veiculos"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao habilitar veículo.");
+    } finally {
+      setTogglingAtivoId(null);
     }
   }
 
@@ -108,24 +124,24 @@ export function VeiculosListSection() {
           ativo={ativo}
           variant="filtro"
         />
-        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
+        <NativeSelect
+          value={filtro}
+          onChange={(v) => setFiltro(v as Filtro)}
+          variant="filtro"
+          allowEmpty={false}
+          aria-label="Status"
+        >
           <option value="ativos">Ativos</option>
           <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
-        <select
-          className="select"
-          value={parceiroId}
-          onChange={(e) => setParceiroId(e.target.value)}
-          aria-label="Parceiro"
-        >
-          <SelectEmptyOption />
+          <option value="todos">{SELECT_LABEL_TODOS}</option>
+        </NativeSelect>
+        <NativeSelect value={parceiroId} onChange={setParceiroId} variant="filtro" aria-label="Parceiro">
           {parceirosOrdenados.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nome}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         {!query.isLoading ? (
           <span className="badge badge--muted">
             {rows.length} veículo{rows.length === 1 ? "" : "s"}
@@ -162,10 +178,13 @@ export function VeiculosListSection() {
             render: (v) => (
               <RowActions
                 editTo={`/veiculos/${v.id}/editar`}
-                onInativar={
-                  registroAtivo(v.ativo) ? () => void inativar(v) : undefined
+                onDesabilitar={
+                  registroAtivo(v.ativo) ? () => void desabilitar(v) : undefined
                 }
-                inactivating={inativandoId === v.id}
+                onHabilitar={
+                  registroAtivo(v.ativo) ? undefined : () => void habilitar(v)
+                }
+                togglingAtivo={togglingAtivoId === v.id}
                 deleting={excluindoId === v.id}
                 onDelete={() => void excluir(v)}
               />

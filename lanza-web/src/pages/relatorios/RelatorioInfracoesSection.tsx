@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, ParceiroSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { QueryError } from "@/components/PageHeader";
 import { ResultPanel } from "@/components/ResultPanel";
 import {
@@ -164,16 +165,17 @@ export function RelatorioInfracoesSection() {
             hint="Filtra pela data de autuação"
           />
           <FieldLike label="Situação">
-            <select
-              className="select"
+            <NativeSelect
               value={situacao}
-              onChange={(e) => setSituacao(e.target.value as FiltroSituacao)}
+              onChange={(v) => setSituacao(v as FiltroSituacao)}
+              variant="filtro"
+              allowEmpty={false}
               aria-label="Situação"
             >
               <option value="em_aberto">Em aberto</option>
               <option value="quitado">Quitadas / pagas</option>
-              <option value="todos">Todas</option>
-            </select>
+              <option value="todos">{SELECT_LABEL_TODOS}</option>
+            </NativeSelect>
           </FieldLike>
         </div>
       </section>

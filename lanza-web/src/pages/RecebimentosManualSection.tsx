@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
 import { useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
@@ -142,67 +142,62 @@ export function RecebimentosManualSection() {
   return (
     <>
       <FormCard
+        className="form-card--compact"
         title="Montar plano de baixa"
         onSubmit={montarPlano}
         loading={loadingPlano}
         submitLabel="Montar plano"
         error={planoError}
       >
-        <div className="form-grid">
-          <Field label="Veículo" hint="Opcional — filtra débitos e vincula ao cliente">
-            <VeiculoSelect
-              value={veiculoId}
-              onChange={onVeiculoChange}
-              valueField="id"
-              ativo
-              clienteId={clienteId || undefined}
-              disabled={loadingPlano}
-              variant="filtro"
-            />
-          </Field>
-          <Field label="Cliente">
-            <ClienteSelect
-              value={clienteId}
-              onChange={onClienteChange}
-              ativo
-              required
-              disabled={loadingPlano}
-            />
-          </Field>
-          <Field label="Data do crédito">
-            <DateInput value={dataBr} onChange={setDataBr} required disabled={loadingPlano} />
-          </Field>
-          <Field
-            label="Valor recebido (R$)"
-            hint={
-              clienteId
-                ? "Débitos em aberto do cliente ou valor manual"
-                : "Selecione o cliente para sugerir valores"
-            }
-          >
-            <select
-              className="select"
+        <Field label="Veículo" hint="Opcional — filtra débitos e vincula ao cliente">
+          <VeiculoSelect
+            value={veiculoId}
+            onChange={onVeiculoChange}
+            valueField="id"
+            ativo
+            clienteId={clienteId || undefined}
+            disabled={loadingPlano}
+            variant="filtro"
+          />
+        </Field>
+        <Field label="Cliente">
+          <ClienteSelect
+            value={clienteId}
+            onChange={onClienteChange}
+            ativo
+            variant="cadastro"
+            required
+            disabled={loadingPlano}
+          />
+        </Field>
+        <Field label="Data do crédito">
+          <DateInput value={dataBr} onChange={setDataBr} required disabled={loadingPlano} />
+        </Field>
+        <Field
+          label="Valor recebido (R$)"
+          span="wide"
+          hint={
+            clienteId
+              ? "Débitos em aberto do cliente ou valor manual"
+              : "Selecione o cliente para sugerir valores"
+          }
+        >
+          <div className="recebimentos-valor-campos">
+            <NativeSelect
               value={valorOpcao}
-              onChange={(e) => onValorOpcaoChange(e.target.value)}
+              onChange={onValorOpcaoChange}
+              variant="cadastro"
               disabled={loadingPlano || !clienteId || despesasQuery.isLoading}
+              loading={Boolean(clienteId && despesasQuery.isLoading)}
               aria-label="Valor sugerido"
             >
-              <option value="">
-                {!clienteId
-                  ? "Selecione o cliente"
-                  : despesasQuery.isLoading
-                    ? "A carregar débitos…"
-                    : opcoesValor.length
-                      ? "Selecione um débito em aberto"
-                      : "Nenhum débito em aberto"}
-              </option>
               {opcoesValor.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
               ))}
               <option value={VALOR_MANUAL}>Outro valor…</option>
-            </select>
+            </NativeSelect>
             {valorManual ? (
               <input
                 className="input"
@@ -214,12 +209,13 @@ export function RecebimentosManualSection() {
                 required
                 disabled={loadingPlano}
                 placeholder="0,00"
+                aria-label="Valor manual"
               />
             ) : (
-              <p className="field__hint">{formatBrl(Number(valor) || 0)}</p>
+              <span className="field__hint">{formatBrl(Number(valor) || 0)}</span>
             )}
-          </Field>
-        </div>
+          </div>
+        </Field>
       </FormCard>
 
       {plano ? (

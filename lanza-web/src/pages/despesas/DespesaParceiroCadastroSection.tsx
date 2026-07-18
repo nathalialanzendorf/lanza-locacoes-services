@@ -103,7 +103,7 @@ export function DespesaParceiroCadastroSection({ despesaId }: Props) {
         error={error}
       >
         <Field label="Veículo">
-          <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required disabled={loading} />
+          <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required variant="cadastro" disabled={loading} />
         </Field>
         <Field label="Categoria">
           <input className="input" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />

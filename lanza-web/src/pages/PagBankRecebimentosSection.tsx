@@ -75,6 +75,7 @@ export function PagBankRecebimentosSection() {
   return (
     <>
       <FormCard
+        className="form-card--compact"
         title="Match PagBank × despesas em aberto"
         onSubmit={carregarMatch}
         loading={loading}

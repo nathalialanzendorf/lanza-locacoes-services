@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
+import { AtivoIconToggle } from "@/components/AtivoIconToggle";
 import { ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
 import { useVinculosParceiro } from "@/api/hooks";
@@ -152,14 +153,15 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
           <input className="input" value={ufRegistro} onChange={(e) => setUfRegistro(e.target.value)} />
         </Field>
         <Field label="Parceiro (proprietário)">
-          <ParceiroSelect value={parceiroId} onChange={setParceiroId} disabled={loading} />
+          <ParceiroSelect value={parceiroId} onChange={setParceiroId} variant="cadastro" disabled={loading} />
         </Field>
-        <Field label="Ativo">
-          <label className="checkbox-label">
-            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
-            Veículo ativo na frota
-          </label>
-        </Field>
+        <AtivoIconToggle
+          label="Status"
+          ativo={ativo}
+          onChange={setAtivo}
+          disabled={loading}
+          hint="Veículo ativo na frota"
+        />
       </FormCard>
     </>
   );

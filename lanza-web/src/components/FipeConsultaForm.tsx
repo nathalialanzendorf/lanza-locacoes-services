@@ -132,7 +132,7 @@ export function FipeConsultaForm({
           }
         >
           {modoSelecao === "veiculo" ? (
-            <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required disabled={loading} />
+            <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required variant="cadastro" disabled={loading} />
           ) : (
             <input
               className="input"

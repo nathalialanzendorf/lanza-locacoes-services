@@ -60,6 +60,50 @@ export function SelectEmptyOption({
   return <option value="">{loading ? "A carregar…" : selectEmptyLabel(variant)}</option>;
 }
 
+export type NativeSelectProps = {
+  value: string;
+  onChange: (value: string) => void;
+  variant?: SelectEmptyVariant;
+  allowEmpty?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+  id?: string;
+  "aria-label"?: string;
+  children: ReactNode;
+};
+
+/** `<select>` nativo com placeholder ---Todos--- (filtro) ou --- Selecionar --- (cadastro). */
+export function NativeSelect({
+  value,
+  onChange,
+  variant = "cadastro",
+  allowEmpty = true,
+  loading,
+  disabled,
+  required,
+  className = "select",
+  id,
+  "aria-label": ariaLabel,
+  children,
+}: NativeSelectProps) {
+  return (
+    <select
+      id={id}
+      className={className}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      disabled={disabled || loading}
+      aria-label={ariaLabel}
+    >
+      {allowEmpty ? <SelectEmptyOption variant={variant} loading={loading} /> : null}
+      {children}
+    </select>
+  );
+}
+
 function clienteValue(c: Cliente, field: "id" | "cpf" | "nome"): string {
   if (field === "id") return c.id;
   if (field === "cpf") return c.cpf?.trim() ?? "";

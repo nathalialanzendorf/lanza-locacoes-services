@@ -5,7 +5,6 @@ export type Resumo = {
   despesasCliente: { emAberto: number; valorEmAberto: number };
   despesasParceiro: { emAberto: number; valorEmAberto: number };
   infracoes: { emAberto: number; semCliente: number; semCondutor?: number };
-  locacoes: { abertas: number };
   recebimentos?: DashboardRecebimentos;
 };
 

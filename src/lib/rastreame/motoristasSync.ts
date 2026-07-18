@@ -11,7 +11,7 @@ import {
   type ClienteRegistro,
   upsertClienteFromRastreame,
 } from "../clientesDb.js";
-import { rastreameEspelhoGlobal } from "../rastreameEspelhoConfig.js";
+import { rastreameClienteContratoObrigatorio } from "../rastreameEspelhoConfig.js";
 import { motoristaToCliente } from "./mapMotoristaCliente.js";
 import { refKey } from "./placaRastreavel.js";
 import {
@@ -201,8 +201,8 @@ export async function pushMotoristasToRastreame(
     erros: [] as string[],
   };
 
-  if (!rastreameEspelhoGlobal()) {
-    result.erros.push("Espelho Rastreame desativado (LANZA_RASTREAME_ESPELHO / lanza_paths.json)");
+  if (!rastreameClienteContratoObrigatorio()) {
+    result.erros.push("Replicação de clientes no Rastreame desativada");
     return result;
   }
 
@@ -250,7 +250,7 @@ export async function replicarClienteNoRastreame(
   c: ClienteRegistro,
   opts?: { dryRun?: boolean; forcePush?: boolean },
 ): Promise<void> {
-  if (!rastreameEspelhoGlobal()) return;
+  if (!rastreameClienteContratoObrigatorio()) return;
   if (c.ativo === false && !opts?.forcePush) return;
   if (!isSyncRastreameEligible(c)) return;
   await pushOneCliente(c, { dryRun: opts?.dryRun ?? false, forcePush: opts?.forcePush });

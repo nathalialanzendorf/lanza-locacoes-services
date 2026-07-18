@@ -224,6 +224,7 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
               setPreview(null);
             }}
             ativo
+            variant="cadastro"
             required
           />
         </Field>
@@ -237,6 +238,7 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
             }}
             clienteId={clienteId || undefined}
             ativo
+            variant="cadastro"
             required
           />
         </Field>

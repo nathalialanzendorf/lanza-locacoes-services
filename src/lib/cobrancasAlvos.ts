@@ -14,6 +14,7 @@ import type { CobrancasDbContext } from "./cobrancasDbContext.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
+  contratoAtivoOperacional,
   contratoMaisRecentePar,
   loadContratosDb,
   type ContratoRegistro,
@@ -498,7 +499,7 @@ export function listarEscoposContratosAtivosCobranca(
   const contratos = ctx?.contratos ?? loadContratosDb().contratos;
 
   for (const c of contratos) {
-    if (c.status !== "ativo" || !c.placa || !c.clienteId) continue;
+    if (!contratoAtivoOperacional(c) || !c.placa || !c.clienteId) continue;
     if (!placaElegivel(c.placa, veiculos)) continue;
     if (!clienteElegivel(c.clienteId, clientes)) continue;
 

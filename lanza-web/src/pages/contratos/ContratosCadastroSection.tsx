@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -357,10 +357,10 @@ export function ContratosCadastroSection({
       <CadastroBackLink to={backTo} label={backLabel} />
       <FormCard title={titulo} onSubmit={submit} loading={loading} submitLabel={submitLabel} error={error}>
         <Field label="Veículo">
-          <VeiculoSelect value={placa} onChange={setPlaca} required disabled={loading} />
+          <VeiculoSelect value={placa} onChange={setPlaca} required variant="cadastro" disabled={loading} />
         </Field>
         <Field label="Cliente">
-          <ClienteSelect value={cpf} onChange={setCpf} valueField="cpf" disabled={loading} />
+          <ClienteSelect value={cpf} onChange={setCpf} valueField="cpf" variant="cadastro" disabled={loading} />
         </Field>
         <Field label="Valor semanal (R$)">
           <input
@@ -394,11 +394,13 @@ export function ContratosCadastroSection({
             />
           </Field>
           <Field label="Tempo do contrato">
-            <select
-              className="select"
+            <NativeSelect
               value={periodo}
-              onChange={(e) => handlePeriodoChange(e.target.value)}
+              onChange={handlePeriodoChange}
+              variant="cadastro"
+              allowEmpty={false}
               disabled={loading}
+              aria-label="Tempo do contrato"
             >
               {periodoPersonalizado ? <option value="">Personalizado</option> : null}
               {PERIODOS_CONTRATO.map((p) => (
@@ -406,7 +408,7 @@ export function ContratosCadastroSection({
                   {p.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
             {periodoPersonalizado && dataInicio.trim() && dataFim.trim() ? (
               <span className="field__hint">
                 {diasEntreDatasBr(dataInicio, dataFim)} dias (ajuste pela data fim)

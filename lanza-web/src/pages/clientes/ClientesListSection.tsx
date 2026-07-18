@@ -10,6 +10,8 @@ import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatVeiculoLabel, formatClienteLabel, statusClass, statusLabel } from "@/lib/format";
 import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
+import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
+import { NativeSelect } from "@/components/EntitySelects";
 import type { Cliente, Contrato } from "@/api/types";
 
 type Filtro = "todos" | "ativos" | "inativos";
@@ -40,7 +42,7 @@ export function ClientesListSection() {
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useClientes(ativo);
   const contratosQuery = useContratos({ status: "ativo" });
@@ -70,18 +72,33 @@ export function ClientesListSection() {
     return porClienteId.get(cliente.id) ?? porCpf.get(normCpf(cliente.cpf));
   }
 
-  async function inativar(cliente: Cliente) {
+  async function desabilitar(cliente: Cliente) {
     const nome = formatClienteLabel(cliente);
-    if (!window.confirm(`Inativar o cliente "${nome}"?`)) return;
-    setInativandoId(cliente.id);
+    if (!window.confirm(`Desabilitar o cliente "${nome}"?`)) return;
+    setTogglingAtivoId(cliente.id);
     try {
       await lanzaApi.atualizarCliente(cliente.id, { ativo: false });
       void qc.invalidateQueries({ queryKey: ["clientes"] });
       void qc.invalidateQueries({ queryKey: ["resumo"] });
     } catch (err) {
-      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar cliente.");
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao desabilitar cliente.");
     } finally {
-      setInativandoId(null);
+      setTogglingAtivoId(null);
+    }
+  }
+
+  async function habilitar(cliente: Cliente) {
+    const nome = formatClienteLabel(cliente);
+    if (!window.confirm(`Habilitar o cliente "${nome}"?`)) return;
+    setTogglingAtivoId(cliente.id);
+    try {
+      await lanzaApi.atualizarCliente(cliente.id, { ativo: true });
+      void qc.invalidateQueries({ queryKey: ["clientes"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao habilitar cliente.");
+    } finally {
+      setTogglingAtivoId(null);
     }
   }
 
@@ -108,11 +125,17 @@ export function ClientesListSection() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
-        <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
+        <NativeSelect
+          value={filtro}
+          onChange={(v) => setFiltro(v as Filtro)}
+          variant="filtro"
+          allowEmpty={false}
+          aria-label="Status"
+        >
           <option value="ativos">Ativos</option>
           <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
+          <option value="todos">{SELECT_LABEL_TODOS}</option>
+        </NativeSelect>
         {!query.isLoading ? (
           <span className="badge badge--muted">
             {rows.length} cliente{rows.length === 1 ? "" : "s"}
@@ -173,10 +196,13 @@ export function ClientesListSection() {
             render: (c) => (
               <RowActions
                 editTo={`/clientes/${c.id}/editar`}
-                onInativar={
-                  registroAtivo(c.ativo) ? () => void inativar(c) : undefined
+                onDesabilitar={
+                  registroAtivo(c.ativo) ? () => void desabilitar(c) : undefined
                 }
-                inactivating={inativandoId === c.id}
+                onHabilitar={
+                  registroAtivo(c.ativo) ? undefined : () => void habilitar(c)
+                }
+                togglingAtivo={togglingAtivoId === c.id}
                 deleting={excluindoId === c.id}
                 onDelete={() => void excluir(c)}
               />

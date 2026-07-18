@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -134,38 +134,46 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
               onChange={onVeiculoChange}
               clienteId={clienteId || undefined}
               required
+              variant="cadastro"
               disabled={loading}
             />
           </Field>
           <Field label="Cliente">
-            <ClienteSelect value={clienteId} onChange={onClienteChange} disabled={loading} />
+            <ClienteSelect
+              value={clienteId}
+              onChange={onClienteChange}
+              variant="cadastro"
+              disabled={loading}
+            />
           </Field>
           <Field label="Tipo">
-            <select
-              className="select"
+            <NativeSelect
               value={situacao}
-              onChange={(e) => setSituacao(e.target.value)}
+              onChange={setSituacao}
+              variant="cadastro"
+              allowEmpty={false}
               disabled={loading}
               aria-label="Tipo"
             >
               <option value="locado">Locado</option>
               <option value="reserva">Reserva</option>
               <option value="manutencao">Manutenção</option>
-            </select>
+            </NativeSelect>
           </Field>
         </div>
         {situacao === "locado" ? (
           <Field label="Tipo de locação">
-            <select
-              className="select"
+            <NativeSelect
               value={tipoLocacao}
-              onChange={(e) => setTipoLocacao(e.target.value)}
+              onChange={setTipoLocacao}
+              variant="cadastro"
+              allowEmpty={false}
               disabled={loading}
             >
               <option value="diaria">Diária</option>
               <option value="semanal">Semanal</option>
               <option value="mensal">Mensal</option>
-            </select>
+            </NativeSelect>
           </Field>
         ) : null}
         <Field label="Início">

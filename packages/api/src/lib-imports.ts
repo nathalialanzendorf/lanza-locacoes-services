@@ -40,6 +40,7 @@ export {
   loadContratosDb,
   loadContratosDbAsync,
   findContratoInDb,
+  contratoAtivoOperacional,
   type ContratoRegistro,
 } from "../../../src/lib/contratosDb.js";
 
@@ -262,6 +263,7 @@ export {
 export {
   gravarRastreameEspelhoConfig,
   obterRastreameEspelhoConfig,
+  rastreameClienteContratoObrigatorio,
   rastreameEspelhoGlobal,
   resolveSyncRastreame,
   type RastreameEspelhoConfig,
