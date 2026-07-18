@@ -514,12 +514,12 @@
       "placa": "PWH-3A45",
       "cpf": "110.866.919-03",
       "dataInicio": "13/11/2025",
-      "dataFimPrevista": "11/02/2026",
+      "dataFimPrevista": "13/11/2026",
       "dataEncerramento": null,
       "quebraContrato": false,
       "motivoEncerramento": null,
       "status": "ativo",
-      "prazoDias": 90,
+      "prazoDias": 365,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": null,
       "diaPagamentoMes": null,
@@ -529,7 +529,7 @@
       "valorDiaria": 120,
       "valorCaucao": 2000,
       "cadastradoEm": "2026-06-28T16:58:47.012Z",
-      "atualizadoEm": "2026-06-28T17:20:05.317Z"
+      "atualizadoEm": "2026-07-18T13:55:00.000Z"
     },
     {
       "id": "e0551c95-25e7-4768-a838-c78296fd4a81",
