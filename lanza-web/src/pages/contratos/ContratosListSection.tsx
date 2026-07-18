@@ -114,7 +114,7 @@ export function ContratosListSection() {
           </span>
         ) : null}
         <Link to="/contratos/encerrar" className="btn btn--ghost btn--sm">
-          Encerrar contrato
+          Encerrar
         </Link>
       </ListToolbar>
       {query.isError ? (
