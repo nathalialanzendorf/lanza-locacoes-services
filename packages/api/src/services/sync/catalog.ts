@@ -125,7 +125,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "seguro",
-    rotulo: "Comprovantes de seguro (PDF)",
+    rotulo: "Boletos seguro",
     destino: "parceiro-despesas.json",
     interativo: false,
     direcao: "buscar",
