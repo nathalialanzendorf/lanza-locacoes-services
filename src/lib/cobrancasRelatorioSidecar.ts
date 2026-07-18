@@ -39,6 +39,7 @@ import { montarRelatorioInfracoesBlocos } from "./relatorioInfracoesBlocos.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
 import {
   listarEscoposContratosAtivosCobranca,
+  despesaNaSituacao,
   despesaNoPeriodo,
   ROTULO_TIPO_COBRANCA,
   type FiltroAlvosCobranca,
@@ -189,6 +190,9 @@ export function coletarInfracoesRelatorio(
       continue;
     }
     if (filtro.clienteId && !despesaDoCliente(d, filtro.clienteId)) {
+      continue;
+    }
+    if (!despesaNaSituacao(d, filtro.situacao ?? "em_aberto")) {
       continue;
     }
     if (!despesaNoPeriodo(d, filtro)) {
@@ -366,7 +370,7 @@ export function coletarTodasDespesasAbertas(filtro: FiltroAlvosCobranca): Client
   const out: ClienteDespesaRegistro[] = [];
 
   for (const d of db.clienteDespesas) {
-    if (!despesaAberta(d)) continue;
+    if (!despesaNaSituacao(d, filtro.situacao ?? "em_aberto")) continue;
     if (isQuebraContrato(d)) continue;
     if (isCreditoDevolucaoLocatario(d)) continue;
     if (d.id && vistos.has(d.id)) continue;

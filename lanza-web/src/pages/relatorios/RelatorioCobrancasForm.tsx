@@ -23,11 +23,14 @@ const TIPOS_PADRAO = [
   "manutencao",
 ];
 
+type FiltroSituacao = "em_aberto" | "pago" | "todos";
+
 export function RelatorioCobrancasForm() {
   const meta = useQuery({ queryKey: ["cobrancas-meta"], queryFn: () => lanzaApi.metaCobrancas() });
   const [tipos, setTipos] = useState<string[]>(["pagamento-semanal"]);
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
+  const [situacao, setSituacao] = useState<FiltroSituacao>("em_aberto");
   const [veiculoPlaca, setVeiculoPlaca] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [armazenarServidor, setArmazenarServidor] = useState(false);
@@ -68,6 +71,7 @@ export function RelatorioCobrancasForm() {
           clienteId: clienteId || undefined,
           dataInicial: dataInicial.trim() || undefined,
           dataFinal: dataFinal.trim() || undefined,
+          situacao: situacao === "em_aberto" ? undefined : situacao,
         },
       });
       const payload = r.data;
@@ -101,6 +105,19 @@ export function RelatorioCobrancasForm() {
           </Field>
           <Field label="Data final">
             <DateInput value={dataFinal} onChange={setDataFinal} disabled={loading} />
+          </Field>
+          <Field label="Situação">
+            <select
+              className="select"
+              value={situacao}
+              onChange={(e) => setSituacao(e.target.value as FiltroSituacao)}
+              disabled={loading}
+              aria-label="Situação"
+            >
+              <option value="em_aberto">Em aberto</option>
+              <option value="pago">Pago</option>
+              <option value="todos">Todas</option>
+            </select>
           </Field>
           <Field label="Cliente" hint="Opcional — exclui filtro por veículo">
             <ClienteSelect

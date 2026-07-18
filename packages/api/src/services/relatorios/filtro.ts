@@ -12,7 +12,17 @@ export type FiltroRelatorioInput = {
   clienteQuery?: string;
   dataInicial?: string;
   dataFinal?: string;
+  situacao?: "em_aberto" | "pago" | "todos";
 };
+
+function normalizarSituacao(raw?: string): "em_aberto" | "pago" | "todos" | undefined {
+  const s = raw?.trim().toLowerCase();
+  if (!s) return undefined;
+  if (s === "em_aberto" || s === "em aberto" || s === "aberto") return "em_aberto";
+  if (s === "pago" || s === "paga" || s === "pagos") return "pago";
+  if (s === "todos" || s === "todas") return "todos";
+  return undefined;
+}
 
 export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): FiltroAlvosCobranca {
   const placa = input.placa?.trim();
@@ -20,14 +30,20 @@ export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): Filtr
   const clienteQuery = input.clienteQuery?.trim();
   const dataInicial = input.dataInicial?.trim();
   const dataFinal = input.dataFinal?.trim();
+  const situacao = normalizarSituacao(input.situacao);
+
+  if (input.situacao?.trim() && !situacao) {
+    throw new HttpError(400, 'Situação inválida — use em_aberto, pago ou todos');
+  }
 
   if (placa && (clienteId || clienteQuery)) {
     throw new HttpError(400, "Use apenas placa OU cliente — não ambos");
   }
 
-  const periodo = {
+  const extras = {
     ...(dataInicial ? { dataInicial } : {}),
     ...(dataFinal ? { dataFinal } : {}),
+    ...(situacao ? { situacao } : {}),
   };
 
   if (clienteQuery) {
@@ -35,12 +51,12 @@ export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): Filtr
     if (!c.id) {
       throw new HttpError(400, `Cliente sem id em clientes.json: ${c.nome}`);
     }
-    return { clienteId: c.id, ...periodo };
+    return { clienteId: c.id, ...extras };
   }
 
-  if (clienteId) return { clienteId, ...periodo };
-  if (placa) return { placa, ...periodo };
-  return periodo;
+  if (clienteId) return { clienteId, ...extras };
+  if (placa) return { placa, ...extras };
+  return extras;
 }
 
 export function hojeBr(): string {

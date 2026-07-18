@@ -107,6 +107,18 @@ function despesaAberta(d: ClienteDespesaRegistro): boolean {
   );
 }
 
+export function despesaNaSituacao(
+  d: ClienteDespesaRegistro,
+  situacao: SituacaoCobrancaFiltro = "em_aberto",
+): boolean {
+  if (situacao === "todos") {
+    return d.ativo !== false;
+  }
+  if (!isClienteDespesaAtiva(d)) return false;
+  if (situacao === "pago") return d.paga === true;
+  return despesaAberta(d);
+}
+
 function placaElegivel(placa: string, veiculos: ReturnType<typeof veiculosAtivos>): boolean {
   return veiculos.has(compactPlaca(placa));
 }
@@ -347,22 +359,25 @@ function filtrarPagamentoSemanal(
   const alvoPlaca = filtro?.placa ? compactPlaca(filtro.placa) : null;
   const porChave = new Map<string, AlvoCobranca>();
   const dataReferencia = hojeBr();
+  const situacao = filtro?.situacao ?? "em_aberto";
 
   for (const d of db.clienteDespesas) {
-    if (!despesaAberta(d)) continue;
+    if (!despesaNaSituacao(d, situacao)) continue;
     if (!despesaNoPeriodo(d, filtro ?? {})) continue;
     if (d.categoria !== "Locação semanal") continue;
-    if (!/ATRASADO/i.test(d.descricao)) continue;
-    const vencSemanal = vencimentoDespesaSemanalBr(
-      d.descricao ?? "",
-      d.rastreameDataIso,
-      d.dataAutuacao,
-    );
-    if (
-      vencSemanal &&
-      !vencimentoSemanalElegivelCobranca(vencSemanal, dataReferencia)
-    ) {
-      continue;
+    if (situacao === "em_aberto") {
+      if (!/ATRASADO/i.test(d.descricao)) continue;
+      const vencSemanal = vencimentoDespesaSemanalBr(
+        d.descricao ?? "",
+        d.rastreameDataIso,
+        d.dataAutuacao,
+      );
+      if (
+        vencSemanal &&
+        !vencimentoSemanalElegivelCobranca(vencSemanal, dataReferencia)
+      ) {
+        continue;
+      }
     }
     if (!placaElegivel(d.veiculoId, veiculos)) continue;
     if (!clienteElegivel(d.condutorId, clientes)) continue;
@@ -378,6 +393,7 @@ function filtrarPagamentoSemanal(
       clienteId: efetivo.clienteId,
     });
     if (
+      situacao === "em_aberto" &&
       semanalAtrasoObsoleto(
         d,
         db.clienteDespesas,
@@ -423,6 +439,8 @@ function filtrarPagamentoSemanal(
     .sort((a, b) => a.placa.localeCompare(b.placa));
 }
 
+export type SituacaoCobrancaFiltro = "em_aberto" | "pago" | "todos";
+
 export type FiltroAlvosCobranca = {
   /** Limita a uma placa. */
   placa?: string;
@@ -431,6 +449,8 @@ export type FiltroAlvosCobranca = {
   /** Período inclusivo (DD/MM/AAAA) sobre a data da despesa (`dataAutuacao` / `pagaEm`). */
   dataInicial?: string;
   dataFinal?: string;
+  /** Situação de pagamento da despesa (padrão: em_aberto). */
+  situacao?: SituacaoCobrancaFiltro;
 };
 
 function parseDataBrDia(s: string): Date | null {
@@ -548,6 +568,7 @@ export function listarAlvosCobranca(
   const veiculos = veiculosAtivos();
   const clientes = clientesAtivos();
   const placaFiltro = filtro?.placa;
+  const situacao = filtro?.situacao ?? "em_aberto";
 
   let alvos: AlvoCobranca[];
 
@@ -568,6 +589,7 @@ export function listarAlvosCobranca(
       const despesas = db.clienteDespesas.filter((d) => {
         if (!infracaoIncluirListagemRelatorio(d)) return false;
         if (!despesaCobravelLocatario(d)) return false;
+        if (!despesaNaSituacao(d, situacao)) return false;
         if (!despesaNoPeriodo(d, filtro ?? {})) return false;
         if (placaFiltro && compactPlaca(d.veiculoId) !== compactPlaca(placaFiltro)) {
           return false;
@@ -579,7 +601,7 @@ export function listarAlvosCobranca(
       const categoria =
         categoriaMap[tipo as Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">];
       const despesas = db.clienteDespesas.filter((d) => {
-        if (!despesaAberta(d)) return false;
+        if (!despesaNaSituacao(d, situacao)) return false;
         if (!despesaCobravelLocatario(d)) return false;
         if (!despesaNoPeriodo(d, filtro ?? {})) return false;
         if (tipo === "manutencao" && !isCategoriaManutencao(d.categoria)) return false;
