@@ -1,5 +1,10 @@
 import { HttpError } from "../../http.js";
-import { lerDocumentoUpload, type DocTipoUpload } from "../../lib-imports.js";
+import {
+  extrairImagemDocumento,
+  lerDocumentoUpload,
+  parseDocumentoTexto,
+  type DocTipoUpload,
+} from "../../lib-imports.js";
 
 const TIPOS: DocTipoUpload[] = ["cnh", "comprovante-residencia", "crlv"];
 
@@ -17,7 +22,7 @@ function normalizarTipo(raw: string): DocTipoUpload {
   return t;
 }
 
-export async function lerDocumento(input: LerDocumentoInput) {
+function validarUpload(input: LerDocumentoInput): { buf: Buffer; tipo: DocTipoUpload } {
   if (!input.nomeArquivo?.trim()) {
     throw new HttpError(400, 'Campo "nomeArquivo" é obrigatório');
   }
@@ -33,10 +38,34 @@ export async function lerDocumento(input: LerDocumentoInput) {
     throw new HttpError(413, "Arquivo excede 12 MB");
   }
 
-  const tipo = normalizarTipo(input.tipo);
+  return {
+    buf,
+    tipo: normalizarTipo(input.tipo),
+  };
+}
+
+export async function lerDocumento(input: LerDocumentoInput) {
+  const { buf, tipo } = validarUpload(input);
   return lerDocumentoUpload({
     tipo,
     nomeArquivo: input.nomeArquivo.trim(),
-    conteudoBase64: input.conteudoBase64.trim(),
+    conteudoBase64: buf.toString("base64"),
   });
+}
+
+export async function extrairImagem(input: LerDocumentoInput) {
+  const { buf, tipo } = validarUpload(input);
+  if (tipo === "crlv") {
+    throw new HttpError(400, "Extração de imagem não disponível para CRLV.");
+  }
+  const r = await extrairImagemDocumento(buf, input.nomeArquivo.trim());
+  return { tipo, ...r };
+}
+
+export function parseTexto(input: { tipo: string; text: string }) {
+  const tipo = normalizarTipo(input.tipo);
+  const text = String(input.text ?? "");
+  const campos = parseDocumentoTexto(tipo, text);
+  const avisos = "avisos" in campos && Array.isArray(campos.avisos) ? campos.avisos : [];
+  return { tipo, campos, avisos, textoChars: text.length };
 }

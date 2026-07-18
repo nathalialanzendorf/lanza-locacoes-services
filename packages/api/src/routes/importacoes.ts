@@ -74,6 +74,33 @@ export function registerImportacoesRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const docImagem = compileRoute("/api/importacoes/documento/extrair-imagem");
+  routes.push({
+    method: "POST",
+    pattern: docImagem.regex,
+    paramNames: docImagem.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<documentoService.LerDocumentoInput>(ctx.req);
+      const data = await documentoService.extrairImagem(body);
+      json(ctx.res, 200, { data });
+    }),
+  });
+
+  const docParse = compileRoute("/api/importacoes/documento/parse-texto");
+  routes.push({
+    method: "POST",
+    pattern: docParse.regex,
+    paramNames: docParse.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<{ tipo: string; text: string }>(ctx.req);
+      if (!body?.text?.trim()) {
+        return badRequest(ctx, 'Campo "text" é obrigatório');
+      }
+      const data = documentoService.parseTexto(body);
+      json(ctx.res, 200, { data });
+    }),
+  });
+
   const rastreame = compileRoute("/api/importacoes/rastreame-clientes");
   routes.push({
     method: "POST",

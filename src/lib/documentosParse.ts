@@ -715,6 +715,51 @@ export function parseCrlvText(text: string): CrlvParseResult {
   return out;
 }
 
+export async function extrairImagemDocumento(
+  buffer: Buffer,
+  nomeArquivo: string,
+): Promise<{ imagemBase64: string | null; mime: string; avisos: string[] }> {
+  const ext = path.extname(nomeArquivo).toLowerCase();
+  if (isImagemExt(ext)) {
+    const mime =
+      ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+    return { imagemBase64: buffer.toString("base64"), mime, avisos: [] };
+  }
+  if (ext !== ".pdf") {
+    return {
+      imagemBase64: null,
+      mime: "",
+      avisos: [`Formato ${ext || "(sem extensão)"} não suportado.`],
+    };
+  }
+  const jpegs = extrairJpegsEmbutidosPdf(buffer);
+  const img = escolherMaiorImagemEmbutida(jpegs);
+  if (!img) {
+    return {
+      imagemBase64: null,
+      mime: "",
+      avisos: ["Nenhuma imagem JPEG encontrada no PDF."],
+    };
+  }
+  return { imagemBase64: img.toString("base64"), mime: "image/jpeg", avisos: [] };
+}
+
+export function parseDocumentoTexto(
+  tipo: DocTipoUpload,
+  text: string,
+): CnhParseResult | ComprovanteParseResult | CrlvParseResult {
+  switch (tipo) {
+    case "cnh":
+      return parseCnhText(text);
+    case "comprovante-residencia":
+      return parseComprovanteText(text);
+    case "crlv":
+      return parseCrlvText(text);
+    default:
+      throw new Error(`Tipo de documento inválido: ${tipo}`);
+  }
+}
+
 export async function lerDocumentoUpload(input: {
   tipo: DocTipoUpload;
   nomeArquivo: string;

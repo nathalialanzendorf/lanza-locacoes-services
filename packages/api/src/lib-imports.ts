@@ -228,7 +228,9 @@ export {
 } from "../../../src/lib/importarClientesCnh.js";
 
 export {
+  extrairImagemDocumento,
   lerDocumentoUpload,
+  parseDocumentoTexto,
   type DocTipoUpload,
   type CnhParseResult,
   type ComprovanteParseResult,
