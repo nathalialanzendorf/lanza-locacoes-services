@@ -61,7 +61,6 @@ function RecebimentosTable({
 export function DashboardPage() {
   const resumo = useResumo();
   const rec = resumo.data?.recebimentos ?? RECEBIMENTOS_VAZIO;
-  const apiSemRecebimentos = Boolean(resumo.data && !resumo.data.recebimentos);
 
   return (
     <PageHeader
@@ -138,13 +137,6 @@ export function DashboardPage() {
         <p className="field__hint">A carregar recebimentos…</p>
       ) : (
         <>
-          {apiSemRecebimentos ? (
-            <p className="form-card__error dashboard-api-aviso">
-              A API em produção ainda não expõe recebimentos no resumo — redeploy pendente ou
-              versão antiga. Os totais abaixo ficam vazios até o backend atualizar.
-            </p>
-          ) : null}
-
           <section className="dashboard-recebimentos-resumo">
             <h2 className="form-card__title">Recebimentos — {rec.dataReferenciaBr}</h2>
             <div className="stat-grid stat-grid--compact">
@@ -182,11 +174,18 @@ export function DashboardPage() {
             titulo="Em atraso"
             linhas={rec.atrasados}
             colunaExtra={{
-              header: "Vencimentos",
-              render: (l) =>
-                l.vencimentosBr?.length
-                  ? l.vencimentosBr.join(", ")
-                  : (l.vencimentoBr ?? "—"),
+              header: "Atraso / vencimentos",
+              render: (l) => {
+                const dias =
+                  l.diasAtraso != null && l.diasAtraso > 0
+                    ? `${l.diasAtraso} dia(s) · `
+                    : "";
+                const venc =
+                  l.vencimentosBr?.length
+                    ? l.vencimentosBr.join(", ")
+                    : (l.vencimentoBr ?? "—");
+                return `${dias}${venc}`;
+              },
             }}
           />
         </>

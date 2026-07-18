@@ -28,6 +28,50 @@ function estadoParaUf(estado: string): string {
   return ESTADO_UF[e] ?? e;
 }
 
+function cpfDigits(cpf: string): string {
+  return String(cpf ?? "").replace(/\D/g, "");
+}
+
+function cpfValido(cpf: string): boolean {
+  const d = cpfDigits(cpf);
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const calc = (base: string, pesoInicial: number): number => {
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (pesoInicial - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  const dv1 = calc(d.slice(0, 9), 10);
+  const dv2 = calc(d.slice(0, 10), 11);
+  return dv1 === Number(d[9]) && dv2 === Number(d[10]);
+}
+
+function cpfFormatado(cpf: string): string {
+  const d = cpfDigits(cpf);
+  return d.length === 11
+    ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+    : cpf;
+}
+
+/** Junta dígitos separados por espaço/quebra (comum em PDFs de CNH-e), sem colar após hífen/ponto. */
+function compactarDigitosEspacados(text: string): string {
+  return text.replace(/(?<![.\-/])(\d)\s+(?=\d)/g, "$1");
+}
+
+function extrairOnzeDigitos(text: string): string[] {
+  const compact = compactarDigitosEspacados(text);
+  const found = compact.match(/\b(\d{11})\b/g) ?? [];
+  return [...new Set(found)];
+}
+
+function extrairDigitosRotulo(text: string, rotulo: RegExp): string | null {
+  const m = text.match(rotulo);
+  if (!m?.[1]) return null;
+  const d = cpfDigits(m[1]);
+  return d.length === 11 ? d : null;
+}
+
 export async function extrairTextoDocumento(
   buffer: Buffer,
   nomeArquivo: string,
@@ -92,12 +136,51 @@ export function parseCnhText(text: string): CnhParseResult {
 
   const out: CnhParseResult = { avisos, cnh: {} };
   const flat = text.replace(/\s+/g, " ");
+  const digitsFlat = compactarDigitosEspacados(flat);
 
-  const cpfM = flat.match(/\b(\d{3}\.\d{3}\.\d{3}-\d{2})\b/);
-  if (cpfM) out.cpf = cpfM[1];
+  const cpfFormatadoM = flat.match(/\b(\d{3}\.\d{3}\.\d{3}-\d{2})\b/);
+  if (cpfFormatadoM) out.cpf = cpfFormatadoM[1];
 
-  const regM = text.match(/(?:REGISTRO|N[°º]\s*REGISTRO|Nº\s*REGISTRO)\s*[:\s]*(\d{11})/i);
-  if (regM) out.cnh!.numeroRegistro = regM[1];
+  if (!out.cpf) {
+    const cpfRotulo =
+      extrairDigitosRotulo(text, /\bCPF\b[^0-9]{0,25}([\d.\-\s]{11,22})/i) ??
+      extrairDigitosRotulo(flat, /\bCPF\b[^0-9]{0,25}([\d.\-\s]{11,22})/i);
+    if (cpfRotulo) out.cpf = cpfFormatado(cpfRotulo);
+  }
+
+  if (!out.cpf) {
+    for (const seq of extrairOnzeDigitos(text)) {
+      if (cpfValido(seq)) {
+        out.cpf = cpfFormatado(seq);
+        break;
+      }
+    }
+  }
+
+  const regRotulo =
+    extrairDigitosRotulo(
+      text,
+      /(?:N[°º.]?\s*REG(?:ISTRO)?\.?|REGISTRO(?:\s*\/\s*CNH)?)\s*[:\/\s]*([\d\s]{11,22})/i,
+    ) ??
+    extrairDigitosRotulo(text, /4\s*[bB][^\d]{0,25}([\d\s]{11,22})/);
+  if (regRotulo) out.cnh!.numeroRegistro = regRotulo;
+
+  if (!out.cnh?.numeroRegistro) {
+    const regM = digitsFlat.match(
+      /(?:REGISTRO|N[°º]\s*REGISTRO|Nº\s*REGISTRO)\s*[:\s]*(\d{11})/i,
+    );
+    if (regM) out.cnh!.numeroRegistro = regM[1];
+  }
+
+  if (!out.cnh?.numeroRegistro) {
+    const cpfDig = out.cpf ? cpfDigits(out.cpf) : null;
+    for (const seq of extrairOnzeDigitos(text)) {
+      if (seq !== cpfDig) {
+        out.cnh!.numeroRegistro = seq;
+        break;
+      }
+    }
+  }
 
   const catM = text.match(/\bCategoria\s*[:\s]*([ABCDE]{1,2})\b/i);
   if (catM) out.cnh!.categoria = catM[1]!.toUpperCase();
@@ -136,7 +219,14 @@ export function parseCnhText(text: string): CnhParseResult {
   }
 
   if (!out.cpf && !out.cnh?.numeroRegistro) {
-    avisos.push("CPF ou número de registro CNH não encontrados no texto.");
+    const seqs = extrairOnzeDigitos(text);
+    if (seqs.length === 0) {
+      avisos.push(
+        "CPF e registro não encontrados — a CNH-e costuma ser PDF só com imagem (sem texto). Preencha manualmente ou use exportação com campos legíveis.",
+      );
+    } else {
+      avisos.push("CPF ou número de registro CNH não encontrados no texto.");
+    }
   }
 
   return out;
