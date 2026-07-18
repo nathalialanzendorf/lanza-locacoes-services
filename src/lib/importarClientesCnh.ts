@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { extrairTextoDocumento, parseCnhText } from "./documentosParse.js";
+import { extrairTextoCnh, parseCnhText } from "./documentosParse.js";
 import { extrairLocatarioDocx } from "./contratoExtrair.js";
 import { docxPlainText } from "./docxPlain.js";
 import { defaultContratosDir, readLanzaPaths } from "./lanzaPaths.js";
@@ -153,10 +153,10 @@ export type CnhTextoParse = {
   cnh?: Record<string, string>;
 };
 
-/** Tenta extrair campos de CNH digital com camada de texto (muitos CNH-e são só imagem). */
+/** Tenta extrair campos da CNH (texto PDF, JPEG embutido + OCR, ou imagem). */
 export async function parseCnhArquivo(filePath: string): Promise<CnhTextoParse | null> {
   const ext = path.extname(filePath).toLowerCase();
-  if (ext !== ".pdf") return null;
+  if (!CNH_EXT.has(ext)) return null;
 
   let buffer: Buffer;
   try {
@@ -165,8 +165,8 @@ export async function parseCnhArquivo(filePath: string): Promise<CnhTextoParse |
     return null;
   }
 
-  const { text } = await extrairTextoDocumento(buffer, filePath);
-  if (text.length < 80) return null;
+  const { text } = await extrairTextoCnh(buffer, path.basename(filePath));
+  if (!text.trim()) return null;
 
   const parsed = parseCnhText(text);
   if (!parsed.cpf && !parsed.cnh?.numeroRegistro) return null;

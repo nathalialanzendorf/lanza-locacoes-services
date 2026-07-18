@@ -5,6 +5,8 @@ import path from "node:path";
 
 import pdfParse from "pdf-parse";
 
+import { escolherImagemCnh, extrairJpegsEmbutidosPdf } from "./cnhPdfImagem.js";
+import { ocrCnhImagem } from "./cnhOcr.js";
 import { formatPlacaHyphen } from "./placa.js";
 
 export type DocTipoUpload = "cnh" | "comprovante-residencia" | "crlv";
@@ -72,6 +74,84 @@ function extrairDigitosRotulo(text: string, rotulo: RegExp): string | null {
   return d.length === 11 ? d : null;
 }
 
+function isImagemExt(ext: string): boolean {
+  return [".jpg", ".jpeg", ".png", ".webp", ".jfif"].includes(ext);
+}
+
+function cnhParseOk(parsed: CnhParseResult): boolean {
+  return Boolean(parsed.cpf || parsed.cnh?.numeroRegistro);
+}
+
+async function textoPdf(buffer: Buffer): Promise<{ text: string; avisos: string[] }> {
+  const avisos: string[] = [];
+  try {
+    const data = await pdfParse(buffer);
+    const text = (data.text || "").trim();
+    if (text.length < 30) {
+      avisos.push("PDF com pouco texto na camada digital — tentando OCR na imagem da CNH.");
+    }
+    return { text, avisos };
+  } catch {
+    avisos.push("Falha ao ler o PDF.");
+    return { text: "", avisos };
+  }
+}
+
+/**
+ * CNH: camada de texto do PDF → se falhar, JPEG embutido + OCR (CNH-e SENATRAN).
+ * Imagens (jpg/png) vão directo para OCR.
+ */
+export async function extrairTextoCnh(
+  buffer: Buffer,
+  nomeArquivo: string,
+): Promise<{ text: string; avisos: string[]; viaOcr: boolean }> {
+  const ext = path.extname(nomeArquivo).toLowerCase();
+  const avisos: string[] = [];
+
+  if (isImagemExt(ext)) {
+    try {
+      const text = await ocrCnhImagem(buffer);
+      avisos.push("Dados lidos por OCR a partir da imagem da CNH.");
+      return { text, avisos, viaOcr: true };
+    } catch {
+      avisos.push("Falha no OCR da imagem — preencha manualmente.");
+      return { text: "", avisos, viaOcr: true };
+    }
+  }
+
+  if (ext !== ".pdf") {
+    avisos.push(`Formato ${ext || "(sem extensão)"} não suportado para CNH — use PDF ou imagem.`);
+    return { text: "", avisos, viaOcr: false };
+  }
+
+  const pdf = await textoPdf(buffer);
+  avisos.push(...pdf.avisos);
+  if (pdf.text) {
+    const parsed = parseCnhText(pdf.text);
+    if (cnhParseOk(parsed)) {
+      return { text: pdf.text, avisos, viaOcr: false };
+    }
+  }
+
+  const jpegs = extrairJpegsEmbutidosPdf(buffer);
+  const imagem = escolherImagemCnh(jpegs);
+  if (!imagem) {
+    avisos.push(
+      "Nenhuma imagem encontrada no PDF (pode ser JBIG2/PNG). Envie foto da CNH ou preencha manualmente.",
+    );
+    return { text: pdf.text, avisos, viaOcr: false };
+  }
+
+  try {
+    const text = await ocrCnhImagem(imagem);
+    avisos.push("Dados lidos por OCR a partir da imagem embutida na CNH-e.");
+    return { text, avisos, viaOcr: true };
+  } catch {
+    avisos.push("Falha no OCR da CNH-e — preencha manualmente.");
+    return { text: pdf.text, avisos, viaOcr: true };
+  }
+}
+
 export async function extrairTextoDocumento(
   buffer: Buffer,
   nomeArquivo: string,
@@ -129,7 +209,8 @@ export type CnhParseResult = {
 
 export function parseCnhText(text: string): CnhParseResult {
   const avisos: string[] = [];
-  if (!text || text.length < 40) {
+  const seqs = extrairOnzeDigitos(text ?? "");
+  if (!text?.trim() || (text.trim().length < 40 && seqs.length === 0)) {
     avisos.push("Texto insuficiente para extrair dados da CNH.");
     return { avisos };
   }
@@ -429,21 +510,37 @@ export async function lerDocumentoUpload(input: {
   textoChars: number;
 }> {
   const buf = Buffer.from(input.conteudoBase64, "base64");
-  const { text, avisos: extAvisos } = await extrairTextoDocumento(buf, input.nomeArquivo);
-  const avisos = [...extAvisos];
 
   switch (input.tipo) {
     case "cnh": {
+      const { text, avisos: extAvisos } = await extrairTextoCnh(buf, input.nomeArquivo);
       const campos = parseCnhText(text);
-      return { tipo: input.tipo, campos, avisos: [...avisos, ...campos.avisos], textoChars: text.length };
+      return {
+        tipo: input.tipo,
+        campos,
+        avisos: [...extAvisos, ...campos.avisos],
+        textoChars: text.length,
+      };
     }
     case "comprovante-residencia": {
+      const { text, avisos: extAvisos } = await extrairTextoDocumento(buf, input.nomeArquivo);
       const campos = parseComprovanteText(text);
-      return { tipo: input.tipo, campos, avisos: [...avisos, ...campos.avisos], textoChars: text.length };
+      return {
+        tipo: input.tipo,
+        campos,
+        avisos: [...extAvisos, ...campos.avisos],
+        textoChars: text.length,
+      };
     }
     case "crlv": {
+      const { text, avisos: extAvisos } = await extrairTextoDocumento(buf, input.nomeArquivo);
       const campos = parseCrlvText(text);
-      return { tipo: input.tipo, campos, avisos: [...avisos, ...campos.avisos], textoChars: text.length };
+      return {
+        tipo: input.tipo,
+        campos,
+        avisos: [...extAvisos, ...campos.avisos],
+        textoChars: text.length,
+      };
     }
     default:
       throw new Error(`Tipo de documento inválido: ${input.tipo}`);

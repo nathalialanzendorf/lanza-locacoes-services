@@ -224,8 +224,9 @@ export function ClientesCadastroSection({ clienteId }: Props) {
           >
             <div className="doc-upload-row">
               <DocUploadField
-                label="CNH (PDF)"
+                label="CNH (PDF ou imagem)"
                 tipo="cnh"
+                hint="CNH-e do Gov.br: o PDF é convertido em imagem e lido por OCR."
                 disabled={loading}
                 onParsed={({ campos }) => aplicarCnh(campos)}
                 onError={setError}

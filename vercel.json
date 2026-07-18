@@ -1,4 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "functions": {
+    "packages/api/src/index.ts": {
+      "maxDuration": 60
+    }
+  }
 }

@@ -18,7 +18,7 @@ Varre pastas de contrato (DD.MM.AAAA - Nome) com arquivo CNH (.pdf, .jpg, .jpeg,
 e grava em database/clientes.json.
 
 Dados principais vêm do Contrato*.docx na mesma pasta (nome, CPF, endereço).
-CNH-e em PDF costuma ser imagem — o número da CNH pode vir de --com-rastreame.
+CNH-e em PDF costuma ser imagem — a leitura usa OCR (JPEG embutido no PDF).
 
 Padrão --raiz: config/lanza_paths.json → documentosRaiz
 `);

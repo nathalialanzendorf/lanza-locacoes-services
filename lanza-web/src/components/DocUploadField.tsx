@@ -82,7 +82,11 @@ export function DocUploadField({
           onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
         />
       </label>
-      {loading ? <p className="doc-upload__status">Lendo documento…</p> : null}
+      {loading ? (
+        <p className="doc-upload__status">
+          {tipo === "cnh" ? "Lendo CNH (OCR pode levar alguns segundos)…" : "Lendo documento…"}
+        </p>
+      ) : null}
       {nomeArquivo && !loading ? (
         <p className="doc-upload__status">
           Arquivo: <strong>{nomeArquivo}</strong>
