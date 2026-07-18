@@ -1,16 +1,15 @@
-import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
+import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 
 export const DB_CONTRATOS = path.join(REPO_ROOT, "database", "contratos.json");
-const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
-const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
 
 export type ContratoCliente = {
   id: string | null;
@@ -253,28 +252,26 @@ function stripPastaSuffix(nome: string): string {
     .trim();
 }
 
-function resolveCliente(cpf: string | null, nomePasta: string): ContratoCliente {
+function resolveClienteFromList(
+  list: ClienteRegistro[],
+  cpf: string | null,
+  nomePasta: string,
+): ContratoCliente {
   const nomeLimpo = stripPastaSuffix(nomePasta);
-  if (fs.existsSync(DB_CLIENTES)) {
-    const db = JSON.parse(fs.readFileSync(DB_CLIENTES, "utf8")) as {
-      clientes?: ClienteJson[];
-    };
-    const list = db.clientes ?? [];
 
-    const n = normNome(nomeLimpo);
-    const matches = list.filter((x) => {
-      const xn = normNome(x.nome);
-      return xn === n || xn.includes(n) || n.includes(xn);
-    });
-    if (matches.length === 1) return snapshotCliente(matches[0]!);
+  const n = normNome(nomeLimpo);
+  const matches = list.filter((x) => {
+    const xn = normNome(x.nome);
+    return xn === n || xn.includes(n) || n.includes(xn);
+  });
+  if (matches.length === 1) return snapshotCliente(matches[0]!);
 
-    if (cpf) {
-      const key = normCpfDigits(cpf);
-      const c = list.find((x) => x.cpf && normCpfDigits(x.cpf) === key);
-      if (c) {
-        const xn = normNome(c.nome);
-        if (xn === n || xn.includes(n) || n.includes(xn)) return snapshotCliente(c);
-      }
+  if (cpf) {
+    const key = normCpfDigits(cpf);
+    const c = list.find((x) => x.cpf && normCpfDigits(x.cpf) === key);
+    if (c) {
+      const xn = normNome(c.nome);
+      if (xn === n || xn.includes(n) || n.includes(xn)) return snapshotCliente(c);
     }
   }
 
@@ -285,33 +282,36 @@ function resolveCliente(cpf: string | null, nomePasta: string): ContratoCliente 
   };
 }
 
-function resolveVeiculo(placa: string): ContratoVeiculo {
-  const placaFmt = formatPlacaHyphen(placa);
-  if (fs.existsSync(DB_VEICULOS)) {
-    const db = JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as {
-      veiculos?: VeiculoJson[];
-    };
-    const v = db.veiculos?.find((x) => placasIguais(x.placa, placaFmt));
-    if (v) return snapshotVeiculo(v);
+function resolveCliente(cpf: string | null, nomePasta: string): ContratoCliente {
+  return resolveClienteFromList(loadClientesDb().clientes, cpf, nomePasta);
+}
 
-    const partial = compactPlaca(placaFmt);
-    if (partial.length >= 3 && partial.length < 7) {
-      const candidates =
-        db.veiculos?.filter((x) => compactPlaca(x.placa).startsWith(partial)) ?? [];
-      if (candidates.length === 1) return snapshotVeiculo(candidates[0]!);
-    }
+function resolveVeiculoFromList(list: VeiculoRegistro[], placa: string): ContratoVeiculo {
+  const placaFmt = formatPlacaHyphen(placa);
+  const v = list.find((x) => placasIguais(x.placa, placaFmt));
+  if (v) return snapshotVeiculo(v);
+
+  const partial = compactPlaca(placaFmt);
+  if (partial.length >= 3 && partial.length < 7) {
+    const candidates = list.filter((x) => compactPlaca(x.placa).startsWith(partial));
+    if (candidates.length === 1) return snapshotVeiculo(candidates[0]!);
   }
   return { id: null, placa: placaFmt };
 }
 
-function loadClienteId(cpf: string | null): string | null {
-  if (!cpf || !fs.existsSync(DB_CLIENTES)) return null;
-  const db = JSON.parse(fs.readFileSync(DB_CLIENTES, "utf8")) as {
-    clientes?: { id?: string; cpf?: string }[];
-  };
+function resolveVeiculo(placa: string): ContratoVeiculo {
+  return resolveVeiculoFromList(loadVeiculosDb().veiculos, placa);
+}
+
+function loadClienteIdFromList(list: ClienteRegistro[], cpf: string | null): string | null {
+  if (!cpf) return null;
   const key = cpf.replace(/\D/g, "");
-  const c = db.clientes?.find((x) => x.cpf?.replace(/\D/g, "") === key);
+  const c = list.find((x) => x.cpf?.replace(/\D/g, "") === key);
   return c?.id ?? null;
+}
+
+function loadClienteId(cpf: string | null): string | null {
+  return loadClienteIdFromList(loadClientesDb().clientes, cpf);
 }
 
 function mesmoParClienteVeiculo(
@@ -410,12 +410,18 @@ export async function saveContratosDbAsync(db: ContratosDb): Promise<void> {
   await saveJsonDocumentAsync(DB_CONTRATOS, db as Record<string, unknown>);
 }
 
+type RegistrarCatalogo = {
+  clientes: ClienteRegistro[];
+  veiculos: VeiculoRegistro[];
+};
+
 function buildRegistro(
   ext: ReturnType<typeof extrairContrato>,
   existing: ContratoRegistro | undefined,
   opts: RegistrarContratoOpts,
   db: ContratosDb,
   pastaKey: string,
+  catalogo?: RegistrarCatalogo,
 ): ContratoRegistro {
   const ts = nowIso();
   const encerramento =
@@ -427,8 +433,10 @@ function buildRegistro(
   if (encerramento) status = "encerrado";
   else if (opts.status) status = opts.status;
 
-  const cliente = resolveCliente(ext.cpf, ext.clienteNome);
-  const veiculo = resolveVeiculo(ext.placa);
+  const clientes = catalogo?.clientes ?? loadClientesDb().clientes;
+  const veiculos = catalogo?.veiculos ?? loadVeiculosDb().veiculos;
+  const cliente = resolveClienteFromList(clientes, ext.cpf, ext.clienteNome);
+  const veiculo = resolveVeiculoFromList(veiculos, ext.placa);
   const { versao, contratoAnteriorId } = resolverVersao(
     db,
     cliente,
@@ -442,7 +450,7 @@ function buildRegistro(
     id: existing?.id ?? crypto.randomUUID(),
     versao,
     contratoAnteriorId,
-    clienteId: cliente.id ?? loadClienteId(ext.cpf),
+    clienteId: cliente.id ?? loadClienteIdFromList(clientes, ext.cpf),
     veiculoId: veiculo.placa,
     cliente,
     veiculo,
@@ -489,6 +497,31 @@ export function registrarContrato(
   else db.contratos.push(registro);
 
   saveContratosDb(db);
+  return registro;
+}
+
+export async function registrarContratoAsync(
+  pastaContrato: string,
+  opts: RegistrarContratoOpts = {},
+): Promise<ContratoRegistro> {
+  const ext = extrairContrato(pastaContrato);
+  const [db, clientesDb, veiculosDb] = await Promise.all([
+    loadContratosDbAsync(),
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+  ]);
+  const pastaKey = normPath(ext.pastaContrato);
+  const idx = db.contratos.findIndex((c) => normPath(c.pastaContrato) === pastaKey);
+  const existing = idx >= 0 ? db.contratos[idx] : undefined;
+  const registro = buildRegistro(ext, existing, opts, db, pastaKey, {
+    clientes: clientesDb.clientes,
+    veiculos: veiculosDb.veiculos,
+  });
+
+  if (idx >= 0) db.contratos[idx] = registro;
+  else db.contratos.push(registro);
+
+  await saveContratosDbAsync(db);
   return registro;
 }
 
@@ -661,7 +694,7 @@ export function validarContratoVigenteParaEncerramento(
 export type ModoContratoCli = "criar" | "renovar";
 
 /** Valida `criar` vs `renovar` antes de gerar Word/registro. */
-export function validarModoContrato(
+function validarModoContratoComLista(
   modo: ModoContratoCli,
   filtros: {
     placa: string;
@@ -669,8 +702,9 @@ export function validarModoContrato(
     clienteId?: string | null;
     clienteNome?: string;
   },
+  contratos: ContratoRegistro[],
 ): { irmaos: ContratoRegistro[]; proximaVersao: number } {
-  const irmaos = listarContratosClienteVeiculo(filtros);
+  const irmaos = listarContratosClienteVeiculo(filtros, contratos);
   const ativo = irmaos.find((c) => c.status === "ativo");
 
   if (modo === "criar") {
@@ -700,6 +734,31 @@ export function validarModoContrato(
   }
   const maxVersao = Math.max(...irmaos.map((c) => c.versao ?? 1));
   return { irmaos, proximaVersao: maxVersao + 1 };
+}
+
+export function validarModoContrato(
+  modo: ModoContratoCli,
+  filtros: {
+    placa: string;
+    cpf?: string | null;
+    clienteId?: string | null;
+    clienteNome?: string;
+  },
+): { irmaos: ContratoRegistro[]; proximaVersao: number } {
+  return validarModoContratoComLista(modo, filtros, loadContratosDb().contratos);
+}
+
+export async function validarModoContratoAsync(
+  modo: ModoContratoCli,
+  filtros: {
+    placa: string;
+    cpf?: string | null;
+    clienteId?: string | null;
+    clienteNome?: string;
+  },
+): Promise<{ irmaos: ContratoRegistro[]; proximaVersao: number }> {
+  const db = await loadContratosDbAsync();
+  return validarModoContratoComLista(modo, filtros, db.contratos);
 }
 
 /** Contratos do mesmo locatário + veículo (qualquer versão), ordenados por versão. */

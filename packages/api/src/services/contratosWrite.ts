@@ -8,9 +8,9 @@ import {
   encerrarContratoDbAsync,
   excluirContrato,
   gerar,
-  montarDadosContratoFromDb,
-  registrarContrato,
-  validarModoContrato,
+  montarDadosContratoFromDbAsync,
+  registrarContratoAsync,
+  validarModoContratoAsync,
   type GerarContratoDados,
   type MontarContratoDbInput,
   type MotivoEncerramento,
@@ -27,6 +27,9 @@ function normalizePaths(dados: GerarContratoDados): void {
     if (dados[k]) {
       (dados as unknown as Record<string, string | undefined>)[k] = absRepo(dados[k] as string);
     }
+  }
+  if (process.env.VERCEL) {
+    dados.contratosDir = path.join("/tmp", "lanza-contratos");
   }
 }
 
@@ -47,7 +50,7 @@ async function executarContratoModo(
   let dados: GerarContratoDados;
 
   if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
-    dados = montarDadosContratoFromDb(input as MontarContratoDbInput);
+    dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
   } else {
     dados = input as GerarContratoDados;
   }
@@ -58,11 +61,11 @@ async function executarContratoModo(
   const cpf = dados.cliente?.cpf ?? null;
   if (!placa) throw new HttpError(400, "Placa do veículo não informada");
 
-  const { proximaVersao } = validarModoContrato(modo, { placa, cpf, clienteNome });
+  const { proximaVersao } = await validarModoContratoAsync(modo, { placa, cpf, clienteNome });
   const gerado = gerar(dados);
   let reg = null;
   try {
-    reg = registrarContrato(gerado.pasta);
+    reg = await registrarContratoAsync(gerado.pasta);
   } catch (err) {
     throw new HttpError(500, err instanceof Error ? err.message : String(err));
   }

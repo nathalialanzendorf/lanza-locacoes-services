@@ -357,11 +357,13 @@ export {
 
 export {
   registrarContrato,
+  registrarContratoAsync,
   encerrarContratoDb,
   encerrarContratoDbAsync,
   atualizarContratoDbAsync,
   excluirContrato,
   validarModoContrato,
+  validarModoContratoAsync,
   type MotivoEncerramento,
   type AtualizarContratoDbPatch,
 } from "../../../src/lib/contratosDb.js";
@@ -375,6 +377,7 @@ export { gerar, type GerarContratoDados } from "../../../src/lib/docxGerar.js";
 
 export {
   montarDadosContratoFromDb,
+  montarDadosContratoFromDbAsync,
   type MontarContratoDbInput,
 } from "../../../src/lib/montarDadosContrato.js";
 

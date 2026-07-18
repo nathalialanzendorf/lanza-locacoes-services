@@ -1,10 +1,19 @@
-import fs from "node:fs";
 import path from "node:path";
 
+import {
+  loadClientesDb,
+  loadClientesDbAsync,
+  type ClienteRegistro,
+} from "./clientesDb.js";
 import { fmtDataBr } from "./contratoExtrair.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
 import { formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import {
+  loadVeiculosDb,
+  loadVeiculosDbAsync,
+  type VeiculoRegistro,
+} from "./veiculosDb.js";
 import type {
   CaucaoParcelas,
   CaucaoSemanalParcelado,
@@ -13,8 +22,6 @@ import type {
 } from "./docxGerar.js";
 import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
 
-const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
-const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
 const DEFAULT_TEMPLATE = path.join(
   REPO_ROOT,
   "templates",
@@ -22,32 +29,9 @@ const DEFAULT_TEMPLATE = path.join(
   "Contrato - Modelo v3.docx",
 );
 
-export type ClienteDb = {
-  id?: string;
-  nome: string;
-  cpf: string;
-  endereco?: {
-    cep?: string | null;
-    logradouro?: string | null;
-    numero?: string | null;
-    complemento?: string | null;
-    bairro?: string | null;
-    cidade?: string | null;
-    uf?: string | null;
-  };
-  cnh?: { categoria?: string | null };
-};
+export type ClienteDb = ClienteRegistro;
 
-export type VeiculoDb = {
-  placa: string;
-  marcaModelo?: string;
-  fipeModelo?: string;
-  chassi?: string;
-  renavam?: string;
-  anoModelo?: string;
-  cor?: string;
-  fipe?: string;
-  fipeValor?: string;
+export type VeiculoDb = VeiculoRegistro & {
   /**
    * Pasta do veículo em "Aluguel Carros" onde ficam os contratos (ex.:
    * "Felipe - FORD FOCUS 2013-2014"). Aceita nome relativo (resolvido sob
@@ -122,20 +106,7 @@ function strField(v: unknown): string {
   return String(v).trim();
 }
 
-export function loadClientesDb(): ClienteDb[] {
-  if (!fs.existsSync(DB_CLIENTES)) return [];
-  const j = JSON.parse(fs.readFileSync(DB_CLIENTES, "utf8")) as { clientes?: ClienteDb[] };
-  return j.clientes ?? [];
-}
-
-export function loadVeiculosDb(): VeiculoDb[] {
-  if (!fs.existsSync(DB_VEICULOS)) return [];
-  const j = JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as { veiculos?: VeiculoDb[] };
-  return j.veiculos ?? [];
-}
-
-export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
-  const list = loadClientesDb();
+function findClienteDbInList(list: ClienteDb[], cpf?: string, nome?: string): ClienteDb {
   if (list.length === 0) {
     throw new Error("database/clientes.json vazio — use cadastro-cliente antes de gerar o contrato.");
   }
@@ -173,8 +144,7 @@ export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
   throw new Error("Informe --cpf ou --cliente (nome do locatário).");
 }
 
-export function findVeiculoDb(placa: string): VeiculoDb {
-  const list = loadVeiculosDb();
+function findVeiculoDbInList(list: VeiculoDb[], placa: string): VeiculoDb {
   const v = list.find((x) => placasIguais(x.placa, placa));
   if (!v) {
     throw new Error(
@@ -182,6 +152,24 @@ export function findVeiculoDb(placa: string): VeiculoDb {
     );
   }
   return v;
+}
+
+export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
+  return findClienteDbInList(loadClientesDb().clientes, cpf, nome);
+}
+
+export async function findClienteDbAsync(cpf?: string, nome?: string): Promise<ClienteDb> {
+  const db = await loadClientesDbAsync();
+  return findClienteDbInList(db.clientes, cpf, nome);
+}
+
+export function findVeiculoDb(placa: string): VeiculoDb {
+  return findVeiculoDbInList(loadVeiculosDb().veiculos, placa);
+}
+
+export async function findVeiculoDbAsync(placa: string): Promise<VeiculoDb> {
+  const db = await loadVeiculosDbAsync();
+  return findVeiculoDbInList(db.veiculos, placa);
 }
 
 /**
@@ -359,10 +347,12 @@ export function resolverParcelamentoContrato(input: MontarContratoDbInput): {
   return out;
 }
 
-export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarContratoDados {
-  const cliente = findClienteDb(input.cpf, input.clienteNome);
+function montarDadosContratoCore(
+  input: MontarContratoDbInput,
+  cliente: ClienteDb,
+  veiculo: VeiculoDb,
+): GerarContratoDados {
   validarEnderecoCliente(cliente);
-  const veiculo = findVeiculoDb(input.placa);
 
   const end = cliente.endereco ?? {};
   const inicio = input.inicio?.trim() || fmtDataBr(new Date());
@@ -376,7 +366,7 @@ export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarCo
     diaPagamento: input.diaPagamento ?? "todos os sábados",
     cliente: {
       nome: cliente.nome,
-      cpf: cliente.cpf,
+      cpf: cliente.cpf ?? "",
       endereco: {
         logradouro: strField(end.logradouro),
         numero: strField(end.numero),
@@ -406,4 +396,18 @@ export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarCo
       data: "auto",
     },
   };
+}
+
+export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarContratoDados {
+  const cliente = findClienteDb(input.cpf, input.clienteNome);
+  const veiculo = findVeiculoDb(input.placa);
+  return montarDadosContratoCore(input, cliente, veiculo);
+}
+
+export async function montarDadosContratoFromDbAsync(
+  input: MontarContratoDbInput,
+): Promise<GerarContratoDados> {
+  const cliente = await findClienteDbAsync(input.cpf, input.clienteNome);
+  const veiculo = await findVeiculoDbAsync(input.placa);
+  return montarDadosContratoCore(input, cliente, veiculo);
 }
