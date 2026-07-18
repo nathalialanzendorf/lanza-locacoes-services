@@ -27,7 +27,7 @@ type FiltroSituacao = "em_aberto" | "pago" | "todos";
 
 export function RelatorioCobrancasForm() {
   const meta = useQuery({ queryKey: ["cobrancas-meta"], queryFn: () => lanzaApi.metaCobrancas() });
-  const [tipos, setTipos] = useState<string[]>(["pagamento-semanal"]);
+  const [tipo, setTipo] = useState("");
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
   const [situacao, setSituacao] = useState<FiltroSituacao>("em_aberto");
@@ -40,10 +40,6 @@ export function RelatorioCobrancasForm() {
   const [textoVisivel, setTextoVisivel] = useState<string | undefined>();
 
   const opcoes = meta.data?.tipos ?? TIPOS_PADRAO.map((id) => ({ id, rotulo: id }));
-
-  function toggleTipo(id: string) {
-    setTipos((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-  }
 
   function onClienteChange(id: string) {
     setClienteId(id);
@@ -64,7 +60,7 @@ export function RelatorioCobrancasForm() {
     }
     try {
       const r = await lanzaApi.gerarCobrancas({
-        tipos: tipos.length ? tipos : undefined,
+        tipos: tipo ? [tipo] : undefined,
         armazenarServidor,
         filtro: {
           placa: veiculoPlaca.trim() || undefined,
@@ -123,7 +119,8 @@ export function RelatorioCobrancasForm() {
             <ClienteSelect
               value={clienteId}
               onChange={onClienteChange}
-              emptyLabel="Todos os clientes"
+              ativo
+              emptyLabel="Todos os clientes ativos"
               disabled={loading || Boolean(veiculoPlaca)}
             />
           </Field>
@@ -131,19 +128,26 @@ export function RelatorioCobrancasForm() {
             <VeiculoSelect
               value={veiculoPlaca}
               onChange={onVeiculoChange}
-              emptyLabel="Todos os veículos"
+              ativo
+              emptyLabel="Todos os veículos ativos"
               disabled={loading || Boolean(clienteId)}
             />
           </Field>
-          <Field label="Tipos de cobrança" span="full">
-            <div className="checkbox-group">
+          <Field label="Tipo de cobrança">
+            <select
+              className="select"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              disabled={loading || meta.isLoading}
+              aria-label="Tipo de cobrança"
+            >
+              <option value="">{meta.isLoading ? "A carregar…" : "Todos os tipos"}</option>
               {opcoes.map((t) => (
-                <label key={t.id} className="checkbox-label">
-                  <input type="checkbox" checked={tipos.includes(t.id)} onChange={() => toggleTipo(t.id)} />
+                <option key={t.id} value={t.id}>
                   {t.rotulo}
-                </label>
+                </option>
               ))}
-            </div>
+            </select>
           </Field>
         </div>
         {error ? <p className="form-card__error">{error}</p> : null}
