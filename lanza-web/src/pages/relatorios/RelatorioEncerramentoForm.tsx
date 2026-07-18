@@ -171,12 +171,18 @@ export function RelatorioEncerramentoForm() {
       <section className="form-card">
         <h2 className="form-card__title">Contratos ativos</h2>
         <div className="despesas-toolbar">
-          <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+          <ClienteSelect
+            value={clienteId}
+            onChange={setClienteId}
+            ativo
+            emptyLabel="Todos os clientes ativos"
+          />
           <VeiculoSelect
             value={veiculoId}
             onChange={setVeiculoId}
             valueField="id"
-            emptyLabel="Todos os veículos"
+            ativo
+            emptyLabel="Todos os veículos ativos"
           />
           {!query.isLoading ? (
             <span className="badge badge--muted">
