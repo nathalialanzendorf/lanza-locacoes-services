@@ -620,13 +620,16 @@ export function registrarEncerramentoContrato(
 }
 
 /** Contrato de maior versão para o par locatário + veículo (renovações em pastas distintas). */
-export function contratoMaisRecentePar(filtros: {
-  placa: string;
-  cpf?: string | null;
-  clienteId?: string | null;
-  clienteNome?: string;
-}): ContratoRegistro | undefined {
-  const list = listarContratosClienteVeiculo(filtros);
+export function contratoMaisRecentePar(
+  filtros: {
+    placa: string;
+    cpf?: string | null;
+    clienteId?: string | null;
+    clienteNome?: string;
+  },
+  contratos?: ContratoRegistro[],
+): ContratoRegistro | undefined {
+  const list = listarContratosClienteVeiculo(filtros, contratos);
   return list.length > 0 ? list[list.length - 1] : undefined;
 }
 
@@ -700,16 +703,19 @@ export function validarModoContrato(
 }
 
 /** Contratos do mesmo locatário + veículo (qualquer versão), ordenados por versão. */
-export function listarContratosClienteVeiculo(filtros: {
-  placa: string;
-  cpf?: string | null;
-  clienteId?: string | null;
-  clienteNome?: string;
-}): ContratoRegistro[] {
-  const db = loadContratosDb();
+export function listarContratosClienteVeiculo(
+  filtros: {
+    placa: string;
+    cpf?: string | null;
+    clienteId?: string | null;
+    clienteNome?: string;
+  },
+  contratos?: ContratoRegistro[],
+): ContratoRegistro[] {
+  const lista = contratos ?? loadContratosDb().contratos;
   const placaFmt = formatPlacaHyphen(filtros.placa);
   const nome = filtros.clienteNome ?? "";
-  return db.contratos
+  return lista
     .filter((c) =>
       mesmoParClienteVeiculo(
         c,

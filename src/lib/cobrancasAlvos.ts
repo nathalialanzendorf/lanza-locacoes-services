@@ -135,19 +135,27 @@ function clienteElegivel(
   return clientes.has(clienteId);
 }
 
+function contratosLista(ctx?: CobrancasDbContext): ContratoRegistro[] {
+  return ctx?.contratos ?? loadContratosDb().contratos;
+}
+
 /** Pagamento semanal só com contrato ativo locatário + veículo (encerrado → renegociação). */
 function temContratoAtivoLocacao(
   clienteId: string | null | undefined,
   placa: string,
+  contratos: ContratoRegistro[],
 ): boolean {
   if (!clienteId) return false;
-  const contrato = contratoMaisRecentePar({ placa, clienteId });
+  const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
   return contrato?.status === "ativo";
 }
 
-function contratoAtivoPorPlaca(placa: string): ContratoRegistro | undefined {
+function contratoAtivoPorPlaca(
+  placa: string,
+  contratos: ContratoRegistro[],
+): ContratoRegistro | undefined {
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = contratos.filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa) === p,
   );
   if (list.length === 0) return undefined;
@@ -163,14 +171,18 @@ function condutorEfetivoPagamentoSemanal(
   d: ClienteDespesaRegistro,
   placa: string,
   clientes: ReturnType<typeof clientesAtivos>,
+  contratos: ContratoRegistro[],
 ): { clienteId: string | null; clienteNome: string | null } {
   const placaFmt = formatPlacaHyphen(placa);
 
   if (d.condutorId) {
-    const contratoCondutor = contratoMaisRecentePar({
-      placa: placaFmt,
-      clienteId: d.condutorId,
-    });
+    const contratoCondutor = contratoMaisRecentePar(
+      {
+        placa: placaFmt,
+        clienteId: d.condutorId,
+      },
+      contratos,
+    );
     if (contratoCondutor?.status === "ativo") {
       const cliente = clientes.get(d.condutorId);
       return {
@@ -186,7 +198,7 @@ function condutorEfetivoPagamentoSemanal(
     return { clienteId: null, clienteNome: null };
   }
 
-  const vigente = contratoAtivoPorPlaca(placaFmt);
+  const vigente = contratoAtivoPorPlaca(placaFmt, contratos);
   if (vigente?.clienteId) {
     return {
       clienteId: vigente.clienteId,
@@ -358,6 +370,7 @@ function filtrarPagamentoSemanal(
   db: ReturnType<typeof loadClienteDespesasDb>,
   veiculos: ReturnType<typeof veiculosAtivos>,
   clientes: ReturnType<typeof clientesAtivos>,
+  contratos: ContratoRegistro[],
   filtro?: FiltroAlvosCobranca,
 ): AlvoCobranca[] {
   const alvoPlaca = filtro?.placa ? compactPlaca(filtro.placa) : null;
@@ -388,14 +401,17 @@ function filtrarPagamentoSemanal(
     if (alvoPlaca && compactPlaca(d.veiculoId) !== alvoPlaca) continue;
 
     const placa = formatPlacaHyphen(d.veiculoId);
-    const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes);
-    if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa)) {
+    const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes, contratos);
+    if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa, contratos)) {
       continue;
     }
-    const contrato = contratoMaisRecentePar({
-      placa,
-      clienteId: efetivo.clienteId,
-    });
+    const contrato = contratoMaisRecentePar(
+      {
+        placa,
+        clienteId: efetivo.clienteId,
+      },
+      contratos,
+    );
     if (
       situacao === "em_aberto" &&
       semanalAtrasoObsoleto(
@@ -577,13 +593,14 @@ export function listarAlvosCobranca(
     : loadClienteDespesasDb();
   const veiculos = veiculosAtivos(ctx);
   const clientes = clientesAtivos(ctx);
+  const contratos = contratosLista(ctx);
   const placaFiltro = filtro?.placa;
   const situacao = filtro?.situacao ?? "em_aberto";
 
   let alvos: AlvoCobranca[];
 
   if (tipo === "pagamento-semanal") {
-    alvos = filtrarPagamentoSemanal(db, veiculos, clientes, filtro);
+    alvos = filtrarPagamentoSemanal(db, veiculos, clientes, contratos, filtro);
   } else {
     const categoriaMap: Record<
       Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">,
