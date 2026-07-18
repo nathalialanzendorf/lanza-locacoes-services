@@ -93,7 +93,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "rastreaveis",
-    rotulo: "Rastreáveis Rastreame (buscar)",
+    rotulo: "Rastreáveis ← Rastreame",
     destino: "Rastreame → veiculos.json",
     interativo: false,
     direcao: "buscar",
