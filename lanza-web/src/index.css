@@ -741,8 +741,8 @@ code {
 
 .data-table th.col-acoes,
 .data-table td.col-acoes {
-  width: 5.75rem;
-  min-width: 5.75rem;
+  width: 10.75rem;
+  min-width: 10.75rem;
   white-space: nowrap;
   text-align: center;
   position: sticky;

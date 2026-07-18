@@ -166,6 +166,8 @@ export function ContratosListSection() {
             render: (c) => (
               <RowActions
                 editTo={`/contratos/${c.id}/editar`}
+                renovarTo={c.status === "ativo" ? `/contratos/renovar?id=${encodeURIComponent(c.id)}` : undefined}
+                encerrarTo={c.status === "ativo" ? `/contratos/encerrar?id=${encodeURIComponent(c.id)}` : undefined}
                 deleting={excluindoId === c.id}
                 onDelete={() => void excluir(c)}
               />

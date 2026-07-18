@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
@@ -23,9 +24,11 @@ function terminoContrato(contrato: Contrato): string {
 
 export function ContratosEncerrarSection() {
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const contratoIdUrl = searchParams.get("id")?.trim() || null;
   const [clienteId, setClienteId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
-  const [contratoSelecionadoId, setContratoSelecionadoId] = useState<string | null>(null);
+  const [contratoSelecionadoId, setContratoSelecionadoId] = useState<string | null>(contratoIdUrl);
   const [dataEncerramento, setDataEncerramento] = useState("");
   const [motivo, setMotivo] = useState<MotivoEncerramento>("devolvido");
   const [quebraContrato, setQuebraContrato] = useState(false);
@@ -48,10 +51,25 @@ export function ContratosEncerrarSection() {
   );
 
   useEffect(() => {
-    if (contratoSelecionadoId && !rows.some((c) => c.id === contratoSelecionadoId)) {
+    if (contratoIdUrl) setContratoSelecionadoId(contratoIdUrl);
+  }, [contratoIdUrl]);
+
+  useEffect(() => {
+    if (query.isLoading || !contratoSelecionadoId) return;
+    if (!rows.some((c) => c.id === contratoSelecionadoId)) {
       setContratoSelecionadoId(null);
+      if (contratoIdUrl) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("id");
+            return next;
+          },
+          { replace: true },
+        );
+      }
     }
-  }, [rows, contratoSelecionadoId]);
+  }, [rows, contratoSelecionadoId, query.isLoading, contratoIdUrl, setSearchParams]);
 
   useEffect(() => {
     if (motivo === "troca") setQuebraContrato(false);
@@ -61,6 +79,14 @@ export function ContratosEncerrarSection() {
     setContratoSelecionadoId(contrato.id);
     setResult(null);
     setError(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("id", contrato.id);
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   async function submit() {
@@ -83,6 +109,14 @@ export function ContratosEncerrarSection() {
       });
       setResult(r.data);
       setContratoSelecionadoId(null);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("id");
+          return next;
+        },
+        { replace: true },
+      );
       void qc.invalidateQueries({ queryKey: ["contratos"] });
       void qc.invalidateQueries({ queryKey: ["clientes"] });
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
