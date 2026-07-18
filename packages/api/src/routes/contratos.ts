@@ -23,6 +23,8 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
         clienteId: ctx.query.get("clienteId") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         placa: ctx.query.get("placa") ?? undefined,
+        dataInicial: ctx.query.get("dataInicial") ?? undefined,
+        dataFinal: ctx.query.get("dataFinal") ?? undefined,
       }));
     }),
   });

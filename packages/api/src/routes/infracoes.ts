@@ -28,6 +28,8 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         parceiroId: ctx.query.get("parceiroId") ?? undefined,
+        dataInicial: ctx.query.get("dataInicial") ?? undefined,
+        dataFinal: ctx.query.get("dataFinal") ?? undefined,
         emAberto,
         ativo,
         semCliente: semCliente === true || semCondutor === true ? true : undefined,

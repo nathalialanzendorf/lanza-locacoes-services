@@ -21,6 +21,8 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
         placa: ctx.query.get("placa") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         situacao: ctx.query.get("situacao") ?? undefined,
+        dataInicial: ctx.query.get("dataInicial") ?? undefined,
+        dataFinal: ctx.query.get("dataFinal") ?? undefined,
         abertas: ctx.query.get("abertas") === "true" || ctx.query.get("abertas") === "1",
       }));
     },

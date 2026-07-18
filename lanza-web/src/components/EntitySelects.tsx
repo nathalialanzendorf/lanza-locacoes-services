@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 
 import { useClientes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
-import { formatVeiculoLabel } from "@/lib/format";
+import { formatClienteLabel, formatVeiculoLabel } from "@/lib/format";
 import type { Cliente, Parceiro, Veiculo } from "@/api/types";
 
 type SelectBaseProps = {
@@ -49,11 +49,6 @@ function clienteValue(c: Cliente, field: "id" | "cpf" | "nome"): string {
   return c.nome?.trim() ?? c.id;
 }
 
-function clienteLabel(c: Cliente): string {
-  const nome = c.nome?.trim() || c.id.slice(0, 8);
-  return c.cpf?.trim() ? `${nome} · ${c.cpf}` : nome;
-}
-
 export type ClienteSelectProps = SelectBaseProps & {
   valueField?: "id" | "cpf" | "nome";
   ativo?: boolean;
@@ -74,7 +69,7 @@ export function ClienteSelect({ valueField = "id", ativo, ...props }: ClienteSel
     <SelectShell {...props} loading={query.isLoading}>
       {items.map((c) => (
         <option key={c.id} value={clienteValue(c, valueField)}>
-          {clienteLabel(c)}
+          {formatClienteLabel(c)}
         </option>
       ))}
     </SelectShell>

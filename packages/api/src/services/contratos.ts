@@ -1,5 +1,6 @@
 import {
   findContratoInDb,
+  intervaloBrIntersectaPeriodo,
   loadContratosDb,
   loadContratosDbAsync,
   type ContratoRegistro,
@@ -10,10 +11,16 @@ export type ListarContratosOpts = {
   clienteId?: string;
   veiculoId?: string;
   placa?: string;
+  dataInicial?: string;
+  dataFinal?: string;
 };
 
 function normPlacaQuery(placa: string): string {
   return placa.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function terminoContratoBr(c: ContratoRegistro): string | null {
+  return c.dataEncerramento?.trim() || c.dataFimPrevista?.trim() || null;
 }
 
 function filtrarContratos(
@@ -36,6 +43,14 @@ function filtrarContratos(
   if (opts.placa?.trim()) {
     const p = normPlacaQuery(opts.placa);
     filtered = filtered.filter((c) => normPlacaQuery(c.placa) === p);
+  }
+  if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
+    filtered = filtered.filter((c) =>
+      intervaloBrIntersectaPeriodo(c.dataInicio, terminoContratoBr(c), {
+        dataInicial: opts.dataInicial,
+        dataFinal: opts.dataFinal,
+      }),
+    );
   }
 
   return filtered;

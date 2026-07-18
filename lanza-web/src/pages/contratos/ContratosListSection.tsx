@@ -7,10 +7,16 @@ import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useContratos, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
+import {
+  PERIODO_VAZIO,
+  RelatorioPeriodoFiltro,
+  type RelatorioPeriodo,
+} from "@/components/relatorios/RelatorioPeriodoFiltro";
+import { useContratos, useClientes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca } from "@/lib/format";
+import { formatPlaca, clienteExibicaoPorId } from "@/lib/format";
+import { periodoPreenchido } from "@/lib/periodoRelatorio";
 import type { Contrato } from "@/api/types";
 
 type FiltroStatus = "ativo" | "encerrado" | "todos";
@@ -34,18 +40,23 @@ export function ContratosListSection() {
   const [status, setStatus] = useState<FiltroStatus>("ativo");
   const [clienteId, setClienteId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
+  const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const query = useContratos({
     status: status === "todos" ? undefined : status,
     clienteId: clienteId || undefined,
     veiculoId: veiculoId || undefined,
+    dataInicial: periodo.dataInicial.trim() || undefined,
+    dataFinal: periodo.dataFinal.trim() || undefined,
   });
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
   const veiculosQuery = useVeiculos();
+  const clientesQuery = useClientes();
 
   const rows = query.data?.items ?? [];
-  const temFiltro = status !== "ativo" || Boolean(clienteId || veiculoId);
+  const temFiltro =
+    status !== "ativo" || Boolean(clienteId || veiculoId || periodoPreenchido(periodo));
 
   const parceiroPorVeiculoId = useMemo(() => {
     const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
@@ -72,7 +83,12 @@ export function ContratosListSection() {
   }
 
   async function excluir(contrato: Contrato) {
-    const label = contrato.clienteNome ?? formatPlaca(contrato.placa) ?? contrato.id;
+    const nomeCli = clienteExibicaoPorId(
+      clientesQuery.data?.items,
+      contrato.clienteId,
+      contrato.clienteNome,
+    );
+    const label = nomeCli !== "—" ? nomeCli : formatPlaca(contrato.placa) ?? contrato.id;
     if (!window.confirm(`Excluir o contrato "${label}"? Esta ação não pode ser desfeita.`)) return;
     setExcluindoId(contrato.id);
     try {
@@ -91,32 +107,53 @@ export function ContratosListSection() {
   return (
     <>
       <ListToolbar addTo="/contratos/cadastrar">
-        <select
-          className="select"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as FiltroStatus)}
-          aria-label="Status"
-        >
-          <option value="ativo">Ativos</option>
-          <option value="encerrado">Encerrados</option>
-          <option value="todos">Todos</option>
-        </select>
-        <VeiculoSelect
-          value={veiculoId}
-          onChange={setVeiculoId}
-          valueField="id"
-          emptyLabel="Todos os veículos"
-        />
-        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
-        {!query.isLoading ? (
-          <span className="badge badge--muted">
-            {rows.length} contrato{rows.length === 1 ? "" : "s"}
-          </span>
-        ) : null}
         <Link to="/contratos/encerrar" className="btn btn--ghost btn--sm">
           Encerrar
         </Link>
       </ListToolbar>
+
+      <section className="form-card">
+        <h2 className="form-card__title">Filtros</h2>
+        <div className="form-grid">
+          <label className="field">
+            <span className="field__label">Veículo</span>
+            <VeiculoSelect
+              value={veiculoId}
+              onChange={setVeiculoId}
+              valueField="id"
+              emptyLabel="Todos os veículos"
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Cliente</span>
+            <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+          </label>
+          <label className="field">
+            <span className="field__label">Status</span>
+            <select
+              className="select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as FiltroStatus)}
+              aria-label="Status"
+            >
+              <option value="ativo">Ativos</option>
+              <option value="encerrado">Encerrados</option>
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <RelatorioPeriodoFiltro
+            value={periodo}
+            onChange={setPeriodo}
+            hint="Contratos que intersectam o período (início / término previsto ou encerramento)"
+          />
+        </div>
+        {!query.isLoading ? (
+          <p className="field__hint">
+            {rows.length} contrato{rows.length === 1 ? "" : "s"}
+          </p>
+        ) : null}
+      </section>
+
       {query.isError ? (
         <QueryError
           message={query.error instanceof LanzaApiError ? query.error.message : "Falha ao listar contratos."}
@@ -146,7 +183,8 @@ export function ContratosListSection() {
           {
             key: "cliente",
             header: "Cliente",
-            render: (c) => c.clienteNome ?? "—",
+            render: (c) =>
+              clienteExibicaoPorId(clientesQuery.data?.items, c.clienteId, c.clienteNome),
           },
           {
             key: "parceiro",

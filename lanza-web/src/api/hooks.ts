@@ -37,6 +37,8 @@ export function useContratos(params?: {
   placa?: string;
   clienteId?: string;
   veiculoId?: string;
+  dataInicial?: string;
+  dataFinal?: string;
 }) {
   return useQuery({
     queryKey: ["contratos", params],
@@ -79,6 +81,8 @@ export function useLocacoes(params?: {
   placa?: string;
   situacao?: string;
   clienteId?: string;
+  dataInicial?: string;
+  dataFinal?: string;
 }) {
   return useQuery({
     queryKey: ["locacoes", params],
@@ -105,6 +109,8 @@ export function useInfracoes(params?: {
   veiculoId?: string;
   clienteId?: string;
   parceiroId?: string;
+  dataInicial?: string;
+  dataFinal?: string;
   emAberto?: boolean;
   semCliente?: boolean;
   ativo?: boolean;

@@ -15,6 +15,7 @@ type Props<T> = {
   loading?: boolean;
   selectedKey?: string | null;
   onRowClick?: (row: T) => void;
+  rowClassName?: (row: T) => string | undefined;
 };
 
 export function DataTable<T>({
@@ -25,6 +26,7 @@ export function DataTable<T>({
   loading,
   selectedKey,
   onRowClick,
+  rowClassName,
 }: Props<T>) {
   if (loading) {
     return <div className="panel panel--loading">A carregar dados…</div>;
@@ -53,7 +55,9 @@ export function DataTable<T>({
             return (
             <tr
               key={rowKey}
-              className={selectedKey === rowKey ? "is-selected" : undefined}
+              className={[selectedKey === rowKey ? "is-selected" : undefined, rowClassName?.(row)]
+                .filter(Boolean)
+                .join(" ")}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               tabIndex={selectable ? 0 : undefined}
               onKeyDown={

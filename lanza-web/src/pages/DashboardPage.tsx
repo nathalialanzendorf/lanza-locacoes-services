@@ -1,7 +1,7 @@
 import { StatCard } from "@/components/StatCard";
 import { PageHeader, QueryError } from "@/components/PageHeader";
-import { useResumo } from "@/api/hooks";
-import { formatBrl } from "@/lib/format";
+import { useResumo, useClientes } from "@/api/hooks";
+import { formatBrl, clienteExibicaoPorId } from "@/lib/format";
 import { semClienteDeResumo } from "@/lib/clienteCampo";
 import { LanzaApiError } from "@/api/client";
 import type { DashboardRecebimentoLinha, DashboardRecebimentos } from "@/api/types";
@@ -19,11 +19,13 @@ function RecebimentosTable({
   linhas,
   colunaExtra,
   colunaVeiculo = "Placa",
+  clientes,
 }: {
   titulo: string;
   linhas: DashboardRecebimentoLinha[];
   colunaExtra?: { header: string; render: (l: DashboardRecebimentoLinha) => string };
   colunaVeiculo?: "Placa" | "Veículo";
+  clientes?: { id: string; nome?: string; ativo?: boolean }[];
 }) {
   return (
     <section className="form-card dashboard-recebimentos">
@@ -47,7 +49,7 @@ function RecebimentosTable({
             <tbody>
               {linhas.map((l) => (
                 <tr key={`${l.clienteId ?? "—"}-${l.placa}`}>
-                  <td>{l.clienteNome ?? "—"}</td>
+                  <td>{clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome)}</td>
                   <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
                   {colunaExtra ? <td>{colunaExtra.render(l)}</td> : null}
                   <td className="num">{formatBrl(l.valor)}</td>
@@ -63,7 +65,9 @@ function RecebimentosTable({
 
 export function DashboardPage() {
   const resumo = useResumo();
+  const clientesQuery = useClientes();
   const rec = resumo.data?.recebimentos ?? RECEBIMENTOS_VAZIO;
+  const clientes = clientesQuery.data?.items;
 
   return (
     <PageHeader
@@ -175,12 +179,14 @@ export function DashboardPage() {
             titulo={rec.tituloPagamentoSemanal ?? "Pagamento semanal"}
             linhas={rec.venceHoje}
             colunaVeiculo="Veículo"
+            clientes={clientes}
           />
 
           <RecebimentosTable
             titulo="Em atraso"
             linhas={rec.atrasados}
             colunaVeiculo="Veículo"
+            clientes={clientes}
             colunaExtra={{
               header: "Atraso / vencimentos",
               render: (l) => {

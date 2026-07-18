@@ -8,7 +8,7 @@ import { DateInput } from "@/components/DateInput";
 import { QueryError } from "@/components/PageHeader";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
-import { useContratos } from "@/api/hooks";
+import { useContratos, useClientes } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import {
@@ -17,7 +17,7 @@ import {
   textoEncerramento,
   type RelatorioModoEntrega,
 } from "@/lib/relatorioDownload";
-import { formatPlaca } from "@/lib/format";
+import { formatPlaca, clienteExibicaoPorId } from "@/lib/format";
 import type { Contrato } from "@/api/types";
 
 type EncerramentoPayload = {
@@ -72,6 +72,7 @@ export function RelatorioEncerramentoForm() {
     clienteId: clienteId || undefined,
     veiculoId: veiculoId || undefined,
   });
+  const clientesQuery = useClientes();
 
   const rows = query.data?.items ?? [];
   const temFiltro = Boolean(clienteId || veiculoId);
@@ -225,7 +226,11 @@ export function RelatorioEncerramentoForm() {
             {
               key: "cliente",
               header: "Cliente",
-              render: (c) => <strong>{c.clienteNome ?? "—"}</strong>,
+              render: (c) => (
+                <strong>
+                  {clienteExibicaoPorId(clientesQuery.data?.items, c.clienteId, c.clienteNome)}
+                </strong>
+              ),
             },
             {
               key: "placa",
@@ -248,7 +253,15 @@ export function RelatorioEncerramentoForm() {
 
       {contratoSelecionado ? (
         <p className="field__hint">
-          Selecionado: <strong>{contratoSelecionado.clienteNome}</strong> ·{" "}
+          Selecionado:{" "}
+          <strong>
+            {clienteExibicaoPorId(
+              clientesQuery.data?.items,
+              contratoSelecionado.clienteId,
+              contratoSelecionado.clienteNome,
+            )}
+          </strong>{" "}
+          ·{" "}
           {formatPlaca(contratoSelecionado.placa)} · {pastaContrato || contratoSelecionado.id}
         </p>
       ) : null}

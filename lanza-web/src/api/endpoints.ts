@@ -61,6 +61,8 @@ export const lanzaApi = {
     clienteId?: string;
     veiculoId?: string;
     placa?: string;
+    dataInicial?: string;
+    dataFinal?: string;
   }) => apiRequest<ListEnvelope<Contrato>>("/api/contratos", { params }),
   criarContrato: (body: Record<string, unknown>) =>
     apiRequest<{ data: unknown }>("/api/contratos/criar", { method: "POST", body }),
@@ -98,6 +100,8 @@ export const lanzaApi = {
     placa?: string;
     situacao?: string;
     clienteId?: string;
+    dataInicial?: string;
+    dataFinal?: string;
   }) => apiRequest<ListEnvelope<Locacao>>("/api/locacoes", { params }),
   salvarLocacao: (body: Record<string, unknown>) =>
     apiRequest<{ data: Locacao }>("/api/locacoes", { method: "POST", body }),
@@ -122,6 +126,8 @@ export const lanzaApi = {
     veiculoId?: string;
     clienteId?: string;
     parceiroId?: string;
+    dataInicial?: string;
+    dataFinal?: string;
     emAberto?: boolean;
     semCliente?: boolean;
     ativo?: boolean;

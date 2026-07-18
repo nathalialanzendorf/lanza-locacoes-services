@@ -8,7 +8,7 @@ import { RowActions } from "@/components/RowActions";
 import { useClientes, useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatVeiculoLabel, statusClass, statusLabel } from "@/lib/format";
+import { formatVeiculoLabel, formatClienteLabel, statusClass, statusLabel } from "@/lib/format";
 import type { Cliente, Contrato } from "@/api/types";
 
 type Filtro = "todos" | "ativos" | "inativos";
@@ -66,7 +66,7 @@ export function ClientesListSection() {
   }
 
   async function excluir(cliente: Cliente) {
-    const nome = cliente.nome ?? cliente.id;
+    const nome = formatClienteLabel(cliente);
     if (!window.confirm(`Excluir o cliente "${nome}"? Esta ação não pode ser desfeita.`)) return;
     setExcluindoId(cliente.id);
     try {
@@ -109,7 +109,7 @@ export function ClientesListSection() {
         rows={rows}
         keyFn={(c) => c.id}
         columns={[
-          { key: "nome", header: "Nome", render: (c) => c.nome ?? "—" },
+          { key: "nome", header: "Nome", render: (c) => formatClienteLabel(c) },
           { key: "cpf", header: "CPF", render: (c) => c.cpf ?? "—" },
           { key: "cnh", header: "CNH", render: (c) => formatCnh(c.cnh) },
           {

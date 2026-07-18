@@ -6,11 +6,17 @@ import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
+import {
+  PERIODO_VAZIO,
+  RelatorioPeriodoFiltro,
+  type RelatorioPeriodo,
+} from "@/components/relatorios/RelatorioPeriodoFiltro";
 import { useClientes, useLocacoes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca } from "@/lib/format";
+import { formatPlaca, formatClienteLabel, formatClienteNomeExibicao } from "@/lib/format";
 import { clienteNomeDe } from "@/lib/clienteCampo";
+import { periodoPreenchido } from "@/lib/periodoRelatorio";
 import type { Locacao, Veiculo } from "@/api/types";
 
 function normPlaca(placa?: string | null): string {
@@ -23,12 +29,15 @@ export function MovimentacaoListSection() {
   const [veiculoPlaca, setVeiculoPlaca] = useState("");
   const [situacao, setSituacao] = useState("");
   const [clienteId, setClienteId] = useState("");
+  const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const query = useLocacoes({
     abertas: emAberto ? true : undefined,
     placa: veiculoPlaca || undefined,
     situacao: situacao || undefined,
     clienteId: clienteId || undefined,
+    dataInicial: periodo.dataInicial.trim() || undefined,
+    dataFinal: periodo.dataFinal.trim() || undefined,
   });
   const clientesQuery = useClientes();
   const veiculosQuery = useVeiculos();
@@ -36,14 +45,16 @@ export function MovimentacaoListSection() {
   const vinculosQuery = useVinculosParceiro();
 
   const rows = query.data?.items ?? [];
-  const temFiltro = Boolean(veiculoPlaca || situacao || clienteId || !emAberto);
+  const temFiltro = Boolean(
+    veiculoPlaca || situacao || clienteId || !emAberto || periodoPreenchido(periodo),
+  );
 
   const nomesCliente = useMemo(
     () =>
       new Map(
         (clientesQuery.data?.items ?? [])
           .filter((c) => c.nome)
-          .map((c) => [c.id, c.nome!]),
+          .map((c) => [c.id, formatClienteLabel(c)]),
       ),
     [clientesQuery.data],
   );
@@ -93,7 +104,7 @@ export function MovimentacaoListSection() {
       return nomesCliente.get(locacao.clienteId)!;
     }
     const nome = clienteNomeDe(locacao);
-    if (nome?.trim()) return nome.trim();
+    if (nome?.trim()) return formatClienteNomeExibicao(nome);
     return "—";
   }
 
@@ -133,36 +144,56 @@ export function MovimentacaoListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/movimentacao/novo">
-        <VeiculoSelect
-          value={veiculoPlaca}
-          onChange={onVeiculoChange}
-          valueField="placa"
-          clienteId={clienteId || undefined}
-          emptyLabel="Todos os veículos"
-        />
-        <ClienteSelect value={clienteId} onChange={onClienteChange} emptyLabel="Todos os clientes" />
-        <select
-          className="select"
-          value={situacao}
-          onChange={(e) => setSituacao(e.target.value)}
-          aria-label="Tipo"
-        >
-          <option value="">Todos os tipos</option>
-          <option value="locado">Locado</option>
-          <option value="reserva">Reserva</option>
-          <option value="manutencao">Manutenção</option>
-        </select>
-        <label className="checkbox-label">
-          <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
-          Só períodos abertos
-        </label>
+      <ListToolbar addTo="/movimentacao/novo" />
+
+      <section className="form-card">
+        <h2 className="form-card__title">Filtros</h2>
+        <div className="form-grid">
+          <label className="field">
+            <span className="field__label">Veículo</span>
+            <VeiculoSelect
+              value={veiculoPlaca}
+              onChange={onVeiculoChange}
+              valueField="placa"
+              clienteId={clienteId || undefined}
+              emptyLabel="Todos os veículos"
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Cliente</span>
+            <ClienteSelect value={clienteId} onChange={onClienteChange} emptyLabel="Todos os clientes" />
+          </label>
+          <label className="field">
+            <span className="field__label">Tipo</span>
+            <select
+              className="select"
+              value={situacao}
+              onChange={(e) => setSituacao(e.target.value)}
+              aria-label="Tipo"
+            >
+              <option value="">Todos os tipos</option>
+              <option value="locado">Locado</option>
+              <option value="reserva">Reserva</option>
+              <option value="manutencao">Manutenção</option>
+            </select>
+          </label>
+          <RelatorioPeriodoFiltro
+            value={periodo}
+            onChange={setPeriodo}
+            hint="Locações que intersectam o período (início/fim da movimentação)"
+          />
+          <label className="field checkbox-label">
+            <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
+            Só períodos abertos
+          </label>
+        </div>
         {!query.isLoading ? (
-          <span className="badge badge--muted">
+          <p className="field__hint">
             {rows.length} movimentaç{rows.length === 1 ? "ão" : "ões"}
-          </span>
+          </p>
         ) : null}
-      </ListToolbar>
+      </section>
+
       {query.isError ? (
         <QueryError
           message={query.error instanceof LanzaApiError ? query.error.message : "Falha ao listar movimentações."}

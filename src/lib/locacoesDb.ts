@@ -294,17 +294,38 @@ export function excluirLocacao(id: string): LocacaoRegistro | null {
 export type ListarLocacoesFiltro = {
   placa?: string;
   situacao?: SituacaoLocacao;
+  clienteId?: string;
+  /** Período inclusivo — locações que intersectam o intervalo (início/fim da movimentação). */
+  dataInicial?: string;
+  dataFinal?: string;
   /** Inclui só registros vigentes/abertos (fim vazio). */
   abertas?: boolean;
 };
+
+function locacaoIntersectaPeriodo(
+  l: LocacaoRegistro,
+  periodo: Pick<ListarLocacoesFiltro, "dataInicial" | "dataFinal">,
+): boolean {
+  if (!periodo.dataInicial?.trim() && !periodo.dataFinal?.trim()) return true;
+  const locIni = parseBrDayStart(l.inicio);
+  if (!locIni) return false;
+  const locFim = l.fim ? parseBrDayEnd(l.fim) : null;
+  const filtroIni = periodo.dataInicial?.trim() ? parseBrDayStart(periodo.dataInicial) : null;
+  const filtroFim = periodo.dataFinal?.trim() ? parseBrDayEnd(periodo.dataFinal) : null;
+  if (filtroFim && locIni > filtroFim) return false;
+  if (filtroIni && locFim && locFim < filtroIni) return false;
+  return true;
+}
 
 export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegistro[] {
   const db = loadLocacoesDb();
   return db.locacoes
     .filter((l) => {
       if (filtro.placa && !placasIguais(l.placa, filtro.placa)) return false;
+      if (filtro.clienteId?.trim() && l.clienteId !== filtro.clienteId.trim()) return false;
       if (filtro.situacao && l.situacao !== filtro.situacao) return false;
       if (filtro.abertas && l.fim) return false;
+      if (!locacaoIntersectaPeriodo(l, filtro)) return false;
       return true;
     })
     .sort((a, b) => dataNum(a.inicio) - dataNum(b.inicio));

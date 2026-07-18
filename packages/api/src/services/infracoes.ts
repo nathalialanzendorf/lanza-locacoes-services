@@ -12,6 +12,7 @@ import {
   type InfracaoRegistro,
   type VeiculoRegistro,
 } from "../lib-imports.js";
+import { dataStringNoPeriodo } from "../lib-imports.js";
 import { listarVinculos, listarVinculosAsync } from "./parceiros.js";
 import { obterVeiculoAsync } from "./veiculos.js";
 import { HttpError } from "../http.js";
@@ -26,6 +27,9 @@ export type ListarInfracoesOpts = {
   /** @deprecated use semCliente */
   semCondutor?: boolean;
   ativo?: boolean;
+  /** Período inclusivo sobre `dataAutuacao` (DD/MM/AAAA). */
+  dataInicial?: string;
+  dataFinal?: string;
 };
 
 type VeiculoRef = Pick<VeiculoRegistro, "id" | "placa">;
@@ -118,6 +122,15 @@ function aplicarFiltrosInfracoes(
         i.debitoParceiroId === pid ||
         veiculoIds.has(i.veiculoId) ||
         placaKeys.has(compactPlaca(i.veiculoId)),
+    );
+  }
+
+  if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
+    out = out.filter((i) =>
+      dataStringNoPeriodo(i.dataAutuacao, {
+        dataInicial: opts.dataInicial,
+        dataFinal: opts.dataFinal,
+      }),
     );
   }
 

@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
-import { DateInput } from "@/components/DateInput";
 import { Field } from "@/components/FormCard";
 import { CobrancasVisualizacao } from "@/components/relatorios/CobrancasVisualizacao";
+import {
+  PERIODO_VAZIO,
+  RelatorioPeriodoFiltro,
+  type RelatorioPeriodo,
+} from "@/components/relatorios/RelatorioPeriodoFiltro";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { LABEL } from "@/lib/labels";
@@ -29,8 +33,7 @@ type FiltroSituacao = "em_aberto" | "pago" | "todos";
 export function RelatorioCobrancasForm() {
   const meta = useQuery({ queryKey: ["cobrancas-meta"], queryFn: () => lanzaApi.metaCobrancas() });
   const [tipo, setTipo] = useState("");
-  const [dataInicial, setDataInicial] = useState("");
-  const [dataFinal, setDataFinal] = useState("");
+  const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
   const [situacao, setSituacao] = useState<FiltroSituacao>("em_aberto");
   const [veiculoPlaca, setVeiculoPlaca] = useState("");
   const [clienteId, setClienteId] = useState("");
@@ -65,8 +68,8 @@ export function RelatorioCobrancasForm() {
         filtro: {
           placa: veiculoPlaca.trim() || undefined,
           clienteId: clienteId || undefined,
-          dataInicial: dataInicial.trim() || undefined,
-          dataFinal: dataFinal.trim() || undefined,
+          dataInicial: periodo.dataInicial.trim() || undefined,
+          dataFinal: periodo.dataFinal.trim() || undefined,
           situacao: situacao === "em_aberto" ? undefined : situacao,
         },
       });
@@ -132,12 +135,7 @@ export function RelatorioCobrancasForm() {
               ))}
             </select>
           </Field>
-          <Field label="Data inicial">
-            <DateInput value={dataInicial} onChange={setDataInicial} disabled={loading} />
-          </Field>
-          <Field label="Data final">
-            <DateInput value={dataFinal} onChange={setDataFinal} disabled={loading} />
-          </Field>
+          <RelatorioPeriodoFiltro value={periodo} onChange={setPeriodo} disabled={loading} />
           <Field label="Situação">
             <select
               className="select"

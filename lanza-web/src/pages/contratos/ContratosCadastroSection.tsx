@@ -15,6 +15,8 @@ type Props = {
   contratoId?: string;
   titulo: string;
   submitLabel?: string;
+  backTo?: string;
+  backLabel?: string;
 };
 
 function round2(n: number): number {
@@ -117,6 +119,8 @@ export function ContratosCadastroSection({
   contratoId,
   titulo,
   submitLabel = "Gerar Word/PDF",
+  backTo = "/contratos",
+  backLabel,
 }: Props) {
   const navigate = useNavigate();
   const editando = Boolean(contratoId);
@@ -232,7 +236,7 @@ export function ContratosCadastroSection({
   if (carregando) {
     return (
       <>
-        <CadastroBackLink to="/contratos" />
+        <CadastroBackLink to={backTo} label={backLabel} />
         <p className="muted">A carregar contrato…</p>
       </>
     );
@@ -240,7 +244,7 @@ export function ContratosCadastroSection({
 
   return (
     <>
-      <CadastroBackLink to="/contratos" />
+      <CadastroBackLink to={backTo} label={backLabel} />
       <FormCard title={titulo} onSubmit={submit} loading={loading} submitLabel={submitLabel} error={error}>
         <Field label="Veículo">
           <VeiculoSelect value={placa} onChange={setPlaca} required disabled={loading} />

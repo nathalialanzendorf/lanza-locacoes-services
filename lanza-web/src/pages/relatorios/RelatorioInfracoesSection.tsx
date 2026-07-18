@@ -3,15 +3,21 @@ import { DataTable } from "@/components/DataTable";
 import { ClienteSelect, ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { QueryError } from "@/components/PageHeader";
 import { ResultPanel } from "@/components/ResultPanel";
+import {
+  PERIODO_VAZIO,
+  RelatorioPeriodoFiltro,
+  type RelatorioPeriodo,
+} from "@/components/relatorios/RelatorioPeriodoFiltro";
 import { useClientes, useInfracoes, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
+import { formatBrl, formatClienteLabel, formatPlaca } from "@/lib/format";
 import {
   clienteConfirmadoDe,
   clienteIdDe,
   clienteNaoIdentificadoDe,
 } from "@/lib/clienteCampo";
+import { periodoPreenchido } from "@/lib/periodoRelatorio";
 import type { Infracao } from "@/api/types";
 
 type FiltroSituacao = "em_aberto" | "quitado" | "todos";
@@ -62,6 +68,7 @@ export function RelatorioInfracoesSection() {
   const [veiculoId, setVeiculoId] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [parceiroId, setParceiroId] = useState("");
+  const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
   const [situacao, setSituacao] = useState<FiltroSituacao>("em_aberto");
   const [atribuirLoading, setAtribuirLoading] = useState(false);
   const [atribuirResult, setAtribuirResult] = useState<unknown>(null);
@@ -73,6 +80,8 @@ export function RelatorioInfracoesSection() {
     veiculoId: veiculoId || undefined,
     clienteId: clienteId || undefined,
     parceiroId: parceiroId || undefined,
+    dataInicial: periodo.dataInicial.trim() || undefined,
+    dataFinal: periodo.dataFinal.trim() || undefined,
     emAberto,
     ativo: true,
   });
@@ -89,13 +98,15 @@ export function RelatorioInfracoesSection() {
       new Map(
         (clientesQuery.data?.items ?? [])
           .filter((c) => c.nome)
-          .map((c) => [c.id, c.nome!]),
+          .map((c) => [c.id, formatClienteLabel(c)]),
       ),
     [clientesQuery.data],
   );
 
   const rows = query.data?.items ?? [];
-  const temFiltro = Boolean(veiculoId || clienteId || parceiroId || situacao !== "em_aberto");
+  const temFiltro = Boolean(
+    veiculoId || clienteId || parceiroId || situacao !== "em_aberto" || periodoPreenchido(periodo),
+  );
 
   const total = useMemo(() => rows.reduce((sum, i) => sum + valorInfracao(i), 0), [rows]);
 
@@ -157,6 +168,11 @@ export function RelatorioInfracoesSection() {
               emptyLabel="Todos os parceiros ativos"
             />
           </FieldLike>
+          <RelatorioPeriodoFiltro
+            value={periodo}
+            onChange={setPeriodo}
+            hint="Filtra pela data de autuação"
+          />
           <FieldLike label="Situação">
             <select
               className="select"

@@ -15,32 +15,17 @@ export function listarLocacoes(opts: {
   clienteId?: string;
   situacao?: string;
   abertas?: boolean;
+  dataInicial?: string;
+  dataFinal?: string;
 } = {}): { total: number; items: LocacaoRegistro[] } {
-  if (opts.abertas || (opts.situacao && !opts.clienteId)) {
-    let items = listarLocacoesLib({
-      placa: opts.placa,
-      situacao: opts.situacao as LocacaoInput["situacao"] | undefined,
-      abertas: opts.abertas,
-    });
-    if (opts.clienteId?.trim()) {
-      items = items.filter((l) => l.clienteId === opts.clienteId?.trim());
-    }
-    return { total: items.length, items };
-  }
-
-  let items = loadLocacoesDb().locacoes;
-
-  if (opts.placa?.trim()) {
-    const p = opts.placa.trim().toUpperCase();
-    items = items.filter((l) => l.placa.toUpperCase().includes(p.replace(/[^A-Z0-9]/g, "")));
-  }
-  if (opts.clienteId?.trim()) {
-    items = items.filter((l) => l.clienteId === opts.clienteId?.trim());
-  }
-  if (opts.situacao?.trim()) {
-    items = items.filter((l) => l.situacao === opts.situacao?.trim());
-  }
-
+  const items = listarLocacoesLib({
+    placa: opts.placa,
+    clienteId: opts.clienteId,
+    situacao: opts.situacao as LocacaoInput["situacao"] | undefined,
+    abertas: opts.abertas,
+    dataInicial: opts.dataInicial,
+    dataFinal: opts.dataFinal,
+  });
   return { total: items.length, items };
 }
 

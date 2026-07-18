@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/FormCard";
 import { ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
+import {
+  PERIODO_VAZIO,
+  RelatorioPeriodoFiltro,
+  type RelatorioPeriodo,
+} from "@/components/relatorios/RelatorioPeriodoFiltro";
 import { ResultPanel } from "@/components/ResultPanel";
 import { useContratos, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
@@ -18,9 +23,24 @@ import {
   textoPrestacaoContas,
   type RelatorioModoEntrega,
 } from "@/lib/relatorioDownload";
+import {
+  competenciaDeDataBr,
+  periodoValido,
+  ultimoDiaMesBr,
+} from "@/lib/periodoRelatorio";
 
-function competenciaValida(comp: string): boolean {
-  return /^\d{2}\/\d{4}$/.test(comp.trim());
+function competenciaDoPeriodo(periodo: RelatorioPeriodo): string | null {
+  const ini = periodo.dataInicial.trim();
+  if (!ini) return null;
+  return competenciaDeDataBr(ini);
+}
+
+function periodoPrestacaoValido(periodo: RelatorioPeriodo): boolean {
+  if (!periodo.dataInicial.trim()) return false;
+  if (!periodoValido(periodo)) return false;
+  const compIni = competenciaDeDataBr(periodo.dataInicial);
+  const compFim = periodo.dataFinal.trim() ? competenciaDeDataBr(periodo.dataFinal) : compIni;
+  return Boolean(compIni && compFim && compIni === compFim);
 }
 
 export function RelatorioPrestacaoContasForm() {
@@ -32,7 +52,8 @@ export function RelatorioPrestacaoContasForm() {
     parceiroId.trim() ? { parceiroId: parceiroId.trim() } : undefined,
   );
 
-  const [competencia, setCompetencia] = useState("");
+  const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
+  const competencia = competenciaDoPeriodo(periodo) ?? "";
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [ganhos, setGanhos] = useState<GanhoVeiculoLinha[]>([]);
   const [ganhosConfirmados, setGanhosConfirmados] = useState(false);
@@ -45,6 +66,14 @@ export function RelatorioPrestacaoContasForm() {
   const [result, setResult] = useState<unknown>(null);
   const [textoVisivel, setTextoVisivel] = useState<string | undefined>();
   const [avisos, setAvisos] = useState<string[] | undefined>();
+
+  function onPeriodoChange(next: RelatorioPeriodo) {
+    let dataFinal = next.dataFinal;
+    if (next.dataInicial.trim() && !next.dataFinal.trim()) {
+      dataFinal = ultimoDiaMesBr(next.dataInicial) ?? "";
+    }
+    setPeriodo({ dataInicial: next.dataInicial, dataFinal });
+  }
 
   const veiculosFiltrados = useMemo(() => {
     let list = veiculosQuery.data?.items ?? [];
@@ -78,7 +107,7 @@ export function RelatorioPrestacaoContasForm() {
   }, [competencia, sel, parceiroId, veiculoId]);
 
   useEffect(() => {
-    if (modoAvancado || !competenciaValida(competencia) || sel.size === 0) {
+    if (modoAvancado || !periodoPrestacaoValido(periodo) || sel.size === 0) {
       setGanhos([]);
       return;
     }
@@ -116,7 +145,7 @@ export function RelatorioPrestacaoContasForm() {
     return () => {
       cancel = true;
     };
-  }, [modoAvancado, competencia, sel, veiculosFiltrados, contratosQuery.data]);
+  }, [modoAvancado, periodo, sel, veiculosFiltrados, contratosQuery.data, competencia]);
 
   const payloadVeiculos = useMemo((): PrestacaoVeiculoInput[] => {
     if (modoAvancado) {
@@ -184,7 +213,12 @@ export function RelatorioPrestacaoContasForm() {
       setAvisos(undefined);
     }
     try {
-      if (!competencia.trim()) throw new Error("Informe a competência (MM/AAAA).");
+      if (!periodo.dataInicial.trim()) {
+        throw new Error("Informe a data inicial do período (competência).");
+      }
+      if (!periodoPrestacaoValido(periodo)) {
+        throw new Error("Período inválido — use datas do mesmo mês (competência).");
+      }
       if (!payloadVeiculos.length) throw new Error("Selecione ao menos um veículo e confirme os ganhos.");
       const r = await lanzaApi.gerarPrestacaoContas({
         competencia: competencia.trim(),
@@ -218,7 +252,11 @@ export function RelatorioPrestacaoContasForm() {
   const temFiltro = Boolean(parceiroId || veiculoId);
   const loadingVeiculos = veiculosQuery.isLoading || (parceiroId ? vinculosQuery.isLoading : false);
   const podeConfirmarGanhos =
-    !modoAvancado && competenciaValida(competencia) && sel.size > 0 && ganhos.length > 0 && !calculandoGanhos;
+    !modoAvancado &&
+    periodoPrestacaoValido(periodo) &&
+    sel.size > 0 &&
+    ganhos.length > 0 &&
+    !calculandoGanhos;
 
   return (
     <>
@@ -235,15 +273,16 @@ export function RelatorioPrestacaoContasForm() {
               emptyLabel="Todos os veículos ativos"
             />
           </Field>
-          <Field label="Competência" hint="MM/AAAA">
-            <input
-              className="input"
-              placeholder="07/2026"
-              value={competencia}
-              onChange={(e) => setCompetencia(e.target.value)}
-              required
-            />
-          </Field>
+          <RelatorioPeriodoFiltro
+            value={periodo}
+            onChange={onPeriodoChange}
+            hint="Competência mensal — início e fim do mesmo mês"
+          />
+          {competencia ? (
+            <Field label="Competência" hint="Derivada do período">
+              <input className="input" value={competencia} readOnly aria-readonly />
+            </Field>
+          ) : null}
           <Field label="Parceiro" hint="Opcional">
             <ParceiroSelect
               value={parceiroId}
@@ -298,7 +337,7 @@ export function RelatorioPrestacaoContasForm() {
             )}
           </section>
 
-          {sel.size > 0 && competenciaValida(competencia) ? (
+          {sel.size > 0 && periodoPrestacaoValido(periodo) ? (
             <section className="form-card">
               <div className="despesas-toolbar">
                 <h2 className="form-card__title">Ganhos sugeridos</h2>
@@ -385,7 +424,8 @@ export function RelatorioPrestacaoContasForm() {
       <RelatorioEntrega
         loading={loading}
         disabled={
-          !competencia.trim() ||
+          !periodo.dataInicial.trim() ||
+          !periodoPrestacaoValido(periodo) ||
           payloadVeiculos.length === 0 ||
           (!modoAvancado && !ganhosConfirmados)
         }

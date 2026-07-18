@@ -290,6 +290,41 @@ code {
   background: #dbeafe;
 }
 
+.data-table tbody tr.row--vencido td {
+  background: #fef2f2;
+}
+
+.data-table tbody tr.row--proximo-vencer td {
+  background: #fffbeb;
+}
+
+.data-table tbody tr.row--vencido.is-selected td,
+.data-table tbody tr.row--proximo-vencer.is-selected td {
+  background: #dbeafe;
+}
+
+.data-table tbody tr.row--vencido[role="button"]:hover td {
+  background: #fee2e2;
+}
+
+.data-table tbody tr.row--proximo-vencer[role="button"]:hover td {
+  background: #fef3c7;
+}
+
+.contratos-renovar__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.contratos-renovar__termino {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
 .data-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;

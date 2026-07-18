@@ -31,6 +31,41 @@ export function formatVeiculoLabel(v: VeiculoLabelInput): string {
   return parts.join(" · ");
 }
 
+export type ClienteLabelInput = {
+  nome?: string | null;
+  id?: string;
+  ativo?: boolean;
+};
+
+/** Rótulo padrão de cliente: só o nome; inativo em MAIÚSCULAS. */
+export function formatClienteLabel(c: ClienteLabelInput): string {
+  const nome = c.nome?.trim() || c.id?.slice(0, 8) || "—";
+  if (c.ativo === false) return nome.toLocaleUpperCase("pt-BR");
+  return nome;
+}
+
+/** Nome para exibição quando só há texto (sem cadastro); inativo opcional. */
+export function formatClienteNomeExibicao(nome: string | null | undefined, ativo?: boolean): string {
+  const n = nome?.trim();
+  if (!n) return "—";
+  if (ativo === false) return n.toLocaleUpperCase("pt-BR");
+  return n;
+}
+
+/** Resolve nome formatado por id do cadastro ou fallback denormalizado. */
+export function clienteExibicaoPorId(
+  clientes: ClienteLabelInput[] | undefined,
+  clienteId: string | null | undefined,
+  fallbackNome?: string | null,
+): string {
+  const id = clienteId?.trim();
+  if (id) {
+    const c = clientes?.find((x) => x.id === id);
+    if (c) return formatClienteLabel(c);
+  }
+  return formatClienteNomeExibicao(fallbackNome);
+}
+
 export function statusLabel(ativo?: boolean): string {
   if (ativo === false) return "Inativo";
   if (ativo === true) return "Ativo";
