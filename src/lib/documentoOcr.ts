@@ -66,16 +66,20 @@ async function prepararImagemOcr(buffer: Buffer): Promise<Buffer> {
 
 /** OCR em português — documentos escaneados (CNH, comprovante, etc.). */
 export async function ocrDocumentoImagem(buffer: Buffer): Promise<string> {
-  const prep = await prepararImagemOcr(buffer);
-  const worker = await workerPor();
+  try {
+    const prep = await prepararImagemOcr(buffer);
+    const worker = await workerPor();
 
-  const recognizePromise = worker.recognize(prep);
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error("OCR excedeu o tempo limite")), OCR_TIMEOUT_MS);
-  });
+    const recognizePromise = worker.recognize(prep);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("OCR excedeu o tempo limite")), OCR_TIMEOUT_MS);
+    });
 
-  const { data } = await Promise.race([recognizePromise, timeoutPromise]);
-  return (data.text ?? "").trim();
+    const { data } = await Promise.race([recognizePromise, timeoutPromise]);
+    return (data.text ?? "").trim();
+  } catch {
+    return "";
+  }
 }
 
 /** @deprecated use ocrDocumentoImagem */
