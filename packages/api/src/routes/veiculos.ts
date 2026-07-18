@@ -61,7 +61,7 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
     paramNames: one.paramNames,
     handler: routeAsync(async (ctx) => {
       const patch = await readJsonBody<VeiculoPatch>(ctx.req);
-      const data = veiculosService.atualizarVeiculo(ctx.params.id, patch);
+      const data = await veiculosService.atualizarVeiculoAsync(ctx.params.id, patch);
       json(ctx.res, 200, { data });
     }),
   });
@@ -70,13 +70,13 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       try {
-        const data = veiculosService.removerVeiculo(ctx.params.id);
+        const data = await veiculosService.removerVeiculoAsync(ctx.params.id);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);
       }
-    },
+    }),
   });
 }

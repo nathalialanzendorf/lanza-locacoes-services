@@ -2,7 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  loadJsonDocumentForApi,
+  saveJsonDocument,
+  saveJsonDocumentAsync,
+} from "@lanza/db";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -132,6 +138,14 @@ export function saveClientesDb(db: ClientesDb): void {
   saveJsonDocument(DB_CLIENTES, db, { description: DEFAULT_DESCRICAO });
 }
 
+export async function saveClientesDbAsync(db: ClientesDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  await saveJsonDocumentAsync(DB_CLIENTES, db as Record<string, unknown>, {
+    description: DEFAULT_DESCRICAO,
+  });
+}
+
 export function isClienteAtivo(c: ClienteRegistro): boolean {
   return c.ativo !== false;
 }
@@ -221,26 +235,52 @@ export type ClientePatch = Partial<
   >
 >;
 
-export function editarCliente(idOrCpf: string, patch: ClientePatch): ClienteRegistro | null {
-  const db = loadClientesDb();
-  const key = idOrCpf.trim();
-  let idx = db.clientes.findIndex((c) => c.id === key);
-  if (idx < 0) {
-    const byCpf = findClienteByCpf(key);
-    if (byCpf) idx = db.clientes.findIndex((c) => c.id === byCpf.id);
-  }
+function findClienteIndexInDb(db: ClientesDb, idOrCpf: string): number {
+  const found = findClienteInDb(db, idOrCpf);
+  if (!found) return -1;
+  return db.clientes.findIndex((c) => c.id === found.id);
+}
+
+function applyEditarCliente(
+  db: ClientesDb,
+  idOrCpf: string,
+  patch: ClientePatch,
+): ClienteRegistro | null {
+  const idx = findClienteIndexInDb(db, idOrCpf);
   if (idx < 0) return null;
 
   const c = db.clientes[idx]!;
   Object.assign(c, patch);
   c.atualizadoEm = nowIso();
   db.clientes[idx] = c;
+  return c;
+}
+
+export function editarCliente(idOrCpf: string, patch: ClientePatch): ClienteRegistro | null {
+  const db = loadClientesDb();
+  const c = applyEditarCliente(db, idOrCpf, patch);
+  if (!c) return null;
   saveClientesDb(db);
+  return c;
+}
+
+export async function editarClienteAsync(
+  idOrCpf: string,
+  patch: ClientePatch,
+): Promise<ClienteRegistro | null> {
+  const db = await loadClientesDbAsync();
+  const c = applyEditarCliente(db, idOrCpf, patch);
+  if (!c) return null;
+  await saveClientesDbAsync(db);
   return c;
 }
 
 export function excluirCliente(idOrCpf: string): ClienteRegistro | null {
   return editarCliente(idOrCpf, { ativo: false });
+}
+
+export async function excluirClienteAsync(idOrCpf: string): Promise<ClienteRegistro | null> {
+  return editarClienteAsync(idOrCpf, { ativo: false });
 }
 
 /** Monta o espelho de análise de cadastro do cliente a partir de um registro do histórico. */

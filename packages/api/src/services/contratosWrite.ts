@@ -4,7 +4,7 @@ import {
   REPO_ROOT,
   ativarClienteDoContrato,
   desativarClienteDoContrato,
-  encerrarContratoDb,
+  encerrarContratoDbAsync,
   excluirContrato,
   gerar,
   montarDadosContratoFromDb,
@@ -98,7 +98,7 @@ export type ContratoEncerrarInput = {
 export async function encerrarContrato(input: ContratoEncerrarInput) {
   const quebra =
     input.quebraContrato ?? (input.motivoEncerramento === "troca" ? false : true);
-  const r = encerrarContratoDb(input.idOuPasta, {
+  const r = await encerrarContratoDbAsync(input.idOuPasta, {
     dataEncerramento: input.dataEncerramento,
     motivoEncerramento: input.motivoEncerramento,
     quebraContrato: quebra,

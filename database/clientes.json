@@ -1,6 +1,6 @@
 {
   "descricao": "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.",
-  "atualizadoEm": "2026-07-09",
+  "atualizadoEm": "2026-07-18",
   "schemaCliente": {
     "id": "uuid",
     "nome": "Nome completo",
@@ -79,8 +79,9 @@
       "origemImportacao": "rastreame",
       "rastreameMotoristaKey": "36",
       "rastreameMotoristaId": 36,
-      "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:40:40.196Z"
+      "ativo": false,
+      "rastreameSyncEm": "2026-07-09T21:40:40.196Z",
+      "atualizadoEm": "2026-07-18T02:14:05.207Z"
     },
     {
       "nome": "Vitor Hugo Pacifico Machado",

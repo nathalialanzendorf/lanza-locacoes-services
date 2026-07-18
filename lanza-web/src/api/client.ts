@@ -53,6 +53,8 @@ type RequestOptions = {
   method?: string;
   body?: unknown;
   params?: Record<string, string | number | boolean | undefined | null>;
+  /** Timeout HTTP (ms). Útil para OCR de documentos. */
+  timeoutMs?: number;
 };
 
 function buildUrl(path: string, params?: RequestOptions["params"]): string {
@@ -86,6 +88,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(options.body);
+  }
+
+  if (options.timeoutMs != null && options.timeoutMs > 0) {
+    init.signal = AbortSignal.timeout(options.timeoutMs);
   }
 
   const res = await fetch(buildUrl(path, options.params), init);

@@ -52,7 +52,27 @@ export const lanzaApiExtra = {
         avisos: string[];
         textoChars: number;
       };
-    }>("/api/importacoes/documento/ler", { method: "POST", body }),
+    }>("/api/importacoes/documento/ler", { method: "POST", body, timeoutMs: 180_000 }),
+
+  extrairImagemDocumento: (body: { tipo: string; nomeArquivo: string; conteudoBase64: string }) =>
+    apiRequest<{
+      data: {
+        tipo: string;
+        imagemBase64: string | null;
+        mime: string;
+        avisos: string[];
+      };
+    }>("/api/importacoes/documento/extrair-imagem", { method: "POST", body, timeoutMs: 30_000 }),
+
+  parseTextoDocumento: (body: { tipo: string; text: string }) =>
+    apiRequest<{
+      data: {
+        tipo: string;
+        campos: Record<string, unknown>;
+        avisos: string[];
+        textoChars: number;
+      };
+    }>("/api/importacoes/documento/parse-texto", { method: "POST", body }),
 
   criarParceiro: (nome: string) =>
     apiRequest<{ data: import("./types").Parceiro }>("/api/parceiros", {

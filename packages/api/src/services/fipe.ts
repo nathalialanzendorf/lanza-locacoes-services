@@ -1,14 +1,14 @@
 import {
   consultarValor,
-  editarVeiculo,
-  findVeiculoById,
-  findVeiculoByPlaca,
+  editarVeiculoAsync,
   isVeiculoAtivo,
   listarAnos,
   listarMarcas,
   listarModelos,
   loadVeiculosDb,
+  loadVeiculosDbAsync,
   montarUrlFipe,
+  placasIguais,
   resolverFipeVeiculo,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -61,10 +61,11 @@ export async function consultarValorFipe(marcaCode: string, modeloCode: string, 
   };
 }
 
-function resolverVeiculo(idOuPlaca: string) {
-  const byId = findVeiculoById(idOuPlaca);
+async function resolverVeiculo(idOuPlaca: string) {
+  const db = await loadVeiculosDbAsync();
+  const byId = db.veiculos.find((v) => v.id === idOuPlaca);
   if (byId) return byId;
-  const byPlaca = findVeiculoByPlaca(idOuPlaca);
+  const byPlaca = db.veiculos.find((v) => placasIguais(v.placa, idOuPlaca));
   if (byPlaca) return byPlaca;
   throw new HttpError(404, `Veículo não encontrado: ${idOuPlaca}`);
 }
@@ -85,12 +86,16 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
   if (!placa) throw new HttpError(400, "Informe a placa.");
 
   const brands = await listarMarcas();
-  const cadastrado = findVeiculoByPlaca(placa) ?? findVeiculoById(placa);
+  const db = await loadVeiculosDbAsync();
+  const cadastrado =
+    db.veiculos.find((v) => placasIguais(v.placa, placa)) ??
+    db.veiculos.find((v) => v.id === placa) ??
+    null;
 
   if (cadastrado) {
     const fipe = await resolverFipeVeiculo(cadastrado, brands);
     if (input.persist) {
-      const data = editarVeiculo(cadastrado.id, fipe);
+      const data = await editarVeiculoAsync(cadastrado.id, fipe);
       return { cadastrado: true as const, data, fipe };
     }
     return { cadastrado: true as const, data: cadastrado, fipe };
@@ -123,22 +128,22 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
 }
 
 export async function atualizarFipeVeiculo(idOuPlaca: string) {
-  const v = resolverVeiculo(idOuPlaca);
+  const v = await resolverVeiculo(idOuPlaca);
   const brands = await listarMarcas();
   const upd = await resolverFipeVeiculo(v, brands);
-  const data = editarVeiculo(v.id, upd);
+  const data = await editarVeiculoAsync(v.id, upd);
   return { data, fipe: upd };
 }
 
 export async function atualizarFipeFrota() {
   const brands = await listarMarcas();
-  const veiculos = loadVeiculosDb().veiculos.filter(isVeiculoAtivo);
+  const veiculos = (await loadVeiculosDbAsync()).veiculos.filter(isVeiculoAtivo);
   const resultados: Array<{ placa: string; ok: boolean; fipe?: unknown; erro?: string }> = [];
 
   for (const v of veiculos) {
     try {
       const upd = await resolverFipeVeiculo(v, brands);
-      editarVeiculo(v.id, upd);
+      await editarVeiculoAsync(v.id, upd);
       resultados.push({ placa: v.placa, ok: true, fipe: upd });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

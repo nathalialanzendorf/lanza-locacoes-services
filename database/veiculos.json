@@ -1,6 +1,6 @@
 {
   "descricao": "Frota de locação de veículos da Nathalia. id = uuid. Chave natural: placa.",
-  "atualizadoEm": "2026-07-11",
+  "atualizadoEm": "2026-07-18",
   "veiculos": [
     {
       "id": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
@@ -259,6 +259,7 @@
       "rastreameSyncEm": "2026-07-08T23:59:13.279Z",
       "ativo": true,
       "origem": "rastreame",
+      "atualizadoEm": "2026-07-18T02:14:05.069Z",
       "marca": "Peugeot",
       "modelo": "2008 STYLE EAT6",
       "ano": 2018,
@@ -421,7 +422,9 @@
       "fipeReferencia": "junho de 2026",
       "rastreameRastreavelKey": "110",
       "rastreameLabel": "RLA-1G81 - RLA1G81 - PEUGEOT/2008 ALLURE EAT6 2020/2021 (Baiano)",
-      "rastreameSyncEm": "2026-07-08T23:59:11.768Z"
+      "rastreameSyncEm": "2026-07-08T23:59:11.768Z",
+      "ativo": false,
+      "atualizadoEm": "2026-07-18T02:14:00.000Z"
     },
     {
       "id": "94cc021d-005e-4f93-af0a-bdff66d4ce95",
@@ -594,11 +597,11 @@
       "renavam": "01345723536",
       "cor": "CINZA",
       "combustivel": "ALCOOL/GASOLINA",
-      "ativo": true,
+      "ativo": false,
       "particular": true,
       "origem": "crlv-particular",
       "id": "46949d70-4607-4cc3-b6c2-d1c0b63f0333",
-      "atualizadoEm": "2026-06-27T23:08:33.499Z",
+      "atualizadoEm": "2026-07-18T02:12:00.000Z",
       "fipe": "https://veiculos.fipe.org.br?carro/vw-volkswagen/6-2026/005526-3/2023",
       "fipeCodigo": "005526-3",
       "fipeModelo": "Nivus Highline 1.0 200 TSI Flex Aut.",

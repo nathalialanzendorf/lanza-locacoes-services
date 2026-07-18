@@ -1,6 +1,8 @@
 import {
   editarCliente,
+  editarClienteAsync,
   excluirCliente,
+  excluirClienteAsync,
   findClienteByCpf,
   findClienteById,
   findClienteInDb,
@@ -71,19 +73,19 @@ export function criarCliente(body: ClienteImportado): {
   return { data: r.registro, acao: r.acao };
 }
 
-export function atualizarCliente(
+export async function atualizarClienteAsync(
   idOuCpf: string,
   patch: ClientePatch,
-): ClienteRegistro {
-  const item = editarCliente(idOuCpf, patch);
+): Promise<ClienteRegistro> {
+  const item = await editarClienteAsync(idOuCpf, patch);
   if (!item) {
     throw new HttpError(404, "Cliente não encontrado");
   }
   return item;
 }
 
-export function removerCliente(idOuCpf: string): ClienteRegistro {
-  const item = excluirCliente(idOuCpf);
+export async function removerClienteAsync(idOuCpf: string): Promise<ClienteRegistro> {
+  const item = await excluirClienteAsync(idOuCpf);
   if (!item) {
     throw new HttpError(404, "Cliente não encontrado");
   }

@@ -1,16 +1,14 @@
 import crypto from "node:crypto";
 
 import {
-  editarVeiculo,
-  excluirVeiculo,
-  findVeiculoById,
-  findVeiculoByPlaca,
+  editarVeiculoAsync,
+  excluirVeiculoAsync,
   formatPlacaHyphen,
   isVeiculoAtivo,
   loadVeiculosDb,
   loadVeiculosDbAsync,
   placasIguais,
-  saveVeiculosDb,
+  saveVeiculosDbAsync,
   type VeiculoPatch,
   type VeiculoRegistro,
 } from "../lib-imports.js";
@@ -58,12 +56,6 @@ function filtrarVeiculos(
   return { total: items.length, items };
 }
 
-export function obterVeiculo(idOuPlaca: string): VeiculoRegistro | null {
-  const byId = findVeiculoById(idOuPlaca);
-  if (byId) return byId;
-  return findVeiculoByPlaca(idOuPlaca);
-}
-
 export async function obterVeiculoAsync(idOuPlaca: string): Promise<VeiculoRegistro | null> {
   const db = await loadVeiculosDbAsync();
   const byId = db.veiculos.find((v) => v.id === idOuPlaca);
@@ -71,19 +63,19 @@ export async function obterVeiculoAsync(idOuPlaca: string): Promise<VeiculoRegis
   return db.veiculos.find((v) => placasIguais(v.placa, idOuPlaca)) ?? null;
 }
 
-export function atualizarVeiculo(
+export async function atualizarVeiculoAsync(
   idOuPlaca: string,
   patch: VeiculoPatch,
-): VeiculoRegistro {
-  const item = editarVeiculo(idOuPlaca, patch);
+): Promise<VeiculoRegistro> {
+  const item = await editarVeiculoAsync(idOuPlaca, patch);
   if (!item) {
     throw new HttpError(404, "Veículo não encontrado");
   }
   return item;
 }
 
-export function removerVeiculo(idOuPlaca: string): VeiculoRegistro {
-  const item = excluirVeiculo(idOuPlaca);
+export async function removerVeiculoAsync(idOuPlaca: string): Promise<VeiculoRegistro> {
+  const item = await excluirVeiculoAsync(idOuPlaca);
   if (!item) {
     throw new HttpError(404, "Veículo não encontrado");
   }
@@ -105,8 +97,8 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
   const placa = formatPlacaHyphen(input.placa);
   if (!placa) throw new HttpError(400, 'Campo "placa" é obrigatório');
 
-  const db = loadVeiculosDb();
-  const existente = findVeiculoByPlaca(placa);
+  const db = await loadVeiculosDbAsync();
+  const existente = db.veiculos.find((v) => placasIguais(v.placa, placa)) ?? null;
   const ts = new Date().toISOString();
   let acao: "novo" | "atualizado";
   let registro: VeiculoRegistro;
@@ -114,7 +106,7 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
   if (existente) {
     const { parceiroNome: _pn, parceiroId: _pi, syncFipe: _sf, ...patchRaw } = input;
     const patch: VeiculoPatch = { ...patchRaw, ativo: input.ativo !== false };
-    const atualizado = editarVeiculo(existente.id, patch);
+    const atualizado = await editarVeiculoAsync(existente.id, patch);
     if (!atualizado) throw new HttpError(500, "Falha ao atualizar veículo");
     registro = atualizado;
     acao = "atualizado";
@@ -129,7 +121,7 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
       atualizadoEm: ts,
     };
     db.veiculos.push(registro);
-    saveVeiculosDb(db);
+    await saveVeiculosDbAsync(db);
     acao = "novo";
   }
 
@@ -145,7 +137,7 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
     try {
       const { atualizarFipeVeiculo } = await import("./fipe.js");
       await atualizarFipeVeiculo(registro.placa);
-      registro = findVeiculoById(registro.id) ?? registro;
+      registro = (await obterVeiculoAsync(registro.id)) ?? registro;
     } catch {
       /* FIPE opcional */
     }

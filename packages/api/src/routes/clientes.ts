@@ -59,7 +59,7 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
     paramNames: one.paramNames,
     handler: routeAsync(async (ctx) => {
       const patch = await readJsonBody<AtualizarClienteBody>(ctx.req);
-      const data = clientesService.atualizarCliente(ctx.params.id, patch);
+      const data = await clientesService.atualizarClienteAsync(ctx.params.id, patch);
       json(ctx.res, 200, { data });
     }),
   });
@@ -68,13 +68,13 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       try {
-        const data = clientesService.removerCliente(ctx.params.id);
+        const data = await clientesService.removerClienteAsync(ctx.params.id);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);
       }
-    },
+    }),
   });
 }

@@ -1,6 +1,6 @@
 {
   "descricao": "Contratos de locação (ativos e encerrados). id = uuid.",
-  "atualizadoEm": "2026-07-11",
+  "atualizadoEm": "2026-07-18",
   "schemaContrato": {
     "id": "uuid",
     "versao": "Número sequencial por par cliente + veículo (1, 2, 3 … — renovações)",
@@ -28,6 +28,7 @@
     "valorMensal": "Valor mensal (R$) — null se não for mensal",
     "valorDiaria": "Valor diário (R$) — null se não for diária",
     "valorCaucao": "Caução (R$)",
+    "dataInicioJurosMultaBr": "DD/MM/AAAA — vencimentos até esta data ficam sem juros/multa e fora da base de bloqueio (acordo)",
     "cadastradoEm": "ISO 8601",
     "atualizadoEm": "ISO 8601"
   },
@@ -410,10 +411,10 @@
       "cpf": "654.003.800-34",
       "dataInicio": "20/06/2026",
       "dataFimPrevista": "18/09/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "dataEncerramento": "06/07/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "recuperado",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "segunda",
@@ -424,7 +425,7 @@
       "valorDiaria": 200,
       "valorCaucao": 1800,
       "cadastradoEm": "2026-06-28T16:58:46.983Z",
-      "atualizadoEm": "2026-07-06T20:30:00.000Z"
+      "atualizadoEm": "2026-07-18T02:14:05.171Z"
     },
     {
       "id": "1abd1be1-9906-4adf-9175-6e333e03b663",

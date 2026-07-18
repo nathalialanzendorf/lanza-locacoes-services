@@ -2,7 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  loadJsonDocumentForApi,
+  saveJsonDocument,
+  saveJsonDocumentAsync,
+} from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -84,6 +90,14 @@ export function saveVeiculosDb(db: VeiculosDb): void {
   saveJsonDocument(DB_VEICULOS, db, { description: DEFAULT_DESCRICAO });
 }
 
+export async function saveVeiculosDbAsync(db: VeiculosDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  await saveJsonDocumentAsync(DB_VEICULOS, db as Record<string, unknown>, {
+    description: DEFAULT_DESCRICAO,
+  });
+}
+
 export function isVeiculoAtivo(v: VeiculoRegistro): boolean {
   return v.ativo !== false;
 }
@@ -129,27 +143,56 @@ export type VeiculoPatch = Partial<
   >
 >;
 
-export function editarVeiculo(idOrPlaca: string, patch: VeiculoPatch): VeiculoRegistro | null {
-  const db = loadVeiculosDb();
+function findVeiculoIndexInDb(db: VeiculosDb, idOrPlaca: string): number {
   const key = idOrPlaca.trim();
-  const idx = db.veiculos.findIndex(
+  return db.veiculos.findIndex(
     (v) =>
       v.id === key ||
       placasIguais(v.placa, key) ||
       compactPlaca(v.placa) === compactPlaca(key),
   );
+}
+
+function applyEditarVeiculo(
+  db: VeiculosDb,
+  idOrPlaca: string,
+  patch: VeiculoPatch,
+): VeiculoRegistro | null {
+  const idx = findVeiculoIndexInDb(db, idOrPlaca);
   if (idx < 0) return null;
 
   const v = db.veiculos[idx]!;
   Object.assign(v, patch);
   v.atualizadoEm = nowIso();
   db.veiculos[idx] = v;
+  return v;
+}
+
+export function editarVeiculo(idOrPlaca: string, patch: VeiculoPatch): VeiculoRegistro | null {
+  const db = loadVeiculosDb();
+  const v = applyEditarVeiculo(db, idOrPlaca, patch);
+  if (!v) return null;
   saveVeiculosDb(db);
+  return v;
+}
+
+export async function editarVeiculoAsync(
+  idOrPlaca: string,
+  patch: VeiculoPatch,
+): Promise<VeiculoRegistro | null> {
+  const db = await loadVeiculosDbAsync();
+  const v = applyEditarVeiculo(db, idOrPlaca, patch);
+  if (!v) return null;
+  await saveVeiculosDbAsync(db);
   return v;
 }
 
 export function excluirVeiculo(idOrPlaca: string): VeiculoRegistro | null {
   return editarVeiculo(idOrPlaca, { ativo: false });
+}
+
+export async function excluirVeiculoAsync(idOrPlaca: string): Promise<VeiculoRegistro | null> {
+  return editarVeiculoAsync(idOrPlaca, { ativo: false });
 }
 
 export type UpsertRastreavelInput = {

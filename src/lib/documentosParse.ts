@@ -273,6 +273,7 @@ export function parseCnhText(text: string): CnhParseResult {
   }
 
   const out: CnhParseResult = { avisos, cnh: {} };
+  const lines = lineBlocks(text);
   const flat = text.replace(/\s+/g, " ");
   const digitsFlat = compactarDigitosEspacados(flat);
 
@@ -295,12 +296,15 @@ export function parseCnhText(text: string): CnhParseResult {
     }
   }
 
+  const regPosCpf = flat.match(/\d{3}\.\d{3}\.\d{3}-\d{2}\s+(\d{11})\b/);
+  if (regPosCpf) out.cnh!.numeroRegistro = regPosCpf[1];
+
   const regRotulo =
     extrairDigitosRotulo(
       text,
       /(?:N[°º.]?\s*REG(?:ISTRO)?\.?|REGISTRO(?:\s*\/\s*CNH)?)\s*[:\/\s]*([\d\s]{11,22})/i,
     ) ??
-    extrairDigitosRotulo(text, /4\s*[bB][^\d]{0,25}([\d\s]{11,22})/);
+    extrairDigitosRotulo(text, /4\s*[cC][^\d]{0,25}([\d\s]{11,22})/);
   if (regRotulo) out.cnh!.numeroRegistro = regRotulo;
 
   if (!out.cnh?.numeroRegistro) {
@@ -320,45 +324,98 @@ export function parseCnhText(text: string): CnhParseResult {
     }
   }
 
+  const catPosReg = flat.match(/\b\d{11}\s+([ABCDE]{1,2})\b/);
+  if (catPosReg) out.cnh!.categoria = catPosReg[1]!.toUpperCase();
+
   const catM = text.match(/\bCategoria\s*[:\s]*([ABCDE]{1,2})\b/i);
   if (catM) out.cnh!.categoria = catM[1]!.toUpperCase();
 
-  const valM = text.match(/Validade\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
-  if (valM) out.cnh!.validade = valM[1];
+  const datasValidade = [...flat.matchAll(/VALIDADE[^\d]{0,30}(\d{2}\/\d{2}\/\d{4})/gi)];
+  if (datasValidade.length) {
+    out.cnh!.validade = datasValidade[datasValidade.length - 1]![1];
+  }
+  if (!out.cnh!.validade) {
+    const valM = text.match(/Validade\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+    if (valM) out.cnh!.validade = valM[1];
+  }
 
-  const emM = text.match(/(?:Emiss[aã]o|Data de emiss[aã]o)\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  const emM = text.match(/(?:4\s*a\s*DATA\s*EMISS[AÃ]O|Emiss[aã]o|Data de emiss[aã]o)[^\d]{0,20}(\d{2}\/\d{2}\/\d{4})/i);
   if (emM) out.cnh!.dataEmissao = emM[1];
 
-  const habM = text.match(/(?:1[aª]\s*Habilita[cç][aã]o|Primeira habilita[cç][aã]o)\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
-  if (habM) out.cnh!.primeiraHabilitacao = habM[1];
+  const habLinha = lines.find((l) => /HABILITA/i.test(l));
+  if (habLinha) {
+    const idx = lines.indexOf(habLinha);
+    const prox = lines[idx + 1];
+    const hm = prox?.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+    if (hm) out.cnh!.primeiraHabilitacao = hm[1];
+  }
+  if (!out.cnh!.primeiraHabilitacao) {
+    const habM = text.match(
+      /(?:1[aªº°]?\s*Habilita[cç][aã]o|Primeira habilita[cç][aã]o)[^\d]{0,20}(\d{2}\/\d{2}\/\d{4})/i,
+    );
+    if (habM) out.cnh!.primeiraHabilitacao = habM[1];
+  }
 
   const nascM = text.match(
-    /(?:Data de nascimento|Nascimento)\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i,
+    /(?:NASCIMENTO|Data de nascimento|Nascimento)[^\d]{0,30}(\d{2}\/\d{2}\/\d{4})/i,
   );
   if (nascM) out.dataNascimento = nascM[1];
 
-  const rgM = text.match(/(?:DOC\.?\s*IDENTIDADE|IDENTIDADE|RG)\s*[:\s]*([\d.\-/]+(?:\s+[A-Z]{2,10}\s+[A-Z]{2})?)/i);
-  if (rgM) out.rg = rgM[1]!.trim();
+  const rgM = flat.match(/\b(\d{5,12})\s+(PC|SSP|IFP|SESP|DETRAN|IIPM|PM|CBM)\s*\/?\s*([A-Z]{2})\b/i);
+  if (rgM) out.rg = `${rgM[1]} ${rgM[2]!.toUpperCase()}/${rgM[3]!.toUpperCase()}`;
 
-  const filM = text.match(/Filia[cç][aã]o\s*[:\s]*(.+?)(?:\n|Validade|Categoria|CPF)/is);
-  if (filM) out.filiacao = filM[1]!.replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!out.rg) {
+    const rgRotulo = text.match(
+      /(?:DOC\.?\s*IDENTIDADE|IDENTIDADE|RG)\s*[:\s]*([\d.\-/]+(?:\s+[A-Z]{2,10}\s*[\/]?\s*[A-Z]{2})?)/i,
+    );
+    if (rgRotulo && rgRotulo[1]!.trim() !== "/") out.rg = rgRotulo[1]!.trim();
+  }
 
-  const nomeM = text.match(/(?:NOME(?:\s+COMPLETO)?|Nome)\s*[:\s]*([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{5,60})/i);
-  if (nomeM) {
-    out.nome = nomeM[1]!.replace(/\s+/g, " ").trim();
-  } else {
-    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    for (const ln of lines.slice(0, 8)) {
-      if (/^[A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{8,}$/.test(ln) && !/CNH|DETRAN|BRASIL|MINIST/i.test(ln)) {
-        out.nome = ln.replace(/\s+/g, " ").trim();
+  for (let i = 0; i < lines.length; i++) {
+    if (/NOME\s+E\s+SOBRENOME|NOME\s+COMPLETO/i.test(lines[i]!)) {
+      const prox = lines[i + 1]?.trim();
+      const nm = prox?.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{4,}?)(?:\s+\d{2}\/\d{2}\/\d{4})?\s*$/i);
+      if (nm && nm[1]!.trim().split(/\s+/).length >= 2) {
+        out.nome = nm[1]!.replace(/\s+/g, " ").trim();
+        if (!out.cnh!.primeiraHabilitacao) {
+          const dm = prox!.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+          if (dm) out.cnh!.primeiraHabilitacao = dm[1];
+        }
         break;
       }
     }
   }
 
+  if (!out.nome) {
+    for (const ln of lines) {
+      const m = ln.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{10,}?)\s+(\d{2}\/\d{2}\/\d{4})$/);
+      if (m && !/CNH|BRASIL|MINIST|NOME|HABILIT|CARTEIRA|SECRETARIA/i.test(m[1]!)) {
+        out.nome = m[1]!.replace(/\s+/g, " ").trim();
+        if (!out.cnh!.primeiraHabilitacao) out.cnh!.primeiraHabilitacao = m[2];
+        break;
+      }
+    }
+  }
+
+  if (!out.nome) {
+    const nomeM = flat.match(
+      /(?:NOME\s+COMPLETO|Nome completo)\s*[:\s]+([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{5,60}?)(?:\s+\d{2}\/|\s+CPF|\s+DOC|$)/i,
+    );
+    if (nomeM) out.nome = nomeM[1]!.replace(/\s+/g, " ").trim();
+  }
+
+  const filIdx = lines.findIndex((l) => /FILIA/i.test(l));
+  if (filIdx >= 0) {
+    const nomes = lines
+      .slice(filIdx + 1, filIdx + 5)
+      .map((l) => l.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim())
+      .filter((l) => l.length >= 8 && /[A-ZÀ-Ú]{3,}/i.test(l) && !/BRASILEIR|NACIONAL|ASSINAT/i.test(l));
+    if (nomes.length) out.filiacao = nomes.slice(0, 2).join(" / ").slice(0, 120);
+  }
+
   if (!out.cpf && !out.cnh?.numeroRegistro) {
-    const seqs = extrairOnzeDigitos(text);
-    if (seqs.length === 0) {
+    const seqs2 = extrairOnzeDigitos(text);
+    if (seqs2.length === 0) {
       avisos.push(
         "CPF e registro não encontrados — a CNH-e costuma ser PDF só com imagem (sem texto). Preencha manualmente ou use exportação com campos legíveis.",
       );

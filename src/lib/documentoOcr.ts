@@ -5,10 +5,7 @@ import { createWorker, OEM, PSM, type Worker } from "tesseract.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const WORKER_PATH = path.join(REPO_ROOT, "node_modules/tesseract.js/src/worker-script/node/index.js");
-const CORE_PATH = path.join(
-  REPO_ROOT,
-  "node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm",
-);
+const LANG_PATH = path.join(REPO_ROOT, "node_modules/@tesseract.js-data/por/4.0.0_best_int");
 const CACHE_PATH =
   process.env.LANZA_OCR_CACHE?.trim() ||
   process.env.TMPDIR ||
@@ -22,10 +19,10 @@ let workerPromise: Promise<Worker> | null = null;
 function ocrWorkerOptions() {
   return {
     workerPath: WORKER_PATH,
-    corePath: CORE_PATH,
+    langPath: LANG_PATH,
     workerBlobURL: false,
     cachePath: CACHE_PATH,
-    gzip: false,
+    gzip: true,
   };
 }
 

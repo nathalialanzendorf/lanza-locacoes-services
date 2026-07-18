@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -382,6 +382,12 @@ export function saveContratosDb(db: ContratosDb): void {
   saveJsonDocument(DB_CONTRATOS, db);
 }
 
+export async function saveContratosDbAsync(db: ContratosDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  db.schemaContrato = DEFAULT_SCHEMA;
+  await saveJsonDocumentAsync(DB_CONTRATOS, db as Record<string, unknown>);
+}
+
 function buildRegistro(
   ext: ReturnType<typeof extrairContrato>,
   existing: ContratoRegistro | undefined,
@@ -473,6 +479,20 @@ function findContratoIndex(db: ContratosDb, pastaOrId: string): number {
   return db.contratos.findIndex((c) => normPath(c.pastaContrato) === pastaKey);
 }
 
+function applyEncerramentoContrato(
+  registro: ContratoRegistro,
+  opts: EncerrarContratoDbOpts,
+): ContratoRegistro {
+  return {
+    ...registro,
+    dataEncerramento: opts.dataEncerramento.trim(),
+    motivoEncerramento: opts.motivoEncerramento,
+    quebraContrato: opts.quebraContrato ?? registro.quebraContrato ?? false,
+    status: "encerrado",
+    atualizadoEm: nowIso(),
+  };
+}
+
 /** Efetiva encerramento no database/contratos.json (após relatório de acerto). */
 export function encerrarContratoDb(
   pastaOrId: string,
@@ -481,6 +501,9 @@ export function encerrarContratoDb(
   const db = loadContratosDb();
   const idx = findContratoIndex(db, pastaOrId);
   if (idx < 0) {
+    if (process.env.VERCEL) {
+      throw new Error(`Contrato não encontrado: ${pastaOrId}`);
+    }
     return registrarContrato(path.resolve(pastaOrId), {
       dataEncerramento: opts.dataEncerramento.trim(),
       motivoEncerramento: opts.motivoEncerramento,
@@ -488,13 +511,28 @@ export function encerrarContratoDb(
       status: "encerrado",
     });
   }
-  const existing = db.contratos[idx]!;
-  return registrarContrato(existing.pastaContrato, {
-    dataEncerramento: opts.dataEncerramento.trim(),
-    motivoEncerramento: opts.motivoEncerramento,
-    quebraContrato: opts.quebraContrato ?? false,
-    status: "encerrado",
-  });
+  const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
+  db.contratos[idx] = registro;
+  saveContratosDb(db);
+  return registro;
+}
+
+export async function encerrarContratoDbAsync(
+  pastaOrId: string,
+  opts: EncerrarContratoDbOpts,
+): Promise<ContratoRegistro> {
+  const db = await loadContratosDbAsync();
+  const idx = findContratoIndex(db, pastaOrId);
+  if (idx < 0) {
+    if (process.env.VERCEL) {
+      throw new Error(`Contrato não encontrado: ${pastaOrId}`);
+    }
+    return encerrarContratoDb(pastaOrId, opts);
+  }
+  const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
+  db.contratos[idx] = registro;
+  await saveContratosDbAsync(db);
+  return registro;
 }
 
 /** Remove registro de database/contratos.json (não apaga pasta Word). */
