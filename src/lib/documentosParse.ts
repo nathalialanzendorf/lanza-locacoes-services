@@ -1,28 +1,47 @@
 /**
- * Leitura de CNH, comprovante de residência e CRLV a partir de PDF (camada de texto).
+ * Leitura de CNH, comprovante de residência e CRLV (texto PDF + OCR em imagem).
  */
 import path from "node:path";
 
 import pdfParse from "pdf-parse";
 
-import { escolherImagemCnh, extrairJpegsEmbutidosPdf } from "./cnhPdfImagem.js";
-import { ocrCnhImagem } from "./cnhOcr.js";
+import { escolherMaiorImagemEmbutida, extrairJpegsEmbutidosPdf } from "./cnhPdfImagem.js";
+import { ocrDocumentoImagem } from "./documentoOcr.js";
 import { formatPlacaHyphen } from "./placa.js";
 
 export type DocTipoUpload = "cnh" | "comprovante-residencia" | "crlv";
 
 const ESTADO_UF: Record<string, string> = {
+  Acre: "AC",
+  Alagoas: "AL",
+  Amapá: "AP",
+  Amazonas: "AM",
+  Bahia: "BA",
+  Ceará: "CE",
+  "Distrito Federal": "DF",
+  "Espírito Santo": "ES",
+  Goiás: "GO",
+  Maranhão: "MA",
+  "Mato Grosso": "MT",
+  "Mato Grosso do Sul": "MS",
+  "Minas Gerais": "MG",
+  Pará: "PA",
+  Paraíba: "PB",
+  Paraná: "PR",
+  Pernambuco: "PE",
+  Piauí: "PI",
+  "Rio de Janeiro": "RJ",
+  "Rio Grande do Norte": "RN",
+  "Rio Grande do Sul": "RS",
+  Rondônia: "RO",
+  Roraima: "RR",
   "Santa Catarina": "SC",
   "São Paulo": "SP",
-  "Rio Grande do Sul": "RS",
-  "Paraná": "PR",
-  "Rio de Janeiro": "RJ",
-  "Minas Gerais": "MG",
-  "Espírito Santo": "ES",
-  "Bahia": "BA",
-  "Goiás": "GO",
-  "Distrito Federal": "DF",
+  Sergipe: "SE",
+  Tocantins: "TO",
 };
+
+const UF_SIGLAS = new Set(Object.values(ESTADO_UF));
 
 function estadoParaUf(estado: string): string {
   const e = estado.trim();
@@ -82,13 +101,19 @@ function cnhParseOk(parsed: CnhParseResult): boolean {
   return Boolean(parsed.cpf || parsed.cnh?.numeroRegistro);
 }
 
-async function textoPdf(buffer: Buffer): Promise<{ text: string; avisos: string[] }> {
+function comprovanteParseOk(parsed: ComprovanteParseResult): boolean {
+  const e = parsed.endereco ?? {};
+  if (!e.cep && !e.logradouro) return false;
+  return Boolean(e.cidade && e.bairro && e.uf);
+}
+
+async function textoPdf(buffer: Buffer, avisoOcr: string): Promise<{ text: string; avisos: string[] }> {
   const avisos: string[] = [];
   try {
     const data = await pdfParse(buffer);
     const text = (data.text || "").trim();
     if (text.length < 30) {
-      avisos.push("PDF com pouco texto na camada digital — tentando OCR na imagem da CNH.");
+      avisos.push(avisoOcr);
     }
     return { text, avisos };
   } catch {
@@ -97,59 +122,86 @@ async function textoPdf(buffer: Buffer): Promise<{ text: string; avisos: string[
   }
 }
 
-/**
- * CNH: camada de texto do PDF → se falhar, JPEG embutido + OCR (CNH-e SENATRAN).
- * Imagens (jpg/png) vão directo para OCR.
- */
-export async function extrairTextoCnh(
+type ExtrairOcrOpts = {
+  docLabel: string;
+  avisoPoucoTexto: string;
+  avisoOcrOk: string;
+  avisoSemImagem: string;
+  parseOk: (text: string) => boolean;
+};
+
+async function extrairTextoComOcr(
   buffer: Buffer,
   nomeArquivo: string,
+  opts: ExtrairOcrOpts,
 ): Promise<{ text: string; avisos: string[]; viaOcr: boolean }> {
   const ext = path.extname(nomeArquivo).toLowerCase();
   const avisos: string[] = [];
 
-  if (isImagemExt(ext)) {
+  async function ocr(bufferImagem: Buffer, msg: string): Promise<{ text: string; viaOcr: boolean }> {
     try {
-      const text = await ocrCnhImagem(buffer);
-      avisos.push("Dados lidos por OCR a partir da imagem da CNH.");
-      return { text, avisos, viaOcr: true };
+      const text = await ocrDocumentoImagem(bufferImagem);
+      avisos.push(msg);
+      return { text, viaOcr: true };
     } catch {
-      avisos.push("Falha no OCR da imagem — preencha manualmente.");
-      return { text: "", avisos, viaOcr: true };
+      avisos.push(`Falha no OCR do ${opts.docLabel} — preencha manualmente.`);
+      return { text: "", viaOcr: true };
     }
+  }
+
+  if (isImagemExt(ext)) {
+    const r = await ocr(buffer, `Dados lidos por OCR a partir da imagem do ${opts.docLabel}.`);
+    return { text: r.text, avisos, viaOcr: r.viaOcr };
   }
 
   if (ext !== ".pdf") {
-    avisos.push(`Formato ${ext || "(sem extensão)"} não suportado para CNH — use PDF ou imagem.`);
+    avisos.push(`Formato ${ext || "(sem extensão)"} não suportado — use PDF ou imagem.`);
     return { text: "", avisos, viaOcr: false };
   }
 
-  const pdf = await textoPdf(buffer);
+  const pdf = await textoPdf(buffer, opts.avisoPoucoTexto);
   avisos.push(...pdf.avisos);
-  if (pdf.text) {
-    const parsed = parseCnhText(pdf.text);
-    if (cnhParseOk(parsed)) {
-      return { text: pdf.text, avisos, viaOcr: false };
-    }
-  }
-
-  const jpegs = extrairJpegsEmbutidosPdf(buffer);
-  const imagem = escolherImagemCnh(jpegs);
-  if (!imagem) {
-    avisos.push(
-      "Nenhuma imagem encontrada no PDF (pode ser JBIG2/PNG). Envie foto da CNH ou preencha manualmente.",
-    );
+  if (pdf.text && opts.parseOk(pdf.text)) {
     return { text: pdf.text, avisos, viaOcr: false };
   }
 
-  try {
-    const text = await ocrCnhImagem(imagem);
-    avisos.push("Dados lidos por OCR a partir da imagem embutida na CNH-e.");
-    return { text, avisos, viaOcr: true };
-  } catch {
-    avisos.push("Falha no OCR da CNH-e — preencha manualmente.");
-    return { text: pdf.text, avisos, viaOcr: true };
+  const jpegs = extrairJpegsEmbutidosPdf(buffer);
+  const imagem = escolherMaiorImagemEmbutida(jpegs);
+  if (!imagem) {
+    avisos.push(opts.avisoSemImagem);
+    return { text: pdf.text, avisos, viaOcr: false };
   }
+
+  const r = await ocr(imagem, opts.avisoOcrOk);
+  return { text: r.text || pdf.text, avisos, viaOcr: r.viaOcr };
+}
+
+export async function extrairTextoCnh(
+  buffer: Buffer,
+  nomeArquivo: string,
+): Promise<{ text: string; avisos: string[]; viaOcr: boolean }> {
+  return extrairTextoComOcr(buffer, nomeArquivo, {
+    docLabel: "CNH",
+    avisoPoucoTexto: "PDF com pouco texto — tentando OCR na imagem da CNH.",
+    avisoOcrOk: "Dados lidos por OCR a partir da imagem embutida na CNH-e.",
+    avisoSemImagem:
+      "Nenhuma imagem encontrada no PDF (pode ser JBIG2/PNG). Envie foto da CNH ou preencha manualmente.",
+    parseOk: (text) => cnhParseOk(parseCnhText(text)),
+  });
+}
+
+export async function extrairTextoComprovante(
+  buffer: Buffer,
+  nomeArquivo: string,
+): Promise<{ text: string; avisos: string[]; viaOcr: boolean }> {
+  return extrairTextoComOcr(buffer, nomeArquivo, {
+    docLabel: "comprovante de residência",
+    avisoPoucoTexto: "PDF com pouco texto — tentando OCR na imagem do comprovante.",
+    avisoOcrOk: "Dados lidos por OCR a partir da imagem do comprovante.",
+    avisoSemImagem:
+      "Nenhuma imagem encontrada no PDF. Envie foto do comprovante ou preencha manualmente.",
+    parseOk: (text) => comprovanteParseOk(parseComprovanteText(text)),
+  });
 }
 
 export async function extrairTextoDocumento(
@@ -323,13 +375,14 @@ export type ComprovanteParseResult = {
 
 export function parseComprovanteText(text: string): ComprovanteParseResult {
   const avisos: string[] = [];
-  if (!text || text.length < 20) {
+  if (!text?.trim() || text.trim().length < 15) {
     avisos.push("Texto insuficiente para extrair endereço.");
     return { avisos };
   }
 
   const out: ComprovanteParseResult = { avisos, endereco: {} };
   const flat = text.replace(/\s+/g, " ");
+  const lines = lineBlocks(text);
 
   const cepM = flat.match(/\b(\d{5}-?\d{3})\b/);
   if (cepM) {
@@ -339,10 +392,19 @@ export function parseComprovanteText(text: string): ComprovanteParseResult {
     avisos.push("CEP não encontrado.");
   }
 
-  const titM = flat.match(
-    /(?:Cliente|Titular|Nome(?:\s+do\s+cliente)?)\s*[:\s]+([A-Za-zÀ-ú][A-Za-zÀ-ú\s'.-]{4,60})/i,
+  const titLinha = lines.find((l) =>
+    /^(?:Cliente|Titular|Sacado|Nome(?:\s+do\s+(?:cliente|titular))?)\s*[:\s]/i.test(l),
   );
-  if (titM) out.titular = titM[1]!.trim();
+  if (titLinha) {
+    const tm = titLinha.match(/(?:Cliente|Titular|Sacado|Nome(?:\s+do\s+(?:cliente|titular))?)\s*[:\s]+(.+)$/i);
+    if (tm) out.titular = tm[1]!.trim();
+  }
+  if (!out.titular) {
+    const titM = flat.match(
+      /(?:Cliente|Titular|Nome(?:\s+do\s+(?:cliente|titular))?|Sacado|Responsável)\s*[:\s]+([A-Za-zÀ-ú][A-Za-zÀ-ú\s'.-]{4,50}?)(?:\s+(?:Endere|CNPJ|CPF|Rua|Av\.|CEP)|$)/i,
+    );
+    if (titM) out.titular = titM[1]!.trim();
+  }
 
   const telM = flat.match(/(?:Tel(?:efone)?|Celular|Fone)\s*[:\s]*([\d()\s\-+]{10,18})/i);
   if (telM) out.telefone = telM[1]!.replace(/\s+/g, " ").trim();
@@ -350,39 +412,193 @@ export function parseComprovanteText(text: string): ComprovanteParseResult {
   const emailM = flat.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
   if (emailM) out.email = emailM[0]!.toLowerCase();
 
-  const logM = flat.match(
-    /((?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA)[^,\n]{3,80})/i,
+  const compRotulo = flat.match(
+    /(?:Complemento|Compl\.?|Refer[eê]ncia|Ref\.?)\s*[:\s]+([^,\n]{2,50})/i,
   );
-  if (logM) out.endereco!.logradouro = logM[1]!.replace(/\s+/g, " ").trim();
+  if (compRotulo) out.endereco!.complemento = compRotulo[1]!.trim();
 
-  const numM = flat.match(/(?:N[°º]|Nº|Numero|Número)\s*[:\s]*(\d+|S\/N)/i);
-  if (numM) out.endereco!.numero = numM[1]!.toUpperCase();
+  const compInline = flat.match(
+    /,\s*((?:Apto?\.?|Ap\.|Bloco|Bl\.|Casa|Sala|Lote|Lj\.?|Loja|Fundos|Cj\.?|Conj\.?)[^,\n]{0,40})/i,
+  );
+  if (!out.endereco!.complemento && compInline) {
+    out.endereco!.complemento = compInline[1]!.trim();
+  }
 
-  const bairroM = flat.match(/(?:Bairro|BAIRRO)\s*[:\s]*([A-Za-zÀ-ú0-9\s'.-]{2,40})/i);
+  const compLinha = findLineValue(
+    lines,
+    "COMPLEMENTO",
+    "COMPL",
+    "REFERÊNCIA",
+    "REFERENCIA",
+    "REF",
+  );
+  if (!out.endereco!.complemento && compLinha) out.endereco!.complemento = compLinha.trim();
+
+  const logLine = lines.find((l) =>
+    /^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A)\b/i.test(
+      l,
+    ),
+  );
+  if (logLine) {
+    aplicarLinhaLogradouro(logLine, out.endereco!);
+  }
+
+  let logM = !out.endereco!.logradouro
+    ? flat.match(
+        /((?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A)[^,\n]{3,90})/i,
+      )
+    : null;
+  if (!logM) {
+    logM = flat.match(
+      /(?:Endere[cç]o(?:\s+de\s+(?:instala[cç][aã]o|correspond[eê]ncia|entrega|cobran[cç]a))?|Local(?:\s+de\s+instala[cç][aã]o)?)\s*[:\s]+([^,\n]{5,90})/i,
+    );
+    if (logM) logM = [logM[0], logM[1]!] as RegExpMatchArray;
+  }
+  if (logM) {
+    aplicarLinhaLogradouro(logM[1]!.replace(/\s+/g, " ").trim(), out.endereco!);
+  }
+
+  const logLinha = findLineValue(
+    lines,
+    "ENDEREÇO",
+    "ENDERECO",
+    "ENDEREÇO DE INSTALAÇÃO",
+    "ENDERECO DE INSTALACAO",
+    "LOCAL DE INSTALAÇÃO",
+    "LOCAL DE INSTALACAO",
+  );
+  if (!out.endereco!.logradouro && logLinha) {
+    aplicarLinhaLogradouro(logLinha, out.endereco!);
+  }
+
+  if (!out.endereco!.numero) {
+    const numM = flat.match(/(?:N[°º]|Nº|Numero|Número|Nro\.?)\s*[:\s]*(\d+|S\/N)/i);
+    if (numM) out.endereco!.numero = numM[1]!.toUpperCase();
+  }
+
+  let bairroM = flat.match(/(?:Bairro|BAIRRO|B\.)\s*[:\s]*([A-Za-zÀ-ú0-9\s'.-]{2,45})/i);
   if (bairroM) out.endereco!.bairro = bairroM[1]!.trim();
+  if (!out.endereco!.bairro) {
+    const bLinha = findLineValue(lines, "BAIRRO", "B.");
+    if (bLinha) out.endereco!.bairro = bLinha.trim();
+  }
 
-  const cidM = flat.match(
-    /(?:Cidade|Municipio|Município|Localidade)\s*[:\s]*([A-Za-zÀ-ú\s'.-]{2,40})/i,
+  let cidM = flat.match(
+    /(?:Cidade|Municipio|Município|Munic\.?|Localidade)\s*[:\s]*([A-Za-zÀ-ú\s'.-]{2,45})/i,
   );
   if (cidM) out.endereco!.cidade = cidM[1]!.trim();
+  if (!out.endereco!.cidade) {
+    const cLinha = findLineValue(lines, "CIDADE", "MUNICÍPIO", "MUNICIPIO", "MUNIC", "LOCALIDADE");
+    if (cLinha) {
+      const cu = parseCidadeUfToken(cLinha);
+      if (cu.cidade) out.endereco!.cidade = cu.cidade;
+      if (cu.uf && !out.endereco!.uf) out.endereco!.uf = cu.uf;
+    }
+  }
 
-  const ufM = flat.match(/(?:UF|Estado)\s*[:\s]*([A-Z]{2}|Santa Catarina|São Paulo|Rio Grande do Sul)/i);
+  let ufM = flat.match(
+    /(?:UF|Estado|U\.F\.)\s*[:\s]*([A-Z]{2}|Acre|Alagoas|Amazonas|Bahia|Ceará|Distrito Federal|Espírito Santo|Goiás|Maranhão|Mato Grosso|Minas Gerais|Pará|Paraíba|Paraná|Pernambuco|Piauí|Rio de Janeiro|Rio Grande do Norte|Rio Grande do Sul|Rondônia|Roraima|Santa Catarina|São Paulo|Sergipe|Tocantins)/i,
+  );
   if (ufM) out.endereco!.uf = estadoParaUf(ufM[1]!);
+  if (!out.endereco!.uf) {
+    const uLinha = findLineValue(lines, "UF", "ESTADO", "U.F.");
+    if (uLinha) out.endereco!.uf = estadoParaUf(uLinha.trim());
+  }
+
+  for (const ln of lines) {
+    const cu = parseCidadeUfToken(ln);
+    if (cu.cidade && cu.uf) {
+      if (!out.endereco!.cidade) out.endereco!.cidade = cu.cidade;
+      if (!out.endereco!.uf) out.endereco!.uf = cu.uf;
+    }
+  }
+
+  if (cepM) {
+    inferirEnderecoProximoCep(lines, cepM[0]!, out.endereco!);
+  }
 
   if (!out.endereco!.logradouro && cepM) {
     const idx = flat.indexOf(cepM[0]!);
-    const trecho = flat.slice(Math.max(0, idx - 120), idx);
+    const trecho = flat.slice(Math.max(0, idx - 160), idx);
     const partes = trecho.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
-    if (partes.length) {
+    for (let i = partes.length - 1; i >= 0; i--) {
+      const p = partes[i]!;
+      if (/^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA)/i.test(p)) {
+        out.endereco!.logradouro = p;
+        break;
+      }
+    }
+    if (!out.endereco!.logradouro && partes.length) {
       out.endereco!.logradouro = partes[partes.length - 1];
     }
   }
+
+  if (!out.endereco!.cidade) avisos.push("Cidade não encontrada.");
+  if (!out.endereco!.bairro) avisos.push("Bairro não encontrado.");
+  if (!out.endereco!.uf) avisos.push("UF não encontrada.");
 
   if (!out.endereco!.logradouro && !out.endereco!.cep) {
     avisos.push("Endereço não identificado — confira o titular e preencha manualmente.");
   }
 
   return out;
+}
+
+function aplicarLinhaLogradouro(rawLog: string, end: EnderecoParse): void {
+  const numNoLog = rawLog.match(/^(.+?)[,\s]+(\d+|S\/N)\b(?:\s+(.+))?$/i);
+  if (numNoLog) {
+    end.logradouro = numNoLog[1]!.trim();
+    end.numero = numNoLog[2]!.toUpperCase();
+    const resto = numNoLog[3]?.trim();
+    if (resto && !end.complemento) end.complemento = resto;
+    return;
+  }
+  end.logradouro = rawLog;
+}
+
+function parseCidadeUfToken(token: string): { cidade?: string; uf?: string } {
+  const t = token.replace(/\s+/g, " ").trim();
+  let m = t.match(/^(.+?)\s*[-\/]\s*([A-Z]{2})$/i);
+  if (m) return { cidade: m[1]!.trim(), uf: m[2]!.toUpperCase() };
+  m = t.match(/^(.+?)\s+([A-Z]{2})$/i);
+  if (m && UF_SIGLAS.has(m[2]!.toUpperCase())) {
+    return { cidade: m[1]!.trim(), uf: m[2]!.toUpperCase() };
+  }
+  for (const [nome, sigla] of Object.entries(ESTADO_UF)) {
+    if (new RegExp(nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(t)) {
+      const cidade = t.replace(new RegExp(nome, "i"), "").replace(/[-\/]/g, " ").trim();
+      return { cidade: cidade || undefined, uf: sigla };
+    }
+  }
+  if (/^[A-Za-zÀ-ú\s'.-]{2,45}$/.test(t)) return { cidade: t };
+  return {};
+}
+
+function inferirEnderecoProximoCep(lines: string[], cepToken: string, end: EnderecoParse): void {
+  const idx = lines.findIndex((l) => l.includes(cepToken.replace(/\D/g, "").slice(0, 5)) || l.includes(cepToken));
+  if (idx < 0) return;
+
+  const acima = lines.slice(Math.max(0, idx - 4), idx).filter(Boolean);
+  for (let i = acima.length - 1; i >= 0; i--) {
+    const ln = acima[i]!;
+    if (/^(?:CEP|CNPJ|CPF|VENCIMENTO|TOTAL)/i.test(ln)) continue;
+
+    const cu = parseCidadeUfToken(ln);
+    if (cu.cidade && !end.cidade) end.cidade = cu.cidade;
+    if (cu.uf && !end.uf) end.uf = cu.uf;
+    if (end.cidade && end.uf) break;
+  }
+
+  if (!end.bairro && acima.length >= 2) {
+    const candidato = acima[acima.length - 2]!;
+    if (
+      !/^(?:RUA|AV\.?|AVENIDA|TRAVESSA)/i.test(candidato) &&
+      candidato.length < 50 &&
+      !parseCidadeUfToken(candidato).uf
+    ) {
+      end.bairro = candidato;
+    }
+  }
 }
 
 function lineBlocks(text: string): string[] {
@@ -523,7 +739,7 @@ export async function lerDocumentoUpload(input: {
       };
     }
     case "comprovante-residencia": {
-      const { text, avisos: extAvisos } = await extrairTextoDocumento(buf, input.nomeArquivo);
+      const { text, avisos: extAvisos } = await extrairTextoComprovante(buf, input.nomeArquivo);
       const campos = parseComprovanteText(text);
       return {
         tipo: input.tipo,

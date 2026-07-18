@@ -84,7 +84,9 @@ export function DocUploadField({
       </label>
       {loading ? (
         <p className="doc-upload__status">
-          {tipo === "cnh" ? "Lendo CNH (OCR pode levar alguns segundos)…" : "Lendo documento…"}
+          {tipo === "cnh" || tipo === "comprovante-residencia"
+            ? "Lendo documento (OCR pode levar alguns segundos)…"
+            : "Lendo documento…"}
         </p>
       ) : null}
       {nomeArquivo && !loading ? (

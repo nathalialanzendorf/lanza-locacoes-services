@@ -24,8 +24,11 @@ export function extrairJpegsEmbutidosPdf(buffer: Buffer): Buffer[] {
   return out;
 }
 
-/** O JPEG maior costuma ser a frente da CNH (ignora ícones/thumbnails). */
-export function escolherImagemCnh(buffers: Buffer[]): Buffer | null {
+/** O JPEG maior costuma ser a página principal (CNH, fatura, etc.). */
+export function escolherMaiorImagemEmbutida(buffers: Buffer[]): Buffer | null {
   if (!buffers.length) return null;
   return buffers.reduce((best, cur) => (cur.length > best.length ? cur : best));
 }
+
+/** @deprecated use escolherMaiorImagemEmbutida */
+export const escolherImagemCnh = escolherMaiorImagemEmbutida;

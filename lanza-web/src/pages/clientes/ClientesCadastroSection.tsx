@@ -232,9 +232,9 @@ export function ClientesCadastroSection({ clienteId }: Props) {
                 onError={setError}
               />
               <DocUploadField
-                label="Comprovante de residência"
+                label="Comprovante de residência (PDF ou imagem)"
                 tipo="comprovante-residencia"
-                hint="Confira se o titular é o locatário."
+                hint="Confira se o titular é o locatário. PDF escaneado: OCR automático."
                 disabled={loading}
                 onParsed={({ campos }) => aplicarComprovante(campos)}
                 onError={setError}

@@ -15,9 +15,12 @@ async function workerPor(): Promise<Worker> {
   return workerPromise;
 }
 
-/** OCR em português — CNH-e (imagem ou JPEG extraído do PDF). */
-export async function ocrCnhImagem(buffer: Buffer): Promise<string> {
+/** OCR em português — documentos escaneados (CNH, comprovante, etc.). */
+export async function ocrDocumentoImagem(buffer: Buffer): Promise<string> {
   const worker = await workerPor();
   const { data } = await worker.recognize(buffer);
   return (data.text ?? "").trim();
 }
+
+/** @deprecated use ocrDocumentoImagem */
+export const ocrCnhImagem = ocrDocumentoImagem;
