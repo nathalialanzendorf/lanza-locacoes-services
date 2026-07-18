@@ -146,6 +146,8 @@ export type ClienteDespesa = {
   clienteConfirmado?: boolean;
   condutorConfirmado?: boolean;
   rastreameId?: string | number | null;
+  /** Vencimento calculado (DD/MM/AAAA) — listagem API. */
+  vencimentoBr?: string | null;
 };
 
 export type AnaliseCadastroItem = {

@@ -184,6 +184,7 @@ export {
 export { compararDataBrAsc } from "../../../src/lib/contratoExtrair.js";
 
 export { dataVencimentoSemanalBr } from "../../../src/lib/pagamentoSemanal.js";
+export { vencimentoClienteDespesaBr } from "../../../src/lib/clienteDespesaVencimento.js";
 
 export { syncMotoristas, replicarClienteNoRastreame } from "../../../src/lib/rastreame/motoristasSync.js";
 export { syncRastreaveis, preencherFipeFaltante } from "../../../src/lib/rastreame/rastreaveisSync.js";

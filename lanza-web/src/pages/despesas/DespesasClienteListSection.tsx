@@ -7,11 +7,11 @@ import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useDespesasCliente } from "@/api/hooks";
+import { useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
-import type { ClienteDespesa } from "@/api/types";
+import { formatBrl, formatVeiculoLabel } from "@/lib/format";
+import type { ClienteDespesa, Veiculo } from "@/api/types";
 
 const CATEGORIAS = [
   "Manutenção",
@@ -25,8 +25,21 @@ const CATEGORIAS = [
 
 type FiltroPagamento = "em_aberto" | "pago" | "todos";
 
-function placaDespesa(d: ClienteDespesa): string {
-  return formatPlaca(d.placa ?? d.veiculoId);
+function compactPlaca(placa: string): string {
+  return placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function veiculoLabelDespesa(
+  d: ClienteDespesa,
+  porId: Map<string, Veiculo>,
+  porPlaca: Map<string, Veiculo>,
+): string {
+  const placaKey = compactPlaca(d.placa ?? d.veiculoId ?? "");
+  const v =
+    (d.veiculoId?.trim() ? porId.get(d.veiculoId.trim()) : undefined) ??
+    (placaKey ? porPlaca.get(placaKey) : undefined);
+  if (v) return formatVeiculoLabel(v);
+  return formatVeiculoLabel({ placa: d.placa ?? d.veiculoId });
 }
 
 export function DespesasClienteListSection() {
@@ -37,6 +50,24 @@ export function DespesasClienteListSection() {
   const [categoria, setCategoria] = useState("");
   const [competencia, setCompetencia] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+
+  const veiculosQuery = useVeiculos();
+
+  const veiculosPorId = useMemo(() => {
+    const map = new Map<string, Veiculo>();
+    for (const v of veiculosQuery.data?.items ?? []) {
+      map.set(v.id, v);
+    }
+    return map;
+  }, [veiculosQuery.data]);
+
+  const veiculosPorPlaca = useMemo(() => {
+    const map = new Map<string, Veiculo>();
+    for (const v of veiculosQuery.data?.items ?? []) {
+      if (v.placa) map.set(compactPlaca(v.placa), v);
+    }
+    return map;
+  }, [veiculosQuery.data]);
 
   const query = useDespesasCliente({
     ativo: true,
@@ -129,22 +160,13 @@ export function DespesasClienteListSection() {
         keyFn={(d) => d.id}
         emptyMessage={temFiltro ? "Nenhuma despesa corresponde aos filtros." : "Nenhuma despesa registada."}
         columns={[
-          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
+          {
+            key: "veiculo",
+            header: "Veículo",
+            render: (d) => veiculoLabelDespesa(d, veiculosPorId, veiculosPorPlaca),
+          },
           { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
-          { key: "placa", header: "Placa", render: (d) => placaDespesa(d) },
-          {
-            key: "valor",
-            header: "Valor",
-            className: "num",
-            render: (d) => formatBrl(Number(d.valorMulta) || 0),
-          },
-          {
-            key: "paga",
-            header: "Paga",
-            render: (d) => (
-              <span className={d.paga ? "badge badge--ok" : "badge badge--warn"}>{d.paga ? "Sim" : "Não"}</span>
-            ),
-          },
+          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
           {
             key: "acoes",
             header: "Ações",

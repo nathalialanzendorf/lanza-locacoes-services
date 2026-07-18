@@ -12,6 +12,7 @@ import {
   isClienteDespesaAtiva,
   loadClienteDespesasDb,
   compactPlaca,
+  vencimentoClienteDespesaBr,
   type ClienteDespesaInput,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
@@ -61,7 +62,7 @@ function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
 
 export function listarDespesas(opts: ListarDespesasOpts = {}): {
   total: number;
-  items: ClienteDespesaRegistro[];
+  items: (ClienteDespesaRegistro & { vencimentoBr: string | null })[];
 } {
   let items = loadClienteDespesasDb().clienteDespesas;
   const placaKey = resolvePlacaFiltro(opts);
@@ -97,7 +98,13 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
     items = items.filter((d) => despesaAtribuidaACliente(d, clienteId));
   }
 
-  return { total: items.length, items };
+  return {
+    total: items.length,
+    items: items.map((d) => ({
+      ...d,
+      vencimentoBr: vencimentoClienteDespesaBr(d),
+    })),
+  };
 }
 
 export function obterDespesa(id: string): ClienteDespesaRegistro | null {
