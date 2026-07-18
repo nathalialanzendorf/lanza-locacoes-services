@@ -247,7 +247,9 @@ export function DashboardPage() {
             title="Veículos locados"
             value={resumo.data ? `${resumo.data.veiculos.locados}` : "—"}
             hint={
-              resumo.data ? `${resumo.data.veiculos.ativos} no total` : undefined
+              resumo.data
+                ? `${resumo.data.veiculos.ativos} operacionais`
+                : undefined
             }
             tone="ok"
           />
@@ -261,28 +263,22 @@ export function DashboardPage() {
             }
           />
           <StatCard
-            title="Infrações notificadas"
+            title="Infrações autuadas"
             value={resumo.data ? `${resumo.data.infracoes.notificadas}` : "—"}
-            hint="Autuação — sem boleto"
+            hint="sem boleto"
             tone="warn"
           />
           <StatCard
-            title="Infrações em aberto"
+            title="Infrações notificada"
             value={resumo.data ? `${resumo.data.infracoes.emAbertoDebito}` : "—"}
-            hint={
-              resumo.data
-                ? `${resumo.data.infracoes.emAberto} no total · boleto gerado`
-                : undefined
-            }
+            hint="boleto gerado"
             tone="warn"
           />
           <StatCard
-            title="Infrações em aberto sem responsável (cliente ou parceiro)"
+            title="Infrações sem responsável"
             value={resumo.data ? `${resumo.data.infracoes.semResponsavel}` : "—"}
             hint={
-              resumo.data
-                ? `${resumo.data.infracoes.emAberto} em aberto no total`
-                : undefined
+              resumo.data ? `${resumo.data.infracoes.emAberto} no total` : undefined
             }
             tone="warn"
           />
