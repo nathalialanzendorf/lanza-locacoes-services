@@ -135,6 +135,7 @@ export type ClienteDespesa = {
   placa?: string;
   categoria?: string;
   descricao?: string;
+  titulo?: string;
   valorMulta?: number;
   paga?: boolean;
   ativo?: boolean;

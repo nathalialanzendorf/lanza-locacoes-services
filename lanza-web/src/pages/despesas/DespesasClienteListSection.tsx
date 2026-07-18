@@ -165,7 +165,8 @@ export function DespesasClienteListSection() {
             header: "Veículo",
             render: (d) => veiculoLabelDespesa(d, veiculosPorId, veiculosPorPlaca),
           },
-          { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
+          { key: "titulo", header: "Título", render: (d) => d.titulo?.trim() || "—" },
+          { key: "desc", header: "Descrição", render: (d) => d.descricao?.trim() || "—" },
           { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
           {
             key: "acoes",
