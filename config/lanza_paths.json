@@ -1,5 +1,5 @@
 {
-  "_comentario": "Editar só se mudar de máquina ou pasta. Caminhos no estilo Windows/Dropbox. rastreameEspelho=false: cadastros só no Lanza; true replica no Rastreame.",
+  "_comentario": "Editar só se mudar de máquina ou pasta. Caminhos no estilo Windows/Dropbox. rastreameEspelho=false: despesas/veículos/syncs opcionais; cliente e contrato sempre vão ao Rastreame.",
   "documentosRaiz": "D:/Dropbox/Aluguel Carros",
   "financeiro": "D:/Dropbox/Aluguel Carros/Financeiro",
   "prestacaoContasSubpasta": "prestação de contas",

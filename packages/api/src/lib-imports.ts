@@ -9,6 +9,7 @@ export {
   findClienteById,
   findClienteByCpf,
   isClienteAtivo,
+  isSyncRastreameEligible,
   gravarCliente,
   editarCliente,
   editarClienteAsync,
@@ -183,7 +184,7 @@ export { compararDataBrAsc } from "../../../src/lib/contratoExtrair.js";
 
 export { dataVencimentoSemanalBr } from "../../../src/lib/pagamentoSemanal.js";
 
-export { syncMotoristas } from "../../../src/lib/rastreame/motoristasSync.js";
+export { syncMotoristas, replicarClienteNoRastreame } from "../../../src/lib/rastreame/motoristasSync.js";
 export { syncRastreaveis, preencherFipeFaltante } from "../../../src/lib/rastreame/rastreaveisSync.js";
 export {
   syncRecebimentos,

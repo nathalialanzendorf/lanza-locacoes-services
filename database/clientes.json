@@ -81,7 +81,7 @@
       "rastreameMotoristaId": 36,
       "ativo": false,
       "rastreameSyncEm": "2026-07-09T21:40:40.196Z",
-      "atualizadoEm": "2026-07-18T02:14:05.207Z"
+      "atualizadoEm": "2026-07-18T14:21:10.990Z"
     },
     {
       "nome": "Vitor Hugo Pacifico Machado",
@@ -1795,10 +1795,10 @@
         "ufEmissor": "SC",
         "ear": false
       },
-      "ativo": true,
+      "ativo": false,
       "id": "21568b10-c02f-413e-93d3-d97bcf4cd7bc",
       "rastreameSyncEm": "2026-07-09T21:41:36.039Z",
-      "atualizadoEm": "2026-07-09T21:11:27.551Z",
+      "atualizadoEm": "2026-07-18T14:21:04.218Z",
       "cpf": "974.676.341-53",
       "rg": "7062007187",
       "rgOrgaoExpedidor": "SSP/SC",

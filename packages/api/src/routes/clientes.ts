@@ -36,7 +36,7 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
     paramNames: list.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<ClienteImportado>(ctx.req);
-      const r = clientesService.criarCliente(body);
+      const r = await clientesService.criarCliente(body);
       json(ctx.res, 201, r);
     }),
   });

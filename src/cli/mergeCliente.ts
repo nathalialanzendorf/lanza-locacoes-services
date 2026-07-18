@@ -70,7 +70,7 @@ async function maybeSync(
 ): Promise<void> {
   if (!sync || !isSyncRastreameEligible(c)) return;
   try {
-    await replicarClienteNoRastreame(c);
+    await replicarClienteNoRastreame(c, { forcePush: c.ativo === false });
     const atual = findClienteById(c.id);
     console.log(
       `     → replicado no Rastreame (key=${atual?.rastreameMotoristaKey ?? "novo"})`,

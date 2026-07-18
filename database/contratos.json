@@ -2681,10 +2681,10 @@
       "cpf": "388.519.608-52",
       "dataInicio": "24/03/2026",
       "dataFimPrevista": "22/06/2026",
-      "dataEncerramento": null,
+      "dataEncerramento": "22/06/2026",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "quarta",
@@ -2695,7 +2695,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:47.591Z",
-      "atualizadoEm": "2026-06-28T17:20:06.320Z"
+      "atualizadoEm": "2026-07-18T14:17:58.323Z"
     },
     {
       "id": "4b0d5c08-e57f-4a67-88f7-dfcfdf93cbb5",
@@ -3593,10 +3593,10 @@
       "cpf": "712.096.212-40",
       "dataInicio": "20/04/2026",
       "dataFimPrevista": "19/06/2026",
-      "dataEncerramento": null,
+      "dataEncerramento": "19/06/2026",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 60,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "segunda",
@@ -3607,7 +3607,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:47.971Z",
-      "atualizadoEm": "2026-06-28T17:20:06.794Z"
+      "atualizadoEm": "2026-07-18T14:17:58.486Z"
     },
     {
       "id": "03e7030f-2ebf-4525-a77b-b7d687b147d4",
@@ -4105,10 +4105,10 @@
       "cpf": "085.167.559-08",
       "dataInicio": "27/12/2025",
       "dataFimPrevista": "27/03/2026",
-      "dataEncerramento": null,
+      "dataEncerramento": "27/03/2026",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "segunda",
@@ -4119,7 +4119,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:48.238Z",
-      "atualizadoEm": "2026-06-28T17:00:02.752Z"
+      "atualizadoEm": "2026-07-18T14:17:58.498Z"
     },
     {
       "id": "a514e0f6-2ed5-4a92-8bf2-bab2614f4a69",
@@ -4753,10 +4753,10 @@
       "cpf": "095.180.669-65",
       "dataInicio": "01/05/2025",
       "dataFimPrevista": "08/05/2025",
-      "dataEncerramento": null,
+      "dataEncerramento": "08/05/2025",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 7,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "quinta",
@@ -4767,7 +4767,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1300,
       "cadastradoEm": "2026-06-28T17:00:02.568Z",
-      "atualizadoEm": "2026-06-28T17:00:02.568Z"
+      "atualizadoEm": "2026-07-18T14:17:58.510Z"
     },
     {
       "id": "8a081c54-95af-4689-b74c-c1dba29613f8",

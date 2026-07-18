@@ -1,15 +1,15 @@
 import {
-  editarCliente,
   editarClienteAsync,
-  excluirCliente,
   excluirClienteAsync,
   findClienteByCpf,
   findClienteById,
   findClienteInDb,
   gravarCliente,
   isClienteAtivo,
+  isSyncRastreameEligible,
   loadClientesDb,
   loadClientesDbAsync,
+  replicarClienteNoRastreame,
   type ClienteImportado,
   type ClientePatch,
   type ClienteRegistro,
@@ -31,6 +31,18 @@ function filtrarClientes(
     return items.filter((c) => !isClienteAtivo(c));
   }
   return items;
+}
+
+async function espelharClienteRastreame(c: ClienteRegistro): Promise<void> {
+  if (!isSyncRastreameEligible(c)) return;
+  try {
+    await replicarClienteNoRastreame(c, { forcePush: c.ativo === false });
+  } catch (err) {
+    console.error(
+      `[clientes] falha ao replicar no Rastreame (${c.nome}):`,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
 }
 
 export function listarClientes(opts: ListarClientesOpts = {}): {
@@ -61,16 +73,18 @@ export async function obterClienteAsync(idOuCpf: string): Promise<ClienteRegistr
   return findClienteInDb(db, idOuCpf);
 }
 
-export function criarCliente(body: ClienteImportado): {
+export async function criarCliente(body: ClienteImportado): Promise<{
   data: ClienteRegistro;
   acao: string;
-} {
+}> {
   const nome = String(body.nome ?? "").trim();
   if (!nome) {
     throw new HttpError(400, 'Campo "nome" é obrigatório');
   }
   const r = gravarCliente({ ...body, nome });
-  return { data: r.registro, acao: r.acao };
+  await espelharClienteRastreame(r.registro);
+  const atualizado = findClienteById(r.registro.id) ?? r.registro;
+  return { data: atualizado, acao: r.acao };
 }
 
 export async function atualizarClienteAsync(
@@ -81,7 +95,8 @@ export async function atualizarClienteAsync(
   if (!item) {
     throw new HttpError(404, "Cliente não encontrado");
   }
-  return item;
+  await espelharClienteRastreame(item);
+  return findClienteById(item.id) ?? item;
 }
 
 export async function removerClienteAsync(idOuCpf: string): Promise<ClienteRegistro> {
@@ -89,5 +104,6 @@ export async function removerClienteAsync(idOuCpf: string): Promise<ClienteRegis
   if (!item) {
     throw new HttpError(404, "Cliente não encontrado");
   }
-  return item;
+  await espelharClienteRastreame(item);
+  return findClienteById(item.id) ?? item;
 }
