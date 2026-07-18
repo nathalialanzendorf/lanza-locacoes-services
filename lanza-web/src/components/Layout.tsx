@@ -15,27 +15,16 @@ import { RastreameEspelhoToggle } from "./RastreameEspelhoToggle";
 
 
 const nav = [
-
   { to: "/", label: "Dashboard", end: true },
-
   { to: "/clientes", label: "Clientes" },
-
-  { to: "/veiculos", label: "Veículos" },
-
   { to: "/parceiros", label: "Parceiros" },
-
+  { to: "/veiculos", label: "Veículos" },
   { to: "/contratos", label: "Contratos" },
-
-  { to: "/movimentacao", label: "Movimentação" },
-
   { to: "/recebimentos", label: "Recebimentos" },
-
-  { to: "/sync", label: "Syncs" },
-
   { to: "/despesas", label: "Despesas" },
-
+  { to: "/movimentacao", label: "Movimentação" },
   { to: "/relatorios", label: "Relatórios" },
-
+  { to: "/sync", label: "Syncs" },
 ];
 
 
