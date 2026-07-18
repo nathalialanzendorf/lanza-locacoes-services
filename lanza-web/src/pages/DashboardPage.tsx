@@ -3,9 +3,12 @@ import { Link } from "react-router-dom";
 
 import { StatCard } from "@/components/StatCard";
 import { PageHeader, QueryError } from "@/components/PageHeader";
+import { IconRecebimento } from "@/components/icons";
 import { useResumo, useClientes, useContratos } from "@/api/hooks";
 import { formatBrl, formatPlaca, clienteExibicaoPorId } from "@/lib/format";
 import { semClienteDeResumo } from "@/lib/clienteCampo";
+import { LABEL } from "@/lib/labels";
+import { urlLancarRecebimento } from "@/lib/recebimentoUrl";
 import {
   PROXIMO_VENCER_DIAS,
   alertaVencimentoContrato,
@@ -32,12 +35,16 @@ function RecebimentosTable({
   colunaExtra,
   colunaVeiculo = "Placa",
   clientes,
+  mostrarAcaoRecebimento = false,
+  dataReferenciaBr,
 }: {
   titulo: string;
   linhas: DashboardRecebimentoLinha[];
   colunaExtra?: { header: string; render: (l: DashboardRecebimentoLinha) => string };
   colunaVeiculo?: "Placa" | "Veículo";
   clientes?: { id: string; nome?: string; ativo?: boolean }[];
+  mostrarAcaoRecebimento?: boolean;
+  dataReferenciaBr?: string;
 }) {
   return (
     <section className="form-card dashboard-recebimentos">
@@ -56,17 +63,39 @@ function RecebimentosTable({
                 <th>{colunaVeiculo}</th>
                 {colunaExtra ? <th>{colunaExtra.header}</th> : null}
                 <th className="num">Valor</th>
+                {mostrarAcaoRecebimento ? <th className="col-acoes">Ação</th> : null}
               </tr>
             </thead>
             <tbody>
-              {linhas.map((l) => (
+              {linhas.map((l) => {
+                const recebimentoTo = mostrarAcaoRecebimento
+                  ? urlLancarRecebimento(l, dataReferenciaBr)
+                  : null;
+                return (
                 <tr key={`${l.clienteId ?? "—"}-${l.placa}`}>
                   <td>{clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome)}</td>
                   <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
                   {colunaExtra ? <td>{colunaExtra.render(l)}</td> : null}
                   <td className="num">{formatBrl(l.valor)}</td>
+                  {mostrarAcaoRecebimento ? (
+                    <td className="col-acoes">
+                      {recebimentoTo ? (
+                        <Link
+                          to={recebimentoTo}
+                          className="btn btn--icon btn--icon-ok"
+                          aria-label={LABEL.lancarRecebimento}
+                          title={LABEL.lancarRecebimento}
+                        >
+                          <IconRecebimento className="row-actions__icon" />
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -325,6 +354,8 @@ export function DashboardPage() {
             linhas={rec.venceHoje}
             colunaVeiculo="Veículo"
             clientes={clientes}
+            mostrarAcaoRecebimento
+            dataReferenciaBr={rec.dataReferenciaBr}
           />
 
           <RecebimentosTable

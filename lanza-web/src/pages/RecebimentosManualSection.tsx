@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
 import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
@@ -12,14 +13,24 @@ import { formatBrl } from "@/lib/format";
 
 const VALOR_MANUAL = "__manual__";
 
+function compactPlaca(placa: string): string {
+  return placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
 export function RecebimentosManualSection() {
+  const [searchParams] = useSearchParams();
+  const clienteIdUrl = searchParams.get("clienteId")?.trim() || "";
+  const placaUrl = searchParams.get("placa")?.trim() || "";
+  const valorUrl = searchParams.get("valor")?.trim() || "";
+  const dataBrUrl = searchParams.get("dataBr")?.trim() || "";
+
   const { ativo: espelhoRastreame } = useRastreameEspelho();
   const veiculosQuery = useVeiculos({ ativo: true });
   const [veiculoId, setVeiculoId] = useState("");
-  const [clienteId, setClienteId] = useState("");
-  const [dataBr, setDataBr] = useState("");
-  const [valorOpcao, setValorOpcao] = useState("");
-  const [valor, setValor] = useState("");
+  const [clienteId, setClienteId] = useState(clienteIdUrl);
+  const [dataBr, setDataBr] = useState(dataBrUrl);
+  const [valorOpcao, setValorOpcao] = useState(valorUrl ? VALOR_MANUAL : "");
+  const [valor, setValor] = useState(valorUrl);
   const [loadingPlano, setLoadingPlano] = useState(false);
   const [planoError, setPlanoError] = useState<string | null>(null);
   const [plano, setPlano] = useState<PlanoBaixa | null>(null);
@@ -50,7 +61,28 @@ export function RecebimentosManualSection() {
       }));
   }, [despesasQuery.data]);
 
-  const valorManual = valorOpcao === VALOR_MANUAL || !valorOpcao;
+  useEffect(() => {
+    if (clienteIdUrl) setClienteId(clienteIdUrl);
+  }, [clienteIdUrl]);
+
+  useEffect(() => {
+    if (dataBrUrl) setDataBr(dataBrUrl);
+  }, [dataBrUrl]);
+
+  useEffect(() => {
+    if (!valorUrl) return;
+    setValorOpcao(VALOR_MANUAL);
+    setValor(valorUrl);
+  }, [valorUrl]);
+
+  useEffect(() => {
+    if (!placaUrl || !veiculosQuery.data) return;
+    const alvo = compactPlaca(placaUrl);
+    const v = (veiculosQuery.data.items ?? []).find(
+      (x) => x.placa && compactPlaca(x.placa) === alvo,
+    );
+    if (v) setVeiculoId(v.id);
+  }, [placaUrl, veiculosQuery.data]);
 
   function onVeiculoChange(id: string) {
     setVeiculoId(id);
@@ -178,8 +210,8 @@ export function RecebimentosManualSection() {
           span="wide"
           hint={
             clienteId
-              ? "Débitos em aberto do cliente ou valor manual"
-              : "Selecione o cliente para sugerir valores"
+              ? "Pendência em aberto sugere o valor — pode ajustar o recebido"
+              : "Selecione o cliente para listar pendências"
           }
         >
           <div className="recebimentos-valor-campos">
@@ -189,7 +221,7 @@ export function RecebimentosManualSection() {
               variant="cadastro"
               disabled={loadingPlano || !clienteId || despesasQuery.isLoading}
               loading={Boolean(clienteId && despesasQuery.isLoading)}
-              aria-label="Valor sugerido"
+              aria-label="Pendência em aberto"
             >
               {opcoesValor.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -198,22 +230,18 @@ export function RecebimentosManualSection() {
               ))}
               <option value={VALOR_MANUAL}>Outro valor…</option>
             </NativeSelect>
-            {valorManual ? (
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                min={0}
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                required
-                disabled={loadingPlano}
-                placeholder="0,00"
-                aria-label="Valor manual"
-              />
-            ) : (
-              <span className="field__hint">{formatBrl(Number(valor) || 0)}</span>
-            )}
+            <input
+              className="input"
+              type="number"
+              step="0.01"
+              min={0}
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              required
+              disabled={loadingPlano || !clienteId}
+              placeholder="0,00"
+              aria-label="Valor recebido"
+            />
           </div>
         </Field>
       </FormCard>

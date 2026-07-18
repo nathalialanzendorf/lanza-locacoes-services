@@ -118,6 +118,17 @@ export function IconEncerrar({ className, title = "Encerrar" }: IconProps) {
   );
 }
 
+export function IconRecebimento({ className, title = "Lançar recebimento" }: IconProps) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden={!title}>
+      {title ? <title>{title}</title> : null}
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.75" />
+      <circle cx="12" cy="14" r="2" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+}
+
 export function IconX({ className, title = "Reprovar" }: IconProps) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden={!title}>

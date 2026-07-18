@@ -11,4 +11,5 @@ export const LABEL = {
   inativar: "Inativar",
   importar: "Importar",
   processando: "A processar…",
+  lancarRecebimento: "Lançar recebimento",
 } as const;
