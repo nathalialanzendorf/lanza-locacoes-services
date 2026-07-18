@@ -101,10 +101,16 @@ export async function requireRastreameToken(): Promise<string> {
 export async function rastreameJsonHeaders(
   includeOrigin: boolean,
 ): Promise<Record<string, string>> {
+  const token = await fetchRastreameToken();
+  if (!token) {
+    throw new Error(
+      "RASTREAME_AUTH (ou RASTREAME_LOGIN+RASTREAME_SENHA) não configurado",
+    );
+  }
   const h: Record<string, string> = {
     Accept: "application/json, text/plain, */*",
     "Content-Type": "application/json",
-    "X-r2f-auth": await requireRastreameToken(),
+    "X-r2f-auth": token,
     "X-r2f-ns": "null",
     Referer: `${RASTREAME_ORIGIN}/`,
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Edg/149.0.0.0",
