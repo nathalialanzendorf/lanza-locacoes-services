@@ -12,7 +12,7 @@ import type { SyncCatalogEntry, SyncDirecao, SyncJob } from "@/api/types";
 const SKILL_ALIASES: Record<string, string> = {
   motoristas: "sync-cliente",
   rastreaveis: "sync-veículo",
-  "rastreaveis-enviar": "sync-veículo (enviar)",
+  "rastreaveis-enviar": "sync-veículo",
   fipe: "sync-fipe",
   infracoes: "sync-infracoes",
   "ipva-licenciamento": "sync-ipva-licenciamento",

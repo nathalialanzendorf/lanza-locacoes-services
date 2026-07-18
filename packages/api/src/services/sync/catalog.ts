@@ -85,7 +85,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "motoristas",
-    rotulo: "Clientes → Rastreame (enviar)",
+    rotulo: "Clientes → Rastreame",
     destino: "clientes.json → Rastreame",
     interativo: false,
     direcao: "enviar",
@@ -101,7 +101,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "rastreaveis-enviar",
-    rotulo: "Rastreáveis → Rastreame (enviar)",
+    rotulo: "Rastreáveis → Rastreame",
     destino: "veiculos.json → Rastreame",
     interativo: false,
     direcao: "enviar",
@@ -117,7 +117,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "recebimentos",
-    rotulo: "Gastos gerais → Rastreame (enviar)",
+    rotulo: "Gastos gerais → Rastreame",
     destino: "cliente-despesas.json → Rastreame",
     interativo: false,
     direcao: "enviar",
@@ -133,7 +133,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "manutencao",
-    rotulo: "Manutenção → Rastreame (enviar)",
+    rotulo: "Manutenção → Rastreame",
     destino: "parceiro-despesas.json → Rastreame (Manutenção)",
     interativo: false,
     direcao: "enviar",
