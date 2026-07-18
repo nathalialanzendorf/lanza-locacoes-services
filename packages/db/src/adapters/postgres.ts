@@ -35,7 +35,10 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
     options?: SaveJsonDocumentOptions,
   ): void {
     if (process.env.VERCEL) {
-      void this.saveAsync(storeName, filePath, data, options);
+      void this.saveAsync(storeName, filePath, data, options).catch((err) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[lanza/db] Falha ao gravar ${storeName} no PostgreSQL: ${msg}`);
+      });
       return;
     }
     awaitSync(this.saveAsync(storeName, filePath, data, options));

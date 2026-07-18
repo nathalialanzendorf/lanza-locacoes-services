@@ -11,6 +11,7 @@ export {
   isClienteAtivo,
   isSyncRastreameEligible,
   gravarCliente,
+  gravarClienteAsync,
   editarCliente,
   editarClienteAsync,
   excluirCliente,

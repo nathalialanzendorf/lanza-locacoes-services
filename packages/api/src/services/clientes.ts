@@ -4,7 +4,7 @@ import {
   findClienteByCpf,
   findClienteById,
   findClienteInDb,
-  gravarCliente,
+  gravarClienteAsync,
   isClienteAtivo,
   isSyncRastreameEligible,
   loadClientesDb,
@@ -81,9 +81,10 @@ export async function criarCliente(body: ClienteImportado): Promise<{
   if (!nome) {
     throw new HttpError(400, 'Campo "nome" é obrigatório');
   }
-  const r = gravarCliente({ ...body, nome });
+  const r = await gravarClienteAsync({ ...body, nome });
   await espelharClienteRastreame(r.registro);
-  const atualizado = findClienteById(r.registro.id) ?? r.registro;
+  const db = await loadClientesDbAsync();
+  const atualizado = findClienteInDb(db, r.registro.id) ?? r.registro;
   return { data: atualizado, acao: r.acao };
 }
 

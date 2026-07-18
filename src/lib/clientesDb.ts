@@ -188,10 +188,10 @@ function cnhKey(c: ClienteRegistro): string {
   return String(cnh?.numeroRegistro ?? "").replace(/\D/g, "");
 }
 
-export function findClienteIndex(
+function findClienteUpsertIndex(
+  db: ClientesDb,
   c: Pick<ClienteRegistro, "id" | "cpf" | "rastreameMotoristaKey"> & { cnh?: unknown },
 ): number {
-  const db = loadClientesDb();
   if (c.rastreameMotoristaKey != null && c.rastreameMotoristaKey !== "") {
     const rk = String(c.rastreameMotoristaKey);
     const idx = db.clientes.findIndex(
@@ -210,6 +210,12 @@ export function findClienteIndex(
   }
   if (c.id) return db.clientes.findIndex((x) => x.id === c.id);
   return -1;
+}
+
+export function findClienteIndex(
+  c: Pick<ClienteRegistro, "id" | "cpf" | "rastreameMotoristaKey"> & { cnh?: unknown },
+): number {
+  return findClienteUpsertIndex(loadClientesDb(), c);
 }
 
 export type ClientePatch = Partial<
@@ -431,13 +437,12 @@ export function upsertClienteFromRastreame(rawInput: UpsertMotoristaInput): Upse
   return { registro: merged, acao: changed ? "atualizado" : "sem_alteracao", aviso: null };
 }
 
-export function gravarCliente(
+function applyGravarCliente(
+  db: ClientesDb,
   cliente: ClienteImportado,
-  opts?: { syncRastreame?: boolean },
 ): UpsertClienteResult {
-  const db = loadClientesDb();
   const ts = nowIso();
-  const idx = findClienteIndex({
+  const idx = findClienteUpsertIndex(db, {
     id: cliente.id ?? "",
     cpf: cliente.cpf,
     rastreameMotoristaKey: cliente.rastreameMotoristaKey,
@@ -455,7 +460,6 @@ export function gravarCliente(
     };
     herdarAnaliseCadastro(merged);
     db.clientes[idx] = merged;
-    saveClientesDb(db);
     return { registro: merged, acao: "atualizado", aviso: null };
   }
 
@@ -468,9 +472,29 @@ export function gravarCliente(
   };
   herdarAnaliseCadastro(registro);
   db.clientes.push(registro);
+  return { registro, acao: "novo", aviso: null };
+}
+
+export function gravarCliente(
+  cliente: ClienteImportado,
+  opts?: { syncRastreame?: boolean },
+): UpsertClienteResult {
+  const db = loadClientesDb();
+  const r = applyGravarCliente(db, cliente);
   saveClientesDb(db);
   void opts?.syncRastreame;
-  return { registro, acao: "novo", aviso: null };
+  return r;
+}
+
+export async function gravarClienteAsync(
+  cliente: ClienteImportado,
+  opts?: { syncRastreame?: boolean },
+): Promise<UpsertClienteResult> {
+  const db = await loadClientesDbAsync();
+  const r = applyGravarCliente(db, cliente);
+  await saveClientesDbAsync(db);
+  void opts?.syncRastreame;
+  return r;
 }
 
 export function marcarClienteRastreameSyncOk(
