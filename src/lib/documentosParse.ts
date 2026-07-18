@@ -104,7 +104,12 @@ function cnhParseOk(parsed: CnhParseResult): boolean {
 function comprovanteParseOk(parsed: ComprovanteParseResult): boolean {
   const e = parsed.endereco ?? {};
   if (!e.cep && !e.logradouro) return false;
-  return Boolean(e.cidade && e.bairro && e.uf);
+  if (!e.cidade || !e.bairro || !e.uf) return false;
+  if (isComprovanteNoiseValue(e.bairro)) return false;
+  if (isComprovanteNoiseValue(e.complemento)) return false;
+  if (isComprovanteNoiseValue(e.logradouro)) return false;
+  if (e.cidade && /^\d{5}-?\d{3}/.test(e.cidade)) return false;
+  return true;
 }
 
 async function textoPdf(buffer: Buffer, avisoOcr: string): Promise<{ text: string; avisos: string[] }> {
@@ -373,6 +378,154 @@ export type ComprovanteParseResult = {
   avisos: string[];
 };
 
+const COMPROVANTE_NOISE_RE =
+  /(?:pix[\d.]*|pix\.|\.com\.?\b|https?|vencimento|codigo de cobranca|código de cobrança|linha digit|valor\s*(?:total|pago|a pagar)|fatura|nosso numero|nosso número|agencia|agência|conta corrente|banco|sicoob|caixa economica|cod\.?\s*de\s*barra|autentic|demonstrativo|competencia|competência|referencia de cobranca|referência de cobrança|qr\s*code|pagamento|documento auxiliar|benefici[áa]rio|cedente|sacador)/i;
+
+function isComprovanteNoiseLine(line: string): boolean {
+  const t = line.trim();
+  if (!t) return true;
+  if (COMPROVANTE_NOISE_RE.test(t)) return true;
+  if (/@/.test(t)) return true;
+  if (/^[\d.\s/\-|]{18,}$/.test(t)) return true;
+  if (/pix[\d.]*pix\./i.test(t.replace(/\s/g, ""))) return true;
+  return false;
+}
+
+function isComprovanteNoiseValue(val: string | null | undefined): boolean {
+  if (!val?.trim()) return false;
+  const t = val.trim();
+  if (isComprovanteNoiseLine(t)) return true;
+  if (/\b(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\w*\b/i.test(t) && /vencimento|cobran/i.test(t)) {
+    return true;
+  }
+  if (/\bc[oó]digo\b/i.test(t) && /\bcobran/i.test(t)) return true;
+  return false;
+}
+
+function limparCidadeNome(cidade: string): string {
+  return cidade
+    .replace(/^\d{5}-?\d{3}\s*[-–]\s*/, "")
+    .replace(/\s*[-–/]\s*[A-Z]{2}\s*$/, "")
+    .trim();
+}
+
+function parseLinhaCep(linha: string): Partial<EnderecoParse> {
+  const out: Partial<EnderecoParse> = {};
+  const cepM = linha.match(/\b(\d{5}-?\d{3})\b/);
+  if (cepM) {
+    const d = cepM[1]!.replace(/\D/g, "");
+    out.cep = `${d.slice(0, 5)}-${d.slice(5)}`;
+  }
+
+  const m = linha.match(
+    /\b\d{5}-?\d{3}\s*[-–]\s*([A-Za-zÀ-ú\s'.-]+?)(?:\s*[-–/]\s*([A-Z]{2}))?\s*$/i,
+  );
+  if (m?.[1]) {
+    out.cidade = limparCidadeNome(m[1]);
+    if (m[2]) out.uf = m[2]!.toUpperCase();
+  }
+
+  const resto = linha.replace(/\b\d{5}-?\d{3}\b/, " ").replace(/\s+/g, " ").trim();
+  if (!out.cidade && resto) {
+    const cu = parseCidadeUfToken(resto);
+    if (cu.cidade) out.cidade = limparCidadeNome(cu.cidade);
+    if (cu.uf) out.uf = cu.uf;
+  }
+  return out;
+}
+
+function findComprovanteLineValue(lines: string[], ...labels: string[]): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (isComprovanteNoiseLine(line)) continue;
+    const u = line.toUpperCase();
+    for (const lab of labels) {
+      const lu = lab.toUpperCase();
+      const matches = u === lu || u.startsWith(`${lu}:`) || u.startsWith(`${lu} `);
+      if (!matches) continue;
+      const inline = line.slice(line.toUpperCase().indexOf(lu) + lu.length).replace(/^[\s:]+/, "").trim();
+      if (inline && !isComprovanteNoiseValue(inline)) return inline;
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const v = lines[j]?.trim() || "";
+        if (!v || isComprovanteNoiseLine(v) || isComprovanteNoiseValue(v)) continue;
+        return v;
+      }
+    }
+  }
+  return null;
+}
+
+function extrairEnderecoBlocoCep(lines: string[]): Partial<EnderecoParse> {
+  const out: Partial<EnderecoParse> = {};
+  const cepIndices: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/\b\d{5}-?\d{3}\b/.test(lines[i]!)) cepIndices.push(i);
+  }
+
+  for (const idx of cepIndices) {
+    const linha = lines[idx]!;
+    const parsed = parseLinhaCep(linha);
+    if (!parsed.cep) continue;
+
+    const candidato: Partial<EnderecoParse> = { ...parsed };
+    const acima = lines
+      .slice(Math.max(0, idx - 6), idx)
+      .map((l) => l.trim())
+      .filter((l) => l && !isComprovanteNoiseLine(l));
+
+    for (const ln of acima) {
+      const cu = parseCidadeUfToken(ln);
+      if (cu.cidade && cu.uf && !candidato.cidade) {
+        candidato.cidade = limparCidadeNome(cu.cidade);
+        candidato.uf = cu.uf;
+      }
+    }
+
+    for (let i = acima.length - 1; i >= 0; i--) {
+      const ln = acima[i]!;
+      if (
+        /^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A|BR[-\s])/i.test(
+          ln,
+        )
+      ) {
+        aplicarLinhaLogradouro(ln, candidato as EnderecoParse);
+        break;
+      }
+    }
+
+    if (!candidato.bairro) {
+      for (let i = acima.length - 1; i >= 0; i--) {
+        const ln = acima[i]!;
+        if (/^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|BR[-\s])/i.test(ln)) {
+          continue;
+        }
+        if (isComprovanteNoiseValue(ln) || parseCidadeUfToken(ln).uf || /^\d/.test(ln)) continue;
+        if (ln.length >= 2 && ln.length <= 45 && /[A-Za-zÀ-ú]{2,}/.test(ln)) {
+          candidato.bairro = ln;
+          break;
+        }
+      }
+    }
+
+    const score =
+      (candidato.logradouro ? 2 : 0) +
+      (candidato.cidade ? 2 : 0) +
+      (candidato.bairro ? 1 : 0) +
+      (candidato.uf ? 1 : 0);
+    if (score >= 3) return candidato;
+    if (score > 0 && !out.cep) Object.assign(out, candidato);
+  }
+  return out;
+}
+
+function sanitizarEnderecoComprovante(end: EnderecoParse): void {
+  if (end.cidade) end.cidade = limparCidadeNome(end.cidade);
+  if (isComprovanteNoiseValue(end.bairro)) end.bairro = null;
+  if (isComprovanteNoiseValue(end.complemento)) end.complemento = null;
+  if (isComprovanteNoiseValue(end.logradouro)) end.logradouro = null;
+  if (end.cidade && isComprovanteNoiseValue(end.cidade)) end.cidade = null;
+}
+
 export function parseComprovanteText(text: string): ComprovanteParseResult {
   const avisos: string[] = [];
   if (!text?.trim() || text.trim().length < 15) {
@@ -382,28 +535,34 @@ export function parseComprovanteText(text: string): ComprovanteParseResult {
 
   const out: ComprovanteParseResult = { avisos, endereco: {} };
   const flat = text.replace(/\s+/g, " ");
-  const lines = lineBlocks(text);
+  const lines = lineBlocks(text).filter((l) => l.length > 0);
 
-  const cepM = flat.match(/\b(\d{5}-?\d{3})\b/);
-  if (cepM) {
-    const d = cepM[1]!.replace(/\D/g, "");
+  Object.assign(out.endereco!, extrairEnderecoBlocoCep(lines));
+
+  const cepM = out.endereco!.cep
+    ? [out.endereco!.cep]
+    : (flat.match(/\b(\d{5}-?\d{3})\b/g) ?? []);
+  if (!out.endereco!.cep && cepM.length) {
+    const d = cepM[0]!.replace(/\D/g, "");
     out.endereco!.cep = `${d.slice(0, 5)}-${d.slice(5)}`;
-  } else {
+  } else if (!out.endereco!.cep) {
     avisos.push("CEP não encontrado.");
   }
 
-  const titLinha = lines.find((l) =>
-    /^(?:Cliente|Titular|Sacado|Nome(?:\s+do\s+(?:cliente|titular))?)\s*[:\s]/i.test(l),
+  const titLinha = lines.find(
+    (l) =>
+      !isComprovanteNoiseLine(l) &&
+      /^(?:Cliente|Titular|Sacado|Nome(?:\s+do\s+(?:cliente|titular))?)\s*[:\s]/i.test(l),
   );
   if (titLinha) {
     const tm = titLinha.match(/(?:Cliente|Titular|Sacado|Nome(?:\s+do\s+(?:cliente|titular))?)\s*[:\s]+(.+)$/i);
-    if (tm) out.titular = tm[1]!.trim();
+    if (tm && !isComprovanteNoiseValue(tm[1])) out.titular = tm[1]!.trim();
   }
   if (!out.titular) {
     const titM = flat.match(
       /(?:Cliente|Titular|Nome(?:\s+do\s+(?:cliente|titular))?|Sacado|Responsável)\s*[:\s]+([A-Za-zÀ-ú][A-Za-zÀ-ú\s'.-]{4,50}?)(?:\s+(?:Endere|CNPJ|CPF|Rua|Av\.|CEP)|$)/i,
     );
-    if (titM) out.titular = titM[1]!.trim();
+    if (titM && !isComprovanteNoiseValue(titM[1])) out.titular = titM[1]!.trim();
   }
 
   const telM = flat.match(/(?:Tel(?:efone)?|Celular|Fone)\s*[:\s]*([\d()\s\-+]{10,18})/i);
@@ -412,53 +571,50 @@ export function parseComprovanteText(text: string): ComprovanteParseResult {
   const emailM = flat.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
   if (emailM) out.email = emailM[0]!.toLowerCase();
 
-  const compRotulo = flat.match(
-    /(?:Complemento|Compl\.?|Refer[eê]ncia|Ref\.?)\s*[:\s]+([^,\n]{2,50})/i,
-  );
-  if (compRotulo) out.endereco!.complemento = compRotulo[1]!.trim();
+  const compRotulo = flat.match(/(?:Complemento|Compl\.?)\s*[:\s]+([^,\n]{2,50})/i);
+  if (compRotulo && !isComprovanteNoiseValue(compRotulo[1])) {
+    out.endereco!.complemento = compRotulo[1]!.trim();
+  }
 
   const compInline = flat.match(
     /,\s*((?:Apto?\.?|Ap\.|Bloco|Bl\.|Casa|Sala|Lote|Lj\.?|Loja|Fundos|Cj\.?|Conj\.?)[^,\n]{0,40})/i,
   );
-  if (!out.endereco!.complemento && compInline) {
+  if (!out.endereco!.complemento && compInline && !isComprovanteNoiseValue(compInline[1])) {
     out.endereco!.complemento = compInline[1]!.trim();
   }
 
-  const compLinha = findLineValue(
-    lines,
-    "COMPLEMENTO",
-    "COMPL",
-    "REFERÊNCIA",
-    "REFERENCIA",
-    "REF",
-  );
+  const compLinha = findComprovanteLineValue(lines, "COMPLEMENTO", "COMPL.");
   if (!out.endereco!.complemento && compLinha) out.endereco!.complemento = compLinha.trim();
 
-  const logLine = lines.find((l) =>
-    /^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A)\b/i.test(
-      l,
-    ),
+  const logLine = lines.find(
+    (l) =>
+      !isComprovanteNoiseLine(l) &&
+      /^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A|BR[-\s])/i.test(
+        l,
+      ),
   );
-  if (logLine) {
+  if (!out.endereco!.logradouro && logLine) {
     aplicarLinhaLogradouro(logLine, out.endereco!);
   }
 
-  let logM = !out.endereco!.logradouro
-    ? flat.match(
-        /((?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A)[^,\n]{3,90})/i,
-      )
-    : null;
-  if (!logM) {
-    logM = flat.match(
-      /(?:Endere[cç]o(?:\s+de\s+(?:instala[cç][aã]o|correspond[eê]ncia|entrega|cobran[cç]a))?|Local(?:\s+de\s+instala[cç][aã]o)?)\s*[:\s]+([^,\n]{5,90})/i,
+  if (!out.endereco!.logradouro) {
+    let logM = flat.match(
+      /((?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|SERVID[AÃ]O|LINHA|VILA|LARGO|PRA[CÇ]A|BR[-\s])[^,\n]{3,120})/i,
     );
-    if (logM) logM = [logM[0], logM[1]!] as RegExpMatchArray;
-  }
-  if (logM) {
-    aplicarLinhaLogradouro(logM[1]!.replace(/\s+/g, " ").trim(), out.endereco!);
+    if (!logM) {
+      const endRotulo = flat.match(
+        /(?:Endere[cç]o(?:\s+de\s+(?:instala[cç][aã]o|correspond[eê]ncia|entrega|cobran[cç]a))?|Local(?:\s+de\s+instala[cç][aã]o)?)\s*[:\s]+([^,\n]{5,120})/i,
+      );
+      if (endRotulo && !isComprovanteNoiseValue(endRotulo[1])) {
+        logM = [endRotulo[0], endRotulo[1]!] as RegExpMatchArray;
+      }
+    }
+    if (logM && !isComprovanteNoiseValue(logM[1])) {
+      aplicarLinhaLogradouro(logM[1]!.replace(/\s+/g, " ").trim(), out.endereco!);
+    }
   }
 
-  const logLinha = findLineValue(
+  const logLinha = findComprovanteLineValue(
     lines,
     "ENDEREÇO",
     "ENDERECO",
@@ -472,66 +628,77 @@ export function parseComprovanteText(text: string): ComprovanteParseResult {
   }
 
   if (!out.endereco!.numero) {
-    const numM = flat.match(/(?:N[°º]|Nº|Numero|Número|Nro\.?)\s*[:\s]*(\d+|S\/N)/i);
+    const numM = flat.match(/(?:N[°º]|Nº|Numero|Número|Nro\.?|KM)\s*[:\s]*(\d+|S\/N)/i);
     if (numM) out.endereco!.numero = numM[1]!.toUpperCase();
   }
 
-  let bairroM = flat.match(/(?:Bairro|BAIRRO|B\.)\s*[:\s]*([A-Za-zÀ-ú0-9\s'.-]{2,45})/i);
-  if (bairroM) out.endereco!.bairro = bairroM[1]!.trim();
   if (!out.endereco!.bairro) {
-    const bLinha = findLineValue(lines, "BAIRRO", "B.");
+    const bairroM = flat.match(/(?:Bairro|BAIRRO)\s*[:\s]+([A-Za-zÀ-ú0-9\s'.-]{2,45})/i);
+    if (bairroM && !isComprovanteNoiseValue(bairroM[1])) {
+      out.endereco!.bairro = bairroM[1]!.trim();
+    }
+  }
+  if (!out.endereco!.bairro) {
+    const bLinha = findComprovanteLineValue(lines, "BAIRRO");
     if (bLinha) out.endereco!.bairro = bLinha.trim();
   }
 
-  let cidM = flat.match(
-    /(?:Cidade|Municipio|Município|Munic\.?|Localidade)\s*[:\s]*([A-Za-zÀ-ú\s'.-]{2,45})/i,
-  );
-  if (cidM) out.endereco!.cidade = cidM[1]!.trim();
   if (!out.endereco!.cidade) {
-    const cLinha = findLineValue(lines, "CIDADE", "MUNICÍPIO", "MUNICIPIO", "MUNIC", "LOCALIDADE");
+    const cidM = flat.match(
+      /(?:Cidade|Municipio|Município|Munic\.?|Localidade)\s*[:\s]+([A-Za-zÀ-ú\s'.-]{2,45})/i,
+    );
+    if (cidM && !isComprovanteNoiseValue(cidM[1])) {
+      out.endereco!.cidade = limparCidadeNome(cidM[1]!.trim());
+    }
+  }
+  if (!out.endereco!.cidade) {
+    const cLinha = findComprovanteLineValue(lines, "CIDADE", "MUNICÍPIO", "MUNICIPIO", "MUNIC", "LOCALIDADE");
     if (cLinha) {
       const cu = parseCidadeUfToken(cLinha);
-      if (cu.cidade) out.endereco!.cidade = cu.cidade;
+      if (cu.cidade) out.endereco!.cidade = limparCidadeNome(cu.cidade);
       if (cu.uf && !out.endereco!.uf) out.endereco!.uf = cu.uf;
     }
   }
 
-  let ufM = flat.match(
-    /(?:UF|Estado|U\.F\.)\s*[:\s]*([A-Z]{2}|Acre|Alagoas|Amazonas|Bahia|Ceará|Distrito Federal|Espírito Santo|Goiás|Maranhão|Mato Grosso|Minas Gerais|Pará|Paraíba|Paraná|Pernambuco|Piauí|Rio de Janeiro|Rio Grande do Norte|Rio Grande do Sul|Rondônia|Roraima|Santa Catarina|São Paulo|Sergipe|Tocantins)/i,
-  );
-  if (ufM) out.endereco!.uf = estadoParaUf(ufM[1]!);
   if (!out.endereco!.uf) {
-    const uLinha = findLineValue(lines, "UF", "ESTADO", "U.F.");
+    const ufM = flat.match(
+      /(?:UF|Estado|U\.F\.)\s*[:\s]*([A-Z]{2}|Acre|Alagoas|Amazonas|Bahia|Ceará|Distrito Federal|Espírito Santo|Goiás|Maranhão|Mato Grosso|Minas Gerais|Pará|Paraíba|Paraná|Pernambuco|Piauí|Rio de Janeiro|Rio Grande do Norte|Rio Grande do Sul|Rondônia|Roraima|Santa Catarina|São Paulo|Sergipe|Tocantins)/i,
+    );
+    if (ufM) out.endereco!.uf = estadoParaUf(ufM[1]!);
+  }
+  if (!out.endereco!.uf) {
+    const uLinha = findComprovanteLineValue(lines, "UF", "ESTADO", "U.F.");
     if (uLinha) out.endereco!.uf = estadoParaUf(uLinha.trim());
   }
 
   for (const ln of lines) {
+    if (isComprovanteNoiseLine(ln)) continue;
     const cu = parseCidadeUfToken(ln);
     if (cu.cidade && cu.uf) {
-      if (!out.endereco!.cidade) out.endereco!.cidade = cu.cidade;
+      if (!out.endereco!.cidade) out.endereco!.cidade = limparCidadeNome(cu.cidade);
       if (!out.endereco!.uf) out.endereco!.uf = cu.uf;
     }
   }
 
-  if (cepM) {
-    inferirEnderecoProximoCep(lines, cepM[0]!, out.endereco!);
+  if (out.endereco!.cep) {
+    inferirEnderecoProximoCep(lines, out.endereco!.cep, out.endereco!);
   }
 
-  if (!out.endereco!.logradouro && cepM) {
-    const idx = flat.indexOf(cepM[0]!);
+  if (!out.endereco!.logradouro && out.endereco!.cep) {
+    const idx = flat.indexOf(out.endereco!.cep.replace("-", ""));
     const trecho = flat.slice(Math.max(0, idx - 160), idx);
     const partes = trecho.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
     for (let i = partes.length - 1; i >= 0; i--) {
       const p = partes[i]!;
-      if (/^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA)/i.test(p)) {
+      if (isComprovanteNoiseValue(p)) continue;
+      if (/^(?:RUA|R\.|AV\.?|AVENIDA|TRAVESSA|ALAMEDA|RODOVIA|ESTRADA|BR[-\s])/i.test(p)) {
         out.endereco!.logradouro = p;
         break;
       }
     }
-    if (!out.endereco!.logradouro && partes.length) {
-      out.endereco!.logradouro = partes[partes.length - 1];
-    }
   }
+
+  sanitizarEnderecoComprovante(out.endereco!);
 
   if (!out.endereco!.cidade) avisos.push("Cidade não encontrada.");
   if (!out.endereco!.bairro) avisos.push("Bairro não encontrado.");
@@ -559,18 +726,18 @@ function aplicarLinhaLogradouro(rawLog: string, end: EnderecoParse): void {
 function parseCidadeUfToken(token: string): { cidade?: string; uf?: string } {
   const t = token.replace(/\s+/g, " ").trim();
   let m = t.match(/^(.+?)\s*[-\/]\s*([A-Z]{2})$/i);
-  if (m) return { cidade: m[1]!.trim(), uf: m[2]!.toUpperCase() };
+  if (m) return { cidade: limparCidadeNome(m[1]!.trim()), uf: m[2]!.toUpperCase() };
   m = t.match(/^(.+?)\s+([A-Z]{2})$/i);
   if (m && UF_SIGLAS.has(m[2]!.toUpperCase())) {
-    return { cidade: m[1]!.trim(), uf: m[2]!.toUpperCase() };
+    return { cidade: limparCidadeNome(m[1]!.trim()), uf: m[2]!.toUpperCase() };
   }
   for (const [nome, sigla] of Object.entries(ESTADO_UF)) {
     if (new RegExp(nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(t)) {
       const cidade = t.replace(new RegExp(nome, "i"), "").replace(/[-\/]/g, " ").trim();
-      return { cidade: cidade || undefined, uf: sigla };
+      return { cidade: limparCidadeNome(cidade || ""), uf: sigla };
     }
   }
-  if (/^[A-Za-zÀ-ú\s'.-]{2,45}$/.test(t)) return { cidade: t };
+  if (/^[A-Za-zÀ-ú\s'.-]{2,45}$/.test(t)) return { cidade: limparCidadeNome(t) };
   return {};
 }
 
@@ -578,25 +745,33 @@ function inferirEnderecoProximoCep(lines: string[], cepToken: string, end: Ender
   const idx = lines.findIndex((l) => l.includes(cepToken.replace(/\D/g, "").slice(0, 5)) || l.includes(cepToken));
   if (idx < 0) return;
 
-  const acima = lines.slice(Math.max(0, idx - 4), idx).filter(Boolean);
+  const linhaCep = parseLinhaCep(lines[idx]!);
+  if (linhaCep.cidade && !end.cidade) end.cidade = linhaCep.cidade;
+  if (linhaCep.uf && !end.uf) end.uf = linhaCep.uf;
+
+  const acima = lines
+    .slice(Math.max(0, idx - 4), idx)
+    .map((l) => l.trim())
+    .filter((l) => l && !isComprovanteNoiseLine(l));
   for (let i = acima.length - 1; i >= 0; i--) {
     const ln = acima[i]!;
     if (/^(?:CEP|CNPJ|CPF|VENCIMENTO|TOTAL)/i.test(ln)) continue;
 
     const cu = parseCidadeUfToken(ln);
-    if (cu.cidade && !end.cidade) end.cidade = cu.cidade;
+    if (cu.cidade && !end.cidade) end.cidade = limparCidadeNome(cu.cidade);
     if (cu.uf && !end.uf) end.uf = cu.uf;
     if (end.cidade && end.uf) break;
   }
 
   if (!end.bairro && acima.length >= 2) {
-    const candidato = acima[acima.length - 2]!;
-    if (
-      !/^(?:RUA|AV\.?|AVENIDA|TRAVESSA)/i.test(candidato) &&
-      candidato.length < 50 &&
-      !parseCidadeUfToken(candidato).uf
-    ) {
-      end.bairro = candidato;
+    for (let i = acima.length - 1; i >= 0; i--) {
+      const candidato = acima[i]!;
+      if (/^(?:RUA|AV\.?|AVENIDA|TRAVESSA|RODOVIA|ESTRADA|BR[-\s])/i.test(candidato)) continue;
+      if (isComprovanteNoiseValue(candidato) || parseCidadeUfToken(candidato).uf) continue;
+      if (candidato.length < 50 && /[A-Za-zÀ-ú]{2,}/.test(candidato)) {
+        end.bairro = candidato;
+        break;
+      }
     }
   }
 }
