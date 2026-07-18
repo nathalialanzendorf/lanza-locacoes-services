@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -357,6 +357,23 @@ export function loadContratosDb(): ContratosDb {
   const db = loadJsonDocument<ContratosDb>(DB_CONTRATOS);
   if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
   return db;
+}
+
+export async function loadContratosDbAsync(): Promise<ContratosDb> {
+  const empty: ContratosDb = {
+    descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    schemaContrato: DEFAULT_SCHEMA,
+    contratos: [],
+  };
+  const db = await loadJsonDocumentForApi<ContratosDb>(DB_CONTRATOS, empty);
+  if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
+  return db;
+}
+
+export function findContratoInDb(db: ContratosDb, id: string): ContratoRegistro | null {
+  const key = id.trim();
+  return db.contratos.find((c) => c.id === key) ?? null;
 }
 
 export function saveContratosDb(db: ContratosDb): void {

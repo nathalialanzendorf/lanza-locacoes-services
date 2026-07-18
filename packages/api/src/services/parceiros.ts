@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
+
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  loadJsonDocumentForApi,
+  saveJsonDocument,
+} from "@lanza/db";
 
 import { REPO_ROOT } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -26,27 +32,39 @@ function hoje(): string {
 }
 
 function loadParceirosDb(): ParceirosDb {
-  if (!fs.existsSync(DBP)) return { parceiros: [] };
-  const db = JSON.parse(fs.readFileSync(DBP, "utf8")) as ParceirosDb;
+  if (!jsonDocumentExists(DBP)) return { parceiros: [] };
+  const db = loadJsonDocument<ParceirosDb>(DBP);
+  if (!Array.isArray(db.parceiros)) db.parceiros = [];
+  return db;
+}
+
+async function loadParceirosDbAsync(): Promise<ParceirosDb> {
+  const db = await loadJsonDocumentForApi<ParceirosDb>(DBP, { parceiros: [] });
   if (!Array.isArray(db.parceiros)) db.parceiros = [];
   return db;
 }
 
 function saveParceirosDb(db: ParceirosDb): void {
   db.atualizadoEm = hoje();
-  fs.writeFileSync(DBP, JSON.stringify(db, null, 2) + "\n", "utf8");
+  saveJsonDocument(DBP, db);
 }
 
 function loadVinculosDb(): VinculosDb {
-  if (!fs.existsSync(DBL)) return { vinculos: [] };
-  const db = JSON.parse(fs.readFileSync(DBL, "utf8")) as VinculosDb;
+  if (!jsonDocumentExists(DBL)) return { vinculos: [] };
+  const db = loadJsonDocument<VinculosDb>(DBL);
+  if (!Array.isArray(db.vinculos)) db.vinculos = [];
+  return db;
+}
+
+async function loadVinculosDbAsync(): Promise<VinculosDb> {
+  const db = await loadJsonDocumentForApi<VinculosDb>(DBL, { vinculos: [] });
   if (!Array.isArray(db.vinculos)) db.vinculos = [];
   return db;
 }
 
 function saveVinculosDb(db: VinculosDb): void {
   db.atualizadoEm = hoje();
-  fs.writeFileSync(DBL, JSON.stringify(db, null, 2) + "\n", "utf8");
+  saveJsonDocument(DBL, db);
 }
 
 export function listarParceiros(): { total: number; items: Parceiro[] } {
@@ -54,8 +72,23 @@ export function listarParceiros(): { total: number; items: Parceiro[] } {
   return { total: items.length, items };
 }
 
+export async function listarParceirosAsync(): Promise<{ total: number; items: Parceiro[] }> {
+  const items = (await loadParceirosDbAsync()).parceiros;
+  return { total: items.length, items };
+}
+
 export function obterParceiro(idOuNome: string): Parceiro | null {
   const db = loadParceirosDb();
+  const key = idOuNome.trim();
+  return (
+    db.parceiros.find((p) => p.id === key) ??
+    db.parceiros.find((p) => p.nome.toLowerCase() === key.toLowerCase()) ??
+    null
+  );
+}
+
+export async function obterParceiroAsync(idOuNome: string): Promise<Parceiro | null> {
+  const db = await loadParceirosDbAsync();
   const key = idOuNome.trim();
   return (
     db.parceiros.find((p) => p.id === key) ??
@@ -104,6 +137,13 @@ export function removerParceiro(id: string): Parceiro {
 
 export function listarVinculos(filtro?: { veiculoId?: string; parceiroId?: string }) {
   let items = loadVinculosDb().vinculos;
+  if (filtro?.veiculoId) items = items.filter((v) => v.veiculoId === filtro.veiculoId);
+  if (filtro?.parceiroId) items = items.filter((v) => v.parceiroId === filtro.parceiroId);
+  return { total: items.length, items };
+}
+
+export async function listarVinculosAsync(filtro?: { veiculoId?: string; parceiroId?: string }) {
+  let items = (await loadVinculosDbAsync()).vinculos;
   if (filtro?.veiculoId) items = items.filter((v) => v.veiculoId === filtro.veiculoId);
   if (filtro?.parceiroId) items = items.filter((v) => v.parceiroId === filtro.parceiroId);
   return { total: items.length, items };

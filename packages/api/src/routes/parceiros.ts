@@ -15,13 +15,13 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: vinculos.regex,
     paramNames: vinculos.paramNames,
-    handler: (ctx) => {
-      const data = parceirosService.listarVinculos({
+    handler: routeAsync(async (ctx) => {
+      const data = await parceirosService.listarVinculosAsync({
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         parceiroId: ctx.query.get("parceiroId") ?? undefined,
       });
       json(ctx.res, 200, data);
-    },
+    }),
   });
 
   routes.push({
@@ -54,7 +54,9 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => json(ctx.res, 200, parceirosService.listarParceiros()),
+    handler: routeAsync(async (ctx) => {
+      json(ctx.res, 200, await parceirosService.listarParceirosAsync());
+    }),
   });
 
   routes.push({
@@ -74,11 +76,11 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = parceirosService.obterParceiro(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await parceirosService.obterParceiroAsync(ctx.params.id);
       if (!item) return notFound(ctx, "Parceiro");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({

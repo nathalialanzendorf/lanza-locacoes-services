@@ -13,18 +13,18 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const statusRaw = ctx.query.get("status");
       if (statusRaw != null && statusRaw !== "" && !STATUS_VALIDOS.has(statusRaw)) {
         return badRequest(ctx, 'Query "status" inválida — use ativo ou encerrado');
       }
-      json(ctx.res, 200, contratosService.listarContratos({
+      json(ctx.res, 200, await contratosService.listarContratosAsync({
         status: statusRaw as "ativo" | "encerrado" | undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         placa: ctx.query.get("placa") ?? undefined,
       }));
-    },
+    }),
   });
 
   const criar = compileRoute("/api/contratos/criar");
@@ -102,11 +102,11 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = contratosService.obterContrato(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await contratosService.obterContratoAsync(ctx.params.id);
       if (!item) return notFound(ctx, "Contrato");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({

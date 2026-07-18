@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -106,6 +106,24 @@ export function loadClientesDb(): ClientesDb {
     return { descricao: DEFAULT_DESCRICAO, clientes: [] };
   }
   return loadJsonDocument<ClientesDb>(DB_CLIENTES);
+}
+
+export async function loadClientesDbAsync(): Promise<ClientesDb> {
+  return loadJsonDocumentForApi<ClientesDb>(DB_CLIENTES, {
+    descricao: DEFAULT_DESCRICAO,
+    clientes: [],
+  });
+}
+
+export function findClienteInDb(db: ClientesDb, idOuCpf: string): ClienteRegistro | null {
+  const key = idOuCpf.trim();
+  const byId = db.clientes.find((c) => c.id === key);
+  if (byId) return byId;
+  const cpfKey = normCpfKey(key);
+  if (!cpfKey) return null;
+  return (
+    db.clientes.find((c) => c.cpf && normCpfKey(String(c.cpf)) === cpfKey) ?? null
+  );
 }
 
 export function saveClientesDb(db: ClientesDb): void {

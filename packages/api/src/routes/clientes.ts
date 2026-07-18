@@ -20,13 +20,14 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       if (ctx.query.has("ativo") && ativo === undefined) {
-        return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+        badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+        return;
       }
-      json(ctx.res, 200, clientesService.listarClientes({ ativo }));
-    },
+      json(ctx.res, 200, await clientesService.listarClientesAsync({ ativo }));
+    }),
   });
 
   routes.push({
@@ -45,11 +46,11 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = clientesService.obterCliente(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await clientesService.obterClienteAsync(ctx.params.id);
       if (!item) return notFound(ctx, "Cliente");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({

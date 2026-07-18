@@ -4,11 +4,14 @@ import {
   isVeiculoAtivo,
   loadClienteDespesasDb,
   loadClientesDb,
+  loadClientesDbAsync,
   loadContratosDb,
+  loadContratosDbAsync,
   loadInfracoesDb,
   loadLocacoesDb,
   loadParceiroDespesasDb,
   loadVeiculosDb,
+  loadVeiculosDbAsync,
   obterDashboardRecebimentos,
 } from "../lib-imports.js";
 
@@ -24,6 +27,23 @@ export function obterResumo() {
   const clientes = loadClientesDb().clientes;
   const veiculos = loadVeiculosDb().veiculos;
   const contratos = loadContratosDb().contratos;
+  return montarResumo(clientes, veiculos, contratos);
+}
+
+export async function obterResumoAsync() {
+  const [clientesDb, veiculosDb, contratosDb] = await Promise.all([
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+    loadContratosDbAsync(),
+  ]);
+  return montarResumo(clientesDb.clientes, veiculosDb.veiculos, contratosDb.contratos);
+}
+
+function montarResumo(
+  clientes: ReturnType<typeof loadClientesDb>["clientes"],
+  veiculos: ReturnType<typeof loadVeiculosDb>["veiculos"],
+  contratos: ReturnType<typeof loadContratosDb>["contratos"],
+) {
   const despesasCliente = loadClienteDespesasDb().clienteDespesas;
   const despesasParceiro = loadParceiroDespesasDb().parceiroDespesas;
   const infracoes = loadInfracoesDb().infracoes;

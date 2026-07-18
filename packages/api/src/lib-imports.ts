@@ -4,6 +4,8 @@
  */
 export {
   loadClientesDb,
+  loadClientesDbAsync,
+  findClienteInDb,
   findClienteById,
   findClienteByCpf,
   isClienteAtivo,
@@ -31,6 +33,8 @@ export {
 
 export {
   loadContratosDb,
+  loadContratosDbAsync,
+  findContratoInDb,
   type ContratoRegistro,
 } from "../../../src/lib/contratosDb.js";
 

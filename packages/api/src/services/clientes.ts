@@ -3,9 +3,11 @@ import {
   excluirCliente,
   findClienteByCpf,
   findClienteById,
+  findClienteInDb,
   gravarCliente,
   isClienteAtivo,
   loadClientesDb,
+  loadClientesDbAsync,
   type ClienteImportado,
   type ClientePatch,
   type ClienteRegistro,
@@ -16,18 +18,33 @@ export type ListarClientesOpts = {
   ativo?: boolean;
 };
 
+function filtrarClientes(
+  items: ClienteRegistro[],
+  opts: ListarClientesOpts,
+): ClienteRegistro[] {
+  if (opts.ativo === true) {
+    return items.filter(isClienteAtivo);
+  }
+  if (opts.ativo === false) {
+    return items.filter((c) => !isClienteAtivo(c));
+  }
+  return items;
+}
+
 export function listarClientes(opts: ListarClientesOpts = {}): {
   total: number;
   items: ClienteRegistro[];
 } {
-  let items = loadClientesDb().clientes;
+  const items = filtrarClientes(loadClientesDb().clientes, opts);
+  return { total: items.length, items };
+}
 
-  if (opts.ativo === true) {
-    items = items.filter(isClienteAtivo);
-  } else if (opts.ativo === false) {
-    items = items.filter((c) => !isClienteAtivo(c));
-  }
-
+export async function listarClientesAsync(opts: ListarClientesOpts = {}): Promise<{
+  total: number;
+  items: ClienteRegistro[];
+}> {
+  const db = await loadClientesDbAsync();
+  const items = filtrarClientes(db.clientes, opts);
   return { total: items.length, items };
 }
 
@@ -35,6 +52,11 @@ export function obterCliente(idOuCpf: string): ClienteRegistro | null {
   const byId = findClienteById(idOuCpf);
   if (byId) return byId;
   return findClienteByCpf(idOuCpf);
+}
+
+export async function obterClienteAsync(idOuCpf: string): Promise<ClienteRegistro | null> {
+  const db = await loadClientesDbAsync();
+  return findClienteInDb(db, idOuCpf);
 }
 
 export function criarCliente(body: ClienteImportado): {

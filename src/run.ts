@@ -229,6 +229,9 @@ Comandos:
     case "postgres":
       await (await import("./cli/postgres.js")).main(rest);
       break;
+    case "auditar-ativo-stores":
+      process.exit(await (await import("./cli/auditarAtivoStores.js")).auditarAtivoStores());
+      break;
     default:
       console.error("Comando desconhecido:", cmd);
       process.exit(1);
