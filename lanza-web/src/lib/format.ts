@@ -2,6 +2,34 @@ export function formatBrl(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/** Valor monetário para campo de texto (ex.: 610,05). */
+export function formatValorInput(value: number): string {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Aceita 610,05 · 1.610,05 · 610.05 (URL/JS). */
+export function parseValorInput(raw: string): number | null {
+  const s = String(raw).trim().replace(/\s/g, "");
+  if (!s) return null;
+
+  let normalized: string;
+  if (s.includes(",")) {
+    normalized = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(".")) {
+    const parts = s.split(".");
+    normalized = parts.length === 2 && parts[1]!.length <= 2 ? s : s.replace(/\./g, "");
+  } else {
+    normalized = s;
+  }
+
+  const n = Number(normalized);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
 export function formatPlaca(placa?: string): string {
   if (!placa) return "—";
   const raw = placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();

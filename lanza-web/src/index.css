@@ -591,13 +591,9 @@ code {
   resize: vertical;
 }
 
-.input--date {
+.input--date-br {
   min-height: 2.5rem;
-}
-
-.input--date::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
 }
 
 .form-card {

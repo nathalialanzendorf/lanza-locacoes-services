@@ -1,4 +1,5 @@
-import { brToIsoDate, isoDateToBr } from "@/lib/dateBr";
+import { useEffect, useState } from "react";
+import { brToIsoDate, dateValueToDisplay, maskDateBrInput } from "@/lib/dateBr";
 
 type DateInputProps = {
   value: string;
@@ -11,6 +12,15 @@ type DateInputProps = {
   id?: string;
 };
 
+function emitStoredValue(masked: string, format: "br" | "iso", onChange: (value: string) => void) {
+  if (format === "iso") {
+    const iso = brToIsoDate(masked);
+    if (iso) onChange(iso);
+    return;
+  }
+  onChange(masked);
+}
+
 export function DateInput({
   value,
   onChange,
@@ -20,18 +30,54 @@ export function DateInput({
   className,
   id,
 }: DateInputProps) {
-  const isoValue = format === "iso" ? brToIsoDate(value) || value.trim() : brToIsoDate(value);
+  const displayFromProps = dateValueToDisplay(value, format);
+  const [text, setText] = useState(displayFromProps);
+  const [focused, setFocused] = useState(false);
 
-  function handleChange(iso: string) {
-    onChange(format === "iso" ? iso : isoDateToBr(iso));
+  useEffect(() => {
+    if (focused) return;
+    setText(displayFromProps);
+  }, [displayFromProps, focused]);
+
+  function handleChange(raw: string) {
+    const masked = maskDateBrInput(raw);
+    setText(masked);
+    if (format === "br") {
+      onChange(masked);
+      return;
+    }
+    if (brToIsoDate(masked)) emitStoredValue(masked, format, onChange);
+  }
+
+  function handleBlur() {
+    setFocused(false);
+    const masked = maskDateBrInput(text);
+    if (!masked.trim()) {
+      onChange("");
+      setText("");
+      return;
+    }
+    const iso = brToIsoDate(masked);
+    if (iso) {
+      emitStoredValue(masked, format, onChange);
+      setText(dateValueToDisplay(format === "iso" ? iso : masked, "br"));
+      return;
+    }
+    setText(displayFromProps);
   }
 
   return (
     <input
       id={id}
-      type="date"
-      className={["input", "input--date", className].filter(Boolean).join(" ")}
-      value={isoValue}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      className={["input", "input--date-br", className].filter(Boolean).join(" ")}
+      value={text}
+      placeholder="dd/mm/aaaa"
+      maxLength={10}
+      onFocus={() => setFocused(true)}
+      onBlur={handleBlur}
       onChange={(e) => handleChange(e.target.value)}
       disabled={disabled}
       required={required}

@@ -10,7 +10,7 @@ import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import type { LinhaPlanoBaixa, PlanoBaixa } from "@/api/types";
 import { useRastreameEspelho } from "@/hooks/useRastreameEspelho";
-import { formatBrl } from "@/lib/format";
+import { formatBrl, formatValorInput, parseValorInput } from "@/lib/format";
 
 const VALOR_MANUAL = "__manual__";
 
@@ -47,7 +47,11 @@ export function RecebimentosManualSection() {
   const [clienteId, setClienteId] = useState(clienteIdUrl);
   const [dataBr, setDataBr] = useState(dataBrUrl);
   const [valorOpcao, setValorOpcao] = useState(valorUrl ? VALOR_MANUAL : "");
-  const [valor, setValor] = useState(valorUrl);
+  const [valor, setValor] = useState(() => {
+    if (!valorUrl) return "";
+    const n = parseValorInput(valorUrl);
+    return n != null ? formatValorInput(n) : valorUrl;
+  });
   const [loadingPlano, setLoadingPlano] = useState(false);
   const [planoError, setPlanoError] = useState<string | null>(null);
   const [plano, setPlano] = useState<PlanoBaixa | null>(null);
@@ -86,8 +90,8 @@ export function RecebimentosManualSection() {
 
   const valorParcialHint = useMemo(() => {
     if (!despesaSel) return null;
-    const pago = Number(valor);
-    if (!Number.isFinite(pago) || pago <= 0) return null;
+    const pago = parseValorInput(valor);
+    if (pago == null) return null;
     const diff = Math.round((despesaSel.valor - pago) * 100) / 100;
     if (diff < 0.01) return null;
     return `Parcial: ${formatBrl(pago)} quitado + ${formatBrl(diff)} permanece em atraso na mesma pendência.`;
@@ -104,7 +108,8 @@ export function RecebimentosManualSection() {
   useEffect(() => {
     if (!valorUrl) return;
     setValorOpcao(VALOR_MANUAL);
-    setValor(valorUrl);
+    const n = parseValorInput(valorUrl);
+    setValor(n != null ? formatValorInput(n) : valorUrl);
   }, [valorUrl]);
 
   useEffect(() => {
@@ -121,7 +126,7 @@ export function RecebimentosManualSection() {
     const item = opcoesValor.find((o) => o.id === despesaIdUrl);
     if (!item) return;
     setValorOpcao(item.id);
-    setValor(String(item.valor));
+    setValor(formatValorInput(item.valor));
   }, [despesaIdUrl, opcoesValor]);
 
   function onVeiculoChange(id: string) {
@@ -149,16 +154,20 @@ export function RecebimentosManualSection() {
       return;
     }
     const item = opcoesValor.find((o) => o.id === opcao);
-    if (item) setValor(String(item.valor));
+    if (item) setValor(formatValorInput(item.valor));
   }
 
   async function montarPlano() {
+    if (!veiculoSel?.placa?.trim()) {
+      setPlanoError("Selecione um veículo.");
+      return;
+    }
     if (!clienteId.trim()) {
       setPlanoError("Selecione um cliente.");
       return;
     }
-    const valorNum = Number(valor);
-    if (!Number.isFinite(valorNum) || valorNum <= 0) {
+    const valorNum = parseValorInput(valor);
+    if (valorNum == null) {
       setPlanoError("Informe o valor recebido.");
       return;
     }
@@ -176,7 +185,7 @@ export function RecebimentosManualSection() {
         clienteQuery: clienteId.trim(),
         valor: valorNum,
         dataBr: dataBr.trim(),
-        placa: veiculoSel?.placa?.trim() || undefined,
+        placa: veiculoSel.placa.trim(),
         autoInfracaoAlvo: despesaSel?.autoInfracao,
       });
       setPlano(r.data);
@@ -222,15 +231,16 @@ export function RecebimentosManualSection() {
         submitLabel="Montar plano"
         error={planoError}
       >
-        <Field label="Veículo" hint="Opcional — filtra débitos e vincula ao cliente">
+        <Field label="Veículo" hint="Filtra débitos e vincula ao cliente">
           <VeiculoSelect
             value={veiculoId}
             onChange={onVeiculoChange}
             valueField="id"
             ativo
             clienteId={clienteId || undefined}
+            required
             disabled={loadingPlano}
-            variant="filtro"
+            variant="cadastro"
           />
         </Field>
         <Field label="Cliente">
@@ -250,9 +260,9 @@ export function RecebimentosManualSection() {
           label="Valor recebido (R$)"
           span="wide"
           hint={
-            clienteId
+            clienteId && veiculoId
               ? "Pendência em aberto sugere o valor — pode ajustar o recebido"
-              : "Selecione o cliente para listar pendências"
+              : "Selecione o veículo e o cliente para listar pendências"
           }
         >
           <div className="recebimentos-valor-campos">
@@ -260,8 +270,8 @@ export function RecebimentosManualSection() {
               value={valorOpcao}
               onChange={onValorOpcaoChange}
               variant="cadastro"
-              disabled={loadingPlano || !clienteId || despesasQuery.isLoading}
-              loading={Boolean(clienteId && despesasQuery.isLoading)}
+              disabled={loadingPlano || !clienteId || !veiculoId || despesasQuery.isLoading}
+              loading={Boolean(clienteId && veiculoId && despesasQuery.isLoading)}
               aria-label="Pendência em aberto"
             >
               {opcoesValor.map((o) => (
@@ -273,13 +283,12 @@ export function RecebimentosManualSection() {
             </NativeSelect>
             <input
               className="input"
-              type="number"
-              step="0.01"
-              min={0}
+              type="text"
+              inputMode="decimal"
               value={valor}
               onChange={(e) => setValor(e.target.value)}
               required
-              disabled={loadingPlano || !clienteId}
+              disabled={loadingPlano || !clienteId || !veiculoId}
               placeholder="0,00"
               aria-label="Valor recebido"
             />
@@ -295,7 +304,7 @@ export function RecebimentosManualSection() {
             <p className="field__hint">
               <strong>{ROTULO_TIPO_BAIXA[plano.tipoBaixa]}</strong>
               {plano.despesaAlvo
-                ? ` · devido ${formatBrl(plano.despesaAlvo.valorDevido)} · recebido ${formatBrl(plano.pagamento?.valor ?? (Number(valor) || 0))}`
+                ? ` · devido ${formatBrl(plano.despesaAlvo.valorDevido)} · recebido ${formatBrl(plano.pagamento?.valor ?? parseValorInput(valor) ?? 0)}`
                 : null}
             </p>
           ) : null}
@@ -337,7 +346,7 @@ export function RecebimentosManualSection() {
               </tbody>
             </table>
           </div>
-          <p className="field__hint">Valor recebido: {formatBrl(Number(valor) || 0)}</p>
+          <p className="field__hint">Valor recebido: {formatBrl(parseValorInput(valor) ?? 0)}</p>
           <button
             type="button"
             className="btn btn--primary"
