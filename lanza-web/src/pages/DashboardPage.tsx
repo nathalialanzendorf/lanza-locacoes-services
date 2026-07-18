@@ -46,6 +46,7 @@ function RecebimentosTable({
   colunaVeiculo = "Placa",
   clientes,
   mostrarAcaoRecebimento = false,
+  mostrarDescricao = true,
   dataReferenciaBr,
 }: {
   titulo: string;
@@ -57,6 +58,7 @@ function RecebimentosTable({
   colunaVeiculo?: "Placa" | "Veículo";
   clientes?: { id: string; nome?: string; ativo?: boolean }[];
   mostrarAcaoRecebimento?: boolean;
+  mostrarDescricao?: boolean;
   dataReferenciaBr?: string;
 }) {
   return (
@@ -74,7 +76,7 @@ function RecebimentosTable({
               <tr>
                 <th>Cliente</th>
                 <th>{colunaVeiculo}</th>
-                <th>Descrição</th>
+                {mostrarDescricao ? <th>Descrição</th> : null}
                 {colunasExtra?.map((col) => (
                   <th key={col.header}>{col.header}</th>
                 ))}
@@ -91,7 +93,7 @@ function RecebimentosTable({
                 <tr key={l.despesaId ?? `${l.clienteId ?? "—"}-${l.placa}-${l.vencimentoBr ?? ""}`}>
                   <td>{clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome)}</td>
                   <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
-                  <td>{l.descricao?.trim() || "—"}</td>
+                  {mostrarDescricao ? <td>{l.descricao?.trim() || "—"}</td> : null}
                   {colunasExtra?.map((col) => (
                     <td key={col.header}>{col.render(l)}</td>
                   ))}
@@ -410,6 +412,7 @@ export function DashboardPage() {
               colunaVeiculo="Veículo"
               clientes={clientes}
               mostrarAcaoRecebimento
+              mostrarDescricao={false}
               dataReferenciaBr={rec.dataReferenciaBr}
             />
 
