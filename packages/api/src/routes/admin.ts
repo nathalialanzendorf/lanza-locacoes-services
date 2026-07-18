@@ -44,10 +44,15 @@ export function registerAdminRoutes(routes: RouteDef[]): void {
           return;
         }
 
-        const body = await readJsonBody<{ importJson?: boolean; dryRun?: boolean }>(ctx.req);
+        const body = await readJsonBody<{
+          importJson?: boolean;
+          dryRun?: boolean;
+          stores?: string[];
+        }>(ctx.req);
         const result = await migrateDb.executarMigracaoDb({
           importJson: body.importJson,
           dryRun: body.dryRun,
+          stores: body.stores,
         });
         json(ctx.res, 200, result);
       } catch (err) {

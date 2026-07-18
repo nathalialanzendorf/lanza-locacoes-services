@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   REPO_ROOT,
   ativarClienteDoContrato,
+  atualizarContratoDbAsync,
   desativarClienteDoContrato,
   encerrarContratoDbAsync,
   excluirContrato,
@@ -117,6 +118,24 @@ export async function encerrarContrato(input: ContratoEncerrarInput) {
 export function removerContrato(idOuPasta: string) {
   try {
     return excluirContrato(idOuPasta);
+  } catch (err) {
+    throw new HttpError(404, err instanceof Error ? err.message : String(err));
+  }
+}
+
+export type ContratoAtualizarInput = {
+  dataFimPrevista?: string;
+  prazoDias?: number;
+  dataEncerramento?: string | null;
+  motivoEncerramento?: MotivoEncerramento | null;
+  quebraContrato?: boolean;
+  status?: "ativo" | "encerrado";
+};
+
+export async function atualizarContrato(id: string, input: ContratoAtualizarInput) {
+  try {
+    const contrato = await atualizarContratoDbAsync(id, input);
+    return { contrato };
   } catch (err) {
     throw new HttpError(404, err instanceof Error ? err.message : String(err));
   }

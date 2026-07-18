@@ -84,6 +84,7 @@ export async function obterDbAdminStatus(): Promise<DbAdminStatus> {
 export async function executarMigracaoDb(opts: {
   importJson?: boolean;
   dryRun?: boolean;
+  stores?: string[];
 }): Promise<{
   dryRun: boolean;
   importJson: boolean;
@@ -99,7 +100,9 @@ export async function executarMigracaoDb(opts: {
 
   if (dryRun) {
     await runSchemaMigration(true);
-    const preview = importJson ? await importJsonStores(true) : { imported: [], skipped: [] };
+    const preview = importJson
+      ? await importJsonStores(true, opts.stores)
+      : { imported: [], skipped: [] };
     return {
       dryRun: true,
       importJson,
@@ -111,7 +114,7 @@ export async function executarMigracaoDb(opts: {
 
   await runSchemaMigration(false);
   const { imported, skipped } = importJson
-    ? await importJsonStores(false)
+    ? await importJsonStores(false, opts.stores)
     : { imported: [] as string[], skipped: [] as string[] };
   const stores = await new JsonStoreRepository(getDefaultPostgresPool()).list();
 

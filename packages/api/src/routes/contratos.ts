@@ -112,6 +112,21 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
   });
 
   routes.push({
+    method: "PATCH",
+    pattern: one.regex,
+    paramNames: one.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<contratosWrite.ContratoAtualizarInput>(ctx.req);
+        const data = await contratosWrite.atualizarContrato(ctx.params.id, body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  routes.push({
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,

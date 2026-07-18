@@ -535,6 +535,44 @@ export async function encerrarContratoDbAsync(
   return registro;
 }
 
+export type AtualizarContratoDbPatch = Partial<
+  Pick<
+    ContratoRegistro,
+    | "dataFimPrevista"
+    | "prazoDias"
+    | "dataEncerramento"
+    | "motivoEncerramento"
+    | "quebraContrato"
+    | "status"
+  >
+>;
+
+/** Atualiza campos do registro em database/contratos.json (+ PostgreSQL em dual/postgres). */
+export async function atualizarContratoDbAsync(
+  id: string,
+  patch: AtualizarContratoDbPatch,
+): Promise<ContratoRegistro> {
+  const db = await loadContratosDbAsync();
+  const idx = findContratoIndex(db, id);
+  if (idx < 0) {
+    throw new Error(`Contrato não encontrado: ${id}`);
+  }
+  const atual = db.contratos[idx]!;
+  const registro: ContratoRegistro = {
+    ...atual,
+    ...patch,
+    atualizadoEm: nowIso(),
+  };
+  if (patch.dataEncerramento !== undefined && patch.dataEncerramento) {
+    registro.status = "encerrado";
+  } else if (patch.status) {
+    registro.status = patch.status;
+  }
+  db.contratos[idx] = registro;
+  await saveContratosDbAsync(db);
+  return registro;
+}
+
 /** Remove registro de database/contratos.json (não apaga pasta Word). */
 export function excluirContrato(pastaOrId: string): ContratoRegistro {
   const db = loadContratosDb();

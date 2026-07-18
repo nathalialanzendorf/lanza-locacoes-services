@@ -1,4 +1,5 @@
 import { closePgPool, getPgConfig, migratePostgres, pgQuery } from "../lib/postgres/index.js";
+import { importJsonStores, runSchemaMigration } from "@lanza/db";
 
 const HELP = `postgres — conexão PostgreSQL (RDS AWS)
 
@@ -6,6 +7,7 @@ Subcomandos:
   check [--json]              Testa conexão (SELECT version(), current_database())
   migrate [--import-json] [--dry-run]
                               Cria schema lanza.json_stores; opcionalmente importa database/*.json
+  sync-store <ficheiro.json>  Espelha um ficheiro database/*.json no PostgreSQL (ex.: contratos.json)
 
 Alternativa via pacote @lanza/db:
   npm run db:check
@@ -76,6 +78,21 @@ export async function main(args: string[]): Promise<void> {
         const dryRun = hasFlag(args, "--dry-run");
         await migratePostgres({ importJson, dryRun });
         if (!dryRun) console.log("Migração concluída.");
+        break;
+      }
+      case "sync-store": {
+        const file = args[1]?.trim();
+        if (!file) {
+          console.error("Informe o ficheiro: postgres sync-store contratos.json");
+          process.exit(1);
+        }
+        await runSchemaMigration(false);
+        const { imported, skipped } = await importJsonStores(false, [file]);
+        if (skipped.length) {
+          console.error(`Ficheiro não encontrado: ${skipped.join(", ")}`);
+          process.exit(1);
+        }
+        console.log(`OK — espelhado no PostgreSQL: ${imported.join(", ")}`);
         break;
       }
       default:

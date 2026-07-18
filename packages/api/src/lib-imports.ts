@@ -351,9 +351,11 @@ export {
   registrarContrato,
   encerrarContratoDb,
   encerrarContratoDbAsync,
+  atualizarContratoDbAsync,
   excluirContrato,
   validarModoContrato,
   type MotivoEncerramento,
+  type AtualizarContratoDbPatch,
 } from "../../../src/lib/contratosDb.js";
 
 export {

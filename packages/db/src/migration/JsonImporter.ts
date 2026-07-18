@@ -21,11 +21,15 @@ export class JsonImporter {
   ) {}
 
   async importAll(dryRun = false): Promise<ImportResult> {
+    return this.importFiles([...JSON_STORE_FILES], dryRun);
+  }
+
+  async importFiles(files: readonly string[], dryRun = false): Promise<ImportResult> {
     const stores = new JsonStoreRepository(this.pool);
     const imported: string[] = [];
     const skipped: string[] = [];
 
-    for (const file of JSON_STORE_FILES) {
+    for (const file of files) {
       const full = path.join(this.databaseDir, file);
       if (!fs.existsSync(full)) {
         skipped.push(file);
@@ -52,7 +56,12 @@ export class JsonImporter {
   }
 }
 
-export async function importJsonStores(dryRun = false): Promise<ImportResult> {
+export async function importJsonStores(
+  dryRun = false,
+  files?: readonly string[],
+): Promise<ImportResult> {
   const { getDefaultPostgresPool } = await import("../client/PostgresPool.js");
-  return new JsonImporter(getDefaultPostgresPool()).importAll(dryRun);
+  const importer = new JsonImporter(getDefaultPostgresPool());
+  if (files?.length) return importer.importFiles(files, dryRun);
+  return importer.importAll(dryRun);
 }
