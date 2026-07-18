@@ -51,6 +51,7 @@ export function useDespesasCliente(params?: {
   veiculoId?: string;
   placa?: string;
   categoria?: string;
+  competencia?: string;
 }) {
   return useQuery({
     queryKey: ["despesas-cliente", params],

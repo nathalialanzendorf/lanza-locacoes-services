@@ -80,6 +80,7 @@ export const lanzaApi = {
     veiculoId?: string;
     placa?: string;
     categoria?: string;
+    competencia?: string;
   }) => apiRequest<ListEnvelope<ClienteDespesa>>("/api/despesas", { params }),
 
   listarDespesasParceiro: (params?: {

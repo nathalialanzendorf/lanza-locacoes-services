@@ -36,6 +36,7 @@ export function DespesasClienteListSection() {
   const [clienteId, setClienteId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [competencia, setCompetencia] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const query = useDespesasCliente({
@@ -44,13 +45,14 @@ export function DespesasClienteListSection() {
     clienteId: clienteId || undefined,
     veiculoId: veiculoId || undefined,
     categoria: categoria || undefined,
+    competencia: competencia.trim() || undefined,
   });
 
   const rows = query.data?.items ?? [];
   const temFiltro =
     status !== "ativos" ||
     pagamento !== "em_aberto" ||
-    Boolean(clienteId || veiculoId || categoria);
+    Boolean(clienteId || veiculoId || categoria || competencia.trim());
 
   const total = useMemo(
     () => rows.reduce((sum, d) => sum + (Number(d.valorMulta) || 0), 0),
@@ -114,6 +116,13 @@ export function DespesasClienteListSection() {
           <option value="pago">Pago</option>
           <option value="todos">Todos</option>
         </select>
+        <input
+          className="input"
+          placeholder="Competência (MM/AAAA)"
+          value={competencia}
+          onChange={(e) => setCompetencia(e.target.value)}
+          aria-label="Competência"
+        />
         {!query.isLoading ? (
           <span className="badge badge--muted">
             {rows.length} lançamento{rows.length === 1 ? "" : "s"} · {formatBrl(total)}

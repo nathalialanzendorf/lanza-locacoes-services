@@ -23,6 +23,7 @@ export type ListarDespesasOpts = {
   veiculoId?: string;
   placa?: string;
   categoria?: string;
+  competencia?: string;
   emAberto?: boolean;
   ativo?: boolean;
 };
@@ -42,6 +43,15 @@ function resolveVeiculoId(opts: ListarDespesasOpts): string | undefined {
   return v?.id;
 }
 
+function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
+  for (const raw of [d.dataAutuacao, d.pagaEm]) {
+    const data = String(raw ?? "").trim();
+    const m = data.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) return `${m[2]}/${m[3]}`;
+  }
+  return null;
+}
+
 export function listarDespesas(opts: ListarDespesasOpts = {}): {
   total: number;
   items: ClienteDespesaRegistro[];
@@ -56,6 +66,11 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
   if (opts.categoria?.trim()) {
     const cat = opts.categoria.trim().toLowerCase();
     items = items.filter((d) => (d.categoria ?? "").trim().toLowerCase() === cat);
+  }
+
+  if (opts.competencia?.trim()) {
+    const comp = opts.competencia.trim();
+    items = items.filter((d) => competenciaDeDespesa(d) === comp);
   }
 
   if (opts.ativo === true) {

@@ -55,6 +55,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         placa: ctx.query.get("placa") ?? undefined,
         categoria: ctx.query.get("categoria") ?? undefined,
+        competencia: ctx.query.get("competencia") ?? undefined,
         ativo,
         emAberto,
       }));
