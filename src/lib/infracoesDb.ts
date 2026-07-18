@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  loadJsonDocumentForApi,
+  saveJsonDocument,
+} from "@lanza/db";
 import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran } from "./detranSc/types.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
@@ -431,6 +436,16 @@ function aplicarCondutor(
   return resolverCondutorVigencia(veiculoId, dataAutuacao, prazoDias);
 }
 
+function normalizeInfracoesDb(raw: Record<string, unknown>): InfracoesDb {
+  const infracoes = (raw.infracoes ?? []) as InfracaoRegistro[];
+  return {
+    descricao: (raw.descricao as string) || DEFAULT_DESCRICAO,
+    atualizadoEm: (raw.atualizadoEm as string) || new Date().toISOString().slice(0, 10),
+    schemaInfracao: (raw.schemaInfracao as Record<string, string>) || DEFAULT_SCHEMA,
+    infracoes,
+  };
+}
+
 export function loadInfracoesDb(): InfracoesDb {
   if (!jsonDocumentExists(DB_INFRACOES)) {
     return {
@@ -441,13 +456,17 @@ export function loadInfracoesDb(): InfracoesDb {
     };
   }
   const raw = loadJsonDocument<Record<string, unknown>>(DB_INFRACOES);
-  const infracoes = (raw.infracoes ?? []) as InfracaoRegistro[];
-  return {
-    descricao: (raw.descricao as string) || DEFAULT_DESCRICAO,
-    atualizadoEm: (raw.atualizadoEm as string) || new Date().toISOString().slice(0, 10),
-    schemaInfracao: (raw.schemaInfracao as Record<string, string>) || DEFAULT_SCHEMA,
-    infracoes,
-  };
+  return normalizeInfracoesDb(raw);
+}
+
+export async function loadInfracoesDbAsync(): Promise<InfracoesDb> {
+  const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_INFRACOES, {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    schemaInfracao: DEFAULT_SCHEMA,
+    infracoes: [],
+  });
+  return normalizeInfracoesDb(raw);
 }
 
 export function saveInfracoesDb(db: InfracoesDb): void {

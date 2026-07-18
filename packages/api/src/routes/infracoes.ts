@@ -18,12 +18,12 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const semCondutor = parseAtivoQuery(ctx.query.get("semCondutor"));
       const semCliente = parseAtivoQuery(ctx.query.get("semCliente"));
-      json(ctx.res, 200, infracoesService.listarInfracoes({
+      json(ctx.res, 200, await infracoesService.listarInfracoesAsync({
         placa: ctx.query.get("placa") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
@@ -32,7 +32,7 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
         ativo,
         semCliente: semCliente === true || semCondutor === true ? true : undefined,
       }));
-    },
+    }),
   });
 
   const one = compileRoute("/api/infracoes/:numeroAuto");

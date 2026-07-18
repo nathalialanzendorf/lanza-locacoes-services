@@ -3,14 +3,16 @@ import {
   confirmarDebitoParceiroInfracao,
   compactPlaca,
   findInfracaoByNumeroAuto,
-  findVeiculoById,
-  findVeiculoByPlaca,
   loadInfracoesDb,
+  loadInfracoesDbAsync,
+  loadVeiculosDb,
+  loadVeiculosDbAsync,
   placasIguais,
   vincularClienteDespesaInfracao,
   type InfracaoRegistro,
+  type VeiculoRegistro,
 } from "../lib-imports.js";
-import { listarVinculos } from "./parceiros.js";
+import { listarVinculos, listarVinculosAsync } from "./parceiros.js";
 import { HttpError } from "../http.js";
 
 export type ListarInfracoesOpts = {
@@ -25,80 +27,88 @@ export type ListarInfracoesOpts = {
   ativo?: boolean;
 };
 
+type VeiculoRef = Pick<VeiculoRegistro, "id" | "placa">;
+
 function infracaoEmAberto(i: InfracaoRegistro): boolean {
   return i.quitadaDetran !== true && !/quitad|pago|paga/i.test(String(i.situacao ?? i.status ?? ""));
 }
 
 /** Em infracoes.json, `veiculoId` guarda a placa (DETRAN), não o uuid do veículo. */
-function infracaoPertenceVeiculo(
-  infracao: InfracaoRegistro,
-  veiculo: { id: string; placa: string },
-): boolean {
+function infracaoPertenceVeiculo(infracao: InfracaoRegistro, veiculo: VeiculoRef): boolean {
   if (infracao.veiculoId === veiculo.id) return true;
   return placasIguais(infracao.veiculoId, veiculo.placa);
+}
+
+function resolveVeiculoRef(idOuPlaca: string, veiculos: VeiculoRef[]): VeiculoRef | null {
+  const ref = idOuPlaca.trim();
+  return (
+    veiculos.find((v) => v.id === ref) ??
+    veiculos.find((v) => placasIguais(v.placa, ref)) ??
+    null
+  );
 }
 
 function filtrarInfracoesPorVeiculoRef(
   items: InfracaoRegistro[],
   idOuPlaca: string,
+  veiculos: VeiculoRef[],
 ): InfracaoRegistro[] {
-  const ref = idOuPlaca.trim();
-  const veiculo = findVeiculoById(ref) ?? findVeiculoByPlaca(ref);
+  const veiculo = resolveVeiculoRef(idOuPlaca, veiculos);
   if (veiculo) {
     return items.filter((i) => infracaoPertenceVeiculo(i, veiculo));
   }
-  return items.filter(
-    (i) => i.veiculoId === ref || placasIguais(i.veiculoId, ref),
-  );
+  const ref = idOuPlaca.trim();
+  return items.filter((i) => i.veiculoId === ref || placasIguais(i.veiculoId, ref));
 }
 
-export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
-  total: number;
-  items: InfracaoRegistro[];
-} {
-  let items = loadInfracoesDb().infracoes;
+function aplicarFiltrosInfracoes(
+  items: InfracaoRegistro[],
+  opts: ListarInfracoesOpts,
+  veiculos: VeiculoRef[],
+  vinculosParceiro: Array<{ veiculoId: string }>,
+): InfracaoRegistro[] {
+  let out = items;
 
   if (opts.veiculoId?.trim()) {
-    items = filtrarInfracoesPorVeiculoRef(items, opts.veiculoId);
+    out = filtrarInfracoesPorVeiculoRef(out, opts.veiculoId, veiculos);
   } else if (opts.placa?.trim()) {
-    items = filtrarInfracoesPorVeiculoRef(items, opts.placa);
+    out = filtrarInfracoesPorVeiculoRef(out, opts.placa, veiculos);
   }
 
   if (opts.ativo === true) {
-    items = items.filter((i) => i.ativo !== false);
+    out = out.filter((i) => i.ativo !== false);
   } else if (opts.ativo === false) {
-    items = items.filter((i) => i.ativo === false);
+    out = out.filter((i) => i.ativo === false);
   }
 
   if (opts.emAberto === true) {
-    items = items.filter(infracaoEmAberto);
+    out = out.filter(infracaoEmAberto);
   } else if (opts.emAberto === false) {
-    items = items.filter((i) => !infracaoEmAberto(i));
+    out = out.filter((i) => !infracaoEmAberto(i));
   }
 
   const semCliente = opts.semCliente === true || opts.semCondutor === true;
   if (semCliente) {
-    items = items.filter(
+    out = out.filter(
       (i) => !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado,
     );
   }
 
   if (opts.clienteId?.trim()) {
     const id = opts.clienteId.trim();
-    items = items.filter((i) => i.condutorId === id);
+    out = out.filter((i) => i.condutorId === id);
   }
 
   if (opts.parceiroId?.trim()) {
     const pid = opts.parceiroId.trim();
-    const vinculos = listarVinculos({ parceiroId: pid }).items;
-    const veiculoIds = new Set(vinculos.map((v) => v.veiculoId));
+    const veiculoIds = new Set(vinculosParceiro.map((v) => v.veiculoId));
     const placaKeys = new Set<string>();
     for (const vid of veiculoIds) {
       placaKeys.add(compactPlaca(vid));
-      const veiculo = findVeiculoById(vid);
+      const veiculo = resolveVeiculoRef(vid, veiculos);
       if (veiculo) placaKeys.add(compactPlaca(veiculo.placa));
     }
-    items = items.filter(
+    out = out.filter(
       (i) =>
         i.debitoParceiroId === pid ||
         veiculoIds.has(i.veiculoId) ||
@@ -106,6 +116,46 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
     );
   }
 
+  return out;
+}
+
+function precisaCatalogoVeiculos(opts: ListarInfracoesOpts): boolean {
+  return Boolean(opts.veiculoId?.trim() || opts.placa?.trim() || opts.parceiroId?.trim());
+}
+
+export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
+  total: number;
+  items: InfracaoRegistro[];
+} {
+  const veiculos = precisaCatalogoVeiculos(opts) ? loadVeiculosDb().veiculos : [];
+  const vinculos = opts.parceiroId?.trim()
+    ? listarVinculos({ parceiroId: opts.parceiroId.trim() }).items
+    : [];
+  const items = aplicarFiltrosInfracoes(loadInfracoesDb().infracoes, opts, veiculos, vinculos);
+  return { total: items.length, items };
+}
+
+export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Promise<{
+  total: number;
+  items: InfracaoRegistro[];
+}> {
+  const needsVeiculos = precisaCatalogoVeiculos(opts);
+  const parceiroId = opts.parceiroId?.trim();
+
+  const [infracoesDb, veiculosDb, vinculos] = await Promise.all([
+    loadInfracoesDbAsync(),
+    needsVeiculos ? loadVeiculosDbAsync() : Promise.resolve({ veiculos: [] as VeiculoRegistro[] }),
+    parceiroId
+      ? listarVinculosAsync({ parceiroId })
+      : Promise.resolve({ total: 0, items: [] as Array<{ veiculoId: string }> }),
+  ]);
+
+  const items = aplicarFiltrosInfracoes(
+    infracoesDb.infracoes,
+    opts,
+    veiculosDb.veiculos,
+    vinculos.items,
+  );
   return { total: items.length, items };
 }
 
@@ -137,8 +187,9 @@ export async function atribuirClientesInfracoes(opts: {
 /** @deprecated use atribuirClientesInfracoes */
 export const atribuirCondutoresInfracoes = atribuirClientesInfracoes;
 
-export function infracoesPorVeiculo(veiculoId: string) {
-  const v = findVeiculoById(veiculoId);
-  if (!v) throw new HttpError(404, "Veículo não encontrado");
-  return listarInfracoes({ veiculoId });
+export async function infracoesPorVeiculoAsync(veiculoId: string) {
+  const db = await loadVeiculosDbAsync();
+  const veiculo = resolveVeiculoRef(veiculoId, db.veiculos);
+  if (!veiculo) throw new HttpError(404, "Veículo não encontrado");
+  return listarInfracoesAsync({ veiculoId: veiculo.id });
 }

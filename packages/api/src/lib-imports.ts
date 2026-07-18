@@ -318,6 +318,7 @@ export {
 
 export {
   loadInfracoesDb,
+  loadInfracoesDbAsync,
   findInfracaoByNumeroAuto,
   confirmarDebitoParceiroInfracao,
   vincularClienteDespesaInfracao,
