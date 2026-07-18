@@ -8,7 +8,7 @@ import { RowActions } from "@/components/RowActions";
 import { useClientes, useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
+import { formatVeiculoLabel, statusClass, statusLabel } from "@/lib/format";
 import type { Cliente, Contrato } from "@/api/types";
 
 type Filtro = "todos" | "ativos" | "inativos";
@@ -27,9 +27,11 @@ function normCpf(cpf?: string | null): string {
 }
 
 function veiculoDoContrato(contrato: Contrato): string {
-  const placa = formatPlaca(contrato.placa ?? contrato.veiculo?.placa);
-  const modelo = contrato.veiculo?.marcaModelo?.trim();
-  return modelo ? `${placa} — ${modelo}` : placa;
+  return formatVeiculoLabel({
+    placa: contrato.placa ?? contrato.veiculo?.placa,
+    marcaModelo: contrato.veiculo?.marcaModelo,
+    anoModelo: contrato.veiculo?.anoModelo,
+  });
 }
 
 export function ClientesListSection() {

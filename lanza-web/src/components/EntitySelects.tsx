@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 
 import { useClientes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
-import { formatPlaca } from "@/lib/format";
+import { formatVeiculoLabel } from "@/lib/format";
 import type { Cliente, Parceiro, Veiculo } from "@/api/types";
 
 type SelectBaseProps = {
@@ -86,11 +86,6 @@ function veiculoValue(v: Veiculo, field: "id" | "placa"): string {
   return v.placa?.trim() ?? v.id;
 }
 
-function veiculoLabel(v: Veiculo): string {
-  const placa = formatPlaca(v.placa ?? v.id);
-  return v.marcaModelo?.trim() ? `${placa} · ${v.marcaModelo}` : placa;
-}
-
 export type VeiculoSelectProps = SelectBaseProps & {
   valueField?: "id" | "placa";
   ativo?: boolean;
@@ -125,7 +120,7 @@ export function VeiculoSelect({
     <SelectShell {...props} loading={query.isLoading || (parceiroId?.trim() ? vinculosQuery.isLoading : false)}>
       {items.map((v) => (
         <option key={v.id} value={veiculoValue(v, valueField)}>
-          {veiculoLabel(v)}
+          {formatVeiculoLabel(v)}
         </option>
       ))}
     </SelectShell>

@@ -6,7 +6,7 @@ import { ResultPanel } from "@/components/ResultPanel";
 import { useContratos, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
+import { formatBrl, formatPlaca, formatVeiculoLabel } from "@/lib/format";
 import {
   calcularGanhosVeiculos,
   type GanhoVeiculoLinha,
@@ -291,7 +291,7 @@ export function RelatorioPrestacaoContasForm() {
                 {veiculosFiltrados.map((v) => (
                   <label key={v.id} className="checkbox-label">
                     <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
-                    {formatPlaca(v.placa)} {v.marcaModelo ? `· ${v.marcaModelo}` : ""}
+                    {formatVeiculoLabel(v)}
                   </label>
                 ))}
               </div>

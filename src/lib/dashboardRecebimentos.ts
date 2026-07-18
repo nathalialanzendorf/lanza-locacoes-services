@@ -25,6 +25,7 @@ import {
 } from "./pagamentoSemanal.js";
 import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { formatVeiculoLabel } from "./veiculoLabel.js";
 import type { VeiculoRegistro } from "./veiculosDb.js";
 
 export type DashboardRecebimentoLinha = {
@@ -106,11 +107,15 @@ function chaveClientePlaca(clienteId: string | null, placa: string): string {
 }
 
 function veiculoLabelPorPlaca(placa: string, veiculos: VeiculoRegistro[]): string {
-  const placaFmt = formatPlacaHyphen(placa);
   const p = compactPlaca(placa);
   const v = veiculos.find((x) => compactPlaca(x.placa) === p);
-  const modelo = v?.marcaModelo?.trim() || v?.fipeModelo?.trim();
-  return modelo ? `${placaFmt} · ${modelo}` : placaFmt;
+  return formatVeiculoLabel({
+    placa: v?.placa ?? placa,
+    marcaModelo: v?.marcaModelo,
+    marca: v?.marca,
+    modelo: v?.modelo,
+    anoModelo: v?.anoModelo,
+  });
 }
 
 function linhaRecebimento(
