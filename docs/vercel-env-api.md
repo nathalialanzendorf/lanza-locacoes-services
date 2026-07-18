@@ -22,6 +22,44 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 
 > **Nota:** o cluster RDS está em **us-east-1** (não sa-east-1).
 
+## Autenticação
+
+| Ambiente | Método |
+|----------|--------|
+| **Vercel (produção)** | OIDC + `AWS_ROLE_ARN` (token IAM automático) |
+| **CLI local — opção A** | AWS CLI + token IAM (`rds-db:connect`) |
+| **CLI local — opção B** | `PGPASSWORD` — senha estática do utilizador `postgres` |
+
+A role `AWS_ROLE_ARN` (Vercel OIDC) **não é assumível** na máquina local. Use credenciais AWS **directas** (perfil/CLI) com permissão `rds-db:connect`.
+
+### Opção A — AWS CLI + token IAM (sem senha RDS)
+
+**Bash (Linux/macOS):**
+
+```bash
+export RDSHOST="aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com"
+psql "host=$RDSHOST port=5432 dbname=postgres user=postgres sslmode=require \
+  password=$(aws rds generate-db-auth-token --hostname $RDSHOST --port 5432 --username postgres --region us-east-1)"
+```
+
+**PowerShell (Windows):**
+
+```powershell
+.\scripts\set-postgres-user-env.ps1 -UseIam   # remove PGPASSWORD; mantém PGHOST/AWS_REGION
+aws configure                               # ou aws sso login
+.\scripts\postgres-psql.ps1                 # psql interactivo
+npm run lanza -- postgres check             # mesmo token via @aws-sdk/rds-signer
+npm run lanza -- postgres sync-all
+```
+
+### Opção B — senha estática
+
+```powershell
+.\scripts\set-postgres-user-env.ps1 -PromptPassword
+npm run lanza -- postgres check
+npm run lanza -- postgres sync-all
+```
+
 ## URLs da aplicação
 
 | Variável | Valor |

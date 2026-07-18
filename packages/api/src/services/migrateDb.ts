@@ -126,3 +126,16 @@ export async function executarMigracaoDb(opts: {
     stores,
   };
 }
+
+/** Define senha estática do PGUSER (executar na Vercel — já ligada via OIDC/IAM). */
+export async function definirSenhaPostgresMaster(password: string): Promise<{ user: string }> {
+  assertVercelRuntime();
+  ensureVercelPool();
+  const user = process.env.PGUSER?.trim() || "postgres";
+  if (!password || password.trim().length < 8) {
+    throw new HttpError(400, "Senha inválida (mínimo 8 caracteres).");
+  }
+  const role = user.replace(/"/g, '""');
+  await getDefaultPostgresPool().query(`ALTER ROLE "${role}" WITH PASSWORD $1`, [password.trim()]);
+  return { user };
+}

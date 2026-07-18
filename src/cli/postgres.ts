@@ -1,13 +1,26 @@
-import { closePgPool, getPgConfig, migratePostgres, pgQuery } from "../lib/postgres/index.js";
+import pg from "pg";
+
+import {
+  closePgPool,
+  getPgConfig,
+  migratePostgres,
+  pgQuery,
+  pgSslOptions,
+  resolvePgPassword,
+} from "../lib/postgres/index.js";
 import { importJsonStores, runSchemaMigration } from "@lanza/db";
+import { PgAuthError } from "@lanza/db";
 
 const HELP = `postgres — conexão PostgreSQL (RDS AWS)
 
 Subcomandos:
   check [--json]              Testa conexão (SELECT version(), current_database())
+  set-password <senha>        Define senha do PGUSER (via IAM: AWS CLI ou token no PGPASSWORD)
+  set-password <senha> --from-env  Usa PGPASSWORD actual como token IAM (copiado do console AWS)
   migrate [--import-json] [--dry-run]
                               Cria schema lanza.json_stores; opcionalmente importa database/*.json
   sync-store <ficheiro.json>  Espelha um ficheiro database/*.json no PostgreSQL (ex.: contratos.json)
+  sync-all                    Espelha todos os database/*.json importáveis no PostgreSQL
 
 Alternativa via pacote @lanza/db:
   npm run db:check
@@ -15,14 +28,14 @@ Alternativa via pacote @lanza/db:
 
 Variáveis (persistentes do utilizador — ver .\\scripts\\set-postgres-user-env.ps1):
   PGHOST, PGPORT, PGDATABASE, PGUSER, PGSSLMODE
-  PGPASSWORD                  (opcional — senha estática; senão usa token IAM)
-  AWS_REGION, AWS_ROLE_ARN    (autenticação IAM no RDS)
+  PGPASSWORD                  (recomendado local — senha RDS)
+  AWS_REGION, AWS_ROLE_ARN      (IAM na Vercel; localmente use PGPASSWORD)
   DATABASE_URL                (alternativa única às PG*)
   LANZA_DB_BACKEND            file (padrão) | dual | postgres — backend dos *Db.ts
 
-Pré-requisitos:
-  - Credenciais AWS locais (perfil/cadeia padrão) com permissão de assumir AWS_ROLE_ARN
-  - Utilizador PostgreSQL com role rds_iam (quando sem PGPASSWORD)
+Autenticação local:
+  AWS_ROLE_ARN (Vercel OIDC) só funciona na Vercel.
+  Para sync local: .\\scripts\\set-postgres-user-env.ps1 -PromptPassword
 `;
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -73,6 +86,38 @@ export async function main(args: string[]): Promise<void> {
         }
         break;
       }
+      case "set-password": {
+        const newPass = args[1]?.trim();
+        const useEnvToken = hasFlag(args, "--from-env");
+        if (!newPass) {
+          console.error("Uso: postgres set-password <nova-senha> [--from-env]");
+          console.error("  --from-env  usa PGPASSWORD como token IAM (valido ~15 min, copiado do console AWS)");
+          process.exit(1);
+        }
+        const config = getPgConfig();
+        const token = useEnvToken && config.password
+          ? config.password
+          : await resolvePgPassword({ ...config, password: undefined });
+        const pool = new pg.Pool({
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          user: config.user,
+          password: token,
+          ssl: pgSslOptions(config.sslMode),
+          connectionTimeoutMillis: 15_000,
+        });
+        try {
+          const role = config.user.replace(/"/g, '""');
+          await pool.query(`ALTER ROLE "${role}" WITH PASSWORD $1`, [newPass]);
+          console.log(`OK — senha definida para "${config.user}".`);
+          console.log(`  .\\scripts\\set-postgres-user-env.ps1 -Password "<senha>"`);
+          console.log(`  npm run lanza -- postgres check`);
+        } finally {
+          await pool.end();
+        }
+        break;
+      }
       case "migrate": {
         const importJson = hasFlag(args, "--import-json");
         const dryRun = hasFlag(args, "--dry-run");
@@ -95,6 +140,15 @@ export async function main(args: string[]): Promise<void> {
         console.log(`OK — espelhado no PostgreSQL: ${imported.join(", ")}`);
         break;
       }
+      case "sync-all": {
+        await runSchemaMigration(false);
+        const { imported, skipped } = await importJsonStores(false);
+        console.log(`OK — espelhados no PostgreSQL: ${imported.join(", ")}`);
+        if (skipped.length) {
+          console.log(`Ignorados (ficheiro ausente): ${skipped.join(", ")}`);
+        }
+        break;
+      }
       default:
         console.error(`Subcomando desconhecido: ${sub}\n`);
         console.log(HELP);
@@ -102,14 +156,13 @@ export async function main(args: string[]): Promise<void> {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("Could not load credentials")) {
-      console.error(
+    if (e instanceof PgAuthError || msg.includes("Could not load credentials")) {
+      console.error(e instanceof PgAuthError ? msg : (
         "Erro: credenciais AWS não encontradas para gerar token IAM.\n" +
-          "  Opção A — configure AWS CLI/perfil (AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY)\n" +
-          "            com permissão de assumir AWS_ROLE_ARN.\n" +
-          "  Opção B — use senha estática:\n" +
-          "            .\\scripts\\set-postgres-user-env.ps1 -Password \"<senha>\"",
-      );
+          "  A role AWS_ROLE_ARN (Vercel OIDC) só funciona na Vercel.\n" +
+          "  Use senha RDS:\n" +
+          "    .\\scripts\\set-postgres-user-env.ps1 -PromptPassword"
+      ));
     } else if (msg.includes("PostgreSQL não configurado")) {
       console.error(msg);
       console.error("  Execute: .\\scripts\\set-postgres-user-env.ps1");

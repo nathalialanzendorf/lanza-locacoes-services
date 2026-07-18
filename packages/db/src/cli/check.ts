@@ -1,4 +1,5 @@
 import { closePgPool, pgQuery } from "../client/PostgresPool.js";
+import { PgAuthError } from "../auth/iam.js";
 import { getPgConfig } from "../config.js";
 
 function hasFlag(args: string[], flag: string): boolean {
@@ -43,11 +44,12 @@ async function main(): Promise<void> {
 main()
   .catch((e) => {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("Could not load credentials")) {
+    if (e instanceof PgAuthError || msg.includes("Could not load credentials")) {
       console.error(
-        "Erro: credenciais AWS não encontradas para gerar token IAM.\n" +
-          "  Opção A — configure AWS CLI/perfil com permissão de assumir AWS_ROLE_ARN.\n" +
-          "  Opção B — use senha estática: .\\scripts\\set-postgres-user-env.ps1 -Password \"<senha>\"",
+        e instanceof PgAuthError
+          ? msg
+          : "Erro: credenciais AWS não encontradas.\n" +
+              "  Use: .\\scripts\\set-postgres-user-env.ps1 -PromptPassword",
       );
     } else if (msg.includes("PostgreSQL não configurado")) {
       console.error(msg);

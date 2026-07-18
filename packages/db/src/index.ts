@@ -5,7 +5,7 @@ export { getPgConfig, pgSslOptions, type PgConfig, type PgSslMode } from "./conf
 export { REPO_ROOT, DATABASE_DIR, SQL_DIR, INITIAL_SCHEMA_SQL } from "./paths.js";
 
 // Auth
-export { getRdsIamAuthToken, resolvePgPassword } from "./auth/iam.js";
+export { getRdsIamAuthToken, PgAuthError, resolvePgPassword } from "./auth/iam.js";
 export { createVercelPostgresPool } from "./auth/vercel.js";
 
 // Client

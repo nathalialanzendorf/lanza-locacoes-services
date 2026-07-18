@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/credential-provider-node": "^3.758.0",
     "@aws-sdk/credential-providers": "^3.758.0",
     "@aws-sdk/rds-signer": "^3.758.0",
     "@vercel/functions": "^2.0.0",

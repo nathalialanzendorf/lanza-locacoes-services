@@ -17,6 +17,12 @@ function migrateAuthorized(req: IncomingMessage, bootstrapAllowed: boolean): boo
   return bootstrapAllowed;
 }
 
+function adminSecretAuthorized(req: IncomingMessage): boolean {
+  const secret = String(req.headers["x-migrate-secret"] ?? "").trim();
+  const expected = process.env.LANZA_MIGRATE_SECRET?.trim();
+  return !!(expected && secret === expected);
+}
+
 export function registerAdminRoutes(routes: RouteDef[]): void {
   const status = compileRoute("/api/admin/db-status");
   routes.push({
@@ -55,6 +61,33 @@ export function registerAdminRoutes(routes: RouteDef[]): void {
           stores: body.stores,
         });
         json(ctx.res, 200, result);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const postgresPassword = compileRoute("/api/admin/postgres-password");
+  routes.push({
+    method: "POST",
+    pattern: postgresPassword.regex,
+    paramNames: postgresPassword.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        if (!adminSecretAuthorized(ctx.req)) {
+          json(ctx.res, 401, {
+            error: "Não autorizado. Header X-Migrate-Secret (LANZA_MIGRATE_SECRET na Vercel).",
+          });
+          return;
+        }
+        const body = await readJsonBody<{ password?: string }>(ctx.req);
+        const password = body.password?.trim();
+        if (!password) {
+          json(ctx.res, 400, { error: "Informe { \"password\": \"...\" } (mínimo 8 caracteres)." });
+          return;
+        }
+        const result = await migrateDb.definirSenhaPostgresMaster(password);
+        json(ctx.res, 200, { ok: true, ...result });
       } catch (err) {
         handleServiceError(ctx, err);
       }
