@@ -183,20 +183,40 @@ code {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
-.stat-grid--pendencias {
-  margin-top: 1rem;
+.dashboard-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+  margin-top: 1.75rem;
+  box-shadow: var(--shadow);
 }
 
-.dashboard-recebimentos-resumo {
-  margin-top: 1.5rem;
+.dashboard-section__head {
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.dashboard-recebimentos-resumo > .dashboard-recebimentos:first-of-type {
+.dashboard-section__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dashboard-section > .dashboard-recebimentos:first-of-type {
   margin-top: 0.75rem;
 }
 
-.dashboard-recebimentos-resumo .form-card__title {
-  margin-bottom: 0.75rem;
+.dashboard-section .dashboard-recebimentos + .dashboard-recebimentos {
+  margin-top: 1rem;
+}
+
+.dashboard-section .dashboard-recebimentos.form-card {
+  background: var(--surface-2);
+  box-shadow: none;
+  margin-bottom: 0;
 }
 
 .dashboard-recebimentos {

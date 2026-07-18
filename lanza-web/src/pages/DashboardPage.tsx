@@ -49,7 +49,7 @@ function RecebimentosTable({
   return (
     <section className="form-card dashboard-recebimentos">
       <header className="dashboard-recebimentos__head">
-        <h2 className="form-card__title">{titulo}</h2>
+        <h3 className="form-card__title">{titulo}</h3>
         <span className="field__hint">{linhas.length} locatário(s)</span>
       </header>
       {linhas.length === 0 ? (
@@ -217,65 +217,84 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <div className="stat-grid">
-        <StatCard
-          title="Clientes ativos"
-          value={resumo.data ? `${resumo.data.clientes.ativos}` : "—"}
-          hint={resumo.data ? `${resumo.data.clientes.total} no total` : undefined}
-          tone="ok"
-        />
-        <StatCard
-          title="Veículos ativos"
-          value={resumo.data ? `${resumo.data.veiculos.ativos}` : "—"}
-          hint={resumo.data ? `${resumo.data.veiculos.total} no total` : undefined}
-        />
-        <StatCard
-          title="Contratos ativos"
-          value={resumo.data ? `${resumo.data.contratos.ativos}` : "—"}
-          hint={resumo.data ? `${resumo.data.contratos.total} no total` : undefined}
-        />
-      </div>
+      <section className="dashboard-section">
+        <header className="dashboard-section__head">
+          <h2 className="dashboard-section__title">Veículos</h2>
+        </header>
+        <div className="stat-grid stat-grid--compact">
+          <StatCard
+            title="Veículos locados"
+            value={resumo.data ? `${resumo.data.veiculos.locados}` : "—"}
+            hint={
+              resumo.data
+                ? `${resumo.data.veiculos.ativos} operacionais`
+                : undefined
+            }
+            tone="ok"
+          />
+          <StatCard
+            title="Veículos não locados"
+            value={resumo.data ? `${resumo.data.veiculos.naoLocados}` : "—"}
+            hint={
+              resumo.data ? `${resumo.data.veiculos.total} veículos no total` : undefined
+            }
+          />
+        </div>
+      </section>
 
-      <div className="stat-grid stat-grid--pendencias">
-        <StatCard
-          title="Débitos cliente em aberto"
-          value={
-            resumo.data ? formatBrl(resumo.data.despesasCliente.valorEmAberto) : "—"
-          }
-          hint={
-            resumo.data
-              ? `${resumo.data.despesasCliente.emAberto} lançamentos`
-              : undefined
-          }
-          tone="warn"
-        />
-        <StatCard
-          title="Despesas parceiro em aberto"
-          value={
-            resumo.data ? formatBrl(resumo.data.despesasParceiro.valorEmAberto) : "—"
-          }
-          hint={
-            resumo.data
-              ? `${resumo.data.despesasParceiro.emAberto} lançamentos`
-              : undefined
-          }
-        />
-        <StatCard
-          title="Infrações em aberto com data de vencimento"
-          value={resumo.data ? `${resumo.data.infracoes.comVencimento}` : "—"}
-          hint={
-            resumo.data
-              ? `${resumo.data.infracoes.emAberto} em aberto no total`
-              : undefined
-          }
-          tone="warn"
-        />
-        <StatCard
-          title="Infrações em aberto sem cliente"
-          value={resumo.data ? `${semClienteDeResumo(resumo.data.infracoes)}` : "—"}
-          tone="warn"
-        />
-      </div>
+      <section className="dashboard-section">
+        <header className="dashboard-section__head">
+          <h2 className="dashboard-section__title">Valores</h2>
+        </header>
+        <div className="stat-grid stat-grid--compact">
+          <StatCard
+            title="Débitos cliente em aberto"
+            value={
+              resumo.data ? formatBrl(resumo.data.despesasCliente.valorEmAberto) : "—"
+            }
+            hint={
+              resumo.data
+                ? `${resumo.data.despesasCliente.emAberto} lançamentos`
+                : undefined
+            }
+            tone="warn"
+          />
+          <StatCard
+            title="Despesas parceiro em aberto"
+            value={
+              resumo.data ? formatBrl(resumo.data.despesasParceiro.valorEmAberto) : "—"
+            }
+            hint={
+              resumo.data
+                ? `${resumo.data.despesasParceiro.emAberto} lançamentos`
+                : undefined
+            }
+          />
+        </div>
+      </section>
+
+      <section className="dashboard-section">
+        <header className="dashboard-section__head">
+          <h2 className="dashboard-section__title">Infrações</h2>
+        </header>
+        <div className="stat-grid stat-grid--compact">
+          <StatCard
+            title="Infrações em aberto com data de vencimento"
+            value={resumo.data ? `${resumo.data.infracoes.comVencimento}` : "—"}
+            hint={
+              resumo.data
+                ? `${resumo.data.infracoes.emAberto} em aberto no total`
+                : undefined
+            }
+            tone="warn"
+          />
+          <StatCard
+            title="Infrações em aberto sem cliente"
+            value={resumo.data ? `${semClienteDeResumo(resumo.data.infracoes)}` : "—"}
+            tone="warn"
+          />
+        </div>
+      </section>
 
       {contratosQuery.isLoading ? (
         <p className="field__hint">A carregar contratos…</p>
@@ -288,9 +307,17 @@ export function DashboardPage() {
           }
         />
       ) : (
-        <section className="dashboard-recebimentos-resumo">
-          <h2 className="form-card__title">Contratos</h2>
+        <section className="dashboard-section">
+          <header className="dashboard-section__head">
+            <h2 className="dashboard-section__title">Contratos</h2>
+          </header>
           <div className="stat-grid stat-grid--compact">
+            <StatCard
+              title="Contratos ativos"
+              value={resumo.data ? `${resumo.data.contratos.ativos}` : "—"}
+              hint={resumo.data ? `${resumo.data.contratos.total} no total` : undefined}
+              tone="ok"
+            />
             <StatCard
               title="Vencidos"
               value={`${contratosVencimento.vencidos.length}`}
@@ -323,8 +350,12 @@ export function DashboardPage() {
         <p className="field__hint">A carregar recebimentos…</p>
       ) : (
         <>
-          <section className="dashboard-recebimentos-resumo">
-            <h2 className="form-card__title">Recebimentos — {rec.dataReferenciaBr}</h2>
+          <section className="dashboard-section">
+            <header className="dashboard-section__head">
+              <h2 className="dashboard-section__title">
+                Recebimentos — {rec.dataReferenciaBr}
+              </h2>
+            </header>
             <div className="stat-grid stat-grid--compact">
               <StatCard
                 title="Total vence hoje"
@@ -352,37 +383,37 @@ export function DashboardPage() {
                 value={formatBrl(rec.totais.renegociacao)}
               />
             </div>
+
+            <RecebimentosTable
+              titulo={rec.tituloPagamentoSemanal ?? "Pagamento semanal"}
+              linhas={rec.venceHoje}
+              colunaVeiculo="Veículo"
+              clientes={clientes}
+              mostrarAcaoRecebimento
+              dataReferenciaBr={rec.dataReferenciaBr}
+            />
+
+            <RecebimentosTable
+              titulo="Em atraso"
+              linhas={rec.atrasados}
+              colunaVeiculo="Veículo"
+              clientes={clientes}
+              colunaExtra={{
+                header: "Atraso / vencimentos",
+                render: (l) => {
+                  const dias =
+                    l.diasAtraso != null && l.diasAtraso > 0
+                      ? `${l.diasAtraso} dia(s) · `
+                      : "";
+                  const venc =
+                    l.vencimentosBr?.length
+                      ? l.vencimentosBr.join(", ")
+                      : (l.vencimentoBr ?? "—");
+                  return `${dias}${venc}`;
+                },
+              }}
+            />
           </section>
-
-          <RecebimentosTable
-            titulo={rec.tituloPagamentoSemanal ?? "Pagamento semanal"}
-            linhas={rec.venceHoje}
-            colunaVeiculo="Veículo"
-            clientes={clientes}
-            mostrarAcaoRecebimento
-            dataReferenciaBr={rec.dataReferenciaBr}
-          />
-
-          <RecebimentosTable
-            titulo="Em atraso"
-            linhas={rec.atrasados}
-            colunaVeiculo="Veículo"
-            clientes={clientes}
-            colunaExtra={{
-              header: "Atraso / vencimentos",
-              render: (l) => {
-                const dias =
-                  l.diasAtraso != null && l.diasAtraso > 0
-                    ? `${l.diasAtraso} dia(s) · `
-                    : "";
-                const venc =
-                  l.vencimentosBr?.length
-                    ? l.vencimentosBr.join(", ")
-                    : (l.vencimentoBr ?? "—");
-                return `${dias}${venc}`;
-              },
-            }}
-          />
         </>
       )}
     </PageHeader>

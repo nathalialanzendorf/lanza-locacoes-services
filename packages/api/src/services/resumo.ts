@@ -72,6 +72,12 @@ function montarResumo(
 
   const clientesAtivos = clientes.filter(isClienteAtivo);
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
+  const veiculosLocados = veiculosAtivos.filter((v) =>
+    Boolean(String(v.clienteVinculadoId ?? "").trim()),
+  );
+  const veiculosNaoLocados = veiculosAtivos.filter(
+    (v) => !String(v.clienteVinculadoId ?? "").trim(),
+  );
   const contratosAtivos = contratos.filter((c) => contratoAtivoOperacional(c));
 
   const despesasClienteAbertas = despesasCliente.filter((d) =>
@@ -94,7 +100,12 @@ function montarResumo(
 
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
-    veiculos: { total: veiculos.length, ativos: veiculosAtivos.length },
+    veiculos: {
+      total: veiculos.length,
+      ativos: veiculosAtivos.length,
+      locados: veiculosLocados.length,
+      naoLocados: veiculosNaoLocados.length,
+    },
     contratos: { total: contratos.length, ativos: contratosAtivos.length },
     despesasCliente: {
       emAberto: despesasClienteAbertas.length,
