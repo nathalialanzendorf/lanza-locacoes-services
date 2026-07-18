@@ -149,24 +149,14 @@ export function RelatorioInfracoesSection() {
               valueField="id"
               ativo
               parceiroId={parceiroId || undefined}
-              emptyLabel="Todos os veículos ativos"
+              variant="filtro"
             />
           </FieldLike>
           <FieldLike label="Cliente">
-            <ClienteSelect
-              value={clienteId}
-              onChange={setClienteId}
-              ativo
-              emptyLabel="Todos os clientes ativos"
-            />
+            <ClienteSelect value={clienteId} onChange={setClienteId} ativo variant="filtro" />
           </FieldLike>
           <FieldLike label="Parceiro">
-            <ParceiroSelect
-              value={parceiroId}
-              onChange={setParceiroId}
-              ativo
-              emptyLabel="Todos os parceiros ativos"
-            />
+            <ParceiroSelect value={parceiroId} onChange={setParceiroId} ativo variant="filtro" />
           </FieldLike>
           <RelatorioPeriodoFiltro
             value={periodo}

@@ -175,7 +175,7 @@ export function SyncPage() {
               value={placa}
               onChange={setPlaca}
               valueField="placa"
-              emptyLabel="Toda a frota"
+              variant="filtro"
             />
             <span className="field__hint">Infrações, IPVA, pedágio e FIPE — um veículo</span>
           </label>

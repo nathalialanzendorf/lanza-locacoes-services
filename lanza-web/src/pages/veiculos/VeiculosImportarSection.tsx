@@ -118,12 +118,7 @@ export function VeiculosImportarSection() {
           <input className="input" value={ufRegistro} onChange={(e) => setUfRegistro(e.target.value)} />
         </Field>
         <Field label="Parceiro (proprietário)">
-          <ParceiroSelect
-            value={parceiroId}
-            onChange={setParceiroId}
-            disabled={loading}
-            emptyLabel="— Sem parceiro —"
-          />
+          <ParceiroSelect value={parceiroId} onChange={setParceiroId} disabled={loading} />
         </Field>
         <label className="field checkbox-label">
           <input type="checkbox" checked={atualizarFipe} onChange={(e) => setAtualizarFipe(e.target.checked)} />

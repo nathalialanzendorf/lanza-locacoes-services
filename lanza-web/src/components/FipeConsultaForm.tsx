@@ -132,13 +132,7 @@ export function FipeConsultaForm({
           }
         >
           {modoSelecao === "veiculo" ? (
-            <VeiculoSelect
-              value={veiculoPlaca}
-              onChange={setVeiculoPlaca}
-              required
-              disabled={loading}
-              emptyLabel="Selecione um veículo"
-            />
+            <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required disabled={loading} />
           ) : (
             <input
               className="input"

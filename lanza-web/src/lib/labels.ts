@@ -6,6 +6,7 @@ export const LABEL = {
   consultar: "Consultar",
   listar: "Listar",
   editar: "Editar",
+  inativar: "Inativar",
   importar: "Importar",
   processando: "A processar…",
 } as const;

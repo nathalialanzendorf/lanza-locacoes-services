@@ -270,7 +270,7 @@ export function RelatorioPrestacaoContasForm() {
               valueField="id"
               ativo
               parceiroId={parceiroId || undefined}
-              emptyLabel="Todos os veículos ativos"
+              variant="filtro"
             />
           </Field>
           <RelatorioPeriodoFiltro
@@ -284,12 +284,7 @@ export function RelatorioPrestacaoContasForm() {
             </Field>
           ) : null}
           <Field label="Parceiro" hint="Opcional">
-            <ParceiroSelect
-              value={parceiroId}
-              onChange={onParceiroChange}
-              ativo
-              emptyLabel="Todos os parceiros ativos"
-            />
+            <ParceiroSelect value={parceiroId} onChange={onParceiroChange} ativo variant="filtro" />
           </Field>
           <label className="field checkbox-label">
             <input type="checkbox" checked={modoAvancado} onChange={(e) => setModoAvancado(e.target.checked)} />

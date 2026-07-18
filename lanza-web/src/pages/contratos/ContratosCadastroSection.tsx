@@ -3,10 +3,18 @@ import { useNavigate } from "react-router-dom";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
+import {
+  PERIODOS_CONTRATO,
+  dataFimDePeriodo,
+  diasEntreDatasBr,
+  hojeDataBr,
+  periodoDeDias,
+} from "@/lib/contratoPrazo";
 
 type ModoContrato = "criar" | "renovar";
 
@@ -129,12 +137,18 @@ export function ContratosCadastroSection({
   const [cpf, setCpf] = useState("");
   const [semana, setSemana] = useState("");
   const [caucao, setCaucao] = useState("");
-  const [periodo, setPeriodo] = useState("semana");
+  const periodoInicial = modo === "renovar" ? "3 meses" : "semana";
+  const inicioInicial = hojeDataBr();
+  const [periodo, setPeriodo] = useState(periodoInicial);
+  const [dataInicio, setDataInicio] = useState(inicioInicial);
+  const [dataFim, setDataFim] = useState(() => dataFimDePeriodo(inicioInicial, periodoInicial));
+  const [periodoPersonalizado, setPeriodoPersonalizado] = useState(false);
   const [parcelarCaucao, setParcelarCaucao] = useState(false);
   const [parcelarSemana, setParcelarSemana] = useState(false);
   const [caucaoEntrada, setCaucaoEntrada] = useState("");
   const [caucaoParcelasN, setCaucaoParcelasN] = useState("");
   const [caucaoValorParcela, setCaucaoValorParcela] = useState("");
+  const [caucaoAnterior, setCaucaoAnterior] = useState<number | null>(null);
   const [semanaEntrada, setSemanaEntrada] = useState("");
   const [semanaParcelasN, setSemanaParcelasN] = useState("");
   const [semanaValorParcela, setSemanaValorParcela] = useState("");
@@ -142,6 +156,41 @@ export function ContratosCadastroSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
+
+  function handlePeriodoChange(valor: string) {
+    setPeriodo(valor);
+    setPeriodoPersonalizado(false);
+    if (dataInicio.trim() && valor) {
+      setDataFim(dataFimDePeriodo(dataInicio, valor));
+    }
+  }
+
+  function handleDataInicioChange(valor: string) {
+    setDataInicio(valor);
+    if (!valor.trim()) return;
+    if (periodoPersonalizado && dataFim.trim()) {
+      const dias = diasEntreDatasBr(valor, dataFim);
+      if (dias != null && dias > 0) return;
+    }
+    if (periodo && !periodoPersonalizado) {
+      setDataFim(dataFimDePeriodo(valor, periodo));
+    }
+  }
+
+  function handleDataFimChange(valor: string) {
+    setDataFim(valor);
+    if (!valor.trim() || !dataInicio.trim()) return;
+    const dias = diasEntreDatasBr(dataInicio, valor);
+    if (dias == null || dias <= 0) return;
+    const per = periodoDeDias(dias);
+    if (per) {
+      setPeriodo(per);
+      setPeriodoPersonalizado(false);
+    } else {
+      setPeriodo("");
+      setPeriodoPersonalizado(true);
+    }
+  }
 
   useEffect(() => {
     if (!contratoId) return;
@@ -152,9 +201,26 @@ export function ContratosCadastroSection({
       .obterContrato(contratoId)
       .then((r) => {
         if (cancelado) return;
-        const c = r.data;
+        const c = r.data as typeof r.data & {
+          prazoDias?: number;
+          valorSemanal?: number | null;
+          valorCaucao?: number;
+        };
         if (c.placa) setPlaca(c.placa);
         if (c.cpf) setCpf(c.cpf);
+        if (c.valorSemanal != null) setSemana(String(c.valorSemanal));
+        if (c.valorCaucao != null) {
+          setCaucao(String(c.valorCaucao));
+          if (modo === "renovar") setCaucaoAnterior(c.valorCaucao);
+        }
+        if (modo === "renovar") {
+          const inicio = hojeDataBr();
+          const per = c.prazoDias ? periodoDeDias(c.prazoDias) || "3 meses" : "3 meses";
+          setDataInicio(inicio);
+          setPeriodo(per);
+          setPeriodoPersonalizado(false);
+          setDataFim(dataFimDePeriodo(inicio, per));
+        }
       })
       .catch((err) => {
         if (cancelado) return;
@@ -166,7 +232,39 @@ export function ContratosCadastroSection({
     return () => {
       cancelado = true;
     };
-  }, [contratoId]);
+  }, [contratoId, modo]);
+
+  const caucaoNumerica = Number(caucao);
+  const caucaoComplementoRenovacao =
+    modo === "renovar" && caucaoAnterior != null && Number.isFinite(caucaoNumerica)
+      ? round2(caucaoNumerica - caucaoAnterior)
+      : null;
+  const mostrarParcelarCaucaoRenovacao =
+    modo === "renovar" &&
+    caucaoComplementoRenovacao != null &&
+    caucaoComplementoRenovacao > 0;
+
+  useEffect(() => {
+    if (modo === "renovar" && !mostrarParcelarCaucaoRenovacao) {
+      setParcelarCaucao(false);
+    }
+  }, [modo, mostrarParcelarCaucaoRenovacao]);
+
+  function saldoCaucaoParcelavel(caucaoTotal: number): number {
+    const entrada = caucaoEntrada.trim() ? Number(caucaoEntrada) : 0;
+    const base =
+      modo === "renovar" && caucaoAnterior != null
+        ? round2(caucaoTotal - caucaoAnterior)
+        : caucaoTotal;
+    if (base <= 0) {
+      throw new Error(
+        modo === "renovar"
+          ? "A caução da renovação deve ser maior que a do contrato anterior para parcelar o complemento."
+          : "Informe um valor de caução válido para parcelamento.",
+      );
+    }
+    return round2(base - (Number.isFinite(entrada) ? entrada : 0));
+  }
 
   async function submit() {
     setLoading(true);
@@ -186,20 +284,32 @@ export function ContratosCadastroSection({
         cpf: cpf.trim() || undefined,
         semana: semanaTotal,
         caucao: caucaoTotal,
-        periodo: periodo.trim() || undefined,
       };
 
-      if (modo === "criar" && parcelarCaucao) {
-        const entrada = caucaoEntrada.trim() ? Number(caucaoEntrada) : 0;
-        const saldo = round2(caucaoTotal - (Number.isFinite(entrada) ? entrada : 0));
+      const inicio = dataInicio.trim();
+      const fim = dataFim.trim();
+      if (!inicio) throw new Error("Informe a data de início.");
+      if (!fim) throw new Error("Informe a data fim.");
+      const dias = diasEntreDatasBr(inicio, fim);
+      if (dias == null || dias <= 0) {
+        throw new Error("A data fim deve ser posterior à data de início.");
+      }
+      body.inicio = inicio;
+      body.dias = dias;
+      const per = periodoDeDias(dias);
+      if (per) body.periodo = per;
+
+      if (parcelarCaucao) {
+        const saldo = saldoCaucaoParcelavel(caucaoTotal);
         const { parcelas, valorParcela } = resolverParcelas(
           caucaoParcelasN,
           caucaoValorParcela,
           saldo,
-          "Caução",
+          modo === "renovar" ? "Complemento de caução" : "Caução",
         );
         body.caucaoParcelasN = parcelas;
         body.caucaoValorParcela = valorParcela;
+        const entrada = caucaoEntrada.trim() ? Number(caucaoEntrada) : 0;
         if (entrada > 0) {
           body.caucaoSaldoAberto = saldo;
         }
@@ -274,17 +384,41 @@ export function ContratosCadastroSection({
             disabled={loading}
           />
         </Field>
-        <Field label="Período">
-          <select className="select" value={periodo} onChange={(e) => setPeriodo(e.target.value)} disabled={loading}>
-            <option value="semana">1 semana</option>
-            <option value="15 dias">15 dias</option>
-            <option value="3 meses">3 meses</option>
-            <option value="6 meses">6 meses</option>
-            <option value="1 ano">1 ano</option>
-          </select>
-        </Field>
+        <div className="form-grid">
+          <Field label="Data início">
+            <DateInput
+              value={dataInicio}
+              onChange={handleDataInicioChange}
+              disabled={loading}
+              required
+            />
+          </Field>
+          <Field label="Tempo do contrato">
+            <select
+              className="select"
+              value={periodo}
+              onChange={(e) => handlePeriodoChange(e.target.value)}
+              disabled={loading}
+            >
+              {periodoPersonalizado ? <option value="">Personalizado</option> : null}
+              {PERIODOS_CONTRATO.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            {periodoPersonalizado && dataInicio.trim() && dataFim.trim() ? (
+              <span className="field__hint">
+                {diasEntreDatasBr(dataInicio, dataFim)} dias (ajuste pela data fim)
+              </span>
+            ) : null}
+          </Field>
+          <Field label="Data fim">
+            <DateInput value={dataFim} onChange={handleDataFimChange} disabled={loading} required />
+          </Field>
+        </div>
 
-        {modo === "criar" ? (
+        {modo === "criar" || mostrarParcelarCaucaoRenovacao ? (
           <>
             <label className="field checkbox-label">
               <input
@@ -295,10 +429,22 @@ export function ContratosCadastroSection({
               />
               Parcelar caução
             </label>
+            {modo === "renovar" && caucaoAnterior != null && caucaoComplementoRenovacao != null ? (
+              <p className="field__hint">
+                Caução anterior {caucaoAnterior.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                {" · "}
+                complemento{" "}
+                {caucaoComplementoRenovacao.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
+            ) : null}
             {parcelarCaucao ? (
               <ParcelamentoFields
-                titulo="Parcelamento da caução (cláusula 3.3)"
-                entradaLabel="Pago na retirada (R$)"
+                titulo={
+                  modo === "renovar"
+                    ? "Parcelamento do complemento de caução (cláusula 3.3)"
+                    : "Parcelamento da caução (cláusula 3.3)"
+                }
+                entradaLabel={modo === "renovar" ? "Pago na renovação (R$)" : "Pago na retirada (R$)"}
                 entrada={caucaoEntrada}
                 onEntradaChange={setCaucaoEntrada}
                 parcelas={caucaoParcelasN}
@@ -308,7 +454,11 @@ export function ContratosCadastroSection({
                 disabled={loading}
               />
             ) : null}
+          </>
+        ) : null}
 
+        {modo === "criar" ? (
+          <>
             <label className="field checkbox-label">
               <input
                 type="checkbox"

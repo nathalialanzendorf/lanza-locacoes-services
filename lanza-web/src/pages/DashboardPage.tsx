@@ -1,10 +1,22 @@
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+
 import { StatCard } from "@/components/StatCard";
 import { PageHeader, QueryError } from "@/components/PageHeader";
-import { useResumo, useClientes } from "@/api/hooks";
-import { formatBrl, clienteExibicaoPorId } from "@/lib/format";
+import { useResumo, useClientes, useContratos } from "@/api/hooks";
+import { formatBrl, formatPlaca, clienteExibicaoPorId } from "@/lib/format";
 import { semClienteDeResumo } from "@/lib/clienteCampo";
+import {
+  PROXIMO_VENCER_DIAS,
+  alertaVencimentoContrato,
+  dataFimPrevistaContrato,
+  hojeIsoBr,
+  ordenarContratosRenovacao,
+  rotuloAlertaVencimento,
+  rowClassVencimentoContrato,
+} from "@/lib/contratoVencimento";
 import { LanzaApiError } from "@/api/client";
-import type { DashboardRecebimentoLinha, DashboardRecebimentos } from "@/api/types";
+import type { Contrato, DashboardRecebimentoLinha, DashboardRecebimentos } from "@/api/types";
 
 const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
   dataReferenciaBr: "—",
@@ -63,11 +75,103 @@ function RecebimentosTable({
   );
 }
 
+function ContratosVencimentoTable({
+  titulo,
+  linhas,
+  hojeIso,
+  clientes,
+  vazio,
+}: {
+  titulo: string;
+  linhas: Contrato[];
+  hojeIso: string;
+  clientes?: { id: string; nome?: string; ativo?: boolean }[];
+  vazio: string;
+}) {
+  return (
+    <section className="form-card dashboard-recebimentos">
+      <header className="dashboard-recebimentos__head">
+        <h3 className="form-card__title">{titulo}</h3>
+        <span className="field__hint">{linhas.length} contrato{linhas.length === 1 ? "" : "s"}</span>
+      </header>
+      {linhas.length === 0 ? (
+        <p className="field__hint">{vazio}</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Placa</th>
+                <th>Fim previsto</th>
+                <th>Alerta</th>
+                <th className="col-acoes">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map((c) => {
+                const fim = dataFimPrevistaContrato(c);
+                const alerta = alertaVencimentoContrato(fim, hojeIso);
+                const rotulo = rotuloAlertaVencimento(fim, hojeIso);
+                return (
+                  <tr key={c.id} className={rowClassVencimentoContrato(c, hojeIso)}>
+                    <td>
+                      {clienteExibicaoPorId(clientes, c.clienteId, c.clienteNome)}
+                    </td>
+                    <td>{formatPlaca(c.placa ?? c.veiculo?.placa)}</td>
+                    <td>{fim ?? "—"}</td>
+                    <td>
+                      {rotulo ? (
+                        <span
+                          className={
+                            alerta === "vencido" ? "badge badge--danger" : "badge badge--warn"
+                          }
+                        >
+                          {rotulo}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="col-acoes">
+                      <Link
+                        to={`/contratos/renovar?id=${encodeURIComponent(c.id)}`}
+                        className="btn btn--ghost btn--sm"
+                      >
+                        Renovar
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function DashboardPage() {
   const resumo = useResumo();
   const clientesQuery = useClientes();
+  const contratosQuery = useContratos({ status: "ativo" });
   const rec = resumo.data?.recebimentos ?? RECEBIMENTOS_VAZIO;
   const clientes = clientesQuery.data?.items;
+  const hojeIso = hojeIsoBr();
+
+  const contratosVencimento = useMemo(() => {
+    const vencidos: Contrato[] = [];
+    const aVencer: Contrato[] = [];
+    for (const c of contratosQuery.data?.items ?? []) {
+      const alerta = alertaVencimentoContrato(dataFimPrevistaContrato(c), hojeIso);
+      if (alerta === "vencido") vencidos.push(c);
+      else if (alerta === "proximo") aVencer.push(c);
+    }
+    vencidos.sort((a, b) => ordenarContratosRenovacao(a, b, hojeIso));
+    aVencer.sort((a, b) => ordenarContratosRenovacao(a, b, hojeIso));
+    return { vencidos, aVencer };
+  }, [contratosQuery.data, hojeIso]);
 
   return (
     <PageHeader
@@ -139,6 +243,48 @@ export function DashboardPage() {
           value={resumo.data ? `${resumo.data.locacoes.abertas}` : "—"}
         />
       </div>
+
+      {contratosQuery.isLoading ? (
+        <p className="field__hint">A carregar contratos…</p>
+      ) : contratosQuery.isError ? (
+        <QueryError
+          message={
+            contratosQuery.error instanceof LanzaApiError
+              ? contratosQuery.error.message
+              : "Falha ao listar contratos."
+          }
+        />
+      ) : (
+        <section className="dashboard-recebimentos-resumo">
+          <h2 className="form-card__title">Contratos</h2>
+          <div className="stat-grid stat-grid--compact">
+            <StatCard
+              title="Vencidos"
+              value={`${contratosVencimento.vencidos.length}`}
+              tone="warn"
+            />
+            <StatCard
+              title={`A vencer (${PROXIMO_VENCER_DIAS} dias)`}
+              value={`${contratosVencimento.aVencer.length}`}
+              tone="warn"
+            />
+          </div>
+          <ContratosVencimentoTable
+            titulo="Vencidos"
+            linhas={contratosVencimento.vencidos}
+            hojeIso={hojeIso}
+            clientes={clientes}
+            vazio="Nenhum contrato ativo vencido."
+          />
+          <ContratosVencimentoTable
+            titulo={`A vencer (próximos ${PROXIMO_VENCER_DIAS} dias)`}
+            linhas={contratosVencimento.aVencer}
+            hojeIso={hojeIso}
+            clientes={clientes}
+            vazio="Nenhum contrato a vencer nos próximos 14 dias."
+          />
+        </section>
+      )}
 
       {resumo.isLoading ? (
         <p className="field__hint">A carregar recebimentos…</p>

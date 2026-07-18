@@ -9,6 +9,7 @@ import { useClientes, useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatVeiculoLabel, formatClienteLabel, statusClass, statusLabel } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
 import type { Cliente, Contrato } from "@/api/types";
 
 type Filtro = "todos" | "ativos" | "inativos";
@@ -39,6 +40,7 @@ export function ClientesListSection() {
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [inativandoId, setInativandoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useClientes(ativo);
   const contratosQuery = useContratos({ status: "ativo" });
@@ -46,8 +48,11 @@ export function ClientesListSection() {
   const rows = useMemo(() => {
     const items = query.data?.items ?? [];
     const q = nome.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((c) => (c.nome ?? "").toLowerCase().includes(q));
+    const filtrados = q ? items.filter((c) => (c.nome ?? "").toLowerCase().includes(q)) : items;
+    return ordenarAtivoDepoisAlfabetico(filtrados, {
+      ativoDe: (c) => registroAtivo(c.ativo),
+      rotuloDe: (c) => c.nome ?? "",
+    });
   }, [query.data, nome]);
 
   const { porClienteId, porCpf } = useMemo(() => {
@@ -63,6 +68,21 @@ export function ClientesListSection() {
 
   function contratoAtivo(cliente: Cliente): Contrato | undefined {
     return porClienteId.get(cliente.id) ?? porCpf.get(normCpf(cliente.cpf));
+  }
+
+  async function inativar(cliente: Cliente) {
+    const nome = formatClienteLabel(cliente);
+    if (!window.confirm(`Inativar o cliente "${nome}"?`)) return;
+    setInativandoId(cliente.id);
+    try {
+      await lanzaApi.atualizarCliente(cliente.id, { ativo: false });
+      void qc.invalidateQueries({ queryKey: ["clientes"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar cliente.");
+    } finally {
+      setInativandoId(null);
+    }
   }
 
   async function excluir(cliente: Cliente) {
@@ -108,6 +128,7 @@ export function ClientesListSection() {
         loading={query.isLoading || contratosQuery.isLoading}
         rows={rows}
         keyFn={(c) => c.id}
+        rowClassName={(c) => rowClassInativo(registroAtivo(c.ativo))}
         columns={[
           { key: "nome", header: "Nome", render: (c) => formatClienteLabel(c) },
           { key: "cpf", header: "CPF", render: (c) => c.cpf ?? "—" },
@@ -152,6 +173,10 @@ export function ClientesListSection() {
             render: (c) => (
               <RowActions
                 editTo={`/clientes/${c.id}/editar`}
+                onInativar={
+                  registroAtivo(c.ativo) ? () => void inativar(c) : undefined
+                }
+                inactivating={inativandoId === c.id}
                 deleting={excluindoId === c.id}
                 onDelete={() => void excluir(c)}
               />

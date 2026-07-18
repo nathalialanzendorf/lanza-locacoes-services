@@ -63,6 +63,7 @@ export {
   excluirLocacao,
   loadLocacoesDb,
   loadLocacoesDbAsync,
+  locacaoEmAberto,
   type LocacaoRegistro,
 } from "../../../src/lib/locacoesDb.js";
 

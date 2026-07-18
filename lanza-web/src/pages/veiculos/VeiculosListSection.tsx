@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { VeiculoSelect } from "@/components/EntitySelects";
+import { SelectEmptyOption, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -10,6 +10,7 @@ import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
 import type { Veiculo } from "@/api/types";
 
 type Filtro = "ativos" | "inativos" | "todos";
@@ -20,6 +21,7 @@ export function VeiculosListSection() {
   const [veiculoId, setVeiculoId] = useState("");
   const [parceiroId, setParceiroId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [inativandoId, setInativandoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
   const query = useVeiculos({ ativo });
   const parceirosQuery = useParceiros();
@@ -47,10 +49,14 @@ export function VeiculosListSection() {
 
   const rows = useMemo(() => {
     const items = query.data?.items ?? [];
-    return items.filter((v) => {
+    const filtrados = items.filter((v) => {
       if (veiculoId && v.id !== veiculoId) return false;
       if (parceiroId && parceiroIdPorVeiculoId.get(v.id) !== parceiroId) return false;
       return true;
+    });
+    return ordenarAtivoDepoisAlfabetico(filtrados, {
+      ativoDe: (v) => registroAtivo(v.ativo),
+      rotuloDe: (v) => v.placa ?? "",
     });
   }, [query.data, veiculoId, parceiroId, parceiroIdPorVeiculoId]);
 
@@ -58,6 +64,21 @@ export function VeiculosListSection() {
 
   function parceiroDoVeiculo(veiculo: Veiculo): string {
     return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
+  }
+
+  async function inativar(veiculo: Veiculo) {
+    const label = formatPlaca(veiculo.placa ?? veiculo.id);
+    if (!window.confirm(`Inativar o veículo ${label}?`)) return;
+    setInativandoId(veiculo.id);
+    try {
+      await lanzaApi.atualizarVeiculo(veiculo.id, { ativo: false });
+      void qc.invalidateQueries({ queryKey: ["veiculos"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar veículo.");
+    } finally {
+      setInativandoId(null);
+    }
   }
 
   async function excluir(veiculo: Veiculo) {
@@ -85,7 +106,7 @@ export function VeiculosListSection() {
           onChange={setVeiculoId}
           valueField="id"
           ativo={ativo}
-          emptyLabel="Todos os veículos"
+          variant="filtro"
         />
         <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
           <option value="ativos">Ativos</option>
@@ -98,7 +119,7 @@ export function VeiculosListSection() {
           onChange={(e) => setParceiroId(e.target.value)}
           aria-label="Parceiro"
         >
-          <option value="">Todos os parceiros</option>
+          <SelectEmptyOption />
           {parceirosOrdenados.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nome}
@@ -120,6 +141,7 @@ export function VeiculosListSection() {
         loading={query.isLoading || loadingExtra}
         rows={rows}
         keyFn={(v) => v.id}
+        rowClassName={(v) => rowClassInativo(registroAtivo(v.ativo))}
         emptyMessage={
           temFiltro ? "Nenhum veículo corresponde aos filtros." : "Nenhum veículo registado."
         }
@@ -140,6 +162,10 @@ export function VeiculosListSection() {
             render: (v) => (
               <RowActions
                 editTo={`/veiculos/${v.id}/editar`}
+                onInativar={
+                  registroAtivo(v.ativo) ? () => void inativar(v) : undefined
+                }
+                inactivating={inativandoId === v.id}
                 deleting={excluindoId === v.id}
                 onDelete={() => void excluir(v)}
               />

@@ -272,6 +272,7 @@ export type PlanoBaixa = {
 export type Parceiro = {
   id: string;
   nome: string;
+  ativo?: boolean;
 };
 
 export type VinculoParceiro = {

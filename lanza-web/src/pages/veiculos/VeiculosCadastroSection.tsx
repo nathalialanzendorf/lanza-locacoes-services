@@ -152,12 +152,7 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
           <input className="input" value={ufRegistro} onChange={(e) => setUfRegistro(e.target.value)} />
         </Field>
         <Field label="Parceiro (proprietário)">
-          <ParceiroSelect
-            value={parceiroId}
-            onChange={setParceiroId}
-            disabled={loading}
-            emptyLabel="— Sem parceiro —"
-          />
+          <ParceiroSelect value={parceiroId} onChange={setParceiroId} disabled={loading} />
         </Field>
         <Field label="Ativo">
           <label className="checkbox-label">

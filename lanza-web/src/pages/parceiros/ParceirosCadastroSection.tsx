@@ -19,6 +19,7 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
   const editando = Boolean(parceiroId);
 
   const [nome, setNome] = useState("");
+  const [ativo, setAtivo] = useState(true);
   const [placa, setPlaca] = useState("");
   const [marcaModelo, setMarcaModelo] = useState("");
   const [cadastrarVeiculo, setCadastrarVeiculo] = useState(true);
@@ -45,6 +46,7 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
       .then((r) => {
         if (cancelado) return;
         setNome(r.data.nome);
+        if (typeof r.data.ativo === "boolean") setAtivo(r.data.ativo);
       })
       .catch((err) => {
         if (cancelado) return;
@@ -67,7 +69,7 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
     setError(null);
     try {
       if (editando) {
-        const parceiro = await lanzaApi.atualizarParceiro(parceiroId!, nome.trim());
+        const parceiro = await lanzaApi.atualizarParceiro(parceiroId!, { nome: nome.trim(), ativo });
         setResult({ parceiro });
       } else {
         const parceiro = await lanzaApi.criarParceiro(nome.trim());
@@ -126,6 +128,12 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
         <Field label="Nome do parceiro (proprietário)">
           <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
         </Field>
+        {editando ? (
+          <label className="field checkbox-label">
+            <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
+            Parceiro ativo
+          </label>
+        ) : null}
         {!editando ? (
           <>
             <label className="field checkbox-label">

@@ -135,16 +135,10 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
               clienteId={clienteId || undefined}
               required
               disabled={loading}
-              emptyLabel="Selecione o veículo"
             />
           </Field>
           <Field label="Cliente">
-            <ClienteSelect
-              value={clienteId}
-              onChange={onClienteChange}
-              disabled={loading}
-              emptyLabel="— Sem cliente —"
-            />
+            <ClienteSelect value={clienteId} onChange={onClienteChange} disabled={loading} />
           </Field>
           <Field label="Tipo">
             <select

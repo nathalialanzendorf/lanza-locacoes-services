@@ -298,7 +298,7 @@ export type ListarLocacoesFiltro = {
   /** Período inclusivo — locações que intersectam o intervalo (início/fim da movimentação). */
   dataInicial?: string;
   dataFinal?: string;
-  /** Inclui só registros vigentes/abertos (fim vazio). */
+  /** Inclui só registros vigentes/abertos (sem fim ou período que cobre hoje). */
   abertas?: boolean;
 };
 
@@ -324,7 +324,7 @@ export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegist
       if (filtro.placa && !placasIguais(l.placa, filtro.placa)) return false;
       if (filtro.clienteId?.trim() && l.clienteId !== filtro.clienteId.trim()) return false;
       if (filtro.situacao && l.situacao !== filtro.situacao) return false;
-      if (filtro.abertas && l.fim) return false;
+      if (filtro.abertas && !locacaoEmAberto(l)) return false;
       if (!locacaoIntersectaPeriodo(l, filtro)) return false;
       return true;
     })
@@ -353,6 +353,12 @@ export function locacaoCobreData(l: LocacaoRegistro, data: Date): boolean {
   if (!ini) return false;
   const fim = l.fim ? parseBrDayEnd(l.fim) : null;
   return data >= ini && (fim === null || data <= fim);
+}
+
+/** Vigente/em aberto: sem data fim ou período que ainda cobre a referência (padrão: hoje). */
+export function locacaoEmAberto(l: LocacaoRegistro, ref: Date = new Date()): boolean {
+  if (!String(l.fim ?? "").trim()) return true;
+  return locacaoCobreData(l, ref);
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   compileRoute,
   json,
   notFound,
+  parseAtivoQuery,
   readJsonBody,
   routeAsync,
   type RouteDef,
@@ -55,7 +56,11 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     pattern: list.regex,
     paramNames: list.paramNames,
     handler: routeAsync(async (ctx) => {
-      json(ctx.res, 200, await parceirosService.listarParceirosAsync());
+      const ativo = parseAtivoQuery(ctx.query.get("ativo"));
+      if (ctx.query.has("ativo") && ativo === undefined) {
+        return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+      }
+      json(ctx.res, 200, await parceirosService.listarParceirosAsync({ ativo }));
     }),
   });
 
@@ -88,9 +93,14 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     pattern: one.regex,
     paramNames: one.paramNames,
     handler: routeAsync(async (ctx) => {
-      const body = await readJsonBody<{ nome?: string }>(ctx.req);
-      if (!body.nome?.trim()) return badRequest(ctx, 'Campo "nome" é obrigatório');
-      const data = parceirosService.atualizarParceiro(ctx.params.id, body.nome);
+      const body = await readJsonBody<parceirosService.AtualizarParceiroPatch>(ctx.req);
+      if (body.nome !== undefined && !body.nome.trim()) {
+        return badRequest(ctx, 'Campo "nome" não pode ser vazio');
+      }
+      if (body.nome === undefined && body.ativo === undefined) {
+        return badRequest(ctx, 'Informe "nome" e/ou "ativo"');
+      }
+      const data = parceirosService.atualizarParceiro(ctx.params.id, body);
       json(ctx.res, 200, { data });
     }),
   });

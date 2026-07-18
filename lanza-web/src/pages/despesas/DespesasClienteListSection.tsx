@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -22,7 +22,6 @@ const CATEGORIAS = [
   "Estacionamento",
 ] as const;
 
-type FiltroStatus = "ativos" | "inativos" | "todos";
 type FiltroPagamento = "em_aberto" | "pago" | "todos";
 
 function placaDespesa(d: ClienteDespesa): string {
@@ -31,7 +30,6 @@ function placaDespesa(d: ClienteDespesa): string {
 
 export function DespesasClienteListSection() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState<FiltroStatus>("ativos");
   const [pagamento, setPagamento] = useState<FiltroPagamento>("em_aberto");
   const [clienteId, setClienteId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
@@ -40,7 +38,7 @@ export function DespesasClienteListSection() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const query = useDespesasCliente({
-    ativo: status === "ativos" ? true : status === "inativos" ? false : undefined,
+    ativo: true,
     emAberto: pagamento === "em_aberto" ? true : pagamento === "pago" ? false : undefined,
     clienteId: clienteId || undefined,
     veiculoId: veiculoId || undefined,
@@ -50,9 +48,7 @@ export function DespesasClienteListSection() {
 
   const rows = query.data?.items ?? [];
   const temFiltro =
-    status !== "ativos" ||
-    pagamento !== "em_aberto" ||
-    Boolean(clienteId || veiculoId || categoria || competencia.trim());
+    pagamento !== "em_aberto" || Boolean(clienteId || veiculoId || categoria || competencia.trim());
 
   const total = useMemo(
     () => rows.reduce((sum, d) => sum + (Number(d.valorMulta) || 0), 0),
@@ -76,30 +72,20 @@ export function DespesasClienteListSection() {
   return (
     <>
       <ListToolbar addTo="/despesas/cliente/novo">
-        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+        <ClienteSelect value={clienteId} onChange={setClienteId} variant="filtro" />
         <VeiculoSelect
           value={veiculoId}
           onChange={setVeiculoId}
           valueField="id"
-          emptyLabel="Todos os veículos"
+          variant="filtro"
         />
-        <select
-          className="select"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as FiltroStatus)}
-          aria-label="Status"
-        >
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
         <select
           className="select"
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
           aria-label="Categoria"
         >
-          <option value="">Todas</option>
+          <SelectEmptyOption />
           {CATEGORIAS.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -156,15 +142,6 @@ export function DespesasClienteListSection() {
             header: "Paga",
             render: (d) => (
               <span className={d.paga ? "badge badge--ok" : "badge badge--warn"}>{d.paga ? "Sim" : "Não"}</span>
-            ),
-          },
-          {
-            key: "ativo",
-            header: "Ativa",
-            render: (d) => (
-              <span className={d.ativo === false ? "badge badge--muted" : "badge badge--ok"}>
-                {d.ativo === false ? "Não" : "Sim"}
-              </span>
             ),
           },
           {

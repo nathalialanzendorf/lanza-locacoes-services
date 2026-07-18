@@ -16,8 +16,9 @@ import { useContratos, useClientes, useParceiros, useVeiculos, useVinculosParcei
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca, clienteExibicaoPorId } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, rowClassInativo } from "@/lib/listagemCadastro";
 import { periodoPreenchido } from "@/lib/periodoRelatorio";
-import type { Contrato } from "@/api/types";
+import type { Cliente, Contrato } from "@/api/types";
 
 type FiltroStatus = "ativo" | "encerrado" | "todos";
 
@@ -33,6 +34,15 @@ function veiculoUuid(contrato: Contrato, placaParaId: Map<string, string>): stri
   const placa = contrato.placa ?? contrato.veiculo?.placa;
   if (!placa) return undefined;
   return placaParaId.get(placa.trim().toUpperCase());
+}
+
+function nomeClienteOrdenacao(contrato: Contrato, clientes: Cliente[] | undefined): string {
+  const id = contrato.clienteId?.trim();
+  if (id) {
+    const c = clientes?.find((x) => x.id === id);
+    if (c?.nome?.trim()) return c.nome.trim();
+  }
+  return contrato.clienteNome?.trim() ?? "";
 }
 
 export function ContratosListSection() {
@@ -54,7 +64,13 @@ export function ContratosListSection() {
   const veiculosQuery = useVeiculos();
   const clientesQuery = useClientes();
 
-  const rows = query.data?.items ?? [];
+  const rows = useMemo(() => {
+    const items = query.data?.items ?? [];
+    return ordenarAtivoDepoisAlfabetico(items, {
+      ativoDe: (c) => c.status === "ativo",
+      rotuloDe: (c) => nomeClienteOrdenacao(c, clientesQuery.data?.items) || "\uffff",
+    });
+  }, [query.data, clientesQuery.data]);
   const temFiltro =
     status !== "ativo" || Boolean(clienteId || veiculoId || periodoPreenchido(periodo));
 
@@ -121,12 +137,12 @@ export function ContratosListSection() {
               value={veiculoId}
               onChange={setVeiculoId}
               valueField="id"
-              emptyLabel="Todos os veículos"
+              variant="filtro"
             />
           </label>
           <label className="field">
             <span className="field__label">Cliente</span>
-            <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+            <ClienteSelect value={clienteId} onChange={setClienteId} variant="filtro" />
           </label>
           <label className="field">
             <span className="field__label">Status</span>
@@ -163,6 +179,7 @@ export function ContratosListSection() {
         loading={query.isLoading || loadingExtra}
         rows={rows}
         keyFn={(c) => c.id}
+        rowClassName={(c) => rowClassInativo(c.status === "ativo")}
         emptyMessage={temFiltro ? "Nenhum contrato corresponde aos filtros." : "Nenhum contrato registado."}
         columns={[
           {

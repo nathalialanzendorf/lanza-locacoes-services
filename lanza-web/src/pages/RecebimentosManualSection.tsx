@@ -157,7 +157,7 @@ export function RecebimentosManualSection() {
               ativo
               clienteId={clienteId || undefined}
               disabled={loadingPlano}
-              emptyLabel="Qualquer veículo"
+              variant="filtro"
             />
           </Field>
           <Field label="Cliente">
@@ -167,7 +167,6 @@ export function RecebimentosManualSection() {
               ativo
               required
               disabled={loadingPlano}
-              emptyLabel="Selecione o cliente"
             />
           </Field>
           <Field label="Data do crédito">

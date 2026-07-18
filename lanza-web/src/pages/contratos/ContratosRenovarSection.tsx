@@ -100,14 +100,14 @@ export function ContratosRenovarSection() {
             value={clienteId}
             onChange={setClienteId}
             ativo
-            emptyLabel="Todos os clientes ativos"
+            variant="filtro"
           />
           <VeiculoSelect
             value={veiculoId}
             onChange={setVeiculoId}
             valueField="id"
             ativo
-            emptyLabel="Todos os veículos ativos"
+            variant="filtro"
           />
           {!query.isLoading ? (
             <span className="badge badge--muted">

@@ -115,7 +115,8 @@ export const lanzaApi = {
       body,
     }),
 
-  listarParceiros: () => apiRequest<ListEnvelope<Parceiro>>("/api/parceiros"),
+  listarParceiros: (params?: { ativo?: boolean }) =>
+    apiRequest<ListEnvelope<Parceiro>>("/api/parceiros", { params }),
   obterParceiro: (id: string) =>
     apiRequest<DataEnvelope<Parceiro>>(`/api/parceiros/${encodeURIComponent(id)}`),
   listarVinculosParceiro: (params?: { veiculoId?: string; parceiroId?: string }) =>

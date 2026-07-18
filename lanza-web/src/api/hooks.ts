@@ -90,10 +90,10 @@ export function useLocacoes(params?: {
   });
 }
 
-export function useParceiros() {
+export function useParceiros(ativo?: boolean) {
   return useQuery({
-    queryKey: ["parceiros"],
-    queryFn: () => lanzaApi.listarParceiros(),
+    queryKey: ["parceiros", { ativo }],
+    queryFn: () => lanzaApi.listarParceiros(ativo === undefined ? undefined : { ativo }),
   });
 }
 

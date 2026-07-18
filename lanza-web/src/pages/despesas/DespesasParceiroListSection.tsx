@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ParceiroSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -22,12 +22,10 @@ const CATEGORIAS = [
   "Outros",
 ] as const;
 
-type FiltroStatus = "ativos" | "inativos" | "todos";
 type FiltroPagamento = "em_aberto" | "pago" | "todos";
 
 export function DespesasParceiroListSection() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState<FiltroStatus>("ativos");
   const [pagamento, setPagamento] = useState<FiltroPagamento>("em_aberto");
   const [parceiroId, setParceiroId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
@@ -36,7 +34,6 @@ export function DespesasParceiroListSection() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const query = useDespesasParceiro({
-    ativo: status === "ativos" ? true : status === "inativos" ? false : undefined,
     emAberto: pagamento === "em_aberto" ? true : pagamento === "pago" ? false : undefined,
     parceiroId: parceiroId || undefined,
     veiculoId: veiculoId || undefined,
@@ -46,9 +43,7 @@ export function DespesasParceiroListSection() {
 
   const rows = query.data?.items ?? [];
   const temFiltro =
-    status !== "ativos" ||
-    pagamento !== "em_aberto" ||
-    Boolean(parceiroId || veiculoId || categoria || competencia.trim());
+    pagamento !== "em_aberto" || Boolean(parceiroId || veiculoId || categoria || competencia.trim());
 
   const total = useMemo(
     () => rows.reduce((sum, d) => sum + (Number(d.valor) || 0), 0),
@@ -72,30 +67,20 @@ export function DespesasParceiroListSection() {
   return (
     <>
       <ListToolbar addTo="/despesas/parceiro/novo">
-        <ParceiroSelect value={parceiroId} onChange={setParceiroId} emptyLabel="Todos os parceiros" />
+        <ParceiroSelect value={parceiroId} onChange={setParceiroId} variant="filtro" />
         <VeiculoSelect
           value={veiculoId}
           onChange={setVeiculoId}
           valueField="id"
-          emptyLabel="Todos os veículos"
+          variant="filtro"
         />
-        <select
-          className="select"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as FiltroStatus)}
-          aria-label="Status"
-        >
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
         <select
           className="select"
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
           aria-label="Categoria"
         >
-          <option value="">Todas</option>
+          <SelectEmptyOption />
           {CATEGORIAS.map((c) => (
             <option key={c} value={c}>
               {c}

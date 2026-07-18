@@ -27,6 +27,8 @@ import {
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
+  listarEscoposContratosAtivosCobranca,
+  locacaoEmAberto,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -44,6 +46,15 @@ type ResumoStores = {
   locacoes: LocacaoRegistro[];
   cobrancasCtx: CobrancasDbContext;
 };
+
+function contarLocacoesAbertas(
+  locacoes: LocacaoRegistro[],
+  cobrancasCtx: CobrancasDbContext,
+): number {
+  const registradas = locacoes.filter((l) => locacaoEmAberto(l)).length;
+  if (registradas > 0) return registradas;
+  return listarEscoposContratosAtivosCobranca(cobrancasCtx).length;
+}
 
 function montarResumo(
   clientes: ClienteRegistro[],
@@ -73,7 +84,7 @@ function montarResumo(
       !i.condutorNaoIdentificado,
   );
 
-  const locacoesAbertas = locacoes.filter((l) => !l.fim);
+  const locacoesAbertas = contarLocacoesAbertas(locacoes, cobrancasCtx);
 
   const totalClienteAberto = despesasClienteAbertas.reduce(
     (s, d) => s + (Number(d.valorMulta) || 0),
@@ -101,7 +112,7 @@ function montarResumo(
       semCliente: infracoesSemCliente.length,
       semCondutor: infracoesSemCliente.length,
     },
-    locacoes: { abertas: locacoesAbertas.length },
+    locacoes: { abertas: locacoesAbertas },
     ...(recebimentos ? { recebimentos } : {}),
   };
 }

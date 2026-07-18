@@ -14,7 +14,7 @@ import { HttpError } from "../http.js";
 const DBP = path.join(REPO_ROOT, "database", "parceiros.json");
 const DBL = path.join(REPO_ROOT, "database", "parceiro-veiculo.json");
 
-export type Parceiro = { id: string; nome: string };
+export type Parceiro = { id: string; nome: string; ativo?: boolean };
 export type VinculoParceiro = { id: string; veiculoId: string; parceiroId: string };
 
 type ParceirosDb = {
@@ -29,6 +29,20 @@ type VinculosDb = {
 
 function hoje(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function isParceiroAtivo(p: Parceiro): boolean {
+  return p.ativo !== false;
+}
+
+export type ListarParceirosOpts = {
+  ativo?: boolean;
+};
+
+function filtrarParceiros(items: Parceiro[], opts: ListarParceirosOpts): Parceiro[] {
+  if (opts.ativo === true) return items.filter(isParceiroAtivo);
+  if (opts.ativo === false) return items.filter((p) => !isParceiroAtivo(p));
+  return items;
 }
 
 function loadParceirosDb(): ParceirosDb {
@@ -67,13 +81,15 @@ function saveVinculosDb(db: VinculosDb): void {
   saveJsonDocument(DBL, db);
 }
 
-export function listarParceiros(): { total: number; items: Parceiro[] } {
-  const items = loadParceirosDb().parceiros;
+export function listarParceiros(opts: ListarParceirosOpts = {}): { total: number; items: Parceiro[] } {
+  const items = filtrarParceiros(loadParceirosDb().parceiros, opts);
   return { total: items.length, items };
 }
 
-export async function listarParceirosAsync(): Promise<{ total: number; items: Parceiro[] }> {
-  const items = (await loadParceirosDbAsync()).parceiros;
+export async function listarParceirosAsync(
+  opts: ListarParceirosOpts = {},
+): Promise<{ total: number; items: Parceiro[] }> {
+  const items = filtrarParceiros((await loadParceirosDbAsync()).parceiros, opts);
   return { total: items.length, items };
 }
 
@@ -109,15 +125,25 @@ export function criarParceiro(nome: string): Parceiro {
   return parceiro;
 }
 
-export function atualizarParceiro(id: string, nome: string): Parceiro {
-  const n = nome.trim();
-  if (!n) throw new HttpError(400, 'Campo "nome" é obrigatório');
+export type AtualizarParceiroPatch = {
+  nome?: string;
+  ativo?: boolean;
+};
+
+export function atualizarParceiro(id: string, patch: AtualizarParceiroPatch): Parceiro {
   const db = loadParceirosDb();
   const idx = db.parceiros.findIndex((p) => p.id === id);
   if (idx < 0) throw new HttpError(404, "Parceiro não encontrado");
-  const dup = db.parceiros.find((p, i) => i !== idx && p.nome.toLowerCase() === n.toLowerCase());
+  const atual = db.parceiros[idx]!;
+  const nome = patch.nome !== undefined ? patch.nome.trim() : atual.nome;
+  if (!nome) throw new HttpError(400, 'Campo "nome" é obrigatório');
+  const dup = db.parceiros.find((p, i) => i !== idx && p.nome.toLowerCase() === nome.toLowerCase());
   if (dup) throw new HttpError(400, `Nome já usado por outro parceiro (${dup.id})`);
-  db.parceiros[idx] = { ...db.parceiros[idx]!, nome: n };
+  db.parceiros[idx] = {
+    ...atual,
+    nome,
+    ...(patch.ativo !== undefined ? { ativo: patch.ativo } : {}),
+  };
   saveParceirosDb(db);
   return db.parceiros[idx]!;
 }

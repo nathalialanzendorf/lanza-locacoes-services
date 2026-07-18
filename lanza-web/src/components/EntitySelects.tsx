@@ -3,6 +3,7 @@ import { useMemo } from "react";
 
 import { useClientes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { formatClienteLabel, formatVeiculoLabel } from "@/lib/format";
+import { selectEmptyLabel, type SelectEmptyVariant } from "@/lib/selectLabels";
 import type { Cliente, Parceiro, Veiculo } from "@/api/types";
 
 type SelectBaseProps = {
@@ -11,6 +12,9 @@ type SelectBaseProps = {
   required?: boolean;
   disabled?: boolean;
   allowEmpty?: boolean;
+  /** Consulta/filtro → ---Todos---; cadastro → --- Selecionar --- */
+  variant?: SelectEmptyVariant;
+  /** Sobrescreve o rótulo definido por `variant`. */
   emptyLabel?: string;
   className?: string;
   id?: string;
@@ -22,12 +26,14 @@ function SelectShell({
   required,
   disabled,
   allowEmpty = true,
-  emptyLabel = "— Selecionar —",
+  variant = "cadastro",
+  emptyLabel,
   className = "select",
   id,
   loading,
   children,
 }: SelectBaseProps & { loading?: boolean; children: ReactNode }) {
+  const label = emptyLabel ?? selectEmptyLabel(variant);
   return (
     <select
       id={id}
@@ -37,10 +43,21 @@ function SelectShell({
       required={required}
       disabled={disabled || loading}
     >
-      {allowEmpty ? <option value="">{loading ? "A carregar…" : emptyLabel}</option> : null}
+      {allowEmpty ? <option value="">{loading ? "A carregar…" : label}</option> : null}
       {children}
     </select>
   );
+}
+
+/** Opção vazia padronizada para `<select>` nativos. */
+export function SelectEmptyOption({
+  variant = "filtro",
+  loading,
+}: {
+  variant?: SelectEmptyVariant;
+  loading?: boolean;
+}) {
+  return <option value="">{loading ? "A carregar…" : selectEmptyLabel(variant)}</option>;
 }
 
 function clienteValue(c: Cliente, field: "id" | "cpf" | "nome"): string {
@@ -123,32 +140,19 @@ export function VeiculoSelect({
 }
 
 export type ParceiroSelectProps = SelectBaseProps & {
-  /** Parceiros com ao menos um veículo ativo na frota. */
+  /** Somente parceiros com status ativo. */
   ativo?: boolean;
 };
 
 export function ParceiroSelect({ ativo, ...props }: ParceiroSelectProps) {
-  const query = useParceiros();
-  const vinculosQuery = useVinculosParceiro();
-  const veiculosQuery = useVeiculos(ativo ? { ativo: true } : undefined);
-  const items = useMemo(() => {
-    let list = [...(query.data?.items ?? [])];
-    if (ativo) {
-      const veiculosAtivos = new Set((veiculosQuery.data?.items ?? []).map((v) => v.id));
-      const parceirosAtivos = new Set<string>();
-      for (const v of vinculosQuery.data?.items ?? []) {
-        if (veiculosAtivos.has(v.veiculoId)) parceirosAtivos.add(v.parceiroId);
-      }
-      list = list.filter((p) => parceirosAtivos.has(p.id));
-    }
-    return list.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [query.data, ativo, vinculosQuery.data, veiculosQuery.data]);
+  const query = useParceiros(ativo ? true : undefined);
+  const items = useMemo(
+    () => [...(query.data?.items ?? [])].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [query.data],
+  );
 
   return (
-    <SelectShell
-      {...props}
-      loading={query.isLoading || (ativo ? vinculosQuery.isLoading || veiculosQuery.isLoading : false)}
-    >
+    <SelectShell {...props} loading={query.isLoading}>
       {items.map((p: Parceiro) => (
         <option key={p.id} value={p.id}>
           {p.nome}

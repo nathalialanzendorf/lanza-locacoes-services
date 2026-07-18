@@ -3,7 +3,8 @@
   "atualizadoEm": "2026-06-27",
   "schemaParceiro": {
     "id": "uuid",
-    "nome": "Nome do parceiro"
+    "nome": "Nome do parceiro",
+    "ativo": "boolean — false = inativo (default true)"
   },
   "parceiros": [
     {

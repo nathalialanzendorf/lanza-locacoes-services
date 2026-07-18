@@ -187,6 +187,10 @@ code {
   margin-top: 1.5rem;
 }
 
+.dashboard-recebimentos-resumo > .dashboard-recebimentos:first-of-type {
+  margin-top: 0.75rem;
+}
+
 .dashboard-recebimentos-resumo .form-card__title {
   margin-bottom: 0.75rem;
 }
@@ -294,12 +298,14 @@ code {
   background: #fef2f2;
 }
 
-.data-table tbody tr.row--proximo-vencer td {
+.data-table tbody tr.row--proximo-vencer td,
+.data-table tbody tr.row--inativo td {
   background: #fffbeb;
 }
 
 .data-table tbody tr.row--vencido.is-selected td,
-.data-table tbody tr.row--proximo-vencer.is-selected td {
+.data-table tbody tr.row--proximo-vencer.is-selected td,
+.data-table tbody tr.row--inativo.is-selected td {
   background: #dbeafe;
 }
 
@@ -307,7 +313,8 @@ code {
   background: #fee2e2;
 }
 
-.data-table tbody tr.row--proximo-vencer[role="button"]:hover td {
+.data-table tbody tr.row--proximo-vencer[role="button"]:hover td,
+.data-table tbody tr.row--inativo[role="button"]:hover td {
   background: #fef3c7;
 }
 
@@ -885,6 +892,12 @@ code {
   background: #fef2f2;
   color: #991b1b;
   border-color: #fca5a5;
+}
+
+.btn.btn--icon.btn--icon-warn:hover:not(:disabled) {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fcd34d;
 }
 
 .btn.btn--icon.btn--icon-ok:hover:not(:disabled) {

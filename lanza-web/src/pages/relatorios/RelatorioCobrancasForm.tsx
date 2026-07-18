@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
 import { Field } from "@/components/FormCard";
 import { CobrancasVisualizacao } from "@/components/relatorios/CobrancasVisualizacao";
 import {
@@ -106,7 +106,7 @@ export function RelatorioCobrancasForm() {
               value={veiculoPlaca}
               onChange={onVeiculoChange}
               ativo
-              emptyLabel="Todos os veículos ativos"
+              variant="filtro"
               disabled={loading || Boolean(clienteId)}
             />
           </Field>
@@ -115,7 +115,7 @@ export function RelatorioCobrancasForm() {
               value={clienteId}
               onChange={onClienteChange}
               ativo
-              emptyLabel="Todos os clientes ativos"
+              variant="filtro"
               disabled={loading || Boolean(veiculoPlaca)}
             />
           </Field>
@@ -127,7 +127,7 @@ export function RelatorioCobrancasForm() {
               disabled={loading || meta.isLoading}
               aria-label="Tipo de cobrança"
             >
-              <option value="">{meta.isLoading ? "A carregar…" : "Todos os tipos"}</option>
+              <SelectEmptyOption loading={meta.isLoading} />
               {opcoes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.rotulo}

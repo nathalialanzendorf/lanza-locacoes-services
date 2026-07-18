@@ -8,7 +8,8 @@ import { RowActions } from "@/components/RowActions";
 import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca } from "@/lib/format";
+import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
 import type { Parceiro } from "@/api/types";
 
 type Filtro = "ativos" | "inativos" | "todos";
@@ -16,7 +17,6 @@ type Filtro = "ativos" | "inativos" | "todos";
 type ParceiroLinha = Parceiro & {
   veiculos: number;
   placas: string[];
-  ativo: boolean;
 };
 
 export function ParceirosListSection() {
@@ -24,62 +24,63 @@ export function ParceirosListSection() {
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
-  const parceirosQuery = useParceiros();
+  const [inativandoId, setInativandoId] = useState<string | null>(null);
+  const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
+  const parceirosQuery = useParceiros(ativo);
   const vinculosQuery = useVinculosParceiro();
   const veiculosQuery = useVeiculos();
 
   const loading = parceirosQuery.isLoading || vinculosQuery.isLoading || veiculosQuery.isLoading;
-
-  const veiculoAtivoPorId = useMemo(() => {
-    const map = new Map<string, boolean>();
-    for (const v of veiculosQuery.data?.items ?? []) {
-      map.set(v.id, v.ativo !== false);
-    }
-    return map;
-  }, [veiculosQuery.data]);
 
   const linhas = useMemo(() => {
     const placaPorVeiculoId = new Map(
       (veiculosQuery.data?.items ?? []).map((v) => [v.id, formatPlaca(v.placa)]),
     );
     const vinculosPorParceiro = new Map<string, string[]>();
-    const parceiroComVeiculoAtivo = new Set<string>();
 
     for (const v of vinculosQuery.data?.items ?? []) {
       const placas = vinculosPorParceiro.get(v.parceiroId) ?? [];
       const placa = placaPorVeiculoId.get(v.veiculoId) ?? v.veiculoId.slice(0, 8);
       placas.push(placa);
       vinculosPorParceiro.set(v.parceiroId, placas);
-      if (veiculoAtivoPorId.get(v.veiculoId)) {
-        parceiroComVeiculoAtivo.add(v.parceiroId);
-      }
     }
 
     const termo = nome.trim().toLowerCase();
 
-    return (parceirosQuery.data?.items ?? [])
-      .filter((p) => {
-        if (termo && !p.nome.toLowerCase().includes(termo)) return false;
-        const ativo = parceiroComVeiculoAtivo.has(p.id);
-        if (filtro === "ativos" && !ativo) return false;
-        if (filtro === "inativos" && ativo) return false;
-        return true;
-      })
+    const mapped = (parceirosQuery.data?.items ?? [])
+      .filter((p) => !termo || p.nome.toLowerCase().includes(termo))
       .map((p) => {
         const placas = vinculosPorParceiro.get(p.id) ?? [];
         return {
           ...p,
           veiculos: placas.length,
           placas: placas.sort((a, b) => a.localeCompare(b, "pt-BR")),
-          ativo: parceiroComVeiculoAtivo.has(p.id),
         } satisfies ParceiroLinha;
-      })
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [nome, filtro, parceirosQuery.data, vinculosQuery.data, veiculosQuery.data, veiculoAtivoPorId]);
+      });
+
+    return ordenarAtivoDepoisAlfabetico(mapped, {
+      ativoDe: (p) => registroAtivo(p.ativo),
+      rotuloDe: (p) => p.nome,
+    });
+  }, [nome, parceirosQuery.data, vinculosQuery.data, veiculosQuery.data]);
 
   const temFiltro = Boolean(nome.trim() || filtro !== "todos");
 
   const erro = parceirosQuery.error ?? vinculosQuery.error ?? veiculosQuery.error ?? null;
+
+  async function inativar(parceiro: ParceiroLinha) {
+    if (!window.confirm(`Inativar o parceiro "${parceiro.nome}"?`)) return;
+    setInativandoId(parceiro.id);
+    try {
+      await lanzaApi.atualizarParceiro(parceiro.id, { ativo: false });
+      void qc.invalidateQueries({ queryKey: ["parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["resumo"] });
+    } catch (err) {
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar parceiro.");
+    } finally {
+      setInativandoId(null);
+    }
+  }
 
   async function excluir(parceiro: ParceiroLinha) {
     if (!window.confirm(`Excluir o parceiro "${parceiro.nome}"? Esta ação não pode ser desfeita.`)) return;
@@ -124,6 +125,7 @@ export function ParceirosListSection() {
         loading={loading}
         rows={linhas}
         keyFn={(p) => p.id}
+        rowClassName={(p) => rowClassInativo(registroAtivo(p.ativo))}
         emptyMessage={temFiltro ? "Nenhum parceiro corresponde aos filtros." : "Nenhum parceiro registado."}
         columns={[
           { key: "nome", header: "Nome", render: (p) => <strong>{p.nome}</strong> },
@@ -141,12 +143,21 @@ export function ParceirosListSection() {
               p.placas.length > 0 ? <span className="parceiros-placas">{p.placas.join(" · ")}</span> : "—",
           },
           {
+            key: "status",
+            header: "Status",
+            render: (p) => <span className={statusClass(p.ativo)}>{statusLabel(p.ativo)}</span>,
+          },
+          {
             key: "acoes",
             header: "Ações",
             className: "col-acoes",
             render: (p) => (
               <RowActions
                 editTo={`/parceiros/${p.id}/editar`}
+                onInativar={
+                  registroAtivo(p.ativo) ? () => void inativar(p) : undefined
+                }
+                inactivating={inativandoId === p.id}
                 deleting={excluindoId === p.id}
                 onDelete={() => void excluir(p)}
               />

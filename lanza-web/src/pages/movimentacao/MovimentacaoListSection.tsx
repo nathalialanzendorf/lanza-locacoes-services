@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { ClienteSelect, VeiculoSelect, SelectEmptyOption } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -156,12 +156,12 @@ export function MovimentacaoListSection() {
               onChange={onVeiculoChange}
               valueField="placa"
               clienteId={clienteId || undefined}
-              emptyLabel="Todos os veículos"
+              variant="filtro"
             />
           </label>
           <label className="field">
             <span className="field__label">Cliente</span>
-            <ClienteSelect value={clienteId} onChange={onClienteChange} emptyLabel="Todos os clientes" />
+            <ClienteSelect value={clienteId} onChange={onClienteChange} variant="filtro" />
           </label>
           <label className="field">
             <span className="field__label">Tipo</span>
@@ -171,7 +171,7 @@ export function MovimentacaoListSection() {
               onChange={(e) => setSituacao(e.target.value)}
               aria-label="Tipo"
             >
-              <option value="">Todos os tipos</option>
+              <SelectEmptyOption />
               <option value="locado">Locado</option>
               <option value="reserva">Reserva</option>
               <option value="manutencao">Manutenção</option>

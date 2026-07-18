@@ -79,10 +79,10 @@ export const lanzaApiExtra = {
       method: "POST",
       body: { nome },
     }),
-  atualizarParceiro: (id: string, nome: string) =>
+  atualizarParceiro: (id: string, patch: { nome?: string; ativo?: boolean }) =>
     apiRequest<DataEnvelope<import("./types").Parceiro>>(`/api/parceiros/${encodeURIComponent(id)}`, {
       method: "PATCH",
-      body: { nome },
+      body: patch,
     }),
   removerParceiro: (id: string) =>
     apiRequest<DataEnvelope<import("./types").Parceiro>>(`/api/parceiros/${encodeURIComponent(id)}`, {
