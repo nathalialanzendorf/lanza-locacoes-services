@@ -47,6 +47,7 @@ function RecebimentosTable({
   clientes,
   mostrarAcaoRecebimento = false,
   mostrarDescricao = true,
+  acoesCompactas = false,
   dataReferenciaBr,
 }: {
   titulo: string;
@@ -59,10 +60,13 @@ function RecebimentosTable({
   clientes?: { id: string; nome?: string; ativo?: boolean }[];
   mostrarAcaoRecebimento?: boolean;
   mostrarDescricao?: boolean;
+  acoesCompactas?: boolean;
   dataReferenciaBr?: string;
 }) {
   return (
-    <section className="form-card dashboard-recebimentos">
+    <section
+      className={`form-card dashboard-recebimentos${acoesCompactas ? " dashboard-recebimentos--acoes-compactas" : ""}`}
+    >
       <header className="dashboard-recebimentos__head">
         <h3 className="form-card__title">{titulo}</h3>
         <span className="field__hint">{linhas.length} locatário(s)</span>
@@ -422,6 +426,7 @@ export function DashboardPage() {
               colunaVeiculo="Veículo"
               clientes={clientes}
               mostrarAcaoRecebimento
+              acoesCompactas
               dataReferenciaBr={rec.dataReferenciaBr}
               colunasExtra={[
                 { header: "Vencimento", render: vencimentoRecebimentoLinha },

@@ -231,6 +231,14 @@ code {
   margin-bottom: 0.75rem;
 }
 
+.dashboard-recebimentos--acoes-compactas .data-table th.col-acoes,
+.dashboard-recebimentos--acoes-compactas .data-table td.col-acoes {
+  width: 1%;
+  min-width: 0;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
 .dashboard-api-aviso {
   margin-top: 1rem;
 }
