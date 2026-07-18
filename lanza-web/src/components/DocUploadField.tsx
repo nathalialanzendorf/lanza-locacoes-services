@@ -116,19 +116,15 @@ export function DocUploadField({
       mime = img.data.mime || "image/jpeg";
     }
 
-    setStatus("Lendo OCR no navegador (pode levar ~30s na 1ª vez)…");
+    setStatus("Lendo documento…");
     const text = await ocrDocumentoNoNavegador(imagemBase64, mime);
     if (!text.trim()) {
       throw new Error("OCR no navegador não extraiu texto.");
     }
     const parsed = await lanzaApi.parseTextoDocumento({ tipo, text });
-    const avisosLista = [
-      ...(parsed.data.avisos ?? []),
-      "OCR executado no navegador.",
-    ];
     return {
       campos: (parsed.data.campos ?? {}) as Record<string, unknown>,
-      avisos: avisosLista,
+      avisos: parsed.data.avisos ?? [],
     };
   }
 
@@ -137,11 +133,7 @@ export function DocUploadField({
     setLoading(true);
     setNomeArquivo(file.name);
     setAvisos([]);
-    setStatus(
-      tipo === "cnh" || tipo === "comprovante-residencia"
-        ? "Lendo documento (OCR pode levar alguns segundos)…"
-        : "Lendo documento…",
-    );
+    setStatus("Lendo documento…");
     try {
       const conteudoBase64 = await fileToBase64(file);
       let campos: Record<string, unknown>;
