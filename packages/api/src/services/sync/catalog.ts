@@ -109,7 +109,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   },
   {
     id: "fipe",
-    rotulo: "FIPE (frota ativa)",
+    rotulo: "Tabela FIPE",
     destino: "veiculos.json",
     interativo: false,
     direcao: "buscar",
