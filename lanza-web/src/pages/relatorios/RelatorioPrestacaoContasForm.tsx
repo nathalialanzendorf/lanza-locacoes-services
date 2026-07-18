@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/FormCard";
+import { ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
-import { useVeiculos } from "@/api/hooks";
+import { useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca } from "@/lib/format";
@@ -15,7 +16,13 @@ import {
 } from "@/lib/relatorioDownload";
 
 export function RelatorioPrestacaoContasForm() {
+  const [parceiroId, setParceiroId] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
   const veiculosQuery = useVeiculos({ ativo: true });
+  const vinculosQuery = useVinculosParceiro(
+    parceiroId.trim() ? { parceiroId: parceiroId.trim() } : undefined,
+  );
+
   const [competencia, setCompetencia] = useState("");
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [ganhoPadrao, setGanhoPadrao] = useState("2000");
@@ -28,7 +35,32 @@ export function RelatorioPrestacaoContasForm() {
   const [textoVisivel, setTextoVisivel] = useState<string | undefined>();
   const [avisos, setAvisos] = useState<string[] | undefined>();
 
-  const veiculos = veiculosQuery.data?.items ?? [];
+  const veiculosFiltrados = useMemo(() => {
+    let list = veiculosQuery.data?.items ?? [];
+    if (parceiroId.trim()) {
+      const ids = new Set((vinculosQuery.data?.items ?? []).map((v) => v.veiculoId));
+      list = list.filter((v) => ids.has(v.id));
+    }
+    if (veiculoId.trim()) {
+      list = list.filter((v) => v.id === veiculoId.trim());
+    }
+    return list.filter((v) => v.placa?.trim());
+  }, [veiculosQuery.data, vinculosQuery.data, parceiroId, veiculoId]);
+
+  useEffect(() => {
+    const visiveis = new Set(veiculosFiltrados.map((v) => v.id));
+    setSel((prev) => {
+      const next = new Set([...prev].filter((id) => visiveis.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [veiculosFiltrados]);
+
+  useEffect(() => {
+    if (veiculoId && parceiroId) {
+      const ok = (vinculosQuery.data?.items ?? []).some((v) => v.veiculoId === veiculoId);
+      if (!ok) setVeiculoId("");
+    }
+  }, [parceiroId, veiculoId, vinculosQuery.data]);
 
   const payloadVeiculos = useMemo((): PrestacaoVeiculoInput[] => {
     if (modoAvancado) {
@@ -38,15 +70,15 @@ export function RelatorioPrestacaoContasForm() {
         return [];
       }
     }
-    return veiculos
-      .filter((v) => v.placa && sel.has(v.id))
+    return veiculosFiltrados
+      .filter((v) => sel.has(v.id))
       .map((v) => ({
         placa: v.placa!,
         ganho: { valor: Number(ganhoPadrao) || 2000, descricao: "Locação semanal" },
         devidoMesAnterior: 0,
         descontoManutencao: { valor: 0, descricao: "" },
       }));
-  }, [modoAvancado, veiculos, sel, ganhoPadrao, veiculosJson]);
+  }, [modoAvancado, veiculosFiltrados, sel, ganhoPadrao, veiculosJson]);
 
   function toggleVeiculo(id: string) {
     setSel((prev) => {
@@ -58,7 +90,12 @@ export function RelatorioPrestacaoContasForm() {
   }
 
   function selecionarTodos() {
-    setSel(new Set(veiculos.map((v) => v.id)));
+    setSel(new Set(veiculosFiltrados.map((v) => v.id)));
+  }
+
+  function onParceiroChange(id: string) {
+    setParceiroId(id);
+    setVeiculoId("");
   }
 
   async function entregar(modo: RelatorioModoEntrega) {
@@ -101,10 +138,34 @@ export function RelatorioPrestacaoContasForm() {
     }
   }
 
+  const temFiltro = Boolean(parceiroId || veiculoId);
+  const loadingVeiculos = veiculosQuery.isLoading || (parceiroId ? vinculosQuery.isLoading : false);
+
   return (
     <>
       <section className="form-card">
         <h2 className="form-card__title">Parâmetros</h2>
+        <div className="despesas-toolbar">
+          <ParceiroSelect
+            value={parceiroId}
+            onChange={onParceiroChange}
+            ativo
+            emptyLabel="Todos os parceiros ativos"
+          />
+          <VeiculoSelect
+            value={veiculoId}
+            onChange={setVeiculoId}
+            valueField="id"
+            ativo
+            parceiroId={parceiroId || undefined}
+            emptyLabel="Todos os veículos ativos"
+          />
+          {!loadingVeiculos ? (
+            <span className="badge badge--muted">
+              {veiculosFiltrados.length} veículo{veiculosFiltrados.length === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
         <div className="form-grid">
           <Field label="Competência" hint="MM/AAAA">
             <input
@@ -129,19 +190,32 @@ export function RelatorioPrestacaoContasForm() {
       {!modoAvancado ? (
         <section className="form-card">
           <div className="despesas-toolbar">
-            <h2 className="form-card__title">Veículos ({sel.size}/{veiculos.length})</h2>
-            <button type="button" className="btn btn--ghost" onClick={selecionarTodos}>
+            <h2 className="form-card__title">Veículos ({sel.size}/{veiculosFiltrados.length})</h2>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={selecionarTodos}
+              disabled={veiculosFiltrados.length === 0}
+            >
               Selecionar todos
             </button>
           </div>
-          <div className="checkbox-group">
-            {veiculos.map((v) => (
-              <label key={v.id} className="checkbox-label">
-                <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
-                {formatPlaca(v.placa)} {v.marcaModelo ? `· ${v.marcaModelo}` : ""}
-              </label>
-            ))}
-          </div>
+          {loadingVeiculos ? (
+            <p className="field__hint">A carregar veículos…</p>
+          ) : veiculosFiltrados.length === 0 ? (
+            <p className="field__hint">
+              {temFiltro ? "Nenhum veículo ativo corresponde aos filtros." : "Nenhum veículo ativo."}
+            </p>
+          ) : (
+            <div className="checkbox-group">
+              {veiculosFiltrados.map((v) => (
+                <label key={v.id} className="checkbox-label">
+                  <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
+                  {formatPlaca(v.placa)} {v.marcaModelo ? `· ${v.marcaModelo}` : ""}
+                </label>
+              ))}
+            </div>
+          )}
         </section>
       ) : (
         <Field label="Veículos (JSON)">

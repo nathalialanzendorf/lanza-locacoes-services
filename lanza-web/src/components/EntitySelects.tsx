@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-import { useClientes, useParceiros, useVeiculos } from "@/api/hooks";
+import { useClientes, useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { formatPlaca } from "@/lib/format";
 import type { Cliente, Parceiro, Veiculo } from "@/api/types";
 
@@ -95,25 +95,34 @@ export type VeiculoSelectProps = SelectBaseProps & {
   valueField?: "id" | "placa";
   ativo?: boolean;
   clienteId?: string;
+  parceiroId?: string;
 };
 
 export function VeiculoSelect({
   valueField = "placa",
   ativo,
   clienteId,
+  parceiroId,
   ...props
 }: VeiculoSelectProps) {
   const query = useVeiculos({ ativo });
+  const vinculosQuery = useVinculosParceiro(
+    parceiroId?.trim() ? { parceiroId: parceiroId.trim() } : undefined,
+  );
   const items = useMemo(() => {
     let list = query.data?.items ?? [];
     if (clienteId?.trim()) {
       list = list.filter((v) => v.clienteVinculadoId === clienteId.trim());
     }
+    if (parceiroId?.trim()) {
+      const veiculoIds = new Set((vinculosQuery.data?.items ?? []).map((v) => v.veiculoId));
+      list = list.filter((v) => veiculoIds.has(v.id));
+    }
     return [...list].sort((a, b) => (a.placa ?? a.id).localeCompare(b.placa ?? b.id, "pt-BR"));
-  }, [query.data, clienteId]);
+  }, [query.data, clienteId, parceiroId, vinculosQuery.data]);
 
   return (
-    <SelectShell {...props} loading={query.isLoading}>
+    <SelectShell {...props} loading={query.isLoading || (parceiroId?.trim() ? vinculosQuery.isLoading : false)}>
       {items.map((v) => (
         <option key={v.id} value={veiculoValue(v, valueField)}>
           {veiculoLabel(v)}
@@ -123,17 +132,33 @@ export function VeiculoSelect({
   );
 }
 
-export type ParceiroSelectProps = SelectBaseProps;
+export type ParceiroSelectProps = SelectBaseProps & {
+  /** Parceiros com ao menos um veículo ativo na frota. */
+  ativo?: boolean;
+};
 
-export function ParceiroSelect(props: ParceiroSelectProps) {
+export function ParceiroSelect({ ativo, ...props }: ParceiroSelectProps) {
   const query = useParceiros();
-  const items = useMemo(
-    () => [...(query.data?.items ?? [])].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [query.data],
-  );
+  const vinculosQuery = useVinculosParceiro();
+  const veiculosQuery = useVeiculos(ativo ? { ativo: true } : undefined);
+  const items = useMemo(() => {
+    let list = [...(query.data?.items ?? [])];
+    if (ativo) {
+      const veiculosAtivos = new Set((veiculosQuery.data?.items ?? []).map((v) => v.id));
+      const parceirosAtivos = new Set<string>();
+      for (const v of vinculosQuery.data?.items ?? []) {
+        if (veiculosAtivos.has(v.veiculoId)) parceirosAtivos.add(v.parceiroId);
+      }
+      list = list.filter((p) => parceirosAtivos.has(p.id));
+    }
+    return list.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [query.data, ativo, vinculosQuery.data, veiculosQuery.data]);
 
   return (
-    <SelectShell {...props} loading={query.isLoading}>
+    <SelectShell
+      {...props}
+      loading={query.isLoading || (ativo ? vinculosQuery.isLoading || veiculosQuery.isLoading : false)}
+    >
       {items.map((p: Parceiro) => (
         <option key={p.id} value={p.id}>
           {p.nome}
