@@ -261,13 +261,18 @@ export function DashboardPage() {
           }
         />
         <StatCard
-          title="Infrações em aberto"
-          value={resumo.data ? `${resumo.data.infracoes.emAberto}` : "—"}
+          title="Infrações em aberto com data de vencimento"
+          value={resumo.data ? `${resumo.data.infracoes.comVencimento}` : "—"}
           hint={
             resumo.data
-              ? `${semClienteDeResumo(resumo.data.infracoes)} sem cliente`
+              ? `${resumo.data.infracoes.emAberto} em aberto no total`
               : undefined
           }
+          tone="warn"
+        />
+        <StatCard
+          title="Infrações em aberto sem cliente"
+          value={resumo.data ? `${semClienteDeResumo(resumo.data.infracoes)}` : "—"}
           tone="warn"
         />
       </div>

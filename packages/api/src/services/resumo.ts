@@ -35,6 +35,25 @@ function infracaoEmAberto(i: {
   return i.quitadaDetran !== true && !/quitad|pago|paga/i.test(String(i.situacao ?? i.status ?? ""));
 }
 
+function infracaoTemDataVencimento(i: {
+  dataVencimentoOriginal?: string | null;
+  dataLimiteDefesa?: string | null;
+  limiteDefesa?: string | null;
+}): boolean {
+  for (const c of [i.dataVencimentoOriginal, i.dataLimiteDefesa, i.limiteDefesa]) {
+    if (/^(\d{2}\/\d{2}\/\d{4})/.test(String(c ?? "").trim())) return true;
+  }
+  return false;
+}
+
+function infracaoSemCliente(i: {
+  condutorId?: string | null;
+  debitoParceiroConfirmado?: boolean;
+  condutorNaoIdentificado?: boolean;
+}): boolean {
+  return !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado;
+}
+
 type ResumoStores = {
   despesasCliente: ClienteDespesaRegistro[];
   despesasParceiro: ParceiroDespesaRegistro[];
@@ -61,14 +80,8 @@ function montarResumo(
   const despesasParceiroAbertas = despesasParceiro.filter((d) => !String(d.baixa ?? "").trim());
 
   const infracoesAbertas = infracoes.filter((i) => i.ativo !== false && infracaoEmAberto(i));
-  const infracoesSemCliente = infracoes.filter(
-    (i) =>
-      i.ativo !== false &&
-      infracaoEmAberto(i) &&
-      !i.condutorId &&
-      !i.debitoParceiroConfirmado &&
-      !i.condutorNaoIdentificado,
-  );
+  const infracoesComVencimento = infracoesAbertas.filter(infracaoTemDataVencimento);
+  const infracoesSemCliente = infracoesAbertas.filter(infracaoSemCliente);
 
   const totalClienteAberto = despesasClienteAbertas.reduce(
     (s, d) => s + (Number(d.valorMulta) || 0),
@@ -93,6 +106,7 @@ function montarResumo(
     },
     infracoes: {
       emAberto: infracoesAbertas.length,
+      comVencimento: infracoesComVencimento.length,
       semCliente: infracoesSemCliente.length,
       semCondutor: infracoesSemCliente.length,
     },
