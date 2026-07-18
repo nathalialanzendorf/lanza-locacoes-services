@@ -19,6 +19,10 @@ export type SystemStatus = {
     prefix: string;
   };
   rastreameEspelho?: ReturnType<typeof obterRastreameEspelhoConfig>;
+  git?: {
+    commitSha?: string;
+    ref?: string;
+  };
 };
 
 async function pingPostgres(): Promise<{ ok: boolean; error?: string }> {
@@ -65,5 +69,9 @@ export async function obterStatusSistema(): Promise<SystemStatus> {
       prefix: storagePrefix(),
     },
     rastreameEspelho: obterRastreameEspelhoConfig(),
+    git: {
+      commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || undefined,
+      ref: process.env.VERCEL_GIT_COMMIT_REF?.trim() || undefined,
+    },
   };
 }

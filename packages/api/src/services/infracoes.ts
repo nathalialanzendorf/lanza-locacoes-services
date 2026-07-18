@@ -13,6 +13,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { listarVinculos, listarVinculosAsync } from "./parceiros.js";
+import { obterVeiculoAsync } from "./veiculos.js";
 import { HttpError } from "../http.js";
 
 export type ListarInfracoesOpts = {
@@ -66,13 +67,17 @@ function aplicarFiltrosInfracoes(
   opts: ListarInfracoesOpts,
   veiculos: VeiculoRef[],
   vinculosParceiro: Array<{ veiculoId: string }>,
+  veiculoFiltro?: VeiculoRef | null,
 ): InfracaoRegistro[] {
   let out = items;
 
-  if (opts.veiculoId?.trim()) {
-    out = filtrarInfracoesPorVeiculoRef(out, opts.veiculoId, veiculos);
-  } else if (opts.placa?.trim()) {
-    out = filtrarInfracoesPorVeiculoRef(out, opts.placa, veiculos);
+  if (opts.veiculoId?.trim() || opts.placa?.trim()) {
+    const ref = (opts.veiculoId ?? opts.placa ?? "").trim();
+    if (veiculoFiltro) {
+      out = out.filter((i) => infracaoPertenceVeiculo(i, veiculoFiltro));
+    } else {
+      out = filtrarInfracoesPorVeiculoRef(out, ref, veiculos);
+    }
   }
 
   if (opts.ativo === true) {
@@ -139,15 +144,17 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
   total: number;
   items: InfracaoRegistro[];
 }> {
-  const needsVeiculos = precisaCatalogoVeiculos(opts);
   const parceiroId = opts.parceiroId?.trim();
+  const veiculoRef = opts.veiculoId?.trim() || opts.placa?.trim();
+  const needsVeiculos = Boolean(veiculoRef || parceiroId);
 
-  const [infracoesDb, veiculosDb, vinculos] = await Promise.all([
+  const [infracoesDb, veiculosDb, vinculos, veiculoFiltro] = await Promise.all([
     loadInfracoesDbAsync(),
     needsVeiculos ? loadVeiculosDbAsync() : Promise.resolve({ veiculos: [] as VeiculoRegistro[] }),
     parceiroId
       ? listarVinculosAsync({ parceiroId })
       : Promise.resolve({ total: 0, items: [] as Array<{ veiculoId: string }> }),
+    veiculoRef ? obterVeiculoAsync(veiculoRef) : Promise.resolve(null),
   ]);
 
   const items = aplicarFiltrosInfracoes(
@@ -155,6 +162,7 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
     opts,
     veiculosDb.veiculos,
     vinculos.items,
+    veiculoFiltro,
   );
   return { total: items.length, items };
 }
