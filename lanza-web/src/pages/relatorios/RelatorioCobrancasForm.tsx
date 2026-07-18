@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field } from "@/components/FormCard";
-import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
+import { LABEL } from "@/lib/labels";
 import {
   downloadArquivoTexto,
   downloadPdfViaImpressao,
@@ -94,7 +94,6 @@ export function RelatorioCobrancasForm() {
   return (
     <>
       <section className="form-card">
-        <h2 className="form-card__title">Parâmetros</h2>
         <div className="form-grid">
           <Field label="Veículo" hint="Opcional — exclui filtro por cliente">
             <VeiculoSelect
@@ -150,15 +149,46 @@ export function RelatorioCobrancasForm() {
             </select>
           </Field>
         </div>
+        <label className="field checkbox-label relatorio-entrega__check">
+          <input
+            type="checkbox"
+            checked={armazenarServidor}
+            onChange={(e) => setArmazenarServidor(e.target.checked)}
+            disabled={loading}
+          />
+          Armazenar no servidor
+        </label>
+        <p className="field__hint">
+          Se marcado, grava ficheiros e espelha no armazenamento configurado (ex.: Vercel Blob).
+        </p>
+        <div className="relatorio-entrega__acoes">
+          <button
+            type="button"
+            className="btn btn--primary"
+            disabled={loading}
+            onClick={() => void entregar("visualizar")}
+          >
+            {loading ? LABEL.processando : "Visualizar"}
+          </button>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            disabled={loading}
+            onClick={() => void entregar("txt")}
+          >
+            Download TXT
+          </button>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            disabled={loading}
+            onClick={() => void entregar("pdf")}
+          >
+            Download PDF
+          </button>
+        </div>
         {error ? <p className="form-card__error">{error}</p> : null}
       </section>
-
-      <RelatorioEntrega
-        loading={loading}
-        armazenarServidor={armazenarServidor}
-        onArmazenarServidorChange={setArmazenarServidor}
-        onEntrega={(modo) => void entregar(modo)}
-      />
 
       <ResultPanel title="Visualização" texto={textoVisivel} data={result} />
     </>
