@@ -7,7 +7,7 @@ import pdfParse from "pdf-parse";
 
 import { escolherMaiorImagemEmbutida, extrairJpegsEmbutidosPdf } from "./cnhPdfImagem.js";
 import { ocrDocumentoImagem } from "./documentoOcr.js";
-import { formatPlacaHyphen } from "./placa.js";
+import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 
 export type DocTipoUpload = "cnh" | "comprovante-residencia" | "crlv";
 
@@ -627,6 +627,290 @@ function findLineValue(lines: string[], ...labels: string[]): string | null {
   return null;
 }
 
+const CRLV_LABEL_VALUES = new Set([
+  "PLACA",
+  "CHASSI",
+  "RENAVAM",
+  "MARCA / MODELO",
+  "MARCA/MODELO",
+  "MARCA E MODELO",
+  "MARCAMODELO",
+  "PLACA ANTERIOR / UF",
+  "PLACA ANTERIOR/UF",
+  "ANO FABRICAÇÃO / ANO MODELO",
+  "ANO FABRICACAO / ANO MODELO",
+  "ANO MODELO",
+  "ANO/MODELO",
+  "ANO DO MODELO",
+  "ESPÉCIE / TIPO",
+  "ESPECIE / TIPO",
+  "COR PREDOMINANTE",
+  "COR DO VEÍCULO",
+  "COR DO VEICULO",
+  "NOME DO PROPRIETÁRIO",
+  "NOME DO PROPRIETARIO",
+  "PROPRIETÁRIO",
+  "PROPRIETARIO",
+  "NOME PROPRIETÁRIO",
+  "NOME PROPRIETARIO",
+  "COMBUSTÍVEL",
+  "COMBUSTIVEL",
+  "CATEGORIA",
+  "CAPACIDADE",
+  "POTÊNCIA",
+  "POTENCIA",
+  "CILINDRADA",
+  "LOCAL",
+  "DATA",
+  "EXERCÍCIO",
+  "EXERCICIO",
+]);
+
+function normalizeCrlvToken(s: string): string {
+  return s.replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+function isPlacaValida(token: string): boolean {
+  const c = compactPlaca(token);
+  if (c.length !== 7) return false;
+  if (/^[A-Z]{3}\d{4}$/.test(c)) return true;
+  if (/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(c)) return true;
+  return false;
+}
+
+function isCrlvLabelLikeValue(val: string): boolean {
+  const u = normalizeCrlvToken(val);
+  if (!u) return true;
+  if (CRLV_LABEL_VALUES.has(u)) return true;
+  if (/^(PLACA|CHASSI|RENAVAM|COR|UF|LOCAL|CATEGORIA|COMBUST)/.test(u) && u.length < 40) {
+    if (u.includes("/") || u.split(/\s+/).length <= 4) return true;
+  }
+  return false;
+}
+
+type CrlvLabelKey =
+  | "placa"
+  | "placaAnterior"
+  | "chassi"
+  | "renavam"
+  | "marcaModelo"
+  | "anoModelo"
+  | "especieTipo"
+  | "cor"
+  | "proprietario"
+  | "uf"
+  | "skip";
+
+const CRLV_LABEL_PATTERNS: { key: CrlvLabelKey; patterns: string[]; exact?: boolean }[] = [
+  { key: "placa", patterns: ["PLACA"], exact: true },
+  { key: "placaAnterior", patterns: ["PLACA ANTERIOR / UF", "PLACA ANTERIOR/UF"] },
+  { key: "chassi", patterns: ["CHASSI"], exact: true },
+  { key: "renavam", patterns: ["RENAVAM"], exact: true },
+  { key: "marcaModelo", patterns: ["MARCA / MODELO", "MARCA/MODELO", "MARCA E MODELO", "MARCAMODELO"] },
+  {
+    key: "anoModelo",
+    patterns: [
+      "ANO FABRICAÇÃO / ANO MODELO",
+      "ANO FABRICACAO / ANO MODELO",
+      "ANO MODELO",
+      "ANO/MODELO",
+      "ANO DO MODELO",
+    ],
+  },
+  { key: "especieTipo", patterns: ["ESPÉCIE / TIPO", "ESPECIE / TIPO"] },
+  { key: "cor", patterns: ["COR PREDOMINANTE", "COR DO VEÍCULO", "COR DO VEICULO"] },
+  {
+    key: "proprietario",
+    patterns: [
+      "NOME DO PROPRIETÁRIO",
+      "NOME DO PROPRIETARIO",
+      "PROPRIETÁRIO",
+      "PROPRIETARIO",
+      "NOME PROPRIETÁRIO",
+      "NOME PROPRIETARIO",
+    ],
+  },
+  { key: "uf", patterns: ["UF", "UF DE REGISTRO", "LOCAL DE REGISTRO"], exact: true },
+  { key: "skip", patterns: ["COMBUSTÍVEL", "COMBUSTIVEL", "CATEGORIA", "CAPACIDADE", "POTÊNCIA", "POTENCIA", "CILINDRADA", "LOCAL", "DATA", "EXERCÍCIO", "EXERCICIO"] },
+];
+
+function matchCrlvLabelLine(line: string): CrlvLabelKey | null {
+  const u = normalizeCrlvToken(line);
+  for (const { key, patterns, exact } of CRLV_LABEL_PATTERNS) {
+    for (const p of patterns) {
+      const pu = p.toUpperCase();
+      if (exact) {
+        if (u === pu || u === `${pu}:` || u.startsWith(`${pu} `)) {
+          if (key === "placa" && u.includes("ANTERIOR")) continue;
+          return key;
+        }
+      } else if (u === pu || u.startsWith(`${pu}:`) || u.startsWith(`${pu} `)) {
+        return key;
+      }
+    }
+  }
+  return null;
+}
+
+function extrairValorInlineCrlv(line: string, label: string): string | null {
+  const u = line.toUpperCase();
+  const lu = label.toUpperCase();
+  const idx = u.indexOf(lu);
+  if (idx < 0) return null;
+  const rest = line.slice(idx + label.length).replace(/^[\s:/-]+/, "").trim();
+  return rest || null;
+}
+
+function findCrlvLineValue(lines: string[], ...labels: string[]): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const u = normalizeCrlvToken(line);
+    for (const lab of labels) {
+      const lu = lab.toUpperCase();
+      const matches =
+        u === lu ||
+        u === `${lu}:` ||
+        u.startsWith(`${lu} `) ||
+        u.startsWith(`${lu}/`) ||
+        (lab.includes("/") && u.startsWith(lu));
+      if (!matches || line.length >= 80) continue;
+
+      const inline = extrairValorInlineCrlv(line, lab);
+      if (inline && !isCrlvLabelLikeValue(inline)) return inline;
+
+      for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+        const v = lines[j]?.trim() || "";
+        if (!v || v === "-" || v === ".") continue;
+        if (matchCrlvLabelLine(v)) break;
+        if (isCrlvLabelLikeValue(v)) continue;
+        return v;
+      }
+    }
+  }
+  return null;
+}
+
+function parseCrlvColumnLayout(lines: string[]): Partial<CrlvParseResult> {
+  const out: Partial<CrlvParseResult> = {};
+  for (let start = 0; start < lines.length; start++) {
+    const keys: CrlvLabelKey[] = [];
+    let i = start;
+    while (i < lines.length) {
+      const key = matchCrlvLabelLine(lines[i]!);
+      if (!key) break;
+      const labelPatterns = CRLV_LABEL_PATTERNS.find((p) => p.key === key)?.patterns ?? [];
+      const pureLabel = labelPatterns.some((p) => normalizeCrlvToken(lines[i]!) === p.toUpperCase());
+      if (!pureLabel) break;
+      keys.push(key);
+      i++;
+    }
+    if (keys.length < 4) continue;
+
+    const values = lines.slice(i).map((l) => l.trim()).filter(Boolean);
+    if (values.length < keys.length) continue;
+
+    for (let k = 0; k < keys.length; k++) {
+      const val = values[k];
+      if (!val || isCrlvLabelLikeValue(val)) continue;
+      assignCrlvField(out, keys[k]!, val);
+    }
+    if (out.placa || out.chassi || out.marcaModelo) return out;
+  }
+  return out;
+}
+
+function assignCrlvField(out: Partial<CrlvParseResult>, key: CrlvLabelKey, val: string): void {
+  const v = val.replace(/\s+/g, " ").trim();
+  switch (key) {
+    case "placa":
+      if (isPlacaValida(v)) out.placa = formatPlacaHyphen(v);
+      break;
+    case "chassi": {
+      const c = v.replace(/\s/g, "").toUpperCase();
+      if (/^[A-HJ-NPR-Z0-9]{17}$/.test(c)) out.chassi = c;
+      break;
+    }
+    case "renavam": {
+      const d = v.replace(/\D/g, "");
+      if (d.length >= 10 && d.length <= 11) out.renavam = d;
+      break;
+    }
+    case "marcaModelo":
+      if (v.includes("/") || /[A-Za-z]{2,}/.test(v)) {
+        out.marcaModelo = /^[\x00-\x7f]+$/.test(v) ? v.toUpperCase() : v;
+      }
+      break;
+    case "anoModelo": {
+      const amClean = v.replace(/\s+/g, "");
+      let m2 = amClean.match(/(\d{4})\/(\d{4})/);
+      if (!m2) m2 = v.match(/(\d{4})\s*\/\s*(\d{4})/);
+      if (m2) out.anoModelo = `${m2[1]}/${m2[2]}`;
+      break;
+    }
+    case "cor":
+      if (v.length < 40 && !/^\d+$/.test(v)) out.cor = v.toUpperCase();
+      break;
+    case "proprietario":
+      out.proprietarioNome = v;
+      break;
+    case "uf":
+      if (/^[A-Z]{2}$/.test(v)) out.ufRegistro = v;
+      else {
+        const um = v.match(/\b([A-Z]{2})\b/);
+        if (um) out.ufRegistro = um[1];
+      }
+      break;
+    case "placaAnterior":
+    case "especieTipo":
+    case "skip":
+      break;
+    default:
+      break;
+  }
+}
+
+function extrairPlacaCrlv(lines: string[], raw: string): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    if (/^PLACA$/i.test(lines[i]!.trim())) {
+      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+        const v = lines[j]!.trim();
+        if (isPlacaValida(v)) return formatPlacaHyphen(v);
+      }
+    }
+  }
+
+  const inline = raw.match(/\bPLACA\s*[:\-]\s*([A-Z0-9-]{7,8})\b/i);
+  if (inline?.[1] && isPlacaValida(inline[1])) return formatPlacaHyphen(inline[1]);
+
+  const seen = new Set<string>();
+  for (const m of raw.matchAll(/\b([A-Z]{3}[\dA-Z][\dA-Z]{3}|[A-Z]{3}\d{4})\b/gi)) {
+    const tok = m[1]!;
+    if (!isPlacaValida(tok)) continue;
+    const fmt = formatPlacaHyphen(tok);
+    const key = compactPlaca(fmt);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const idx = m.index ?? 0;
+    const ctx = raw.slice(Math.max(0, idx - 24), idx + tok.length + 8).toUpperCase();
+    if (/PLACA\s+ANTERIOR/.test(ctx)) continue;
+    return fmt;
+  }
+  return null;
+}
+
+function isMarcaModeloCrlv(val: string): boolean {
+  const u = normalizeCrlvToken(val);
+  if (isCrlvLabelLikeValue(val)) return false;
+  if (!u.includes("/")) return false;
+  const [a, b] = u.split(/\s*\/\s*/);
+  if (!a || !b || a.length > 20 || b.length > 45) return false;
+  if (CRLV_LABEL_VALUES.has(u)) return false;
+  if (/^[A-Z]{2}$/.test(b.trim())) return false;
+  if (isPlacaValida(a.trim())) return false;
+  if (/^(TIPO|MODELO|UF|CHASSI|RENAVAM|PLACA)$/.test(b.trim())) return false;
+  return true;
+}
+
 export type CrlvParseResult = {
   placa?: string;
   marcaModelo?: string;
@@ -647,8 +931,10 @@ export function parseCrlvText(text: string): CrlvParseResult {
   }
 
   const out: CrlvParseResult = { avisos };
-  const lines = lineBlocks(text);
+  const lines = lineBlocks(text).filter((ln) => ln.length > 0);
   const raw = lines.join("\n");
+
+  Object.assign(out, parseCrlvColumnLayout(lines));
 
   let m = raw.match(/CHASSI\s*[:\s]*([A-HJ-NPR-Z0-9]{17})/i);
   if (!m) m = raw.match(/\b([A-HJ-NPR-Z0-9]{17})\b/);
@@ -657,54 +943,96 @@ export function parseCrlvText(text: string): CrlvParseResult {
   m = raw.match(/RENAVAM\s*[:\s]*(\d{10,11})\b/i);
   if (m) out.renavam = m[1]!;
 
-  m = raw.match(/PLACA\s*[:\s]*([A-Z]{3}[\dA-Z][A-Z0-9]{4}|[A-Z]{3}\d{4})\b/i);
-  if (m) out.placa = formatPlacaHyphen(m[1]!);
+  if (!out.placa) out.placa = extrairPlacaCrlv(lines, raw) ?? undefined;
 
-  let mm = findLineValue(lines, "MARCA / MODELO", "MARCA/MODELO", "MARCA E MODELO", "MARCAMODELO");
-  if (mm) {
-    mm = mm.replace(/\s+/g, " ").trim();
-    if (mm.includes("/") || /[A-Z]{2,}/i.test(mm)) {
-      out.marcaModelo = /^[\x00-\x7f]+$/.test(mm) ? mm.toUpperCase() : mm;
+  if (!out.marcaModelo) {
+    let mm = findCrlvLineValue(
+      lines,
+      "MARCA / MODELO",
+      "MARCA/MODELO",
+      "MARCA E MODELO",
+      "MARCAMODELO",
+    );
+    if (mm) {
+      mm = mm.replace(/\s+/g, " ").trim();
+      if (isMarcaModeloCrlv(mm)) {
+        out.marcaModelo = /^[\x00-\x7f]+$/.test(mm) ? mm.toUpperCase() : mm;
+      }
     }
   }
 
-  const am = findLineValue(lines, "ANO MODELO", "ANO/MODELO", "ANO DO MODELO");
-  if (am) {
-    const amClean = am.replace(/\s+/g, "");
-    let m2 = amClean.match(/(\d{4})\/(\d{4})/);
-    if (!m2) m2 = am.match(/(\d{4})\s*\/\s*(\d{4})/);
-    if (m2) out.anoModelo = `${m2[1]}/${m2[2]}`;
-  }
-
-  let cor = findLineValue(lines, "COR PREDOMINANTE", "COR", "COR DO VEÍCULO", "COR DO VEICULO");
-  if (cor) {
-    cor = cor.replace(/\s+/g, " ").trim();
-    if (cor.length < 40 && !/^\d+$/.test(cor)) out.cor = cor.toUpperCase();
-  }
-
-  const ufM = findLineValue(lines, "UF", "UF DE REGISTRO", "LOCAL DE REGISTRO");
-  if (ufM && /^[A-Z]{2}$/.test(ufM.trim())) out.ufRegistro = ufM.trim();
-
-  let prop = findLineValue(
-    lines,
-    "NOME DO PROPRIETÁRIO",
-    "NOME DO PROPRIETARIO",
-    "PROPRIETÁRIO",
-    "PROPRIETARIO",
-    "NOME PROPRIETÁRIO",
-  );
-  if (!prop) {
-    const pm = raw.match(
-      /(?:PROPRIET[AÁ]RIO|NOME DO PROPRIET[AÁ]RIO)\s*[:\s]*([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{4,60})/i,
+  if (!out.anoModelo) {
+    const am = findCrlvLineValue(
+      lines,
+      "ANO FABRICAÇÃO / ANO MODELO",
+      "ANO FABRICACAO / ANO MODELO",
+      "ANO MODELO",
+      "ANO/MODELO",
+      "ANO DO MODELO",
     );
-    if (pm) prop = pm[1]!;
+    if (am) {
+      const amClean = am.replace(/\s+/g, "");
+      let m2 = amClean.match(/(\d{4})\/(\d{4})/);
+      if (!m2) m2 = am.match(/(\d{4})\s*\/\s*(\d{4})/);
+      if (m2) out.anoModelo = `${m2[1]}/${m2[2]}`;
+    }
   }
-  if (prop) out.proprietarioNome = prop.replace(/\s+/g, " ").trim();
+
+  if (!out.cor) {
+    let cor = findCrlvLineValue(
+      lines,
+      "COR PREDOMINANTE",
+      "COR DO VEÍCULO",
+      "COR DO VEICULO",
+    );
+    if (cor) {
+      cor = cor.replace(/\s+/g, " ").trim();
+      if (cor.length < 40 && !/^\d+$/.test(cor) && !isCrlvLabelLikeValue(cor)) {
+        out.cor = cor.toUpperCase();
+      }
+    }
+  }
+
+  if (!out.ufRegistro) {
+    const ufM = findCrlvLineValue(lines, "UF", "UF DE REGISTRO", "LOCAL DE REGISTRO");
+    if (ufM) {
+      const u = ufM.trim().toUpperCase();
+      if (/^[A-Z]{2}$/.test(u)) out.ufRegistro = u;
+      else {
+        const um = u.match(/\b([A-Z]{2})\b/);
+        if (um) out.ufRegistro = um[1];
+      }
+    }
+  }
+
+  if (!out.proprietarioNome) {
+    let prop = findCrlvLineValue(
+      lines,
+      "NOME DO PROPRIETÁRIO",
+      "NOME DO PROPRIETARIO",
+      "PROPRIETÁRIO",
+      "PROPRIETARIO",
+      "NOME PROPRIETÁRIO",
+      "NOME PROPRIETARIO",
+    );
+    if (!prop) {
+      const pm = raw.match(
+        /(?:PROPRIET[AÁ]RIO|NOME DO PROPRIET[AÁ]RIO)\s*[:\s]*([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{4,60})/i,
+      );
+      if (pm) prop = pm[1]!;
+    }
+    if (prop && !isPlacaValida(prop) && !/^\d+$/.test(prop.replace(/\D/g, ""))) {
+      out.proprietarioNome = prop.replace(/\s+/g, " ").trim();
+    }
+  }
 
   if (!out.marcaModelo) {
-    m = raw.match(/([A-Z]{2,15})\s*\/\s*([A-Z0-9][A-Z0-9\s.\-]{2,40})/i);
-    if (m && m[0]!.length < 60) {
-      out.marcaModelo = `${m[1]!.toUpperCase()}/${m[2]!.toUpperCase().trim()}`;
+    for (const m2 of raw.matchAll(/([A-Z0-9][^\n/]{1,18})\s*\/\s*([A-Z0-9][^\n/]{2,40})/gi)) {
+      const cand = `${m2[1]!.trim()} / ${m2[2]!.trim()}`;
+      if (isMarcaModeloCrlv(cand) && cand.length < 60) {
+        out.marcaModelo = cand.toUpperCase();
+        break;
+      }
     }
   }
 
