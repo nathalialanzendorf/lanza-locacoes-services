@@ -74,6 +74,7 @@ function RecebimentosTable({
               <tr>
                 <th>Cliente</th>
                 <th>{colunaVeiculo}</th>
+                <th>Descrição</th>
                 {colunasExtra?.map((col) => (
                   <th key={col.header}>{col.header}</th>
                 ))}
@@ -87,9 +88,10 @@ function RecebimentosTable({
                   ? urlLancarRecebimento(l, dataReferenciaBr)
                   : null;
                 return (
-                <tr key={`${l.clienteId ?? "—"}-${l.placa}`}>
+                <tr key={l.despesaId ?? `${l.clienteId ?? "—"}-${l.placa}-${l.vencimentoBr ?? ""}`}>
                   <td>{clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome)}</td>
                   <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
+                  <td>{l.descricao?.trim() || "—"}</td>
                   {colunasExtra?.map((col) => (
                     <td key={col.header}>{col.render(l)}</td>
                   ))}

@@ -21,6 +21,8 @@ export type DashboardRecebimentoLinha = {
   clienteNome: string | null;
   placa: string;
   veiculo: string;
+  despesaId?: string | null;
+  descricao?: string | null;
   valor: number;
   vencimentoBr?: string | null;
   vencimentosBr?: string[];

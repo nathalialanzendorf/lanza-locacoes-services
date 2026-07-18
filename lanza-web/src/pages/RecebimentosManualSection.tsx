@@ -38,6 +38,7 @@ export function RecebimentosManualSection() {
   const clienteIdUrl = searchParams.get("clienteId")?.trim() || "";
   const placaUrl = searchParams.get("placa")?.trim() || "";
   const valorUrl = searchParams.get("valor")?.trim() || "";
+  const despesaIdUrl = searchParams.get("despesaId")?.trim() || "";
   const dataBrUrl = searchParams.get("dataBr")?.trim() || "";
 
   const { ativo: espelhoRastreame } = useRastreameEspelho();
@@ -114,6 +115,14 @@ export function RecebimentosManualSection() {
     );
     if (v) setVeiculoId(v.id);
   }, [placaUrl, veiculosQuery.data]);
+
+  useEffect(() => {
+    if (!despesaIdUrl || opcoesValor.length === 0) return;
+    const item = opcoesValor.find((o) => o.id === despesaIdUrl);
+    if (!item) return;
+    setValorOpcao(item.id);
+    setValor(String(item.valor));
+  }, [despesaIdUrl, opcoesValor]);
 
   function onVeiculoChange(id: string) {
     setVeiculoId(id);

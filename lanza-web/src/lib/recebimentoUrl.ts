@@ -22,6 +22,9 @@ export function urlLancarRecebimento(
     params.set("valor", String(linha.valor));
   }
 
+  const despesaId = linha.despesaId?.trim();
+  if (despesaId) params.set("despesaId", despesaId);
+
   const data = dataReferenciaBr?.trim();
   if (data && data !== "—") params.set("dataBr", data);
 
