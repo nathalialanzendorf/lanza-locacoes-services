@@ -4977,10 +4977,10 @@
       "cpf": "570.533.161-49",
       "dataInicio": "03/07/2026",
       "dataFimPrevista": "01/10/2026",
-      "dataEncerramento": null,
+      "dataEncerramento": "18/07/2026",
       "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "motivoEncerramento": "troca",
+      "status": "encerrado",
       "prazoDias": 90,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": "sabado",
@@ -4991,7 +4991,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-07-03T21:36:13.467Z",
-      "atualizadoEm": "2026-07-03T21:38:51.103Z"
+      "atualizadoEm": "2026-07-18T15:24:40.546Z"
     },
     {
       "id": "810db07c-02cc-42a8-8f3d-9e075086072e",

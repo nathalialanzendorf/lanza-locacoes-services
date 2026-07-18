@@ -630,7 +630,16 @@
       "rastreameMotoristaKey": "6",
       "rastreameMotoristaId": 6,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:41:00.703Z"
+      "rastreameSyncEm": "2026-07-09T21:41:00.703Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "80a01c2a-ea86-493c-88e1-c12843043007",
+          "placa": "IYR-8F19",
+          "rastreavelKey": "235",
+          "vinculadoEm": "2026-07-18T15:19:19.284Z"
+        }
+      ],
+      "atualizadoEm": "2026-07-18T15:19:19.288Z"
     },
     {
       "nome": "Luiz Marcelo Porto Menezes Moreira",
@@ -691,7 +700,16 @@
       "rastreameMotoristaKey": "33",
       "rastreameMotoristaId": 33,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:41:01.981Z"
+      "rastreameSyncEm": "2026-07-09T21:41:01.981Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
+          "placa": "OWN-3C59",
+          "rastreavelKey": "223",
+          "vinculadoEm": "2026-07-18T15:22:37.409Z"
+        }
+      ],
+      "atualizadoEm": "2026-07-18T15:22:37.413Z"
     },
     {
       "nome": "Rafaela Cardoso Debiazi (Higor)",
@@ -724,7 +742,16 @@
       "rastreameMotoristaKey": "8",
       "rastreameMotoristaId": 8,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:41:02.358Z"
+      "rastreameSyncEm": "2026-07-09T21:41:02.358Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "0517704e-f5b4-42a4-835c-8f022b04dab9",
+          "placa": "PWH-3A45",
+          "rastreavelKey": "159",
+          "vinculadoEm": "2026-07-18T15:22:02.388Z"
+        }
+      ],
+      "atualizadoEm": "2026-07-18T15:22:02.391Z"
     },
     {
       "nome": "MONICA GUIMARAES DE OLIVEIRA",
@@ -982,7 +1009,16 @@
       "rastreameMotoristaKey": "29",
       "rastreameMotoristaId": 29,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:41:11.310Z"
+      "rastreameSyncEm": "2026-07-09T21:41:11.310Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "f4ec129c-454e-4572-b0a2-78adac59b051",
+          "placa": "IXT-7I93",
+          "rastreavelKey": "209",
+          "vinculadoEm": "2026-07-18T15:18:19.812Z"
+        }
+      ],
+      "atualizadoEm": "2026-07-18T15:18:19.816Z"
     },
     {
       "nome": "Ronald Viana Junior",
@@ -1012,7 +1048,16 @@
       "rastreameMotoristaKey": "35",
       "rastreameMotoristaId": 35,
       "ativo": true,
-      "rastreameSyncEm": "2026-07-09T21:41:11.680Z"
+      "rastreameSyncEm": "2026-07-09T21:41:11.680Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
+          "placa": "AVU-6740",
+          "rastreavelKey": "110",
+          "vinculadoEm": "2026-07-18T15:12:16.916Z"
+        }
+      ],
+      "atualizadoEm": "2026-07-18T15:12:16.920Z"
     },
     {
       "nome": "Lucas da Silva Dimas",
@@ -1245,7 +1290,15 @@
       "ativo": true,
       "id": "0621844a-475e-46a2-b595-89967488dd9c",
       "rastreameSyncEm": "2026-07-09T21:41:18.565Z",
-      "atualizadoEm": "2026-06-27T21:03:24.109Z"
+      "atualizadoEm": "2026-07-18T15:21:17.457Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
+          "placa": "RAH-4F54",
+          "rastreavelKey": "238",
+          "vinculadoEm": "2026-07-18T15:21:17.452Z"
+        }
+      ]
     },
     {
       "nome": "Danielle Batalha de Lima",
@@ -1391,7 +1444,15 @@
       "ativo": true,
       "id": "a56a4d8e-03d0-4600-b06e-31fab673299a",
       "rastreameSyncEm": "2026-07-09T21:41:23.614Z",
-      "atualizadoEm": "2026-06-28T16:37:44.488Z"
+      "atualizadoEm": "2026-07-18T15:23:18.743Z",
+      "rastreameVinculos": [
+        {
+          "veiculoId": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",
+          "placa": "OZC-0B50",
+          "rastreavelKey": "174",
+          "vinculadoEm": "2026-07-18T15:23:18.740Z"
+        }
+      ]
     },
     {
       "nome": "Maria Aparecida Lentz",
@@ -1749,7 +1810,7 @@
       "ativo": true,
       "id": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
       "rastreameSyncEm": "2026-07-09T21:41:35.699Z",
-      "atualizadoEm": "2026-07-03T21:42:03.872Z",
+      "atualizadoEm": "2026-07-18T15:20:18.297Z",
       "cpf": "570.533.161-49",
       "rg": "7007931",
       "rgOrgaoExpedidor": "SSP SC",
@@ -1770,10 +1831,10 @@
       "pastaContratoOrigem": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\03.07.2026 - Waldemir Pereira De Oliveira Filho",
       "rastreameVinculos": [
         {
-          "veiculoId": "20630c6c-0b8a-41a9-b098-ff1773fddc76",
-          "placa": "MLW-7I09",
-          "rastreavelKey": "100",
-          "vinculadoEm": "2026-07-03T21:36:13.490Z"
+          "veiculoId": "cb8799e3-d032-4ec3-850e-ca1725555db3",
+          "placa": "MKV-6268",
+          "rastreavelKey": "101",
+          "vinculadoEm": "2026-07-18T15:20:18.293Z"
         }
       ],
       "comprovanteResidenciaArquivo": "D:\\Dropbox\\Aluguel Carros\\Felipe - HYUNDAI HB20 2014-2015\\03.07.2026 - Waldemir Pereira De Oliveira Filho\\Comprovante de residencia.jpeg"

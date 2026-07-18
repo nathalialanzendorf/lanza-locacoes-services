@@ -15,7 +15,13 @@ function env(name: string): string | undefined {
 
 function postgresConfigured(): boolean {
   const hasHost = Boolean(env("PGHOST") ?? process.env.DATABASE_URL?.trim());
-  return hasHost && Boolean(env("AWS_ROLE_ARN") ?? process.env.AWS_ROLE_ARN?.trim());
+  const hasAuth = Boolean(
+    env("PGPASSWORD") ??
+      process.env.PGPASSWORD?.trim() ??
+      env("AWS_ROLE_ARN") ??
+      process.env.AWS_ROLE_ARN?.trim(),
+  );
+  return hasHost && hasAuth;
 }
 
 /** Backend ativo: `file` (padrão), `postgres` ou `dual`. */
@@ -26,8 +32,8 @@ export function getDbBackend(): DbBackend {
     cachedBackend = raw;
     return raw;
   }
-  // Vercel com RDS configurado: dual por defeito (JSON + Postgres)
-  if (process.env.VERCEL && postgresConfigured()) {
+  // Com RDS configurado: dual por defeito (JSON local + espelho PostgreSQL)
+  if (postgresConfigured()) {
     cachedBackend = "dual";
     return "dual";
   }

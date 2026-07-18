@@ -110,6 +110,17 @@ enquanto outro corre:
 - **Rodar em paralelo:** lançar os comandos concorrentemente (não sequencial), respeitando essa ordem de prioridade no arranque, porque os tokens curtos (Pedágio) não podem esperar os syncs longos (Rastreame ~50s) terminarem.
 - DETRAN/Pedágio podem precisar de credenciais frescas (token/sessão capturados no navegador); ver a secção "Set de variáveis de ambiente" abaixo.
 
+## Espelho PostgreSQL — obrigatório em toda gravação
+
+Sempre que **alterar `database/*.json`** (CLI, skill, API local ou sync Rastreame/DETRAN que grava no DB), o dado **deve** ser espelhado no **PostgreSQL** de produção.
+
+- **Nunca editar JSON à mão** (`node -e`, editor directo) — usar sempre `save*Db` / `saveJsonDocument` em `src/lib/*Db.ts` ou CLIs (`gravar-despesa`, `cadastro-*`, syncs).
+- **Backend:** com `PGHOST`/`DATABASE_URL` + auth (`PGPASSWORD` ou `AWS_ROLE_ARN`), `LANZA_DB_BACKEND=dual` (definido por `scripts/set-postgres-user-env.ps1`). Modo **dual** grava JSON **e** Postgres; localmente o espelho Postgres é **síncrono** (não perde writes ao terminar o CLI).
+- **Rotas HTTP / jobs async:** preferir `save*DbAsync` / `saveJsonDocumentAsync` (já usado em contratos, clientes, veículos; demais *Db têm variantes async).
+- **Recuperação manual** (JSON já alterado fora do fluxo): `npx tsx src/run.ts postgres sync-store parceiro-despesas.json` ou `POST /api/admin/migrar` com `{ "stores": ["…"] }`.
+- **Rastreame:** syncs que gravam local (`sync-recebimentos`, `sync-manutencao`, `sync-cliente`, etc.) passam pelos mesmos `save*Db` — o espelho Postgres aplica-se automaticamente com dual activo.
+- **Git push ≠ Postgres:** commit/push só actualiza o repositório; produção (API Vercel) lê do Postgres — sem espelho, dashboard e API ficam desactualizados.
+
 ## Set de variáveis de ambiente — sempre permitido
 
 - **Sempre permitir definir/atualizar as variáveis de ambiente** das integrações (DETRAN, Pedágio, Rastreame, **PagBank**, etc.), **tanto leitura/consulta quanto salvamento** (sessão e persistente no **utilizador**), quando o utilizador fornecer credenciais para rodar os syncs ou tools. É passo esperado e autorizado — **sempre gravar com `[Environment]::SetEnvironmentVariable(..., "User")`** (ou scripts `scripts/set-*-auth-user-env.ps1`); não pedir aprovação extra para `$env:…` / SetEnvironmentVariable desses tokens/cookies.

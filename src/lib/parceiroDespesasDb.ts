@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -176,6 +176,14 @@ export function saveParceiroDespesasDb(db: ParceiroDespesasDb): void {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   saveJsonDocument(DB_PARCEIRO_DESPESAS, db, { description: DEFAULT_DESCRICAO });
+}
+
+export async function saveParceiroDespesasDbAsync(db: ParceiroDespesasDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  await saveJsonDocumentAsync(DB_PARCEIRO_DESPESAS, db as Record<string, unknown>, {
+    description: DEFAULT_DESCRICAO,
+  });
 }
 
 /** @deprecated use loadParceiroDespesasDb */

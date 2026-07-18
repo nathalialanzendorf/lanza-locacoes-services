@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -180,6 +180,13 @@ export function saveLocacoesDb(db: LocacoesDb): void {
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaLocacao = DEFAULT_SCHEMA;
   saveJsonDocument(DB_LOCACOES, db, { trailingNewline: true });
+}
+
+export async function saveLocacoesDbAsync(db: LocacoesDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  db.schemaLocacao = DEFAULT_SCHEMA;
+  await saveJsonDocumentAsync(DB_LOCACOES, db as Record<string, unknown>, { trailingNewline: true });
 }
 
 export type LocacaoInput = {

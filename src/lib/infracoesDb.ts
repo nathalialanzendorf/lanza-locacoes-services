@@ -7,6 +7,7 @@ import {
   loadJsonDocument,
   loadJsonDocumentForApi,
   saveJsonDocument,
+  saveJsonDocumentAsync,
 } from "@lanza/db";
 import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran } from "./detranSc/types.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
@@ -474,6 +475,15 @@ export function saveInfracoesDb(db: InfracoesDb): void {
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   if (!db.schemaInfracao) db.schemaInfracao = DEFAULT_SCHEMA;
   saveJsonDocument(DB_INFRACOES, db, { description: DEFAULT_DESCRICAO });
+}
+
+export async function saveInfracoesDbAsync(db: InfracoesDb): Promise<void> {
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  if (!db.schemaInfracao) db.schemaInfracao = DEFAULT_SCHEMA;
+  await saveJsonDocumentAsync(DB_INFRACOES, db as Record<string, unknown>, {
+    description: DEFAULT_DESCRICAO,
+  });
 }
 
 export function findInfracaoByNumeroAuto(numeroAuto: string): InfracaoRegistro | null {

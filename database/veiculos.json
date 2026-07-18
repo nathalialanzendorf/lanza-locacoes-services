@@ -20,14 +20,15 @@
       "rastreameSyncEm": "2026-07-10T16:14:51.883Z",
       "ativo": true,
       "origem": "rastreame",
-      "atualizadoEm": "2026-07-10T16:10:00.000Z",
+      "atualizadoEm": "2026-07-18T15:15:56.274Z",
       "marca": "VOLKSWAGEN",
       "modelo": "GOL 1.0",
       "ano": 2013,
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-12-30",
-      "inicioLocacoes": "2025-12-20"
+      "inicioLocacoes": "2025-12-20",
+      "clienteVinculadoId": "9c055b90-e03b-4225-9e5d-0aaf512faffe"
     },
     {
       "id": "77c7be82-a74d-4895-8466-5ecbadf10989",
@@ -80,7 +81,9 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-10-31",
-      "inicioLocacoes": "2025-12-24"
+      "inicioLocacoes": "2025-12-24",
+      "clienteVinculadoId": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
+      "atualizadoEm": "2026-07-18T15:20:18.305Z"
     },
     {
       "id": "359000ba-3b11-4d88-be89-94bb583e4e0d",
@@ -131,7 +134,9 @@
       "categoria": "Veiculo",
       "tipo": "Furgão",
       "vencimentoDocumento": "2026-07-31",
-      "inicioLocacoes": "2025-11-14"
+      "inicioLocacoes": "2025-11-14",
+      "clienteVinculadoId": "548b6bad-d9a8-445e-94f4-dddd40d40e30",
+      "atualizadoEm": "2026-07-18T15:22:02.396Z"
     },
     {
       "id": "c033803d-2348-4bbf-9b7b-d779c8c23448",
@@ -214,7 +219,9 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "inicioLocacoes": "2026-03-25",
-      "vencimentoDocumento": "2027-05-31"
+      "vencimentoDocumento": "2027-05-31",
+      "clienteVinculadoId": "ad051658-2cd2-4adf-8b4e-7405175799d3",
+      "atualizadoEm": "2026-07-18T15:18:19.821Z"
     },
     {
       "id": "b188ac2b-96c4-4fb4-bd1a-0e9ceaeac263",
@@ -239,7 +246,9 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "inicioLocacoes": "2026-06-01",
-      "vencimentoDocumento": "2027-06-30"
+      "vencimentoDocumento": "2027-06-30",
+      "clienteVinculadoId": "0621844a-475e-46a2-b595-89967488dd9c",
+      "atualizadoEm": "2026-07-18T15:21:17.465Z"
     },
     {
       "id": "80a01c2a-ea86-493c-88e1-c12843043007",
@@ -259,7 +268,7 @@
       "rastreameSyncEm": "2026-07-08T23:59:13.279Z",
       "ativo": true,
       "origem": "rastreame",
-      "atualizadoEm": "2026-07-18T02:14:05.069Z",
+      "atualizadoEm": "2026-07-18T15:19:19.292Z",
       "marca": "Peugeot",
       "modelo": "2008 STYLE EAT6",
       "ano": 2018,
@@ -267,7 +276,8 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-11-30",
-      "inicioLocacoes": "2026-05-30"
+      "inicioLocacoes": "2026-05-30",
+      "clienteVinculadoId": "3b0778b6-9d31-4d45-a9d5-691b27ca62dc"
     },
     {
       "id": "4c116216-c4c3-4eef-96c4-a65abb5f4e38",
@@ -323,8 +333,8 @@
       "tipo": "Carro",
       "vencimentoDocumento": "2026-11-30",
       "inicioLocacoes": "2025-12-23",
-      "clienteVinculadoId": "6633da89-7121-4f1c-ba8f-9fbffc9367ef",
-      "atualizadoEm": "2026-07-11T20:15:21.777Z"
+      "clienteVinculadoId": null,
+      "atualizadoEm": "2026-07-18T15:20:18.286Z"
     },
     {
       "id": "20025418-0fc3-4993-9a7b-40494862ad8d",
@@ -377,7 +387,9 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-12-30",
-      "inicioLocacoes": "2025-12-24"
+      "inicioLocacoes": "2025-12-24",
+      "clienteVinculadoId": "a56a4d8e-03d0-4600-b06e-31fab673299a",
+      "atualizadoEm": "2026-07-18T15:23:18.748Z"
     },
     {
       "id": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
@@ -405,7 +417,9 @@
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-11-30",
-      "inicioLocacoes": "2026-05-06"
+      "inicioLocacoes": "2026-05-06",
+      "clienteVinculadoId": "caf97370-463d-468f-af8c-931906c89ca2",
+      "atualizadoEm": "2026-07-18T15:22:37.418Z"
     },
     {
       "id": "c83e65be-1516-42b2-a94a-95de4ab204ab",

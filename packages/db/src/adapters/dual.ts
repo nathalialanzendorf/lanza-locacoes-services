@@ -1,4 +1,5 @@
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
+import { awaitSync } from "../util/awaitSync.js";
 import { FileJsonDocumentAdapter } from "./file.js";
 import { PostgresJsonDocumentAdapter } from "./postgres.js";
 
@@ -54,9 +55,20 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
         logMirrorError("ficheiro", storeName, err);
       }
     }
-    void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
+    // CLI/local: aguarda o espelho no Postgres (evita perder writes se o processo terminar).
+    // Vercel: saveAsync nas rotas HTTP; aqui best-effort sem bloquear.
+    if (isVercelRuntime()) {
+      void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
+        logMirrorError("PostgreSQL", storeName, err);
+      });
+      return;
+    }
+    try {
+      awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
+    } catch (err) {
       logMirrorError("PostgreSQL", storeName, err);
-    });
+      throw err;
+    }
   }
 
   async loadAsync<T>(storeName: string, filePath: string): Promise<T | null> {
