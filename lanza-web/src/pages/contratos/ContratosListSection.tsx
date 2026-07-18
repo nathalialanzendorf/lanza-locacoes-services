@@ -144,6 +144,11 @@ export function ContratosListSection() {
             render: (c) => c.veiculo?.anoModelo ?? "—",
           },
           {
+            key: "cliente",
+            header: "Cliente",
+            render: (c) => c.clienteNome ?? "—",
+          },
+          {
             key: "parceiro",
             header: "Parceiro",
             render: (c) => parceiroDoContrato(c),
