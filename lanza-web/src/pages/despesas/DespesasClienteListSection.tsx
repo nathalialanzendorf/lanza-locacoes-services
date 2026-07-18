@@ -11,6 +11,7 @@ import { useClientes, useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { clienteExibicaoPorId, formatBrl, formatVeiculoLabel } from "@/lib/format";
+import { urlLancarRecebimentoDespesa } from "@/lib/recebimentoUrl";
 import type { ClienteDespesa, Veiculo } from "@/api/types";
 
 const CATEGORIAS = [
@@ -48,6 +49,11 @@ function badgeStatusDespesa(d: ClienteDespesa): "ok" | "warn" | "muted" {
   if (d.paga || d.situacao?.toLowerCase() === "registrado") return "ok";
   if (d.ativo === false) return "muted";
   return "warn";
+}
+
+function despesaElegivelBaixa(d: ClienteDespesa): boolean {
+  if (d.paga || d.situacao?.toLowerCase() === "registrado") return false;
+  return Boolean((d.clienteId ?? d.condutorId)?.trim());
 }
 
 export function DespesasClienteListSection() {
@@ -171,6 +177,7 @@ export function DespesasClienteListSection() {
           },
           { key: "titulo", header: "Título", render: (d) => d.titulo?.trim() || "—" },
           { key: "desc", header: "Descrição", render: (d) => d.descricao?.trim() || "—" },
+          { key: "categoria", header: "Categoria", render: (d) => d.categoria?.trim() || "—" },
           { key: "vencimento", header: "Vencimento", render: (d) => d.vencimentoBr?.trim() || "—" },
           {
             key: "valor",
@@ -194,6 +201,9 @@ export function DespesasClienteListSection() {
             className: "col-acoes",
             render: (d) => (
               <RowActions
+                recebimentoTo={
+                  despesaElegivelBaixa(d) ? urlLancarRecebimentoDespesa(d) : null
+                }
                 editTo={`/despesas/cliente/${d.id}/editar`}
                 deleting={excluindoId === d.id}
                 onDelete={() => void excluir(d)}

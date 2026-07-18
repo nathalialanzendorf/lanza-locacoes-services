@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 
-import { IconEdit, IconEncerrar, IconRenovar, IconTrash } from "@/components/icons";
+import { IconEdit, IconEncerrar, IconRecebimento, IconRenovar, IconTrash } from "@/components/icons";
 import { Toggle } from "@/components/Toggle";
 import { LABEL } from "@/lib/labels";
 
 type Props = {
   editTo: string;
+  /** Baixa manual — mesma ação do dashboard (Recebimentos). */
+  recebimentoTo?: string | null;
   renovarTo?: string;
   encerrarTo?: string;
   ativo?: boolean;
@@ -22,6 +24,7 @@ type Props = {
 
 export function RowActions({
   editTo,
+  recebimentoTo,
   renovarTo,
   encerrarTo,
   ativo = true,
@@ -34,6 +37,17 @@ export function RowActions({
   toggleAtivoMode = "desabilitar",
 }: Props) {
   const busy = deleting || togglingAtivo;
+
+  const recebimento = recebimentoTo ? (
+    <Link
+      to={recebimentoTo}
+      className="btn btn--icon btn--icon-ok"
+      aria-label={LABEL.lancarRecebimento}
+      title={LABEL.lancarRecebimento}
+    >
+      <IconRecebimento className="row-actions__icon" />
+    </Link>
+  ) : null;
 
   const editar = (
     <Link to={editTo} className="btn btn--icon" aria-label={LABEL.editar} title={LABEL.editar}>
@@ -88,7 +102,7 @@ export function RowActions({
   const actions =
     variant === "contrato"
       ? [encerrar, renovar, editar, excluir]
-      : [toggleAtivo, editar, renovar, encerrar, excluir];
+      : [recebimento, toggleAtivo, editar, renovar, encerrar, excluir];
 
   return <div className="row-actions">{actions}</div>;
 }
