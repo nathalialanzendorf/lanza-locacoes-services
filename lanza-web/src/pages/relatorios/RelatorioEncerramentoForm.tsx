@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { DataTable } from "@/components/DataTable";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
+import { QueryError } from "@/components/PageHeader";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
+import { useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import {
@@ -11,6 +17,8 @@ import {
   textoEncerramento,
   type RelatorioModoEntrega,
 } from "@/lib/relatorioDownload";
+import { formatPlaca } from "@/lib/format";
+import type { Contrato } from "@/api/types";
 
 type EncerramentoPayload = {
   data?: unknown;
@@ -20,6 +28,8 @@ type EncerramentoPayload = {
   arquivos?: unknown;
 };
 
+type MotivoEncerramento = "devolvido" | "recuperado" | "troca";
+
 function normalizarEncerramento(r: EncerramentoPayload & { data?: EncerramentoPayload }): EncerramentoPayload {
   if (r.texto != null || r.whatsapp != null) return r;
   if (r.data && typeof r.data === "object" && ("texto" in r.data || "whatsapp" in r.data)) {
@@ -28,8 +38,22 @@ function normalizarEncerramento(r: EncerramentoPayload & { data?: EncerramentoPa
   return r;
 }
 
+function pastaDoContrato(contrato: Contrato): string {
+  return contrato.pastaContrato ?? contrato.pasta ?? "";
+}
+
+function terminoContrato(contrato: Contrato): string {
+  if (contrato.dataEncerramento?.trim()) return contrato.dataEncerramento;
+  if (contrato.dataFimPrevista?.trim()) return contrato.dataFimPrevista;
+  return contrato.dataFim ?? "—";
+}
+
 export function RelatorioEncerramentoForm() {
-  const [pastaContrato, setPastaContrato] = useState("");
+  const qc = useQueryClient();
+  const [clienteId, setClienteId] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
+  const [contratoSelecionadoId, setContratoSelecionadoId] = useState<string | null>(null);
+
   const [dataEncerramento, setDataEncerramento] = useState("");
   const [semanasPagas, setSemanasPagas] = useState("");
   const [armazenarServidor, setArmazenarServidor] = useState(false);
@@ -37,16 +61,53 @@ export function RelatorioEncerramentoForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<EncerramentoPayload | null>(null);
 
-  const [idOuPasta, setIdOuPasta] = useState("");
-  const [motivo, setMotivo] = useState("devolvido");
+  const [motivo, setMotivo] = useState<MotivoEncerramento>("devolvido");
   const [quebraContrato, setQuebraContrato] = useState(false);
   const [loadingEncerrar, setLoadingEncerrar] = useState(false);
   const [encerrarResult, setEncerrarResult] = useState<unknown>(null);
   const [encerrarError, setEncerrarError] = useState<string | null>(null);
 
+  const query = useContratos({
+    status: "ativo",
+    clienteId: clienteId || undefined,
+    veiculoId: veiculoId || undefined,
+  });
+
+  const rows = query.data?.items ?? [];
+  const temFiltro = Boolean(clienteId || veiculoId);
+
+  const contratoSelecionado = useMemo(
+    () => rows.find((c) => c.id === contratoSelecionadoId) ?? null,
+    [rows, contratoSelecionadoId],
+  );
+
+  const pastaContrato = contratoSelecionado ? pastaDoContrato(contratoSelecionado) : "";
+
+  useEffect(() => {
+    if (contratoSelecionadoId && !rows.some((c) => c.id === contratoSelecionadoId)) {
+      setContratoSelecionadoId(null);
+    }
+  }, [rows, contratoSelecionadoId]);
+
+  useEffect(() => {
+    if (motivo === "troca") setQuebraContrato(false);
+  }, [motivo]);
+
   const paramsValidos = Boolean(pastaContrato.trim() && dataEncerramento.trim());
 
+  function selecionarContrato(contrato: Contrato) {
+    setContratoSelecionadoId(contrato.id);
+    setResult(null);
+    setEncerrarResult(null);
+    setError(null);
+    setEncerrarError(null);
+  }
+
   async function entregar(modo: RelatorioModoEntrega) {
+    if (!contratoSelecionado) {
+      setError("Selecione um contrato na lista.");
+      return;
+    }
     setLoading(true);
     setError(null);
     if (modo !== "visualizar") setResult(null);
@@ -76,16 +137,28 @@ export function RelatorioEncerramentoForm() {
   }
 
   async function efetivarEncerramento() {
+    if (!contratoSelecionado) {
+      setEncerrarError("Selecione um contrato na lista.");
+      return;
+    }
+    if (!dataEncerramento.trim()) {
+      setEncerrarError("Informe a data de encerramento.");
+      return;
+    }
     setLoadingEncerrar(true);
     setEncerrarError(null);
     try {
       const r = await lanzaApi.encerrarContrato({
-        idOuPasta: idOuPasta.trim() || pastaContrato.trim(),
+        idOuPasta: contratoSelecionado.id,
         dataEncerramento: dataEncerramento.trim(),
         motivoEncerramento: motivo,
-        quebraContrato,
+        quebraContrato: motivo === "troca" ? false : quebraContrato,
       });
       setEncerrarResult(r.data);
+      setContratoSelecionadoId(null);
+      void qc.invalidateQueries({ queryKey: ["contratos"] });
+      void qc.invalidateQueries({ queryKey: ["clientes"] });
+      void qc.invalidateQueries({ queryKey: ["veiculos"] });
     } catch (err) {
       setEncerrarError(err instanceof LanzaApiError ? err.message : "Falha ao encerrar contrato.");
     } finally {
@@ -96,16 +169,87 @@ export function RelatorioEncerramentoForm() {
   return (
     <>
       <section className="form-card">
+        <h2 className="form-card__title">Contratos ativos</h2>
+        <div className="despesas-toolbar">
+          <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+          <VeiculoSelect
+            value={veiculoId}
+            onChange={setVeiculoId}
+            valueField="id"
+            emptyLabel="Todos os veículos"
+          />
+          {!query.isLoading ? (
+            <span className="badge badge--muted">
+              {rows.length} contrato{rows.length === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
+        {query.isError ? (
+          <QueryError
+            message={
+              query.error instanceof LanzaApiError ? query.error.message : "Falha ao listar contratos."
+            }
+          />
+        ) : null}
+        <p className="field__hint">Clique num contrato para selecionar e calcular o acerto ou encerrar.</p>
+        <DataTable
+          loading={query.isLoading}
+          rows={rows}
+          keyFn={(c) => c.id}
+          selectedKey={contratoSelecionadoId}
+          onRowClick={selecionarContrato}
+          emptyMessage={
+            temFiltro ? "Nenhum contrato ativo corresponde aos filtros." : "Nenhum contrato ativo."
+          }
+          columns={[
+            {
+              key: "sel",
+              header: "",
+              className: "col-sel",
+              render: (c) => (
+                <input
+                  type="radio"
+                  name="contrato-encerramento"
+                  checked={contratoSelecionadoId === c.id}
+                  onChange={() => selecionarContrato(c)}
+                  aria-label={`Selecionar contrato ${formatPlaca(c.placa)}`}
+                />
+              ),
+            },
+            {
+              key: "cliente",
+              header: "Cliente",
+              render: (c) => <strong>{c.clienteNome ?? "—"}</strong>,
+            },
+            {
+              key: "placa",
+              header: "Placa",
+              render: (c) => formatPlaca(c.placa ?? c.veiculo?.placa),
+            },
+            {
+              key: "inicio",
+              header: "Início",
+              render: (c) => c.dataInicio ?? "—",
+            },
+            {
+              key: "termino",
+              header: "Término previsto",
+              render: (c) => terminoContrato(c),
+            },
+          ]}
+        />
+      </section>
+
+      {contratoSelecionado ? (
+        <p className="field__hint">
+          Selecionado: <strong>{contratoSelecionado.clienteNome}</strong> ·{" "}
+          {formatPlaca(contratoSelecionado.placa)} · {pastaContrato || contratoSelecionado.id}
+        </p>
+      ) : null}
+
+      <section className="form-card">
         <h2 className="form-card__title">Calcular acerto final</h2>
         <div className="form-grid">
-          <Field label="Pasta do contrato" hint="Ex.: 17.07.2026 - Nome Cliente">
-            <input
-              className="input"
-              value={pastaContrato}
-              onChange={(e) => setPastaContrato(e.target.value)}
-              required
-            />
-          </Field>
           <Field label="Data de encerramento">
             <DateInput value={dataEncerramento} onChange={setDataEncerramento} required disabled={loading} />
           </Field>
@@ -116,6 +260,7 @@ export function RelatorioEncerramentoForm() {
               min={0}
               value={semanasPagas}
               onChange={(e) => setSemanasPagas(e.target.value)}
+              disabled={!contratoSelecionado || loading}
             />
           </Field>
         </div>
@@ -124,7 +269,7 @@ export function RelatorioEncerramentoForm() {
 
       <RelatorioEntrega
         loading={loading}
-        disabled={!paramsValidos}
+        disabled={!paramsValidos || !contratoSelecionado}
         armazenarServidor={armazenarServidor}
         onArmazenarServidorChange={setArmazenarServidor}
         onEntrega={(modo) => void entregar(modo)}
@@ -142,17 +287,23 @@ export function RelatorioEncerramentoForm() {
         title="Efetivar encerramento"
         onSubmit={efetivarEncerramento}
         loading={loadingEncerrar}
+        submitDisabled={!contratoSelecionado}
         submitLabel="Encerrar contrato no database"
         error={encerrarError}
       >
-        <Field label="ID ou pasta" hint="Deixe vazio para usar a pasta acima">
-          <input className="input" value={idOuPasta} onChange={(e) => setIdOuPasta(e.target.value)} />
+        <Field label="Data de encerramento" hint="Usa a mesma data do acerto acima">
+          <DateInput value={dataEncerramento} onChange={setDataEncerramento} required disabled={loadingEncerrar} />
         </Field>
-        <Field label="Motivo">
-          <select className="select" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+        <Field label="Motivo do encerramento">
+          <select
+            className="select"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value as MotivoEncerramento)}
+            disabled={loadingEncerrar}
+          >
             <option value="devolvido">Devolvido</option>
             <option value="recuperado">Recuperado</option>
-            <option value="troca">Troca</option>
+            <option value="troca">Troca de veículo</option>
           </select>
         </Field>
         <Field label="Quebra de contrato">
@@ -161,9 +312,13 @@ export function RelatorioEncerramentoForm() {
               type="checkbox"
               checked={quebraContrato}
               onChange={(e) => setQuebraContrato(e.target.checked)}
+              disabled={loadingEncerrar || motivo === "troca"}
             />
-            Registrar quebra (multa contratual)
+            Registrar quebra (retenção proporcional de caução)
           </label>
+          {motivo === "troca" ? (
+            <span className="field__hint">Troca de veículo não é quebra — a caução transfere para o novo contrato.</span>
+          ) : null}
         </Field>
       </FormCard>
 

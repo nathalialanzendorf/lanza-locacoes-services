@@ -13,6 +13,8 @@ type Props<T> = {
   keyFn: (row: T) => string;
   emptyMessage?: string;
   loading?: boolean;
+  selectedKey?: string | null;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTable<T>({
@@ -21,6 +23,8 @@ export function DataTable<T>({
   keyFn,
   emptyMessage = "Nenhum registo encontrado.",
   loading,
+  selectedKey,
+  onRowClick,
 }: Props<T>) {
   if (loading) {
     return <div className="panel panel--loading">A carregar dados…</div>;
@@ -43,15 +47,35 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={keyFn(row)}>
+          {rows.map((row) => {
+            const rowKey = keyFn(row);
+            const selectable = Boolean(onRowClick);
+            return (
+            <tr
+              key={rowKey}
+              className={selectedKey === rowKey ? "is-selected" : undefined}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              tabIndex={selectable ? 0 : undefined}
+              onKeyDown={
+                selectable
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onRowClick!(row);
+                      }
+                    }
+                  : undefined
+              }
+              role={selectable ? "button" : undefined}
+            >
               {columns.map((col) => (
                 <td key={col.key} className={col.className}>
                   {col.render(row)}
                 </td>
               ))}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

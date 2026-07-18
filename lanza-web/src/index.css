@@ -274,6 +274,22 @@ code {
   border-bottom: none;
 }
 
+.data-table tbody tr.is-selected td {
+  background: #eff6ff;
+}
+
+.data-table tbody tr[role="button"] {
+  cursor: pointer;
+}
+
+.data-table tbody tr[role="button"]:hover td {
+  background: #f8fafc;
+}
+
+.data-table tbody tr.is-selected[role="button"]:hover td {
+  background: #dbeafe;
+}
+
 .data-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
