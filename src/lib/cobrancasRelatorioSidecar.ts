@@ -55,6 +55,8 @@ import {
 import { compararDataBrAsc, daysBetween, parseDataBr } from "./contratoExtrair.js";
 import { isCreditoDevolucaoLocatario } from "./encerrarContrato.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { vencimentoClienteDespesaBr } from "./clienteDespesaVencimento.js";
+import { formatVeiculoLabel } from "./veiculoLabel.js";
 import { vencimentoDespesaSemanalBr } from "./pagamentoSemanal.js";
 import {
   despesaSemanalElegivelRelatorio,
@@ -213,14 +215,23 @@ function isQuebraContrato(d: ClienteDespesaRegistro): boolean {
   return desc.includes("quebra de contrato") || desc.includes("retenção caução (quebra");
 }
 
+function veiculoLabelDespesa(d: ClienteDespesaRegistro): string {
+  const p = compactPlaca(d.veiculoId);
+  const v = loadVeiculosDb().veiculos.find(
+    (x) => x.id === d.veiculoId || compactPlaca(x.placa) === p,
+  );
+  if (v) return formatVeiculoLabel(v);
+  return formatVeiculoLabel({ placa: d.veiculoId });
+}
+
 function linhaDespesa(d: ClienteDespesaRegistro): LinhaRelatorioCobranca {
   const descricao = isInfracaoTransito(d)
     ? rotuloInfracaoCobranca(d)
     : d.descricao?.trim() || d.titulo?.trim() || "(sem descrição)";
   return {
     descricao,
-    placa: formatPlacaHyphen(d.veiculoId),
-    data: d.dataAutuacao || "—",
+    placa: veiculoLabelDespesa(d),
+    data: vencimentoClienteDespesaBr(d) ?? "—",
     categoria: d.categoria ?? "Outros",
     valor: round2(Number(d.valorMulta) || 0),
   };
@@ -419,8 +430,8 @@ function linhaDespesaEmAberto(
     ? rotuloInfracaoCobranca(d)
     : d.descricao?.trim() || d.titulo?.trim() || "(sem descrição)";
   return {
-    rastreavel: rastreavelLabel(d.veiculoId),
-    data: d.dataAutuacao || "—",
+    rastreavel: veiculoLabelDespesa(d),
+    data: vencimentoClienteDespesaBr(d) ?? (d.dataAutuacao || "—"),
     descricao,
     motorista: resolverMotoristaDespesa(d, fallbackMotorista),
     tipo: tipoRastreame(d.categoria),

@@ -40,7 +40,9 @@ function alertaAtrasoRecebimento(l: DashboardRecebimentoLinha): ReactNode {
 }
 
 function chaveClienteLinha(l: DashboardRecebimentoLinha): string {
-  return l.clienteId ?? l.clienteNome ?? "";
+  const id = l.clienteId?.trim();
+  if (id) return `id:${id}`;
+  return `nome:${(l.clienteNome ?? "").trim().toLocaleLowerCase("pt-BR")}`;
 }
 
 /** Índice de grupo por cliente (0, 0, 1, 1, 2…) para zebra na tabela. */
@@ -92,7 +94,7 @@ function RecebimentosTable({
 
   return (
     <section
-      className={`form-card dashboard-recebimentos${acoesCompactas ? " dashboard-recebimentos--acoes-compactas" : ""}`}
+      className={`form-card dashboard-recebimentos${acoesCompactas ? " dashboard-recebimentos--acoes-compactas" : ""}${zebraPorCliente ? " dashboard-recebimentos--zebra-cliente" : ""}`}
     >
       <header className="dashboard-recebimentos__head">
         <h3 className="form-card__title">{titulo}</h3>

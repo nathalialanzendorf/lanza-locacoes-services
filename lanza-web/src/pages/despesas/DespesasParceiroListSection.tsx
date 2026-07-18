@@ -144,10 +144,14 @@ export function DespesasParceiroListSection() {
         keyFn={(d) => d.id}
         emptyMessage={temFiltro ? "Nenhuma despesa corresponde aos filtros." : "Nenhuma despesa registada."}
         columns={[
-          { key: "veiculo", header: "Veículo", render: (d) => veiculoDespesa(d, veiculos) },
+          {
+            key: "veiculo",
+            header: "Veículo",
+            render: (d) => d.veiculoLabel?.trim() || veiculoDespesa(d, veiculos),
+          },
           { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
           { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
-          { key: "vencimento", header: "Vencimento", render: (d) => d.data?.trim() || "—" },
+          { key: "vencimento", header: "Vencimento", render: (d) => d.vencimentoBr?.trim() || d.data?.trim() || "—" },
           { key: "competencia", header: "Competência", render: (d) => d.competencia ?? "—" },
           {
             key: "acoes",

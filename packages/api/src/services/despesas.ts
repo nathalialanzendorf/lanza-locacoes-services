@@ -12,6 +12,8 @@ import {
   isClienteDespesaAtiva,
   loadClienteDespesasDb,
   compactPlaca,
+  formatPlacaHyphen,
+  formatVeiculoLabel,
   vencimentoClienteDespesaBr,
   type ClienteDespesaInput,
   type ClienteDespesaPatch,
@@ -60,9 +62,36 @@ function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
   return null;
 }
 
+export type DespesaClienteListagem = ClienteDespesaRegistro & {
+  placa: string;
+  veiculoLabel: string;
+  vencimentoBr: string | null;
+};
+
+function veiculoDaDespesaCliente(d: ClienteDespesaRegistro) {
+  return findVeiculoById(d.veiculoId) ?? findVeiculoByPlaca(d.veiculoId);
+}
+
+function enriquecerDespesaCliente(d: ClienteDespesaRegistro): DespesaClienteListagem {
+  const veiculo = veiculoDaDespesaCliente(d);
+  const placa = veiculo?.placa ?? formatPlacaHyphen(d.veiculoId);
+  return {
+    ...d,
+    placa,
+    veiculoLabel: formatVeiculoLabel(
+      veiculo ?? {
+        placa,
+        marcaModelo: null,
+        anoModelo: null,
+      },
+    ),
+    vencimentoBr: vencimentoClienteDespesaBr(d),
+  };
+}
+
 export function listarDespesas(opts: ListarDespesasOpts = {}): {
   total: number;
-  items: (ClienteDespesaRegistro & { vencimentoBr: string | null })[];
+  items: DespesaClienteListagem[];
 } {
   let items = loadClienteDespesasDb().clienteDespesas;
   const placaKey = resolvePlacaFiltro(opts);
@@ -100,10 +129,7 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
 
   return {
     total: items.length,
-    items: items.map((d) => ({
-      ...d,
-      vencimentoBr: vencimentoClienteDespesaBr(d),
-    })),
+    items: items.map(enriquecerDespesaCliente),
   };
 }
 

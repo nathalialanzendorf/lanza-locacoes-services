@@ -7,6 +7,8 @@ import {
   loadParceiroDespesasDb,
   marcarBaixaParceiroDespesa,
   saveParceiroDespesasDb,
+  formatPlacaHyphen,
+  formatVeiculoLabel,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
 } from "../lib-imports.js";
@@ -42,6 +44,22 @@ function despesaDoParceiro(d: ParceiroDespesaRegistro, veiculoIds: Set<string>):
   if (d.veiculoId && veiculoIds.has(d.veiculoId)) return true;
   const veiculo = veiculoDaDespesa(d);
   return veiculo ? veiculoIds.has(veiculo.id) : false;
+}
+
+export type ParceiroDespesaListagem = ParceiroDespesaRegistro & {
+  veiculoLabel: string;
+  vencimentoBr: string | null;
+};
+
+function enriquecerParceiroDespesa(d: ParceiroDespesaRegistro): ParceiroDespesaListagem {
+  const veiculo = veiculoDaDespesa(d);
+  const placa = veiculo?.placa ?? formatPlacaHyphen(d.placa);
+  return {
+    ...d,
+    placa,
+    veiculoLabel: formatVeiculoLabel(veiculo ?? { placa }),
+    vencimentoBr: d.data?.trim() || null,
+  };
 }
 
 export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
@@ -89,7 +107,10 @@ export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
   if (opts.emAberto === true) items = items.filter(emAberto);
   else if (opts.emAberto === false) items = items.filter((d) => !emAberto(d));
 
-  return { total: items.length, items };
+  return {
+    total: items.length,
+    items: items.map(enriquecerParceiroDespesa),
+  };
 }
 
 export function obterParceiroDespesa(id: string): ParceiroDespesaRegistro | null {

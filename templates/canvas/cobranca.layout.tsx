@@ -15,7 +15,7 @@ import {
   useHostTheme,
 } from "cursor/canvas";
 
-const tabHeaders = ["Descrição", "Placa", "Data", "Categoria", "Valor"] as const;
+const tabHeaders = ["Descrição", "Veículo", "Vencimento", "Categoria", "Valor"] as const;
 const alinhamento = ["left", "left", "left", "left", "right"] as const;
 const colunasTabela = "minmax(0, 1fr) 88px 92px 116px 152px";
 const celulaTabela = { padding: "8px 12px" } as const;

@@ -146,6 +146,8 @@ export type ClienteDespesa = {
   clienteConfirmado?: boolean;
   condutorConfirmado?: boolean;
   rastreameId?: string | number | null;
+  /** Rótulo do veículo (API listagem). */
+  veiculoLabel?: string | null;
   /** Vencimento calculado (DD/MM/AAAA) — listagem API. */
   vencimentoBr?: string | null;
 };
@@ -212,6 +214,8 @@ export type ParceiroDespesa = {
   valor?: number;
   competencia?: string;
   baixa?: string;
+  veiculoLabel?: string | null;
+  vencimentoBr?: string | null;
 };
 
 export type Infracao = {
