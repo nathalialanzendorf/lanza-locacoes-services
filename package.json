@@ -21,7 +21,6 @@
     "api:start": "npm run start -w @lanza/api",
     "start": "tsx packages/api/src/index.ts",
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
-    "sync:postgresql": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-postgresql.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
   "devDependencies": {

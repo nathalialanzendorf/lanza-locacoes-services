@@ -6014,7 +6014,10 @@
       "valor": 3,
       "competencia": "07/2026",
       "origem": "pedagio-digital/sem-locatario/FHG0B73/PED-45403469",
-      "baixa": "18/07/2026"
+      "baixa": "18/07/2026",
+      "rastreameManutencaoId": 539,
+      "rastreameHash": "33ee7ae4b7838111",
+      "rastreameSyncEm": "2026-07-18T18:39:15.549Z"
     },
     {
       "id": "f197d1e4-6ab3-44cd-becd-adfd9dd9ca68",
@@ -6086,7 +6089,10 @@
       "valor": 79.89,
       "competencia": "07/2026",
       "origem": "Proteção Veicular/Comprovantes/2026/07 Julho/FHG0B73 - FIESTA.pdf",
-      "baixa": "18/07/2026"
+      "baixa": "18/07/2026",
+      "rastreameManutencaoId": 372,
+      "rastreameHash": "ebfedfb78d13742e",
+      "rastreameSyncEm": "2026-07-18T18:34:59.079Z"
     },
     {
       "id": "6d4b0abc-95ad-4bf5-b248-737fd3dbcaa2",

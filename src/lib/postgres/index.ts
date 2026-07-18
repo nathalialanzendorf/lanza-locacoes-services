@@ -16,8 +16,3 @@ export {
   JSON_STORE_FILES,
   type MigrateOptions,
 } from "@lanza/db";
-export {
-  syncPostgresql,
-  mirrorStoreIfNeeded,
-  type SyncPostgresqlOptions,
-} from "./syncPostgresql.js";

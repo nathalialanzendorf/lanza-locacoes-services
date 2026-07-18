@@ -8,11 +8,11 @@ import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useDespesasParceiro } from "@/api/hooks";
+import { useDespesasParceiro, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatPlaca } from "@/lib/format";
-import type { ParceiroDespesa } from "@/api/types";
+import { formatBrl, formatVeiculoLabel } from "@/lib/format";
+import type { ParceiroDespesa, Veiculo } from "@/api/types";
 
 const CATEGORIAS = [
   "Seguro",
@@ -24,6 +24,19 @@ const CATEGORIAS = [
 ] as const;
 
 type FiltroPagamento = "em_aberto" | "pago" | "todos";
+
+function compactPlaca(placa: string | null | undefined): string {
+  return (placa ?? "").replace(/-/g, "").trim().toUpperCase();
+}
+
+function veiculoDespesa(d: ParceiroDespesa, veiculos: Veiculo[] | undefined): string {
+  const placaKey = compactPlaca(d.placa ?? d.veiculoId ?? undefined);
+  const v = veiculos?.find(
+    (x) => x.id === d.veiculoId || compactPlaca(x.placa) === placaKey,
+  );
+  if (v) return formatVeiculoLabel(v);
+  return formatVeiculoLabel({ placa: d.placa ?? d.veiculoId ?? undefined });
+}
 
 export function DespesasParceiroListSection() {
   const qc = useQueryClient();
@@ -41,6 +54,8 @@ export function DespesasParceiroListSection() {
     categoria: categoria || undefined,
     competencia: competencia.trim() || undefined,
   });
+  const veiculosQuery = useVeiculos();
+  const veiculos = veiculosQuery.data?.items;
 
   const rows = query.data?.items ?? [];
   const temFiltro =
@@ -129,29 +144,11 @@ export function DespesasParceiroListSection() {
         keyFn={(d) => d.id}
         emptyMessage={temFiltro ? "Nenhuma despesa corresponde aos filtros." : "Nenhuma despesa registada."}
         columns={[
-          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
+          { key: "veiculo", header: "Veículo", render: (d) => veiculoDespesa(d, veiculos) },
           { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
-          { key: "placa", header: "Placa", render: (d) => formatPlaca(d.placa) },
+          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
+          { key: "vencimento", header: "Vencimento", render: (d) => d.data?.trim() || "—" },
           { key: "competencia", header: "Competência", render: (d) => d.competencia ?? "—" },
-          { key: "data", header: "Vencimento", render: (d) => d.data ?? "—" },
-          {
-            key: "valor",
-            header: "Valor",
-            className: "num",
-            render: (d) => formatBrl(Number(d.valor) || 0),
-          },
-          {
-            key: "baixa",
-            header: "Baixa",
-            render: (d) => {
-              const quitada = Boolean(d.baixa?.trim());
-              return (
-                <span className={quitada ? "badge badge--ok" : "badge badge--warn"}>
-                  {quitada ? d.baixa : "Em aberto"}
-                </span>
-              );
-            },
-          },
           {
             key: "acoes",
             header: "Ações",

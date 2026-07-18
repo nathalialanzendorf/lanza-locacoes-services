@@ -59,7 +59,6 @@ Comandos:
   relatorio-analise-cadastro --cpf CPF --nome "NOME" --nascimento DD/MM/AAAA --base-legal "TEXTO" [--bnmp|--pf|--tjsc] [--aprovar|--reprovar] [--cliente id|cpf] [--timeout-min N] [--sem-browser] [--out] [--json]  (antecedentes/processos em Chrome real; exige base legal LGPD; grava em database/analise-cadastro.json e espelha no cliente)
   relatorio-analise-cadastro --listar [--cpf CPF] [--com-alerta] [--json]  (histórico de análises de cadastro gravadas)
   postgres check [--json] | postgres migrate [--import-json] [--dry-run]  (RDS PostgreSQL — ver postgres --help)
-  sync-postgresql [ficheiro.json ...] [--dry-run]  (espelha database/*.json → PostgreSQL)
 `);
     process.exit(cmd ? 0 : 1);
   }
@@ -229,9 +228,6 @@ Comandos:
       break;
     case "postgres":
       await (await import("./cli/postgres.js")).main(rest);
-      break;
-    case "sync-postgresql":
-      await (await import("./cli/syncPostgresql.js")).main(rest);
       break;
     case "auditar-ativo-stores":
       process.exit(await (await import("./cli/auditarAtivoStores.js")).auditarAtivoStores());

@@ -25,19 +25,15 @@ const CATEGORIAS = [
 
 type FiltroPagamento = "em_aberto" | "pago" | "todos";
 
-function compactPlaca(placa: string): string {
-  return placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+function compactPlaca(placa: string | null | undefined): string {
+  return (placa ?? "").replace(/-/g, "").trim().toUpperCase();
 }
 
-function veiculoLabelDespesa(
-  d: ClienteDespesa,
-  porId: Map<string, Veiculo>,
-  porPlaca: Map<string, Veiculo>,
-): string {
-  const placaKey = compactPlaca(d.placa ?? d.veiculoId ?? "");
-  const v =
-    (d.veiculoId?.trim() ? porId.get(d.veiculoId.trim()) : undefined) ??
-    (placaKey ? porPlaca.get(placaKey) : undefined);
+function veiculoDespesa(d: ClienteDespesa, veiculos: Veiculo[] | undefined): string {
+  const placaKey = compactPlaca(d.placa ?? d.veiculoId);
+  const v = veiculos?.find(
+    (x) => x.id === d.veiculoId || compactPlaca(x.placa) === placaKey,
+  );
   if (v) return formatVeiculoLabel(v);
   return formatVeiculoLabel({ placa: d.placa ?? d.veiculoId });
 }
@@ -51,24 +47,6 @@ export function DespesasClienteListSection() {
   const [competencia, setCompetencia] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
-  const veiculosQuery = useVeiculos();
-
-  const veiculosPorId = useMemo(() => {
-    const map = new Map<string, Veiculo>();
-    for (const v of veiculosQuery.data?.items ?? []) {
-      map.set(v.id, v);
-    }
-    return map;
-  }, [veiculosQuery.data]);
-
-  const veiculosPorPlaca = useMemo(() => {
-    const map = new Map<string, Veiculo>();
-    for (const v of veiculosQuery.data?.items ?? []) {
-      if (v.placa) map.set(compactPlaca(v.placa), v);
-    }
-    return map;
-  }, [veiculosQuery.data]);
-
   const query = useDespesasCliente({
     ativo: true,
     emAberto: pagamento === "em_aberto" ? true : pagamento === "pago" ? false : undefined,
@@ -77,6 +55,8 @@ export function DespesasClienteListSection() {
     categoria: categoria || undefined,
     competencia: competencia.trim() || undefined,
   });
+  const veiculosQuery = useVeiculos();
+  const veiculos = veiculosQuery.data?.items;
 
   const rows = query.data?.items ?? [];
   const temFiltro =
@@ -160,14 +140,10 @@ export function DespesasClienteListSection() {
         keyFn={(d) => d.id}
         emptyMessage={temFiltro ? "Nenhuma despesa corresponde aos filtros." : "Nenhuma despesa registada."}
         columns={[
-          {
-            key: "veiculo",
-            header: "Veículo",
-            render: (d) => veiculoLabelDespesa(d, veiculosPorId, veiculosPorPlaca),
-          },
-          { key: "titulo", header: "Título", render: (d) => d.titulo?.trim() || "—" },
-          { key: "desc", header: "Descrição", render: (d) => d.descricao?.trim() || "—" },
+          { key: "veiculo", header: "Veículo", render: (d) => veiculoDespesa(d, veiculos) },
+          { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
           { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
+          { key: "vencimento", header: "Vencimento", render: (d) => d.vencimentoBr?.trim() || "—" },
           {
             key: "acoes",
             header: "Ações",

@@ -21,7 +21,6 @@ Subcomandos:
                               Cria schema lanza.json_stores; opcionalmente importa database/*.json
   sync-store <ficheiro.json>  Espelha um ficheiro database/*.json no PostgreSQL (ex.: contratos.json)
   sync-all                    Espelha todos os database/*.json importáveis no PostgreSQL
-  sync-postgresql             Alias de sync-all (ver também: npm run lanza -- sync-postgresql)
 
 Alternativa via pacote @lanza/db:
   npm run db:check
@@ -141,8 +140,7 @@ export async function main(args: string[]): Promise<void> {
         console.log(`OK — espelhado no PostgreSQL: ${imported.join(", ")}`);
         break;
       }
-      case "sync-all":
-      case "sync-postgresql": {
+      case "sync-all": {
         await runSchemaMigration(false);
         const { imported, skipped } = await importJsonStores(false);
         console.log(`OK — espelhados no PostgreSQL: ${imported.join(", ")}`);
