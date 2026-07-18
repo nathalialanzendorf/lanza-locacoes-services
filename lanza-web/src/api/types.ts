@@ -4,7 +4,15 @@ export type Resumo = {
   contratos: { total: number; ativos: number };
   despesasCliente: { emAberto: number; valorEmAberto: number };
   despesasParceiro: { emAberto: number; valorEmAberto: number };
-  infracoes: { emAberto: number; comVencimento: number; semCliente: number; semCondutor?: number };
+  infracoes: {
+    emAberto: number;
+    notificadas: number;
+    emAbertoDebito: number;
+    semResponsavel: number;
+    comVencimento?: number;
+    semCliente?: number;
+    semCondutor?: number;
+  };
   recebimentos?: DashboardRecebimentos;
 };
 

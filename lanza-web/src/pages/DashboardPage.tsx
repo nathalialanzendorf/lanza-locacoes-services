@@ -6,7 +6,6 @@ import { PageHeader, QueryError } from "@/components/PageHeader";
 import { IconRecebimento } from "@/components/icons";
 import { useResumo, useClientes, useContratos } from "@/api/hooks";
 import { formatBrl, formatPlaca, clienteExibicaoPorId } from "@/lib/format";
-import { semClienteDeResumo } from "@/lib/clienteCampo";
 import { LABEL } from "@/lib/labels";
 import { urlLancarRecebimento } from "@/lib/recebimentoUrl";
 import {
@@ -239,6 +238,32 @@ export function DashboardPage() {
               resumo.data ? `${resumo.data.veiculos.total} veículos no total` : undefined
             }
           />
+          <StatCard
+            title="Infrações notificadas"
+            value={resumo.data ? `${resumo.data.infracoes.notificadas}` : "—"}
+            hint="Autuação — sem boleto"
+            tone="warn"
+          />
+          <StatCard
+            title="Infrações em aberto"
+            value={resumo.data ? `${resumo.data.infracoes.emAbertoDebito}` : "—"}
+            hint={
+              resumo.data
+                ? `${resumo.data.infracoes.emAberto} no total · boleto gerado`
+                : undefined
+            }
+            tone="warn"
+          />
+          <StatCard
+            title="Infrações em aberto sem responsável (cliente ou parceiro)"
+            value={resumo.data ? `${resumo.data.infracoes.semResponsavel}` : "—"}
+            hint={
+              resumo.data
+                ? `${resumo.data.infracoes.emAberto} em aberto no total`
+                : undefined
+            }
+            tone="warn"
+          />
         </div>
       </section>
 
@@ -269,29 +294,6 @@ export function DashboardPage() {
                 ? `${resumo.data.despesasParceiro.emAberto} lançamentos`
                 : undefined
             }
-          />
-        </div>
-      </section>
-
-      <section className="dashboard-section">
-        <header className="dashboard-section__head">
-          <h2 className="dashboard-section__title">Infrações</h2>
-        </header>
-        <div className="stat-grid stat-grid--compact">
-          <StatCard
-            title="Infrações em aberto com data de vencimento"
-            value={resumo.data ? `${resumo.data.infracoes.comVencimento}` : "—"}
-            hint={
-              resumo.data
-                ? `${resumo.data.infracoes.emAberto} em aberto no total`
-                : undefined
-            }
-            tone="warn"
-          />
-          <StatCard
-            title="Infrações em aberto sem cliente"
-            value={resumo.data ? `${semClienteDeResumo(resumo.data.infracoes)}` : "—"}
-            tone="warn"
           />
         </div>
       </section>

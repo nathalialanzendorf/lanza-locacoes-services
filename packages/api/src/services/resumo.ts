@@ -35,23 +35,35 @@ function infracaoEmAberto(i: {
   return i.quitadaDetran !== true && !/quitad|pago|paga/i.test(String(i.situacao ?? i.status ?? ""));
 }
 
-function infracaoTemDataVencimento(i: {
+/** Autuação notificada — ainda sem boleto (prazo de defesa ou não convertida em débito). */
+function infracaoNotificada(i: {
+  convertidaEmDebito?: boolean;
   dataVencimentoOriginal?: string | null;
-  dataLimiteDefesa?: string | null;
-  limiteDefesa?: string | null;
 }): boolean {
-  for (const c of [i.dataVencimentoOriginal, i.dataLimiteDefesa, i.limiteDefesa]) {
-    if (/^(\d{2}\/\d{2}\/\d{4})/.test(String(c ?? "").trim())) return true;
-  }
-  return false;
+  if (i.convertidaEmDebito === true) return false;
+  return !String(i.dataVencimentoOriginal ?? "").trim();
 }
 
-function infracaoSemCliente(i: {
+/** Débito/boleto gerado — cobrança em aberto no DETRAN. */
+function infracaoEmAbertoDebito(i: {
+  convertidaEmDebito?: boolean;
+  dataVencimentoOriginal?: string | null;
+}): boolean {
+  if (i.convertidaEmDebito === true) return true;
+  return !!String(i.dataVencimentoOriginal ?? "").trim();
+}
+
+/** Sem locatário nem parceiro confirmado como responsável. */
+function infracaoSemResponsavel(i: {
   condutorId?: string | null;
   debitoParceiroConfirmado?: boolean;
-  condutorNaoIdentificado?: boolean;
+  debitoParceiroId?: string | null;
 }): boolean {
-  return !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado;
+  const temCliente = Boolean(String(i.condutorId ?? "").trim());
+  const temParceiro =
+    i.debitoParceiroConfirmado === true ||
+    Boolean(String(i.debitoParceiroId ?? "").trim());
+  return !temCliente && !temParceiro;
 }
 
 type ResumoStores = {
@@ -86,8 +98,9 @@ function montarResumo(
   const despesasParceiroAbertas = despesasParceiro.filter((d) => !String(d.baixa ?? "").trim());
 
   const infracoesAbertas = infracoes.filter((i) => i.ativo !== false && infracaoEmAberto(i));
-  const infracoesComVencimento = infracoesAbertas.filter(infracaoTemDataVencimento);
-  const infracoesSemCliente = infracoesAbertas.filter(infracaoSemCliente);
+  const infracoesNotificadas = infracoesAbertas.filter(infracaoNotificada);
+  const infracoesEmAbertoDebito = infracoesAbertas.filter(infracaoEmAbertoDebito);
+  const infracoesSemResponsavel = infracoesAbertas.filter(infracaoSemResponsavel);
 
   const totalClienteAberto = despesasClienteAbertas.reduce(
     (s, d) => s + (Number(d.valorMulta) || 0),
@@ -117,9 +130,12 @@ function montarResumo(
     },
     infracoes: {
       emAberto: infracoesAbertas.length,
-      comVencimento: infracoesComVencimento.length,
-      semCliente: infracoesSemCliente.length,
-      semCondutor: infracoesSemCliente.length,
+      notificadas: infracoesNotificadas.length,
+      emAbertoDebito: infracoesEmAbertoDebito.length,
+      semResponsavel: infracoesSemResponsavel.length,
+      comVencimento: infracoesEmAbertoDebito.length,
+      semCliente: infracoesSemResponsavel.length,
+      semCondutor: infracoesSemResponsavel.length,
     },
     ...(recebimentos ? { recebimentos } : {}),
   };
