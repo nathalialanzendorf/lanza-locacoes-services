@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader, QueryError } from "@/components/PageHeader";
+import { VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
 import { useSyncJobs, useSyncMeta } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
@@ -169,9 +170,14 @@ export function SyncPage() {
         <h2 className="form-card__title">Opções globais</h2>
         <div className="form-grid">
           <label className="field">
-            <span className="field__label">Placa (opcional)</span>
-            <input className="input" value={placa} onChange={(e) => setPlaca(e.target.value)} />
-            <span className="field__hint">Infrações, IPVA e pedágio — uma placa</span>
+            <span className="field__label">Veículo (opcional)</span>
+            <VeiculoSelect
+              value={placa}
+              onChange={setPlaca}
+              valueField="placa"
+              emptyLabel="Toda a frota"
+            />
+            <span className="field__hint">Infrações, IPVA, pedágio e FIPE — um veículo</span>
           </label>
           <label className="field checkbox-label">
             <input
