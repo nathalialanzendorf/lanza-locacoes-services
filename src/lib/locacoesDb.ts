@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -158,6 +158,18 @@ export function loadLocacoesDb(): LocacoesDb {
     };
   }
   const db = loadJsonDocument<LocacoesDb>(DB_LOCACOES);
+  if (!db.schemaLocacao) db.schemaLocacao = DEFAULT_SCHEMA;
+  if (!Array.isArray(db.locacoes)) db.locacoes = [];
+  return db;
+}
+
+export async function loadLocacoesDbAsync(): Promise<LocacoesDb> {
+  const db = await loadJsonDocumentForApi<LocacoesDb>(DB_LOCACOES, {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    schemaLocacao: DEFAULT_SCHEMA,
+    locacoes: [],
+  });
   if (!db.schemaLocacao) db.schemaLocacao = DEFAULT_SCHEMA;
   if (!Array.isArray(db.locacoes)) db.locacoes = [];
   return db;

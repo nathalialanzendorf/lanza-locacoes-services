@@ -3,26 +3,29 @@
  */
 import {
   isClienteDespesaAtiva,
-  loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
-import { loadClientesDb } from "./clientesDb.js";
-import { loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
+import type { ClienteRegistro } from "./clientesDb.js";
 import {
   listarAlvosCobranca,
   listarEscoposContratosAtivosCobranca,
 } from "./cobrancasAlvos.js";
+import {
+  loadCobrancasDbContextAsync,
+  loadCobrancasDbContextSync,
+  type CobrancasDbContext,
+} from "./cobrancasDbContext.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
+import type { ContratoRegistro } from "./contratosDb.js";
 import { diaPagamentoParaDow } from "./caucaoParcelas.js";
+import { hojeBr, hojeDowBr } from "./dataBr.js";
 import {
   isJurosMultaSemanalDescricao,
   vencimentoDespesaSemanalBr,
 } from "./pagamentoSemanal.js";
-import {
-  vencimentoSemanalElegivelCobranca,
-} from "./pagamentoSemanalCobranca.js";
+import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { loadVeiculosDb } from "./veiculosDb.js";
+import type { VeiculoRegistro } from "./veiculosDb.js";
 
 export type DashboardRecebimentoLinha = {
   clienteId: string | null;
@@ -49,11 +52,6 @@ export type DashboardRecebimentos = {
   totais: DashboardRecebimentosTotais;
 };
 
-function hojeBr(): string {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-}
-
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
@@ -66,9 +64,9 @@ function despesaAberta(d: ClienteDespesaRegistro): boolean {
   );
 }
 
-function veiculoAtivo(placa: string): boolean {
+function veiculoAtivo(placa: string, veiculos: VeiculoRegistro[]): boolean {
   const p = compactPlaca(placa);
-  for (const v of loadVeiculosDb().veiculos) {
+  for (const v of veiculos) {
     if (compactPlaca(v.placa) !== p) continue;
     if (v.ativo === false || v.particular === true) return false;
     return true;
@@ -76,15 +74,19 @@ function veiculoAtivo(placa: string): boolean {
   return false;
 }
 
-function clienteAtivo(clienteId: string | null | undefined): boolean {
+function clienteAtivo(clienteId: string | null | undefined, clientes: ClienteRegistro[]): boolean {
   if (!clienteId) return false;
-  const c = loadClientesDb().clientes.find((x) => x.id === clienteId);
+  const c = clientes.find((x) => x.id === clienteId);
   return c != null && c.ativo !== false;
 }
 
-function contratoAtivoPlaca(placa: string, clienteId?: string | null): ContratoRegistro | null {
+function contratoAtivoPlaca(
+  placa: string,
+  contratos: ContratoRegistro[],
+  clienteId?: string | null,
+): ContratoRegistro | null {
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = contratos.filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
   if (clienteId) {
@@ -105,15 +107,14 @@ function ordenarLinhas(a: DashboardRecebimentoLinha, b: DashboardRecebimentoLinh
   return a.placa.localeCompare(b.placa, "pt-BR");
 }
 
-function listarVenceHoje(hoje: string): DashboardRecebimentoLinha[] {
+function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebimentoLinha[] {
   const porChave = new Map<string, DashboardRecebimentoLinha>();
-  const db = loadClienteDespesasDb();
 
-  for (const d of db.clienteDespesas) {
+  for (const d of ctx.clienteDespesas) {
     if (!despesaAberta(d)) continue;
     if (d.categoria !== "Locação semanal") continue;
     if (isJurosMultaSemanalDescricao(d.descricao ?? "")) continue;
-    if (!veiculoAtivo(d.veiculoId)) continue;
+    if (!veiculoAtivo(d.veiculoId, ctx.veiculos)) continue;
 
     const venc = vencimentoDespesaSemanalBr(
       d.descricao ?? "",
@@ -124,15 +125,15 @@ function listarVenceHoje(hoje: string): DashboardRecebimentoLinha[] {
     if (vencimentoSemanalElegivelCobranca(venc, hoje)) continue;
 
     const placa = formatPlacaHyphen(d.veiculoId);
-    const contrato = contratoAtivoPlaca(placa, d.condutorId);
+    const contrato = contratoAtivoPlaca(placa, ctx.contratos, d.condutorId);
     const clienteId = contrato?.clienteId ?? d.condutorId ?? null;
-    if (!clienteAtivo(clienteId)) continue;
+    if (!clienteAtivo(clienteId, ctx.clientes)) continue;
 
     const chave = chaveClientePlaca(clienteId, placa);
     const valor = contrato?.valorSemanal ?? (Number(d.valorMulta) || 0);
     const nomeCliente =
       contrato?.clienteNome ??
-      loadClientesDb().clientes.find((c) => c.id === clienteId)?.nome ??
+      ctx.clientes.find((c) => c.id === clienteId)?.nome ??
       null;
     const existente = porChave.get(chave);
     if (existente) {
@@ -149,10 +150,10 @@ function listarVenceHoje(hoje: string): DashboardRecebimentoLinha[] {
     });
   }
 
-  const hojeDow = new Date().getDay();
-  for (const escopo of listarEscoposContratosAtivosCobranca()) {
+  const hojeDow = hojeDowBr();
+  for (const escopo of listarEscoposContratosAtivosCobranca(ctx)) {
     if (!escopo.placa || !escopo.clienteId) continue;
-    const contrato = contratoAtivoPlaca(escopo.placa, escopo.clienteId);
+    const contrato = contratoAtivoPlaca(escopo.placa, ctx.contratos, escopo.clienteId);
     if (!contrato?.diaPagamentoSemana || contrato.valorSemanal == null) continue;
     if (diaPagamentoParaDow(contrato.diaPagamentoSemana) !== hojeDow) continue;
 
@@ -171,8 +172,8 @@ function listarVenceHoje(hoje: string): DashboardRecebimentoLinha[] {
   return [...porChave.values()].sort(ordenarLinhas);
 }
 
-function listarAtrasados(hoje: string): DashboardRecebimentoLinha[] {
-  const alvos = listarAlvosCobranca("pagamento-semanal");
+function listarAtrasados(hoje: string, ctx: CobrancasDbContext): DashboardRecebimentoLinha[] {
+  const alvos = listarAlvosCobranca("pagamento-semanal", undefined, ctx);
   const linhas: DashboardRecebimentoLinha[] = [];
 
   for (const alvo of alvos) {
@@ -198,48 +199,47 @@ function listarAtrasados(hoje: string): DashboardRecebimentoLinha[] {
   return linhas.sort(ordenarLinhas);
 }
 
-function somaCategoria(categoria: string): number {
-  const db = loadClienteDespesasDb();
+function somaCategoria(categoria: string, ctx: CobrancasDbContext): number {
   return round2(
-    db.clienteDespesas
+    ctx.clienteDespesas
       .filter(
         (d) =>
           despesaAberta(d) &&
           (d.categoria ?? "") === categoria &&
-          veiculoAtivo(d.veiculoId) &&
-          clienteAtivo(d.condutorId),
+          veiculoAtivo(d.veiculoId, ctx.veiculos) &&
+          clienteAtivo(d.condutorId, ctx.clientes),
       )
       .reduce((s, d) => s + (Number(d.valorMulta) || 0), 0),
   );
 }
 
-function totalSemanalAberto(): number {
-  const db = loadClienteDespesasDb();
+function totalSemanalAberto(ctx: CobrancasDbContext): number {
   return round2(
-    db.clienteDespesas
+    ctx.clienteDespesas
       .filter(
         (d) =>
           despesaAberta(d) &&
           d.categoria === "Locação semanal" &&
           !isJurosMultaSemanalDescricao(d.descricao ?? "") &&
-          veiculoAtivo(d.veiculoId) &&
-          clienteAtivo(d.condutorId),
+          veiculoAtivo(d.veiculoId, ctx.veiculos) &&
+          clienteAtivo(d.condutorId, ctx.clientes),
       )
       .reduce((s, d) => s + (Number(d.valorMulta) || 0), 0),
   );
 }
 
-export function obterDashboardRecebimentos(): DashboardRecebimentos {
+export function obterDashboardRecebimentos(ctx?: CobrancasDbContext): DashboardRecebimentos {
+  const db = ctx ?? loadCobrancasDbContextSync();
   const dataReferenciaBr = hojeBr();
-  const venceHoje = listarVenceHoje(dataReferenciaBr);
-  const atrasados = listarAtrasados(dataReferenciaBr);
+  const venceHoje = listarVenceHoje(dataReferenciaBr, db);
+  const atrasados = listarAtrasados(dataReferenciaBr, db);
 
   const totais: DashboardRecebimentosTotais = {
     venceHoje: round2(venceHoje.reduce((s, l) => s + l.valor, 0)),
     atrasado: round2(atrasados.reduce((s, l) => s + l.valor, 0)),
-    semanal: totalSemanalAberto(),
-    caucao: somaCategoria("Caução"),
-    renegociacao: somaCategoria("Renegociação"),
+    semanal: totalSemanalAberto(db),
+    caucao: somaCategoria("Caução", db),
+    renegociacao: somaCategoria("Renegociação", db),
   };
 
   return {
@@ -248,4 +248,19 @@ export function obterDashboardRecebimentos(): DashboardRecebimentos {
     atrasados,
     totais,
   };
+}
+
+export async function obterDashboardRecebimentosAsync(): Promise<DashboardRecebimentos> {
+  return obterDashboardRecebimentos(await loadCobrancasDbContextAsync());
+}
+
+/** Despesa cliente em aberto elegível para totais do dashboard (frota + cliente activos). */
+export function despesaClienteAbertaDashboard(
+  d: ClienteDespesaRegistro,
+  ctx: CobrancasDbContext,
+): boolean {
+  if (!despesaAberta(d)) return false;
+  if (!veiculoAtivo(d.veiculoId, ctx.veiculos)) return false;
+  if (d.condutorId && !clienteAtivo(d.condutorId, ctx.clientes)) return false;
+  return true;
 }

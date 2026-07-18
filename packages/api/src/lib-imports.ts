@@ -45,6 +45,7 @@ export {
 
 export {
   loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
   findClienteDespesaById,
   isClienteDespesaAtiva,
   despesaAtribuidaACliente,
@@ -61,6 +62,7 @@ export {
   gravarLocacao,
   excluirLocacao,
   loadLocacoesDb,
+  loadLocacoesDbAsync,
   type LocacaoRegistro,
 } from "../../../src/lib/locacoesDb.js";
 
@@ -139,10 +141,20 @@ export {
 
 export {
   obterDashboardRecebimentos,
+  obterDashboardRecebimentosAsync,
+  despesaClienteAbertaDashboard,
   type DashboardRecebimentos,
   type DashboardRecebimentoLinha,
   type DashboardRecebimentosTotais,
 } from "../../../src/lib/dashboardRecebimentos.js";
+
+export {
+  loadCobrancasDbContextAsync,
+  loadCobrancasDbContextSync,
+  type CobrancasDbContext,
+} from "../../../src/lib/cobrancasDbContext.js";
+
+export { hojeBr, hojeDowBr } from "../../../src/lib/dataBr.js";
 
 export {
   blobKey,
@@ -327,6 +339,7 @@ export {
 
 export {
   loadParceiroDespesasDb,
+  loadParceiroDespesasDbAsync,
   saveParceiroDespesasDb,
   gravarParceiroDespesaManual,
   marcarBaixaParceiroDespesa,

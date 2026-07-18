@@ -10,6 +10,7 @@ import {
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { loadClientesDb } from "./clientesDb.js";
+import type { CobrancasDbContext } from "./cobrancasDbContext.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -80,9 +81,10 @@ export type AlvoCobranca = {
   vencimentosBr?: string[];
 };
 
-function veiculosAtivos() {
+function veiculosAtivos(ctx?: CobrancasDbContext) {
   const map = new Map<string, ReturnType<typeof loadVeiculosDb>["veiculos"][0]>();
-  for (const v of loadVeiculosDb().veiculos) {
+  const lista = ctx?.veiculos ?? loadVeiculosDb().veiculos;
+  for (const v of lista) {
     if (v.ativo === false) continue;
     if (v.particular === true) continue;
     map.set(compactPlaca(v.placa), v);
@@ -90,9 +92,10 @@ function veiculosAtivos() {
   return map;
 }
 
-function clientesAtivos() {
+function clientesAtivos(ctx?: CobrancasDbContext) {
   const map = new Map<string, { id: string; nome: string }>();
-  for (const c of loadClientesDb().clientes) {
+  const lista = ctx?.clientes ?? loadClientesDb().clientes;
+  for (const c of lista) {
     if (c.ativo === false) continue;
     if (c.id) map.set(c.id, { id: c.id, nome: c.nome });
   }
@@ -486,12 +489,15 @@ export function despesaNoPeriodo(
  * Exige veículo ativo (não particular) e cliente ativo.
  * Vários `ativo` na mesma placa: maior versão; empate → data de início mais recente.
  */
-export function listarEscoposContratosAtivosCobranca(): FiltroAlvosCobranca[] {
-  const veiculos = veiculosAtivos();
-  const clientes = clientesAtivos();
+export function listarEscoposContratosAtivosCobranca(
+  ctx?: CobrancasDbContext,
+): FiltroAlvosCobranca[] {
+  const veiculos = veiculosAtivos(ctx);
+  const clientes = clientesAtivos(ctx);
   const porPlaca = new Map<string, ContratoRegistro>();
+  const contratos = ctx?.contratos ?? loadContratosDb().contratos;
 
-  for (const c of loadContratosDb().contratos) {
+  for (const c of contratos) {
     if (c.status !== "ativo" || !c.placa || !c.clienteId) continue;
     if (!placaElegivel(c.placa, veiculos)) continue;
     if (!clienteElegivel(c.clienteId, clientes)) continue;
@@ -563,10 +569,13 @@ export function normalizarTipoCobrancaAction(raw: string): TipoCobrancaAction | 
 export function listarAlvosCobranca(
   tipo: TipoCobrancaAction,
   filtro?: FiltroAlvosCobranca,
+  ctx?: CobrancasDbContext,
 ): AlvoCobranca[] {
-  const db = loadClienteDespesasDb();
-  const veiculos = veiculosAtivos();
-  const clientes = clientesAtivos();
+  const db = ctx
+    ? { clienteDespesas: ctx.clienteDespesas }
+    : loadClienteDespesasDb();
+  const veiculos = veiculosAtivos(ctx);
+  const clientes = clientesAtivos(ctx);
   const placaFiltro = filtro?.placa;
   const situacao = filtro?.situacao ?? "em_aberto";
 

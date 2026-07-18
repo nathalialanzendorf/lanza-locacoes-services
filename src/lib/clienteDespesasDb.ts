@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   isCategoriaInfracao,
@@ -364,6 +364,16 @@ export function loadClienteDespesasDb(): ClienteDespesasDb {
     };
   }
   const raw = loadJsonDocument<Record<string, unknown>>(DB_CLIENTE_DESPESAS);
+  return normalizeRawDb(raw);
+}
+
+export async function loadClienteDespesasDbAsync(): Promise<ClienteDespesasDb> {
+  const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_CLIENTE_DESPESAS, {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    schemaClienteDespesa: DEFAULT_SCHEMA,
+    clienteDespesas: [],
+  });
   return normalizeRawDb(raw);
 }
 

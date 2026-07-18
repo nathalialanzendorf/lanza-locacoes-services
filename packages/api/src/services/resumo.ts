@@ -1,18 +1,32 @@
 import {
   isClienteAtivo,
-  isClienteDespesaAtiva,
   isVeiculoAtivo,
   loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
   loadClientesDb,
   loadClientesDbAsync,
   loadContratosDb,
   loadContratosDbAsync,
   loadInfracoesDb,
+  loadInfracoesDbAsync,
   loadLocacoesDb,
+  loadLocacoesDbAsync,
   loadParceiroDespesasDb,
+  loadParceiroDespesasDbAsync,
   loadVeiculosDb,
   loadVeiculosDbAsync,
+  type ClienteDespesaRegistro,
+  type ClienteRegistro,
+  type ContratoRegistro,
+  type InfracaoRegistro,
+  type LocacaoRegistro,
+  type ParceiroDespesaRegistro,
+  type VeiculoRegistro,
+  despesaClienteAbertaDashboard,
   obterDashboardRecebimentos,
+  loadCobrancasDbContextAsync,
+  loadCobrancasDbContextSync,
+  type CobrancasDbContext,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -23,44 +37,36 @@ function infracaoEmAberto(i: {
   return i.quitadaDetran !== true && !/quitad|pago|paga/i.test(String(i.situacao ?? i.status ?? ""));
 }
 
-export function obterResumo() {
-  const clientes = loadClientesDb().clientes;
-  const veiculos = loadVeiculosDb().veiculos;
-  const contratos = loadContratosDb().contratos;
-  return montarResumo(clientes, veiculos, contratos);
-}
-
-export async function obterResumoAsync() {
-  const [clientesDb, veiculosDb, contratosDb] = await Promise.all([
-    loadClientesDbAsync(),
-    loadVeiculosDbAsync(),
-    loadContratosDbAsync(),
-  ]);
-  return montarResumo(clientesDb.clientes, veiculosDb.veiculos, contratosDb.contratos);
-}
+type ResumoStores = {
+  despesasCliente: ClienteDespesaRegistro[];
+  despesasParceiro: ParceiroDespesaRegistro[];
+  infracoes: InfracaoRegistro[];
+  locacoes: LocacaoRegistro[];
+  cobrancasCtx: CobrancasDbContext;
+};
 
 function montarResumo(
-  clientes: ReturnType<typeof loadClientesDb>["clientes"],
-  veiculos: ReturnType<typeof loadVeiculosDb>["veiculos"],
-  contratos: ReturnType<typeof loadContratosDb>["contratos"],
+  clientes: ClienteRegistro[],
+  veiculos: VeiculoRegistro[],
+  contratos: ContratoRegistro[],
+  stores: ResumoStores,
+  recebimentos?: ReturnType<typeof obterDashboardRecebimentos>,
 ) {
-  const despesasCliente = loadClienteDespesasDb().clienteDespesas;
-  const despesasParceiro = loadParceiroDespesasDb().parceiroDespesas;
-  const infracoes = loadInfracoesDb().infracoes;
-  const locacoes = loadLocacoesDb().locacoes;
+  const { despesasCliente, despesasParceiro, infracoes, locacoes, cobrancasCtx } = stores;
 
   const clientesAtivos = clientes.filter(isClienteAtivo);
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
   const contratosAtivos = contratos.filter((c) => c.status === "ativo");
 
-  const despesasClienteAbertas = despesasCliente.filter(
-    (d) => isClienteDespesaAtiva(d) && !d.paga,
+  const despesasClienteAbertas = despesasCliente.filter((d) =>
+    despesaClienteAbertaDashboard(d, cobrancasCtx),
   );
   const despesasParceiroAbertas = despesasParceiro.filter((d) => !String(d.baixa ?? "").trim());
 
-  const infracoesAbertas = infracoes.filter(infracaoEmAberto);
+  const infracoesAbertas = infracoes.filter((i) => i.ativo !== false && infracaoEmAberto(i));
   const infracoesSemCliente = infracoes.filter(
     (i) =>
+      i.ativo !== false &&
       infracaoEmAberto(i) &&
       !i.condutorId &&
       !i.debitoParceiroConfirmado &&
@@ -77,13 +83,6 @@ function montarResumo(
     (s, d) => s + (Number(d.valor) || 0),
     0,
   );
-
-  let recebimentos;
-  try {
-    recebimentos = obterDashboardRecebimentos();
-  } catch (err) {
-    console.error("[resumo] falha ao calcular recebimentos:", err);
-  }
 
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
@@ -105,4 +104,72 @@ function montarResumo(
     locacoes: { abertas: locacoesAbertas.length },
     ...(recebimentos ? { recebimentos } : {}),
   };
+}
+
+export function obterResumo() {
+  const stores: ResumoStores = {
+    despesasCliente: loadClienteDespesasDb().clienteDespesas,
+    despesasParceiro: loadParceiroDespesasDb().parceiroDespesas,
+    infracoes: loadInfracoesDb().infracoes,
+    locacoes: loadLocacoesDb().locacoes,
+    cobrancasCtx: loadCobrancasDbContextSync(),
+  };
+  let recebimentos;
+  try {
+    recebimentos = obterDashboardRecebimentos(stores.cobrancasCtx);
+  } catch (err) {
+    console.error("[resumo] falha ao calcular recebimentos:", err);
+  }
+  return montarResumo(
+    loadClientesDb().clientes,
+    loadVeiculosDb().veiculos,
+    loadContratosDb().contratos,
+    stores,
+    recebimentos,
+  );
+}
+
+export async function obterResumoAsync() {
+  const [
+    clientesDb,
+    veiculosDb,
+    contratosDb,
+    clienteDespesasDb,
+    parceiroDespesasDb,
+    infracoesDb,
+    locacoesDb,
+    cobrancasCtx,
+  ] = await Promise.all([
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+    loadContratosDbAsync(),
+    loadClienteDespesasDbAsync(),
+    loadParceiroDespesasDbAsync(),
+    loadInfracoesDbAsync(),
+    loadLocacoesDbAsync(),
+    loadCobrancasDbContextAsync(),
+  ]);
+
+  const stores: ResumoStores = {
+    despesasCliente: clienteDespesasDb.clienteDespesas,
+    despesasParceiro: parceiroDespesasDb.parceiroDespesas,
+    infracoes: infracoesDb.infracoes,
+    locacoes: locacoesDb.locacoes,
+    cobrancasCtx,
+  };
+
+  let recebimentos;
+  try {
+    recebimentos = obterDashboardRecebimentos(cobrancasCtx);
+  } catch (err) {
+    console.error("[resumo] falha ao calcular recebimentos:", err);
+  }
+
+  return montarResumo(
+    clientesDb.clientes,
+    veiculosDb.veiculos,
+    contratosDb.contratos,
+    stores,
+    recebimentos,
+  );
 }

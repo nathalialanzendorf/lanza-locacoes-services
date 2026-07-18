@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -159,6 +159,16 @@ export function loadParceiroDespesasDb(): ParceiroDespesasDb {
     };
   }
   const raw = loadJsonDocument<Record<string, unknown>>(DB_PARCEIRO_DESPESAS);
+  return normalizeRawDb(raw);
+}
+
+export async function loadParceiroDespesasDbAsync(): Promise<ParceiroDespesasDb> {
+  const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_PARCEIRO_DESPESAS, {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    schemaParceiroDespesa: DEFAULT_SCHEMA,
+    parceiroDespesas: [],
+  });
   return normalizeRawDb(raw);
 }
 

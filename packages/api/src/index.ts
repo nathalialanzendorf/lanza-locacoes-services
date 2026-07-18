@@ -1,5 +1,5 @@
 /// <reference path="./ambient.d.ts" />
-/** Entrypoint serverless @lanza/api (Vercel). */
+/** Entrypoint serverless @lanza/api (Vercel) — resumo/dashboard via Postgres. */
 import {
   createVercelPostgresPool,
   getDbBackend,
