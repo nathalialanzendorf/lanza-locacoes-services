@@ -13,8 +13,23 @@ import { formatBrl } from "@/lib/format";
 
 const VALOR_MANUAL = "__manual__";
 
+const ROTULO_TIPO_BAIXA: Record<NonNullable<PlanoBaixa["tipoBaixa"]>, string> = {
+  integral: "Baixa integral",
+  parcial: "Baixa parcial",
+  integral_desconto: "Baixa integral com desconto",
+};
+
 function compactPlaca(placa: string): string {
   return placa.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function rotuloEfeitoLinha(l: LinhaPlanoBaixa): string {
+  const patch = l.patch ?? {};
+  if (l.operacao === "criar" && patch.paga === true) return "Quitado (valor pago)";
+  if (l.operacao === "criar") return "Nova parcela em aberto";
+  if (l.operacao === "atualizar" && patch.paga === true) return "Quitado";
+  if (l.operacao === "atualizar") return "Saldo em atraso";
+  return "—";
 }
 
 export function RecebimentosManualSection() {
@@ -56,10 +71,25 @@ export function RecebimentosManualSection() {
       .filter((d) => Number(d.valorMulta) > 0)
       .map((d) => ({
         id: d.id,
+        autoInfracao: d.autoInfracao?.trim() || d.id,
         valor: Number(d.valorMulta),
         label: `${formatBrl(Number(d.valorMulta))} · ${d.descricao ?? d.categoria ?? d.id}`,
       }));
   }, [despesasQuery.data]);
+
+  const despesaSel = useMemo(() => {
+    if (!valorOpcao || valorOpcao === VALOR_MANUAL) return null;
+    return opcoesValor.find((o) => o.id === valorOpcao) ?? null;
+  }, [valorOpcao, opcoesValor]);
+
+  const valorParcialHint = useMemo(() => {
+    if (!despesaSel) return null;
+    const pago = Number(valor);
+    if (!Number.isFinite(pago) || pago <= 0) return null;
+    const diff = Math.round((despesaSel.valor - pago) * 100) / 100;
+    if (diff < 0.01) return null;
+    return `Parcial: ${formatBrl(pago)} quitado + ${formatBrl(diff)} permanece em atraso na mesma pendência.`;
+  }, [despesaSel, valor]);
 
   useEffect(() => {
     if (clienteIdUrl) setClienteId(clienteIdUrl);
@@ -137,6 +167,7 @@ export function RecebimentosManualSection() {
         valor: valorNum,
         dataBr: dataBr.trim(),
         placa: veiculoSel?.placa?.trim() || undefined,
+        autoInfracaoAlvo: despesaSel?.autoInfracao,
       });
       setPlano(r.data);
       setLinhasSel(new Set(r.data.linhas.map((l) => l.num)));
@@ -243,12 +274,26 @@ export function RecebimentosManualSection() {
               aria-label="Valor recebido"
             />
           </div>
+          {valorParcialHint ? <p className="field__hint">{valorParcialHint}</p> : null}
         </Field>
       </FormCard>
 
       {plano ? (
         <section className="form-card">
           <h2 className="form-card__title">Confirmar linhas ({plano.linhas.length})</h2>
+          {plano.tipoBaixa ? (
+            <p className="field__hint">
+              <strong>{ROTULO_TIPO_BAIXA[plano.tipoBaixa]}</strong>
+              {plano.despesaAlvo
+                ? ` · devido ${formatBrl(plano.despesaAlvo.valorDevido)} · recebido ${formatBrl(plano.pagamento?.valor ?? (Number(valor) || 0))}`
+                : null}
+            </p>
+          ) : null}
+          {plano.avisos?.map((a) => (
+            <p key={a} className="field__hint">
+              {a}
+            </p>
+          ))}
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -256,8 +301,9 @@ export function RecebimentosManualSection() {
                   <th />
                   <th>#</th>
                   <th>Operação</th>
-                  <th>Placa</th>
-                  <th>Auto</th>
+                  <th>Descrição</th>
+                  <th>Efeito</th>
+                  <th className="num">Valor</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,14 +314,15 @@ export function RecebimentosManualSection() {
                     </td>
                     <td>{l.num}</td>
                     <td>{l.operacao}</td>
-                    <td>{l.rastreavel}</td>
-                    <td>{l.autoInfracao ?? "—"}</td>
+                    <td>{l.descricao ?? "—"}</td>
+                    <td>{rotuloEfeitoLinha(l)}</td>
+                    <td className="num">{formatBrl(l.total ?? 0)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="field__hint">Valor: {formatBrl(Number(valor) || 0)}</p>
+          <p className="field__hint">Valor recebido: {formatBrl(Number(valor) || 0)}</p>
           <button
             type="button"
             className="btn btn--primary"

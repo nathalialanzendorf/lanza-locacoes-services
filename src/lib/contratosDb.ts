@@ -152,13 +152,18 @@ export type EncerrarContratoDbOpts = {
   quebraContrato?: boolean;
 };
 
-/** Contrato ainda em vigência operacional (ativo, sem encerramento, fim previsto não passou). */
-export function contratoAtivoOperacional(
+/** Contrato em locação ativa (status ativo e sem data de encerramento). */
+export function contratoAtivoOperacional(c: ContratoRegistro): boolean {
+  if (c.status !== "ativo") return false;
+  return !String(c.dataEncerramento ?? "").trim();
+}
+
+/** Contrato ativo cujo fim previsto ainda não passou (ou sem fim previsto). */
+export function contratoDentroPrazoPrevisto(
   c: ContratoRegistro,
   ref: Date = new Date(),
 ): boolean {
-  if (c.status !== "ativo") return false;
-  if (String(c.dataEncerramento ?? "").trim()) return false;
+  if (!contratoAtivoOperacional(c)) return false;
   const fimStr = String(c.dataFimPrevista ?? "").trim();
   if (!fimStr) return true;
   const fim = parseDataBrOuIsoDia(fimStr);

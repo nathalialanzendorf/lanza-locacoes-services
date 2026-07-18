@@ -260,11 +260,22 @@ export type LinhaPlanoBaixa = {
   operacao: string;
   rastreavel: string;
   autoInfracao: string | null;
+  descricao?: string;
+  total?: number;
   patch?: Record<string, unknown>;
 };
 
 export type PlanoBaixa = {
-  cliente: unknown;
+  cliente: { id: string; nome: string; cpf?: string | null };
+  pagamento?: { valor: number; dataBr: string };
+  despesaAlvo?: {
+    autoInfracao: string;
+    descricaoAtual: string;
+    valorDevido: number;
+    dataVencimento: string;
+  } | null;
+  tipoBaixa?: "integral" | "parcial" | "integral_desconto";
+  avisos?: string[];
   linhas: LinhaPlanoBaixa[];
 };
 

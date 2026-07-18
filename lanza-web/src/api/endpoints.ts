@@ -153,6 +153,7 @@ export const lanzaApi = {
     valor: number;
     dataBr: string;
     placa?: string;
+    autoInfracaoAlvo?: string;
   }) => apiRequest<{ data: PlanoBaixa }>("/api/recebimentos/plano", { method: "POST", body }),
   executarRecebimento: (body: { linhas: PlanoBaixa["linhas"]; syncRastreame?: boolean }) =>
     apiRequest<{ data: unknown }>("/api/recebimentos/executar", { method: "POST", body }),

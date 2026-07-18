@@ -356,6 +356,43 @@ function escolherDespesaAlvo(
   return candidates[0]?.d ?? null;
 }
 
+function resolverDespesaAlvo(
+  abertas: ClienteDespesaRegistro[],
+  opts: {
+    autoInfracaoAlvo?: string | null;
+    placa?: string | null;
+    valor: number;
+    dataRecebimentoBr: string;
+  },
+): ClienteDespesaRegistro | null {
+  const alvoId = opts.autoInfracaoAlvo?.trim();
+  if (alvoId) {
+    const alvo =
+      abertas.find((d) => d.autoInfracao === alvoId) ??
+      loadClienteDespesasDb().clienteDespesas.find(
+        (d) =>
+          d.autoInfracao === alvoId &&
+          d.ativo !== false &&
+          d.paga !== true &&
+          (d.situacao === "Em aberto" || !d.paga),
+      ) ??
+      null;
+    if (!alvo) {
+      throw new Error(`Despesa em aberto não encontrada: ${alvoId}.`);
+    }
+    const placaKey = opts.placa?.trim() ? compactPlaca(opts.placa) : null;
+    if (placaKey && compactPlaca(alvo.veiculoId) !== placaKey) {
+      throw new Error(`Despesa ${alvoId} não pertence à placa informada.`);
+    }
+    return alvo;
+  }
+
+  const pool = opts.placa?.trim()
+    ? abertas.filter((d) => compactPlaca(d.veiculoId) === compactPlaca(opts.placa!))
+    : abertas;
+  return escolherDespesaAlvo(pool, opts.valor, opts.dataRecebimentoBr);
+}
+
 function previewProximaParcela(
   pago: ClienteDespesaRegistro,
   descricaoAntes: string,
@@ -416,6 +453,10 @@ export type MontarPlanoBaixaInput = {
   /** Ex.: omitir Infração no match automático PagBank (Juliano). */
   excluirCategoriasAuto?: string[];
   revisaoManual?: boolean;
+  /** Despesa em aberto alvo (autoInfracao) — ex.: pendência escolhida na UI. */
+  autoInfracaoAlvo?: string | null;
+  /** Restringe match automático à placa do veículo. */
+  placa?: string | null;
 };
 
 export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebimento {
@@ -429,7 +470,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   const abertas = despesasAbertasCliente(cliente.id!, {
     excluirCategorias: input.excluirCategoriasAuto,
   });
-  const alvo = escolherDespesaAlvo(abertas, valor, dataBr);
+  const alvo = resolverDespesaAlvo(abertas, {
+    autoInfracaoAlvo: input.autoInfracaoAlvo,
+    placa: input.placa,
+    valor,
+    dataRecebimentoBr: dataBr,
+  });
 
   if (!alvo) {
     return {
@@ -477,6 +523,9 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     );
   } else if (valor < valorDevido) {
     tipoBaixa = "parcial";
+    avisos.push(
+      `Pagamento parcial: R$ ${valor.toFixed(2)} quitado (nova linha) + R$ ${diff.toFixed(2)} permanece em atraso na despesa ${alvo.autoInfracao}.`,
+    );
   } else {
     tipoBaixa = "integral";
     if (valor > valorDevido) {
