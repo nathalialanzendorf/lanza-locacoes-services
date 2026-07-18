@@ -359,6 +359,10 @@ code {
   background: #fef3c7;
 }
 
+.data-table tbody tr.row--cliente-alt td {
+  background: var(--surface-2);
+}
+
 .contratos-renovar__legenda {
   display: flex;
   flex-wrap: wrap;
