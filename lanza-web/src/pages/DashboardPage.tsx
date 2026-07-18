@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { StatCard } from "@/components/StatCard";
 import { PageHeader, QueryError } from "@/components/PageHeader";
-import { IconRecebimento } from "@/components/icons";
+import { IconRecebimento, IconRenovar } from "@/components/icons";
 import { useResumo, useClientes, useContratos } from "@/api/hooks";
 import { formatBrl, formatPlaca, clienteExibicaoPorId } from "@/lib/format";
 import { LABEL } from "@/lib/labels";
@@ -164,9 +164,11 @@ function ContratosVencimentoTable({
                     <td className="col-acoes">
                       <Link
                         to={`/contratos/renovar?id=${encodeURIComponent(c.id)}`}
-                        className="btn btn--ghost btn--sm"
+                        className="btn btn--icon"
+                        aria-label="Renovar"
+                        title="Renovar"
                       >
-                        Renovar
+                        <IconRenovar className="row-actions__icon" />
                       </Link>
                     </td>
                   </tr>
