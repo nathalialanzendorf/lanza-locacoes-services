@@ -330,8 +330,16 @@ export function parseCnhText(text: string): CnhParseResult {
   const catM = text.match(/\bCategoria\s*[:\s]*([ABCDE]{1,2})\b/i);
   if (catM) out.cnh!.categoria = catM[1]!.toUpperCase();
 
-  const datasValidade = [...flat.matchAll(/VALIDADE[^\d]{0,30}(\d{2}\/\d{2}\/\d{4})/gi)];
-  if (datasValidade.length) {
+  const parEmVal = flat.match(
+    /(?:EMISS[AÃ]O|VALIDADE)[^\d]{0,40}(\d{2}\/\d{2}\/\d{4})[^\d]{0,25}(\d{2}\/\d{2}\/\d{4})/i,
+  );
+  if (parEmVal) {
+    out.cnh!.dataEmissao = parEmVal[1];
+    out.cnh!.validade = parEmVal[2];
+  }
+
+  const datasValidade = [...flat.matchAll(/VALIDADE[^\d]{0,40}(\d{2}\/\d{2}\/\d{4})/gi)];
+  if (!out.cnh!.validade && datasValidade.length) {
     out.cnh!.validade = datasValidade[datasValidade.length - 1]![1];
   }
   if (!out.cnh!.validade) {
@@ -340,7 +348,7 @@ export function parseCnhText(text: string): CnhParseResult {
   }
 
   const emM = text.match(/(?:4\s*a\s*DATA\s*EMISS[AÃ]O|Emiss[aã]o|Data de emiss[aã]o)[^\d]{0,20}(\d{2}\/\d{2}\/\d{4})/i);
-  if (emM) out.cnh!.dataEmissao = emM[1];
+  if (emM && !out.cnh!.dataEmissao) out.cnh!.dataEmissao = emM[1];
 
   const habLinha = lines.find((l) => /HABILITA/i.test(l));
   if (habLinha) {
@@ -407,9 +415,20 @@ export function parseCnhText(text: string): CnhParseResult {
   const filIdx = lines.findIndex((l) => /FILIA/i.test(l));
   if (filIdx >= 0) {
     const nomes = lines
-      .slice(filIdx + 1, filIdx + 5)
-      .map((l) => l.replace(/[^\p{L}\s'.-]/gu, " ").replace(/\s+/g, " ").trim())
-      .filter((l) => l.length >= 8 && /[A-ZÀ-Ú]{3,}/i.test(l) && !/BRASILEIR|NACIONAL|ASSINAT/i.test(l));
+      .slice(filIdx + 1, filIdx + 6)
+      .map((l) =>
+        l
+          .replace(/[^\p{L}\s'.-]/gu, " ")
+          .replace(/\s+/g, " ")
+          .replace(/^(?:[^A-ZÀ-Ú]+\s*)+/, "")
+          .trim(),
+      )
+      .filter(
+        (l) =>
+          l.length >= 10 &&
+          /^[A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{8,}$/i.test(l) &&
+          !/BRASILEIR|NACIONAL|ASSINAT|PORTADOR/i.test(l),
+      );
     if (nomes.length) out.filiacao = nomes.slice(0, 2).join(" / ").slice(0, 120);
   }
 
