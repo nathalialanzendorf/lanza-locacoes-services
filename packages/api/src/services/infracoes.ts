@@ -8,11 +8,14 @@ import {
   vincularClienteDespesaInfracao,
   type InfracaoRegistro,
 } from "../lib-imports.js";
+import { listarVinculos } from "./parceiros.js";
 import { HttpError } from "../http.js";
 
 export type ListarInfracoesOpts = {
   placa?: string;
   veiculoId?: string;
+  clienteId?: string;
+  parceiroId?: string;
   emAberto?: boolean;
   semCliente?: boolean;
   /** @deprecated use semCliente */
@@ -55,6 +58,21 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
   if (semCliente) {
     items = items.filter(
       (i) => !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado,
+    );
+  }
+
+  if (opts.clienteId?.trim()) {
+    const id = opts.clienteId.trim();
+    items = items.filter((i) => i.condutorId === id);
+  }
+
+  if (opts.parceiroId?.trim()) {
+    const pid = opts.parceiroId.trim();
+    const veiculoIds = new Set(
+      listarVinculos({ parceiroId: pid }).items.map((v) => v.veiculoId),
+    );
+    items = items.filter(
+      (i) => i.debitoParceiroId === pid || veiculoIds.has(i.veiculoId),
     );
   }
 

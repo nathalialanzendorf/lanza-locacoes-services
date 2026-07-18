@@ -102,6 +102,9 @@ export function useVinculosParceiro(params?: { veiculoId?: string; parceiroId?: 
 
 export function useInfracoes(params?: {
   placa?: string;
+  veiculoId?: string;
+  clienteId?: string;
+  parceiroId?: string;
   emAberto?: boolean;
   semCliente?: boolean;
   ativo?: boolean;

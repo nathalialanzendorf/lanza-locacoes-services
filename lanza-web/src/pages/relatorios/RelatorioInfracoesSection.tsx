@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { DataTable } from "@/components/DataTable";
+import { ClienteSelect, ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { QueryError } from "@/components/PageHeader";
 import { ResultPanel } from "@/components/ResultPanel";
-import { useClientes, useInfracoes } from "@/api/hooks";
+import { useClientes, useInfracoes, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatBrl, formatPlaca } from "@/lib/format";
@@ -12,6 +13,8 @@ import {
   clienteNaoIdentificadoDe,
 } from "@/lib/clienteCampo";
 import type { Infracao } from "@/api/types";
+
+type FiltroSituacao = "em_aberto" | "quitado" | "todos";
 
 function valorInfracao(i: Infracao): number {
   return Number(i.valorMulta ?? i.valor) || 0;
@@ -56,20 +59,30 @@ function situacaoLabel(i: Infracao): { text: string; className: string } {
 }
 
 export function RelatorioInfracoesSection() {
-  const [emAberto, setEmAberto] = useState(true);
-  const [semCliente, setSemCliente] = useState(false);
-  const [placa, setPlaca] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const [parceiroId, setParceiroId] = useState("");
+  const [situacao, setSituacao] = useState<FiltroSituacao>("em_aberto");
   const [atribuirLoading, setAtribuirLoading] = useState(false);
   const [atribuirResult, setAtribuirResult] = useState<unknown>(null);
   const [atribuirError, setAtribuirError] = useState<string | null>(null);
 
+  const emAberto = situacao === "em_aberto" ? true : situacao === "quitado" ? false : undefined;
+
   const query = useInfracoes({
+    veiculoId: veiculoId || undefined,
+    clienteId: clienteId || undefined,
+    parceiroId: parceiroId || undefined,
     emAberto,
-    semCliente: semCliente || undefined,
-    placa: placa.trim() || undefined,
     ativo: true,
   });
   const clientesQuery = useClientes();
+  const veiculosQuery = useVeiculos({ ativo: true });
+
+  const placaFiltro = useMemo(() => {
+    if (!veiculoId) return undefined;
+    return veiculosQuery.data?.items.find((v) => v.id === veiculoId)?.placa;
+  }, [veiculoId, veiculosQuery.data]);
 
   const nomesCliente = useMemo(
     () =>
@@ -81,10 +94,10 @@ export function RelatorioInfracoesSection() {
     [clientesQuery.data],
   );
 
-  const total = useMemo(
-    () => (query.data?.items ?? []).reduce((sum, i) => sum + valorInfracao(i), 0),
-    [query.data],
-  );
+  const rows = query.data?.items ?? [];
+  const temFiltro = Boolean(veiculoId || clienteId || parceiroId || situacao !== "em_aberto");
+
+  const total = useMemo(() => rows.reduce((sum, i) => sum + valorInfracao(i), 0), [rows]);
 
   const loading = query.isLoading || clientesQuery.isLoading;
 
@@ -94,7 +107,7 @@ export function RelatorioInfracoesSection() {
     try {
       const r = await lanzaApi.atribuirClientesInfracoes({
         dryRun,
-        placa: placa.trim() || undefined,
+        placa: placaFiltro?.trim() || undefined,
       });
       setAtribuirResult(r);
     } catch (err) {
@@ -115,29 +128,51 @@ export function RelatorioInfracoesSection() {
         </p>
       ) : null}
 
+      <section className="form-card">
+        <h2 className="form-card__title">Filtros</h2>
+        <div className="form-grid">
+          <FieldLike label="Veículo">
+            <VeiculoSelect
+              value={veiculoId}
+              onChange={setVeiculoId}
+              valueField="id"
+              ativo
+              parceiroId={parceiroId || undefined}
+              emptyLabel="Todos os veículos ativos"
+            />
+          </FieldLike>
+          <FieldLike label="Cliente">
+            <ClienteSelect
+              value={clienteId}
+              onChange={setClienteId}
+              ativo
+              emptyLabel="Todos os clientes ativos"
+            />
+          </FieldLike>
+          <FieldLike label="Parceiro">
+            <ParceiroSelect
+              value={parceiroId}
+              onChange={setParceiroId}
+              ativo
+              emptyLabel="Todos os parceiros ativos"
+            />
+          </FieldLike>
+          <FieldLike label="Situação">
+            <select
+              className="select"
+              value={situacao}
+              onChange={(e) => setSituacao(e.target.value as FiltroSituacao)}
+              aria-label="Situação"
+            >
+              <option value="em_aberto">Em aberto</option>
+              <option value="quitado">Quitadas / pagas</option>
+              <option value="todos">Todas</option>
+            </select>
+          </FieldLike>
+        </div>
+      </section>
+
       <div className="despesas-toolbar">
-        <input
-          className="input"
-          placeholder="Filtrar placa"
-          value={placa}
-          onChange={(e) => setPlaca(e.target.value)}
-        />
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={emAberto}
-            onChange={(e) => setEmAberto(e.target.checked)}
-          />
-          Só em aberto
-        </label>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={semCliente}
-            onChange={(e) => setSemCliente(e.target.checked)}
-          />
-          Sem cliente
-        </label>
         <button
           type="button"
           className="btn btn--ghost"
@@ -171,9 +206,11 @@ export function RelatorioInfracoesSection() {
 
       <DataTable
         loading={loading}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(i) => i.id}
-        emptyMessage="Nenhuma infração encontrada para os filtros selecionados."
+        emptyMessage={
+          temFiltro ? "Nenhuma infração corresponde aos filtros." : "Nenhuma infração encontrada."
+        }
         columns={[
           {
             key: "auto",
@@ -234,5 +271,14 @@ export function RelatorioInfracoesSection() {
         ]}
       />
     </>
+  );
+}
+
+function FieldLike({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="field">
+      <span className="field__label">{label}</span>
+      {children}
+    </label>
   );
 }

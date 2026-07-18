@@ -119,6 +119,9 @@ export const lanzaApi = {
 
   listarInfracoes: (params?: {
     placa?: string;
+    veiculoId?: string;
+    clienteId?: string;
+    parceiroId?: string;
     emAberto?: boolean;
     semCliente?: boolean;
     ativo?: boolean;

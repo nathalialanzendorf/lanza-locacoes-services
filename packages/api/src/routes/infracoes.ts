@@ -26,6 +26,8 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
       json(ctx.res, 200, infracoesService.listarInfracoes({
         placa: ctx.query.get("placa") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
+        clienteId: ctx.query.get("clienteId") ?? undefined,
+        parceiroId: ctx.query.get("parceiroId") ?? undefined,
         emAberto,
         ativo,
         semCliente: semCliente === true || semCondutor === true ? true : undefined,
