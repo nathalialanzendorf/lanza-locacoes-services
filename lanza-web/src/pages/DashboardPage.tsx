@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { StatCard } from "@/components/StatCard";
@@ -28,10 +28,21 @@ const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
   totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
 };
 
+function vencimentoRecebimentoLinha(l: DashboardRecebimentoLinha): string {
+  if (l.vencimentosBr?.length) return l.vencimentosBr.join(", ");
+  return l.vencimentoBr?.trim() || "—";
+}
+
+function alertaAtrasoRecebimento(l: DashboardRecebimentoLinha): ReactNode {
+  const dias = l.diasAtraso;
+  if (dias == null || dias <= 0) return "—";
+  return <span className="badge badge--danger">Vencido há {dias} dia(s)</span>;
+}
+
 function RecebimentosTable({
   titulo,
   linhas,
-  colunaExtra,
+  colunasExtra,
   colunaVeiculo = "Placa",
   clientes,
   mostrarAcaoRecebimento = false,
@@ -39,7 +50,10 @@ function RecebimentosTable({
 }: {
   titulo: string;
   linhas: DashboardRecebimentoLinha[];
-  colunaExtra?: { header: string; render: (l: DashboardRecebimentoLinha) => string };
+  colunasExtra?: Array<{
+    header: string;
+    render: (l: DashboardRecebimentoLinha) => ReactNode;
+  }>;
   colunaVeiculo?: "Placa" | "Veículo";
   clientes?: { id: string; nome?: string; ativo?: boolean }[];
   mostrarAcaoRecebimento?: boolean;
@@ -60,7 +74,9 @@ function RecebimentosTable({
               <tr>
                 <th>Cliente</th>
                 <th>{colunaVeiculo}</th>
-                {colunaExtra ? <th>{colunaExtra.header}</th> : null}
+                {colunasExtra?.map((col) => (
+                  <th key={col.header}>{col.header}</th>
+                ))}
                 <th className="num">Valor</th>
                 {mostrarAcaoRecebimento ? <th className="col-acoes">Ação</th> : null}
               </tr>
@@ -74,7 +90,9 @@ function RecebimentosTable({
                 <tr key={`${l.clienteId ?? "—"}-${l.placa}`}>
                   <td>{clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome)}</td>
                   <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
-                  {colunaExtra ? <td>{colunaExtra.render(l)}</td> : null}
+                  {colunasExtra?.map((col) => (
+                    <td key={col.header}>{col.render(l)}</td>
+                  ))}
                   <td className="num">{formatBrl(l.valor)}</td>
                   {mostrarAcaoRecebimento ? (
                     <td className="col-acoes">
@@ -400,20 +418,10 @@ export function DashboardPage() {
               linhas={rec.atrasados}
               colunaVeiculo="Veículo"
               clientes={clientes}
-              colunaExtra={{
-                header: "Atraso / vencimentos",
-                render: (l) => {
-                  const dias =
-                    l.diasAtraso != null && l.diasAtraso > 0
-                      ? `${l.diasAtraso} dia(s) · `
-                      : "";
-                  const venc =
-                    l.vencimentosBr?.length
-                      ? l.vencimentosBr.join(", ")
-                      : (l.vencimentoBr ?? "—");
-                  return `${dias}${venc}`;
-                },
-              }}
+              colunasExtra={[
+                { header: "Vencimento", render: vencimentoRecebimentoLinha },
+                { header: "Alerta", render: alertaAtrasoRecebimento },
+              ]}
             />
           </section>
         </>
