@@ -2,9 +2,14 @@
 # quando ainda nao estao definidas — evita reabrir o terminal apos set-*-user-env.ps1.
 
 function Sync-UserEnvToProcess {
+  $forceFromUser = @(
+    'PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE',
+    'LANZA_DB_BACKEND', 'AWS_REGION', 'AWS_ROLE_ARN'
+  )
   foreach ($entry in [Environment]::GetEnvironmentVariables('User').GetEnumerator()) {
     $proc = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
-    if ([string]::IsNullOrEmpty($proc) -and -not [string]::IsNullOrEmpty($entry.Value)) {
+    $force = $forceFromUser -contains $entry.Key
+    if (($force -or [string]::IsNullOrEmpty($proc)) -and -not [string]::IsNullOrEmpty($entry.Value)) {
       Set-Item -Path "env:$($entry.Key)" -Value $entry.Value
     }
   }

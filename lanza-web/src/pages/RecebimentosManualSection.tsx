@@ -8,7 +8,7 @@ import { Toggle } from "@/components/Toggle";
 import { useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import type { LinhaPlanoBaixa, PlanoBaixa } from "@/api/types";
+import type { LinhaPlanoBaixa, PlanoBaixa, ClienteDespesa } from "@/api/types";
 import { useRastreameEspelho } from "@/hooks/useRastreameEspelho";
 import { formatBrl, formatValorInput, parseValorInput } from "@/lib/format";
 
@@ -31,6 +31,11 @@ function rotuloEfeitoLinha(l: LinhaPlanoBaixa): string {
   if (l.operacao === "atualizar" && patch.paga === true) return "Quitado";
   if (l.operacao === "atualizar") return "Saldo em atraso";
   return "—";
+}
+
+function valorDespesaCliente(d: ClienteDespesa): number {
+  const v = Number(d.valorMulta);
+  return Number.isFinite(v) && v > 0 ? v : 0;
 }
 
 export function RecebimentosManualSection() {
@@ -69,18 +74,24 @@ export function RecebimentosManualSection() {
     emAberto: true,
     ativo: true,
     clienteId: clienteId || undefined,
-    veiculoId: veiculoId || undefined,
+    placa: veiculoSel?.placa?.trim() || undefined,
   });
 
   const opcoesValor = useMemo(() => {
     return (despesasQuery.data?.items ?? [])
-      .filter((d) => Number(d.valorMulta) > 0)
-      .map((d) => ({
-        id: d.id,
-        autoInfracao: d.autoInfracao?.trim() || d.id,
-        valor: Number(d.valorMulta),
-        label: `${formatBrl(Number(d.valorMulta))} · ${d.descricao ?? d.categoria ?? d.id}`,
-      }));
+      .map((d) => {
+        const valor = valorDespesaCliente(d);
+        if (valor <= 0) return null;
+        const chave = d.autoInfracao?.trim() || d.id;
+        return {
+          id: chave,
+          autoInfracao: chave,
+          valor,
+          label: `${formatBrl(valor)} · ${d.descricao ?? d.categoria ?? chave}`,
+        };
+      })
+      .filter((o): o is NonNullable<typeof o> => o != null)
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
   }, [despesasQuery.data]);
 
   const despesaSel = useMemo(() => {
@@ -272,6 +283,11 @@ export function RecebimentosManualSection() {
               variant="cadastro"
               disabled={loadingPlano || !clienteId || !veiculoId || despesasQuery.isLoading}
               loading={Boolean(clienteId && veiculoId && despesasQuery.isLoading)}
+              emptyLabel={
+                clienteId && veiculoId && !despesasQuery.isLoading && opcoesValor.length === 0
+                  ? "Nenhuma pendência em aberto"
+                  : undefined
+              }
               aria-label="Pendência em aberto"
             >
               {opcoesValor.map((o) => (

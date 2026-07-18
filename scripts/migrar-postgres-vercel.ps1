@@ -48,7 +48,7 @@ try {
 
   $result | ConvertTo-Json -Depth 6
   Write-Host ""
-  Write-Host "OK — migracao concluida." -ForegroundColor Green
+  Write-Host "OK - migracao concluida." -ForegroundColor Green
 } catch {
   $resp = $_.ErrorDetails.Message
   if ($resp) {

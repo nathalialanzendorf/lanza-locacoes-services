@@ -74,6 +74,7 @@ export type { LocacaoInput } from "../../../src/lib/locacoesDb.js";
 export {
   montarPlanoBaixa,
   resolverCliente,
+  resolvePlacaLinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
   type LinhaPlanoBaixa,
   type PlanoBaixaRecebimento,

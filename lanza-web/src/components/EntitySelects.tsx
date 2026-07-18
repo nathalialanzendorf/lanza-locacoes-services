@@ -65,6 +65,7 @@ export type NativeSelectProps = {
   onChange: (value: string) => void;
   variant?: SelectEmptyVariant;
   allowEmpty?: boolean;
+  emptyLabel?: string;
   loading?: boolean;
   disabled?: boolean;
   required?: boolean;
@@ -80,6 +81,7 @@ export function NativeSelect({
   onChange,
   variant = "cadastro",
   allowEmpty = true,
+  emptyLabel,
   loading,
   disabled,
   required,
@@ -98,7 +100,9 @@ export function NativeSelect({
       disabled={disabled || loading}
       aria-label={ariaLabel}
     >
-      {allowEmpty ? <SelectEmptyOption variant={variant} loading={loading} /> : null}
+      {allowEmpty ? (
+        <option value="">{loading ? "A carregar…" : (emptyLabel ?? selectEmptyLabel(variant))}</option>
+      ) : null}
       {children}
     </select>
   );

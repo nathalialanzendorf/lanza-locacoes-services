@@ -11,6 +11,7 @@ import {
   gravarClienteDespesa,
   isClienteDespesaAtiva,
   loadClienteDespesasDb,
+  compactPlaca,
   type ClienteDespesaInput,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
@@ -36,11 +37,17 @@ function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
   return d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
 }
 
-function resolveVeiculoId(opts: ListarDespesasOpts): string | undefined {
-  if (opts.veiculoId?.trim()) return opts.veiculoId.trim();
-  if (!opts.placa?.trim()) return undefined;
-  const v = findVeiculoByPlaca(opts.placa);
-  return v?.id;
+function resolvePlacaFiltro(opts: ListarDespesasOpts): string | null {
+  if (opts.placa?.trim()) {
+    const v = findVeiculoByPlaca(opts.placa);
+    return compactPlaca(v?.placa ?? opts.placa);
+  }
+  if (opts.veiculoId?.trim()) {
+    const raw = opts.veiculoId.trim();
+    const v = findVeiculoById(raw) ?? findVeiculoByPlaca(raw);
+    return compactPlaca(v?.placa ?? raw);
+  }
+  return null;
 }
 
 function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
@@ -57,10 +64,10 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
   items: ClienteDespesaRegistro[];
 } {
   let items = loadClienteDespesasDb().clienteDespesas;
-  const veiculoId = resolveVeiculoId(opts);
+  const placaKey = resolvePlacaFiltro(opts);
 
-  if (veiculoId) {
-    items = items.filter((d) => d.veiculoId === veiculoId);
+  if (placaKey) {
+    items = items.filter((d) => compactPlaca(d.veiculoId) === placaKey);
   }
 
   if (opts.categoria?.trim()) {

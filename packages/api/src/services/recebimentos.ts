@@ -1,6 +1,6 @@
 import {
-  findVeiculoByPlaca,
   montarPlanoBaixa,
+  resolvePlacaLinhaPlanoBaixa,
   resolveSyncRastreame,
   type LinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
@@ -46,12 +46,12 @@ export type ExecutarBaixaResultado = {
 };
 
 function resolveVeiculoIdDaLinha(linha: LinhaPlanoBaixa): string {
-  const v = findVeiculoByPlaca(linha.rastreavel);
-  if (v?.placa) return v.placa;
-  throw new HttpError(
-    400,
-    `Veículo não encontrado para a linha ${linha.num}: ${linha.rastreavel}`,
-  );
+  try {
+    return resolvePlacaLinhaPlanoBaixa(linha);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new HttpError(400, msg);
+  }
 }
 
 export async function executarBaixa(input: ExecutarBaixaInput): Promise<ExecutarBaixaResultado> {

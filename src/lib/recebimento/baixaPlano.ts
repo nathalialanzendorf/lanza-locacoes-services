@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  despesaAtribuidaACliente,
   loadClienteDespesasDb,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
@@ -24,7 +25,11 @@ import {
   deveExibirCalculoSemanalAtraso,
   montarPacoteCobrancaSemanalAtraso,
 } from "../pagamentoSemanalCobranca.js";
-import { compactPlaca } from "../placa.js";
+import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import {
+  findVeiculoByPlaca,
+  findVeiculoByRastreameKey,
+} from "../veiculosDb.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import {
   verificarIdempotenciaBaixa,
@@ -177,6 +182,34 @@ export function rastreavelLabel(veiculoId: string): string {
   return v?.rastreameLabel ?? veiculoId;
 }
 
+/** Placa para gravar despesa a partir de linha do plano (rastreavel pode ser label Rastreame). */
+export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
+  const fromPatch = linha.patch?.veiculoId?.trim();
+  if (fromPatch) {
+    const v = findVeiculoByPlaca(fromPatch);
+    return v?.placa ?? formatPlacaHyphen(fromPatch);
+  }
+
+  const rKey = linha.patch?.rastreameRastreavelKey;
+  if (rKey != null && String(rKey).trim() !== "") {
+    const v = findVeiculoByRastreameKey(rKey);
+    if (v?.placa) return v.placa;
+  }
+
+  const direct = findVeiculoByPlaca(linha.rastreavel);
+  if (direct?.placa) return direct.placa;
+
+  const head = linha.rastreavel.split(" - ")[0]?.trim();
+  if (head) {
+    const v = findVeiculoByPlaca(head);
+    if (v?.placa) return v.placa;
+  }
+
+  throw new Error(
+    `Veículo não encontrado para a linha ${linha.num}: ${linha.rastreavel}`,
+  );
+}
+
 export function tipoRastreame(categoria?: string): string {
   switch (categoria) {
     case "Renegociação":
@@ -269,7 +302,7 @@ function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: 
   return db.clienteDespesas
     .filter(
       (d) =>
-        d.condutorId === clienteId &&
+        despesaAtribuidaACliente(d, clienteId) &&
         d.ativo !== false &&
         d.paga !== true &&
         (d.situacao === "Em aberto" || !d.paga) &&
@@ -430,6 +463,7 @@ function previewProximaParcela(
       descricao: prox.descricao,
       valorMulta: valorParcela,
       dataAutuacao: prox.dataAutuacao,
+      veiculoId: pago.veiculoId,
       paga: false,
       situacao: "Em aberto",
       categoria: pago.categoria,
@@ -573,6 +607,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
         descricao: descQuitada,
         valorMulta: valor,
         dataAutuacao: dataPagamento,
+        veiculoId: alvo.veiculoId,
         paga: true,
         pagaEm: pagaEmIso,
         rastreameDataIso: pagaEmIso,
