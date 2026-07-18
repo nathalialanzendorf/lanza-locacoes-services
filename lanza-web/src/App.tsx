@@ -17,6 +17,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { DespesasPage } from "@/pages/DespesasPage";
 
 import { RelatorioFipeSection } from "@/pages/relatorios/RelatorioFipeSection";
+import { RelatorioInfracoesSection } from "@/pages/relatorios/RelatorioInfracoesSection";
 
 import { LoginPage } from "@/pages/LoginPage";
 
