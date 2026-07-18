@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataFieldsPanel } from "@/components/DataFieldsPanel";
+import { VeiculoSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
 import { useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
@@ -38,12 +39,19 @@ type Props = {
   title?: string;
   /** Exibe opção de gravar FIPE no cadastro quando a placa já existe na frota. */
   showPersistOption?: boolean;
+  /** placa: digitar placa (relatório, avulso); veiculo: combobox da frota cadastrada. */
+  modoSelecao?: "placa" | "veiculo";
 };
 
-export function FipeConsultaForm({ title = "Consulta FIPE", showPersistOption = true }: Props) {
+export function FipeConsultaForm({
+  title = "Consulta FIPE",
+  showPersistOption = true,
+  modoSelecao = "placa",
+}: Props) {
   const qc = useQueryClient();
   const veiculosQuery = useVeiculos();
   const [placa, setPlaca] = useState("");
+  const [veiculoPlaca, setVeiculoPlaca] = useState("");
   const [marcaModelo, setMarcaModelo] = useState("");
   const [anoModelo, setAnoModelo] = useState("");
   const [persist, setPersist] = useState(false);
@@ -51,18 +59,36 @@ export function FipeConsultaForm({ title = "Consulta FIPE", showPersistOption = 
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<FipeResposta | null>(null);
 
-  const placaNorm = normPlaca(placa);
+  const placaConsulta = modoSelecao === "veiculo" ? veiculoPlaca : placa;
+  const placaNorm = normPlaca(placaConsulta);
+  const veiculoSelecionado = useMemo(() => {
+    if (modoSelecao !== "veiculo" || !placaNorm) return null;
+    return (veiculosQuery.data?.items ?? []).find((v) => normPlaca(v.placa) === placaNorm) ?? null;
+  }, [modoSelecao, placaNorm, veiculosQuery.data]);
+
   const cadastrado = useMemo(() => {
+    if (modoSelecao === "veiculo") return Boolean(veiculoSelecionado);
     if (!placaNorm) return false;
     return (veiculosQuery.data?.items ?? []).some((v) => normPlaca(v.placa) === placaNorm);
-  }, [veiculosQuery.data, placaNorm]);
+  }, [modoSelecao, veiculoSelecionado, veiculosQuery.data, placaNorm]);
 
   async function consultar() {
-    if (!placa.trim()) {
+    if (modoSelecao === "veiculo") {
+      if (!veiculoSelecionado?.placa?.trim()) {
+        setError("Selecione um veículo.");
+        return;
+      }
+    } else if (!placa.trim()) {
       setError("Informe a placa.");
       return;
     }
-    if (!cadastrado && (!marcaModelo.trim() || !anoModelo.trim())) {
+
+    const placaEnvio = (modoSelecao === "veiculo" ? veiculoSelecionado?.placa : placa)?.trim() ?? "";
+    const marcaEnvio =
+      modoSelecao === "veiculo" ? veiculoSelecionado?.marcaModelo?.trim() : marcaModelo.trim();
+    const anoEnvio = modoSelecao === "veiculo" ? veiculoSelecionado?.anoModelo?.trim() : anoModelo.trim();
+
+    if (!cadastrado && (!marcaEnvio || !anoEnvio)) {
       setError("Veículo não cadastrado — informe marca/modelo e ano.");
       return;
     }
@@ -71,9 +97,9 @@ export function FipeConsultaForm({ title = "Consulta FIPE", showPersistOption = 
     setError(null);
     try {
       const r = (await lanzaApi.consultarFipe({
-        placa: placa.trim(),
-        marcaModelo: marcaModelo.trim() || undefined,
-        anoModelo: anoModelo.trim() || undefined,
+        placa: placaEnvio,
+        marcaModelo: marcaEnvio || undefined,
+        anoModelo: anoEnvio || undefined,
         persist: showPersistOption && cadastrado ? persist : undefined,
       })) as FipeResposta;
       setResultado(r);
@@ -97,17 +123,34 @@ export function FipeConsultaForm({ title = "Consulta FIPE", showPersistOption = 
         submitLabel={LABEL.consultar}
         error={error}
       >
-        <Field label="Placa" hint="Digite a placa — cadastrada ou não">
-          <input
-            className="input"
-            value={placa}
-            onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-            placeholder="ABC1D23"
-            required
-            disabled={loading}
-          />
+        <Field
+          label={modoSelecao === "veiculo" ? "Veículo" : "Placa"}
+          hint={
+            modoSelecao === "veiculo"
+              ? "Selecione um veículo cadastrado na frota"
+              : "Digite a placa — cadastrada ou não"
+          }
+        >
+          {modoSelecao === "veiculo" ? (
+            <VeiculoSelect
+              value={veiculoPlaca}
+              onChange={setVeiculoPlaca}
+              required
+              disabled={loading}
+              emptyLabel="Selecione um veículo"
+            />
+          ) : (
+            <input
+              className="input"
+              value={placa}
+              onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+              placeholder="ABC1D23"
+              required
+              disabled={loading}
+            />
+          )}
         </Field>
-        {!cadastrado && placaNorm ? (
+        {modoSelecao === "placa" && !cadastrado && placaNorm ? (
           <>
             <Field label="Marca / modelo" hint="Ex.: VW/GOL">
               <input

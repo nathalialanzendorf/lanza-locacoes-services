@@ -5,6 +5,7 @@ export function RelatorioFipeSection() {
     <FipeConsultaForm
       title="Consulta FIPE por placa"
       showPersistOption
+      modoSelecao="placa"
     />
   );
 }

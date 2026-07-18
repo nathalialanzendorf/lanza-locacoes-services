@@ -1,5 +1,5 @@
 import { FipeConsultaForm } from "@/components/FipeConsultaForm";
 
 export function VeiculosFipeSection() {
-  return <FipeConsultaForm title="Consulta FIPE" showPersistOption />;
+  return <FipeConsultaForm title="Consulta FIPE" showPersistOption modoSelecao="veiculo" />;
 }
