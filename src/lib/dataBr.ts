@@ -31,3 +31,19 @@ export function hojeDowBr(timeZone = TZ_BR): number {
   };
   return map[weekday] ?? new Date().getDay();
 }
+
+const DIAS_SEMANA_BR = [
+  "DOMINGO",
+  "SEGUNDA-FEIRA",
+  "TERÇA-FEIRA",
+  "QUARTA-FEIRA",
+  "QUINTA-FEIRA",
+  "SEXTA-FEIRA",
+  "SÁBADO",
+] as const;
+
+/** Nome do dia da semana em PT-BR maiúsculas (ex.: SÁBADO). */
+export function nomeDiaSemanaBr(dow = hojeDowBr(), timeZone = TZ_BR): string {
+  void timeZone;
+  return DIAS_SEMANA_BR[dow] ?? DIAS_SEMANA_BR[hojeDowBr()];
+}

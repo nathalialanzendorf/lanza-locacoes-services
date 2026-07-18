@@ -8,6 +8,7 @@ import type { DashboardRecebimentoLinha, DashboardRecebimentos } from "@/api/typ
 
 const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
   dataReferenciaBr: "—",
+  tituloPagamentoSemanal: "Pagamento semanal",
   venceHoje: [],
   atrasados: [],
   totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
@@ -17,10 +18,12 @@ function RecebimentosTable({
   titulo,
   linhas,
   colunaExtra,
+  colunaVeiculo = "Placa",
 }: {
   titulo: string;
   linhas: DashboardRecebimentoLinha[];
   colunaExtra?: { header: string; render: (l: DashboardRecebimentoLinha) => string };
+  colunaVeiculo?: "Placa" | "Veículo";
 }) {
   return (
     <section className="form-card dashboard-recebimentos">
@@ -36,7 +39,7 @@ function RecebimentosTable({
             <thead>
               <tr>
                 <th>Cliente</th>
-                <th>Placa</th>
+                <th>{colunaVeiculo}</th>
                 {colunaExtra ? <th>{colunaExtra.header}</th> : null}
                 <th className="num">Valor</th>
               </tr>
@@ -45,7 +48,7 @@ function RecebimentosTable({
               {linhas.map((l) => (
                 <tr key={`${l.clienteId ?? "—"}-${l.placa}`}>
                   <td>{l.clienteNome ?? "—"}</td>
-                  <td>{l.placa}</td>
+                  <td>{colunaVeiculo === "Veículo" ? (l.veiculo ?? l.placa) : l.placa}</td>
                   {colunaExtra ? <td>{colunaExtra.render(l)}</td> : null}
                   <td className="num">{formatBrl(l.valor)}</td>
                 </tr>
@@ -168,11 +171,16 @@ export function DashboardPage() {
             </div>
           </section>
 
-          <RecebimentosTable titulo="Vence hoje" linhas={rec.venceHoje} />
+          <RecebimentosTable
+            titulo={rec.tituloPagamentoSemanal ?? "Pagamento semanal"}
+            linhas={rec.venceHoje}
+            colunaVeiculo="Veículo"
+          />
 
           <RecebimentosTable
             titulo="Em atraso"
             linhas={rec.atrasados}
+            colunaVeiculo="Veículo"
             colunaExtra={{
               header: "Atraso / vencimentos",
               render: (l) => {

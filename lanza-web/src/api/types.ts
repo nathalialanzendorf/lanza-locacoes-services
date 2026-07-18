@@ -13,6 +13,7 @@ export type DashboardRecebimentoLinha = {
   clienteId: string | null;
   clienteNome: string | null;
   placa: string;
+  veiculo: string;
   valor: number;
   vencimentoBr?: string | null;
   vencimentosBr?: string[];
@@ -29,6 +30,7 @@ export type DashboardRecebimentosTotais = {
 
 export type DashboardRecebimentos = {
   dataReferenciaBr: string;
+  tituloPagamentoSemanal?: string;
   venceHoje: DashboardRecebimentoLinha[];
   atrasados: DashboardRecebimentoLinha[];
   totais: DashboardRecebimentosTotais;

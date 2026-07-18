@@ -18,7 +18,7 @@ import {
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
 import type { ContratoRegistro } from "./contratosDb.js";
 import { diaPagamentoParaDow } from "./caucaoParcelas.js";
-import { hojeBr, hojeDowBr } from "./dataBr.js";
+import { hojeBr, hojeDowBr, nomeDiaSemanaBr } from "./dataBr.js";
 import {
   isJurosMultaSemanalDescricao,
   vencimentoDespesaSemanalBr,
@@ -31,6 +31,8 @@ export type DashboardRecebimentoLinha = {
   clienteId: string | null;
   clienteNome: string | null;
   placa: string;
+  /** Placa + marca/modelo para exibição no dashboard. */
+  veiculo: string;
   valor: number;
   vencimentoBr?: string | null;
   vencimentosBr?: string[];
@@ -47,6 +49,8 @@ export type DashboardRecebimentosTotais = {
 
 export type DashboardRecebimentos = {
   dataReferenciaBr: string;
+  /** Ex.: Pagamento semanal (SÁBADO) */
+  tituloPagamentoSemanal: string;
   venceHoje: DashboardRecebimentoLinha[];
   atrasados: DashboardRecebimentoLinha[];
   totais: DashboardRecebimentosTotais;
@@ -101,6 +105,24 @@ function chaveClientePlaca(clienteId: string | null, placa: string): string {
   return `${clienteId ?? ""}|${compactPlaca(placa)}`;
 }
 
+function veiculoLabelPorPlaca(placa: string, veiculos: VeiculoRegistro[]): string {
+  const placaFmt = formatPlacaHyphen(placa);
+  const p = compactPlaca(placa);
+  const v = veiculos.find((x) => compactPlaca(x.placa) === p);
+  const modelo = v?.marcaModelo?.trim() || v?.fipeModelo?.trim();
+  return modelo ? `${placaFmt} · ${modelo}` : placaFmt;
+}
+
+function linhaRecebimento(
+  base: Omit<DashboardRecebimentoLinha, "veiculo">,
+  veiculos: VeiculoRegistro[],
+): DashboardRecebimentoLinha {
+  return {
+    ...base,
+    veiculo: veiculoLabelPorPlaca(base.placa, veiculos),
+  };
+}
+
 function ordenarLinhas(a: DashboardRecebimentoLinha, b: DashboardRecebimentoLinha): number {
   const na = (a.clienteNome ?? "").localeCompare(b.clienteNome ?? "", "pt-BR");
   if (na !== 0) return na;
@@ -141,13 +163,13 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
       continue;
     }
 
-    porChave.set(chave, {
+    porChave.set(chave, linhaRecebimento({
       clienteId,
       clienteNome: nomeCliente,
       placa,
       valor: round2(valor),
       vencimentoBr: venc,
-    });
+    }, ctx.veiculos));
   }
 
   const hojeDow = hojeDowBr();
@@ -160,13 +182,13 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
     const chave = chaveClientePlaca(escopo.clienteId, escopo.placa);
     if (porChave.has(chave)) continue;
 
-    porChave.set(chave, {
+    porChave.set(chave, linhaRecebimento({
       clienteId: escopo.clienteId,
       clienteNome: contrato.clienteNome ?? null,
       placa: formatPlacaHyphen(escopo.placa),
       valor: round2(contrato.valorSemanal),
       vencimentoBr: hoje,
-    });
+    }, ctx.veiculos));
   }
 
   return [...porChave.values()].sort(ordenarLinhas);
@@ -186,14 +208,14 @@ function listarAtrasados(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
     );
     if (!pacote) continue;
 
-    linhas.push({
+    linhas.push(linhaRecebimento({
       clienteId: alvo.clienteId,
       clienteNome: alvo.clienteNome,
       placa: alvo.placa,
       valor: round2(pacote.totalGeral),
       vencimentosBr: alvo.vencimentosBr,
       diasAtraso: pacote.resumo?.diasAtrasados ?? null,
-    });
+    }, ctx.veiculos));
   }
 
   return linhas.sort(ordenarLinhas);
@@ -244,6 +266,7 @@ export function obterDashboardRecebimentos(ctx?: CobrancasDbContext): DashboardR
 
   return {
     dataReferenciaBr,
+    tituloPagamentoSemanal: `Pagamento semanal (${nomeDiaSemanaBr()})`,
     venceHoje,
     atrasados,
     totais,

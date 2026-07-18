@@ -154,7 +154,7 @@ export {
   type CobrancasDbContext,
 } from "../../../src/lib/cobrancasDbContext.js";
 
-export { hojeBr, hojeDowBr } from "../../../src/lib/dataBr.js";
+export { hojeBr, hojeDowBr, nomeDiaSemanaBr } from "../../../src/lib/dataBr.js";
 
 export {
   blobKey,
