@@ -105,6 +105,11 @@ export const lanzaApi = {
     apiRequest<{ data: Locacao }>(`/api/locacoes/${encodeURIComponent(id)}`, {
       method: "DELETE",
     }),
+  sugerirLocacoesPrestacao: (body: { competencia: string; placa?: string }) =>
+    apiRequest<{ data: import("./types").PrestacaoSugestaoLocacoes }>("/api/locacoes/sugerir", {
+      method: "POST",
+      body,
+    }),
 
   listarParceiros: () => apiRequest<ListEnvelope<Parceiro>>("/api/parceiros"),
   obterParceiro: (id: string) =>

@@ -103,6 +103,10 @@ export type Contrato = {
   dataFimPrevista?: string;
   dataEncerramento?: string | null;
   cpf?: string | null;
+  tipoContrato?: string | null;
+  valorSemanal?: number | null;
+  valorMensal?: number | null;
+  valorDiaria?: number | null;
 };
 
 /** Resposta completa de GET /api/contratos/:id */
@@ -162,9 +166,27 @@ export type PagBankLote = {
 
 export type PrestacaoVeiculoInput = {
   placa: string;
-  ganho?: { valor: number; descricao?: string };
+  ganho?: { valor: number; descricao?: string; itens?: { descricao: string; valor: number }[] };
   devidoMesAnterior?: number;
-  descontoManutencao?: { valor: number; descricao?: string };
+  descontoManutencao?: {
+    valor: number;
+    descricao?: string;
+    itens?: { descricao: string; valor: number }[];
+  };
+};
+
+export type PrestacaoSugestaoVeiculo = {
+  placa: string;
+  veiculoId?: string;
+  ganhoItens?: { descricao: string; valor: number }[];
+  manutencaoItens?: { descricao: string; valor: number }[];
+  locado?: { repasseParceiro?: number };
+};
+
+export type PrestacaoSugestaoLocacoes = {
+  competencia: string;
+  periodo: { inicio: string; fim: string };
+  veiculos: PrestacaoSugestaoVeiculo[];
 };
 
 export type ParceiroDespesa = {

@@ -3,10 +3,14 @@ import { Field } from "@/components/FormCard";
 import { ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
-import { useVeiculos, useVinculosParceiro } from "@/api/hooks";
+import { useContratos, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca } from "@/lib/format";
+import { formatBrl, formatPlaca } from "@/lib/format";
+import {
+  calcularGanhosVeiculos,
+  type GanhoVeiculoLinha,
+} from "@/lib/prestacaoGanho";
 import type { PrestacaoVeiculoInput } from "@/api/types";
 import {
   downloadArquivoTexto,
@@ -15,17 +19,24 @@ import {
   type RelatorioModoEntrega,
 } from "@/lib/relatorioDownload";
 
+function competenciaValida(comp: string): boolean {
+  return /^\d{2}\/\d{4}$/.test(comp.trim());
+}
+
 export function RelatorioPrestacaoContasForm() {
   const [parceiroId, setParceiroId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
   const veiculosQuery = useVeiculos({ ativo: true });
+  const contratosQuery = useContratos();
   const vinculosQuery = useVinculosParceiro(
     parceiroId.trim() ? { parceiroId: parceiroId.trim() } : undefined,
   );
 
   const [competencia, setCompetencia] = useState("");
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [ganhoPadrao, setGanhoPadrao] = useState("2000");
+  const [ganhos, setGanhos] = useState<GanhoVeiculoLinha[]>([]);
+  const [ganhosConfirmados, setGanhosConfirmados] = useState(false);
+  const [calculandoGanhos, setCalculandoGanhos] = useState(false);
   const [modoAvancado, setModoAvancado] = useState(false);
   const [veiculosJson, setVeiculosJson] = useState("[]");
   const [armazenarServidor, setArmazenarServidor] = useState(false);
@@ -62,6 +73,51 @@ export function RelatorioPrestacaoContasForm() {
     }
   }, [parceiroId, veiculoId, vinculosQuery.data]);
 
+  useEffect(() => {
+    setGanhosConfirmados(false);
+  }, [competencia, sel, parceiroId, veiculoId]);
+
+  useEffect(() => {
+    if (modoAvancado || !competenciaValida(competencia) || sel.size === 0) {
+      setGanhos([]);
+      return;
+    }
+
+    let cancel = false;
+    setCalculandoGanhos(true);
+    void lanzaApi
+      .sugerirLocacoesPrestacao({ competencia: competencia.trim() })
+      .then((r) => {
+        if (cancel) return;
+        const sugestoes = r.data?.veiculos ?? [];
+        setGanhos(
+          calcularGanhosVeiculos({
+            veiculos: veiculosFiltrados,
+            selecionados: sel,
+            contratos: contratosQuery.data?.items ?? [],
+            sugestoes,
+          }),
+        );
+      })
+      .catch(() => {
+        if (cancel) return;
+        setGanhos(
+          calcularGanhosVeiculos({
+            veiculos: veiculosFiltrados,
+            selecionados: sel,
+            contratos: contratosQuery.data?.items ?? [],
+          }),
+        );
+      })
+      .finally(() => {
+        if (!cancel) setCalculandoGanhos(false);
+      });
+
+    return () => {
+      cancel = true;
+    };
+  }, [modoAvancado, competencia, sel, veiculosFiltrados, contratosQuery.data]);
+
   const payloadVeiculos = useMemo((): PrestacaoVeiculoInput[] => {
     if (modoAvancado) {
       try {
@@ -70,15 +126,16 @@ export function RelatorioPrestacaoContasForm() {
         return [];
       }
     }
-    return veiculosFiltrados
-      .filter((v) => sel.has(v.id))
-      .map((v) => ({
-        placa: v.placa!,
-        ganho: { valor: Number(ganhoPadrao) || 2000, descricao: "Locação semanal" },
-        devidoMesAnterior: 0,
-        descontoManutencao: { valor: 0, descricao: "" },
-      }));
-  }, [modoAvancado, veiculosFiltrados, sel, ganhoPadrao, veiculosJson]);
+    if (!ganhosConfirmados) return [];
+    return ganhos.map((g) => ({
+      placa: g.placa,
+      ganho: g.itens?.length
+        ? { itens: g.itens, valor: g.valor, descricao: g.descricao }
+        : { valor: g.valor, descricao: g.descricao },
+      devidoMesAnterior: 0,
+      descontoManutencao: g.descontoManutencao ?? { valor: 0, descricao: "" },
+    }));
+  }, [modoAvancado, ganhos, ganhosConfirmados, veiculosJson]);
 
   function toggleVeiculo(id: string) {
     setSel((prev) => {
@@ -98,7 +155,27 @@ export function RelatorioPrestacaoContasForm() {
     setVeiculoId("");
   }
 
+  function atualizarGanho(veiculoIdLinha: string, valor: number) {
+    setGanhosConfirmados(false);
+    setGanhos((prev) =>
+      prev.map((g) => (g.veiculoId === veiculoIdLinha ? { ...g, valor: Math.max(0, valor) } : g)),
+    );
+  }
+
+  function confirmarGanhos() {
+    if (ganhos.some((g) => g.valor <= 0)) {
+      setError("Há veículo com ganho zero — ajuste o valor ou remova da seleção.");
+      return;
+    }
+    setError(null);
+    setGanhosConfirmados(true);
+  }
+
   async function entregar(modo: RelatorioModoEntrega) {
+    if (!modoAvancado && !ganhosConfirmados) {
+      setError("Confirme os ganhos antes de gerar o relatório.");
+      return;
+    }
     setLoading(true);
     setError(null);
     if (modo !== "visualizar") {
@@ -108,7 +185,7 @@ export function RelatorioPrestacaoContasForm() {
     }
     try {
       if (!competencia.trim()) throw new Error("Informe a competência (MM/AAAA).");
-      if (!payloadVeiculos.length) throw new Error("Selecione ao menos um veículo.");
+      if (!payloadVeiculos.length) throw new Error("Selecione ao menos um veículo e confirme os ganhos.");
       const r = await lanzaApi.gerarPrestacaoContas({
         competencia: competencia.trim(),
         veiculos: payloadVeiculos,
@@ -140,33 +217,24 @@ export function RelatorioPrestacaoContasForm() {
 
   const temFiltro = Boolean(parceiroId || veiculoId);
   const loadingVeiculos = veiculosQuery.isLoading || (parceiroId ? vinculosQuery.isLoading : false);
+  const podeConfirmarGanhos =
+    !modoAvancado && competenciaValida(competencia) && sel.size > 0 && ganhos.length > 0 && !calculandoGanhos;
 
   return (
     <>
       <section className="form-card">
         <h2 className="form-card__title">Parâmetros</h2>
-        <div className="despesas-toolbar">
-          <ParceiroSelect
-            value={parceiroId}
-            onChange={onParceiroChange}
-            ativo
-            emptyLabel="Todos os parceiros ativos"
-          />
-          <VeiculoSelect
-            value={veiculoId}
-            onChange={setVeiculoId}
-            valueField="id"
-            ativo
-            parceiroId={parceiroId || undefined}
-            emptyLabel="Todos os veículos ativos"
-          />
-          {!loadingVeiculos ? (
-            <span className="badge badge--muted">
-              {veiculosFiltrados.length} veículo{veiculosFiltrados.length === 1 ? "" : "s"}
-            </span>
-          ) : null}
-        </div>
         <div className="form-grid">
+          <Field label="Veículo" hint="Filtrar frota ativa">
+            <VeiculoSelect
+              value={veiculoId}
+              onChange={setVeiculoId}
+              valueField="id"
+              ativo
+              parceiroId={parceiroId || undefined}
+              emptyLabel="Todos os veículos ativos"
+            />
+          </Field>
           <Field label="Competência" hint="MM/AAAA">
             <input
               className="input"
@@ -176,47 +244,138 @@ export function RelatorioPrestacaoContasForm() {
               required
             />
           </Field>
-          <Field label="Ganho padrão (R$)" hint="Por veículo selecionado">
-            <input className="input" type="number" value={ganhoPadrao} onChange={(e) => setGanhoPadrao(e.target.value)} />
+          <Field label="Parceiro" hint="Opcional">
+            <ParceiroSelect
+              value={parceiroId}
+              onChange={onParceiroChange}
+              ativo
+              emptyLabel="Todos os parceiros ativos"
+            />
           </Field>
           <label className="field checkbox-label">
             <input type="checkbox" checked={modoAvancado} onChange={(e) => setModoAvancado(e.target.checked)} />
             Modo avançado (JSON manual)
           </label>
         </div>
+        {!loadingVeiculos ? (
+          <p className="field__hint">
+            {veiculosFiltrados.length} veículo{veiculosFiltrados.length === 1 ? "" : "s"} na lista
+            {temFiltro ? " (filtrados)" : ""}.
+          </p>
+        ) : null}
         {error ? <p className="form-card__error">{error}</p> : null}
       </section>
 
       {!modoAvancado ? (
-        <section className="form-card">
-          <div className="despesas-toolbar">
-            <h2 className="form-card__title">Veículos ({sel.size}/{veiculosFiltrados.length})</h2>
-            <button
-              type="button"
-              className="btn btn--ghost"
-              onClick={selecionarTodos}
-              disabled={veiculosFiltrados.length === 0}
-            >
-              Selecionar todos
-            </button>
-          </div>
-          {loadingVeiculos ? (
-            <p className="field__hint">A carregar veículos…</p>
-          ) : veiculosFiltrados.length === 0 ? (
-            <p className="field__hint">
-              {temFiltro ? "Nenhum veículo ativo corresponde aos filtros." : "Nenhum veículo ativo."}
-            </p>
-          ) : (
-            <div className="checkbox-group">
-              {veiculosFiltrados.map((v) => (
-                <label key={v.id} className="checkbox-label">
-                  <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
-                  {formatPlaca(v.placa)} {v.marcaModelo ? `· ${v.marcaModelo}` : ""}
-                </label>
-              ))}
+        <>
+          <section className="form-card">
+            <div className="despesas-toolbar">
+              <h2 className="form-card__title">Veículos ({sel.size}/{veiculosFiltrados.length})</h2>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={selecionarTodos}
+                disabled={veiculosFiltrados.length === 0}
+              >
+                Selecionar todos
+              </button>
             </div>
-          )}
-        </section>
+            {loadingVeiculos ? (
+              <p className="field__hint">A carregar veículos…</p>
+            ) : veiculosFiltrados.length === 0 ? (
+              <p className="field__hint">
+                {temFiltro ? "Nenhum veículo ativo corresponde aos filtros." : "Nenhum veículo ativo."}
+              </p>
+            ) : (
+              <div className="checkbox-group">
+                {veiculosFiltrados.map((v) => (
+                  <label key={v.id} className="checkbox-label">
+                    <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
+                    {formatPlaca(v.placa)} {v.marcaModelo ? `· ${v.marcaModelo}` : ""}
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {sel.size > 0 && competenciaValida(competencia) ? (
+            <section className="form-card">
+              <div className="despesas-toolbar">
+                <h2 className="form-card__title">Ganhos sugeridos</h2>
+                {ganhosConfirmados ? (
+                  <span className="badge badge--ok">Confirmado</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--sm"
+                    disabled={!podeConfirmarGanhos}
+                    onClick={confirmarGanhos}
+                  >
+                    Confirmar ganhos
+                  </button>
+                )}
+              </div>
+              {calculandoGanhos ? (
+                <p className="field__hint">A calcular ganhos (locações e contratos)…</p>
+              ) : (
+                <>
+                  <p className="field__hint">
+                    Valores de locações no período ou, se não houver movimentação, 4 semanas do contrato vigente.
+                    Ajuste se necessário e confirme antes de gerar.
+                  </p>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Placa</th>
+                          <th>Origem</th>
+                          <th>Referência</th>
+                          <th className="num">Ganho (R$)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ganhos.map((g) => (
+                          <tr key={g.veiculoId}>
+                            <td>
+                              <strong>{formatPlaca(g.placa)}</strong>
+                            </td>
+                            <td>{g.origem === "locacoes" ? "Locações" : "Contrato"}</td>
+                            <td>
+                              <span className="field__hint" title={g.descricao}>
+                                {g.contratoCliente ?? g.descricao}
+                              </span>
+                            </td>
+                            <td className="num">
+                              <input
+                                className="input"
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={g.valor}
+                                onChange={(e) => atualizarGanho(g.veiculoId, Number(e.target.value))}
+                                disabled={ganhosConfirmados}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={3}>
+                            <strong>Total</strong>
+                          </td>
+                          <td className="num">
+                            <strong>{formatBrl(ganhos.reduce((s, g) => s + g.valor, 0))}</strong>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </>
+              )}
+            </section>
+          ) : null}
+        </>
       ) : (
         <Field label="Veículos (JSON)">
           <textarea className="textarea" rows={12} value={veiculosJson} onChange={(e) => setVeiculosJson(e.target.value)} />
@@ -225,7 +384,11 @@ export function RelatorioPrestacaoContasForm() {
 
       <RelatorioEntrega
         loading={loading}
-        disabled={!competencia.trim() || payloadVeiculos.length === 0}
+        disabled={
+          !competencia.trim() ||
+          payloadVeiculos.length === 0 ||
+          (!modoAvancado && !ganhosConfirmados)
+        }
         armazenarServidor={armazenarServidor}
         onArmazenarServidorChange={setArmazenarServidor}
         onEntrega={(modo) => void entregar(modo)}
