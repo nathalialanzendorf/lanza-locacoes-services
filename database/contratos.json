@@ -1009,10 +1009,10 @@
       "cpf": "467.564.448-16",
       "dataInicio": "13/01/2026",
       "dataFimPrevista": "15/01/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "dataEncerramento": "19/01/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 2,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": null,
@@ -1023,7 +1023,7 @@
       "valorDiaria": 120,
       "valorCaucao": 1500,
       "cadastradoEm": "2026-06-28T16:58:47.141Z",
-      "atualizadoEm": "2026-06-28T17:20:05.587Z"
+      "atualizadoEm": "2026-07-18T14:08:00.953Z"
     },
     {
       "id": "0321c6a9-1064-4fe2-a4f3-20c1ce64b586",
