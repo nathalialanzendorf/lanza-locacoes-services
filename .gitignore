@@ -31,3 +31,5 @@ lanza-web/dist/
 
 # Relatórios gerados pela CLI — saída por tipo em relatorios/_tmp/<tipo>/ (só local, não comitar)
 relatorios/_tmp/
+.vercel
+.env*

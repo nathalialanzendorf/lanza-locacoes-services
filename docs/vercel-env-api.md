@@ -8,7 +8,7 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 
 | Variável | Valor |
 |----------|-------|
-| `LANZA_DB_BACKEND` | `dual` *(JSON + Postgres)* ou `postgres` *(só Postgres)* |
+| `LANZA_DB_BACKEND` | `postgres` *(só Postgres — produção)* ou `dual` *(JSON + Postgres)* |
 | `PGHOST` | `aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com` |
 | `PGPORT` | `5432` |
 | `PGDATABASE` | `postgres` |

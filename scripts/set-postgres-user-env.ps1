@@ -26,6 +26,8 @@ param(
   [string]$PgSslMode = "require",
   [string]$PgUser = "postgres",
   [string]$Password = "",
+  [ValidateSet("postgres", "dual", "file")]
+  [string]$Backend = "postgres",
   [switch]$PromptPassword,
   [switch]$UseIam
 )
@@ -61,7 +63,7 @@ Set-UserEnv "PGHOST" $PgHost.Trim()
 Set-UserEnv "PGPORT" $PgPort.Trim()
 Set-UserEnv "PGSSLMODE" $PgSslMode.Trim()
 Set-UserEnv "PGUSER" $PgUser.Trim()
-Set-UserEnv "LANZA_DB_BACKEND" "dual"
+Set-UserEnv "LANZA_DB_BACKEND" $Backend.Trim()
 
 if ($Password.Trim()) {
   Set-UserEnv "PGPASSWORD" $Password.Trim()
@@ -93,6 +95,6 @@ $authMode = if ($Password.Trim()) {
 Write-Host ""
 Write-Host "OK: variaveis PostgreSQL gravadas (utilizador + sessao atual)."
 Write-Host "    Autenticacao: $authMode"
-Write-Host "    Backend:      LANZA_DB_BACKEND=dual (grava JSON + PostgreSQL)"
+Write-Host "    Backend:      LANZA_DB_BACKEND=$Backend"
 Write-Host ""
 Write-Host "Testar: npm run lanza -- postgres check"

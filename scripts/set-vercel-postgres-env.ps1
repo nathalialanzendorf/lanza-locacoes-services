@@ -6,13 +6,13 @@
 #
 # Uso:
 #   .\scripts\set-vercel-postgres-env.ps1
-#   .\scripts\set-vercel-postgres-env.ps1 -Backend dual
+#   .\scripts\set-vercel-postgres-env.ps1 -Backend postgres
 #   .\scripts\set-vercel-postgres-env.ps1 -DryRun
 
 param(
   [ValidateSet("postgres", "dual")]
-  [string]$Backend = "dual",
-  [string]$ProjectName = "lanza-locacoes",
+  [string]$Backend = "postgres",
+  [string]$ProjectName = "lanza-locacoes-services",
   [switch]$DryRun
 )
 
@@ -49,27 +49,30 @@ if ($DryRun) {
   exit 0
 }
 
-$whoami = npx vercel whoami 2>&1
-if ($LASTEXITCODE -ne 0) {
+$ErrorActionPreference = "Continue"
+$whoami = (npx vercel whoami 2>&1 | Where-Object { $_ -is [string] -and $_.Trim() -and $_ -notmatch 'Warning|npm WARN|node:' } | Select-Object -Last 1).ToString().Trim()
+if (-not $whoami) {
   Write-Host "ERRO: Vercel CLI nao autenticado. Execute: npx vercel login" -ForegroundColor Red
   exit 1
 }
 Write-Host "Vercel: $whoami"
 Write-Host ""
+$ErrorActionPreference = "Stop"
 
+$ErrorActionPreference = "Continue"
 foreach ($kv in $vars.GetEnumerator()) {
   $name = $kv.Key
   $value = $kv.Value
   Write-Host "-> $name"
-  # Remove valor anterior (ignora se nao existir) e adiciona nos 3 ambientes
-  npx vercel env rm $name production --yes 2>$null | Out-Null
-  npx vercel env rm $name preview --yes 2>$null | Out-Null
-  npx vercel env rm $name development --yes 2>$null | Out-Null
-  $value | npx vercel env add $name production preview development --yes 2>&1 | Out-Null
-  if ($LASTEXITCODE -ne 0) {
-    Write-Host "   falhou (tente pelo dashboard Vercel)" -ForegroundColor Yellow
+  foreach ($envName in @("production", "preview", "development")) {
+    npx vercel env rm $name $envName --yes 2>$null | Out-Null
+    $value | npx vercel env add $name $envName --yes 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host "   falhou em $envName (tente pelo dashboard Vercel)" -ForegroundColor Yellow
+    }
   }
 }
+$ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "OK. Faca Redeploy do projeto API na Vercel."
