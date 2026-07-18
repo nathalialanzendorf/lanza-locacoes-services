@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -6,10 +6,11 @@ import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { Toggle } from "@/components/Toggle";
 import { ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
-import { useVinculosParceiro } from "@/api/hooks";
+import { useContratos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import {
+  placasComContratoAtivo,
   statusVeiculoClass,
   statusVeiculoLabel,
   statusVeiculoOperacional,
@@ -27,6 +28,11 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
   const vinculosQuery = useVinculosParceiro(
     veiculoId ? { veiculoId } : undefined,
   );
+  const contratosQuery = useContratos({ status: "ativo" });
+  const placasContratoAtivo = useMemo(
+    () => placasComContratoAtivo(contratosQuery.data?.items ?? []),
+    [contratosQuery.data],
+  );
 
   const [placa, setPlaca] = useState("");
   const [marcaModelo, setMarcaModelo] = useState("");
@@ -37,10 +43,13 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
   const [ufRegistro, setUfRegistro] = useState("SC");
   const [parceiroId, setParceiroId] = useState("");
   const [ativo, setAtivo] = useState(true);
-  const [clienteVinculadoId, setClienteVinculadoId] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(editando);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const statusOperacional = useMemo(
+    () => statusVeiculoOperacional({ ativo, placa }, placasContratoAtivo),
+    [ativo, placa, placasContratoAtivo],
+  );
   function popularFormulario(v: Record<string, unknown>) {
     if (typeof v.placa === "string") setPlaca(v.placa);
     if (typeof v.marcaModelo === "string") setMarcaModelo(v.marcaModelo);
@@ -50,8 +59,6 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
     if (typeof v.cor === "string") setCor(v.cor);
     if (typeof v.ufRegistro === "string") setUfRegistro(v.ufRegistro);
     if (typeof v.ativo === "boolean") setAtivo(v.ativo);
-    if (typeof v.clienteVinculadoId === "string") setClienteVinculadoId(v.clienteVinculadoId);
-    else if (v.clienteVinculadoId === null) setClienteVinculadoId(null);
   }
 
   useEffect(() => {
@@ -164,15 +171,11 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
           <ParceiroSelect value={parceiroId} onChange={setParceiroId} variant="cadastro" disabled={loading} />
         </Field>
         <Field label="Status operacional">
-          <span
-            className={statusVeiculoClass(
-              statusVeiculoOperacional({ ativo, clienteVinculadoId }),
-            )}
-          >
-            {statusVeiculoLabel(statusVeiculoOperacional({ ativo, clienteVinculadoId }))}
+          <span className={statusVeiculoClass(statusOperacional)}>
+            {statusVeiculoLabel(statusOperacional)}
           </span>
           <span className="field__hint">
-            Locado vem do contrato ativo. Use o toggle abaixo para inativar ou reativar.
+            Locado = contrato ativo na placa. Use o toggle abaixo para inativar ou reativar.
           </span>
         </Field>
         <Field label="Frota" hint="Inativo sai da frota operacional">

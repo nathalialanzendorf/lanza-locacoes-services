@@ -22,6 +22,7 @@ import {
   contratoAtivoOperacional,
   despesaClienteAbertaDashboard,
   obterDashboardRecebimentos,
+  placasIguais,
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
@@ -84,13 +85,11 @@ function montarResumo(
 
   const clientesAtivos = clientes.filter(isClienteAtivo);
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
-  const veiculosLocados = veiculosAtivos.filter((v) =>
-    Boolean(String(v.clienteVinculadoId ?? "").trim()),
-  );
-  const veiculosNaoLocados = veiculosAtivos.filter(
-    (v) => !String(v.clienteVinculadoId ?? "").trim(),
-  );
   const contratosAtivos = contratos.filter((c) => contratoAtivoOperacional(c));
+  const veiculoTemContratoAtivo = (v: VeiculoRegistro) =>
+    contratosAtivos.some((c) => placasIguais(c.placa, v.placa));
+  const veiculosLocados = veiculosAtivos.filter(veiculoTemContratoAtivo);
+  const veiculosNaoLocados = veiculosAtivos.filter((v) => !veiculoTemContratoAtivo(v));
 
   const despesasClienteAbertas = despesasCliente.filter((d) =>
     despesaClienteAbertaDashboard(d, cobrancasCtx),

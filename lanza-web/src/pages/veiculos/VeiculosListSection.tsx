@@ -6,12 +6,13 @@ import { VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
+import { useParceiros, useVeiculos, useVinculosParceiro, useContratos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca } from "@/lib/format";
 import { ordenarAtivoDepoisAlfabetico, registroAtivo } from "@/lib/listagemCadastro";
 import {
+  placasComContratoAtivo,
   statusVeiculoClass,
   statusVeiculoLabel,
   statusVeiculoOperacional,
@@ -25,6 +26,7 @@ export function VeiculosListSection() {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
   const query = useVeiculos();
+  const contratosQuery = useContratos({ status: "ativo" });
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
 
@@ -47,6 +49,11 @@ export function VeiculosListSection() {
     }
     return { parceiroPorVeiculoId, parceiroIdPorVeiculoId };
   }, [parceirosQuery.data, vinculosQuery.data]);
+
+  const placasContratoAtivo = useMemo(
+    () => placasComContratoAtivo(contratosQuery.data?.items ?? []),
+    [contratosQuery.data],
+  );
 
   const rows = useMemo(() => {
     const items = query.data?.items ?? [];
@@ -160,7 +167,7 @@ export function VeiculosListSection() {
             key: "status",
             header: "Status",
             render: (v) => {
-              const status = statusVeiculoOperacional(v);
+              const status = statusVeiculoOperacional(v, placasContratoAtivo);
               return (
                 <span className={statusVeiculoClass(status)}>{statusVeiculoLabel(status)}</span>
               );

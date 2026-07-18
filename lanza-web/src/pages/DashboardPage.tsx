@@ -226,7 +226,7 @@ export function DashboardPage() {
             value={resumo.data ? `${resumo.data.veiculos.locados}` : "—"}
             hint={
               resumo.data
-                ? `${resumo.data.veiculos.ativos} operacionais`
+                ? `${resumo.data.contratos.ativos} contratos ativos`
                 : undefined
             }
             tone="ok"
@@ -235,7 +235,9 @@ export function DashboardPage() {
             title="Veículos não locados"
             value={resumo.data ? `${resumo.data.veiculos.naoLocados}` : "—"}
             hint={
-              resumo.data ? `${resumo.data.veiculos.total} veículos no total` : undefined
+              resumo.data
+                ? `${resumo.data.veiculos.ativos} operacionais · sem contrato`
+                : undefined
             }
           />
           <StatCard
