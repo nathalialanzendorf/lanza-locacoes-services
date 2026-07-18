@@ -98,7 +98,92 @@ function isImagemExt(ext: string): boolean {
 }
 
 function cnhParseOk(parsed: CnhParseResult): boolean {
+  if (!parsed.cpf && !parsed.cnh?.numeroRegistro) return false;
+  if (parsed.nome && !isNomeCnhValido(parsed.nome)) return false;
   return Boolean(parsed.cpf || parsed.cnh?.numeroRegistro);
+}
+
+function isNomeCnhValido(nome: string): boolean {
+  const t = nome.trim();
+  if (t.length < 8) return false;
+  const u = t.toUpperCase();
+  if (u === "E SOBRENOME" || u === "SOBRENOME" || /\bSOBRENOME$/i.test(u)) return false;
+  if (/^(NOME|E)\b|HABILIT|CNH|BRASIL|MINIST|CARTEIRA|SECRETARIA|TRANSPORTE/i.test(u)) return false;
+  return t.split(/\s+/).filter(Boolean).length >= 2;
+}
+
+function parseDataBr(s: string): number {
+  const p = s.split("/").map(Number);
+  if (p.length !== 3 || !p[0] || !p[1] || !p[2]) return 0;
+  return new Date(p[2], p[1] - 1, p[0]).getTime();
+}
+
+function extrairNomeCnh(
+  text: string,
+  lines: string[],
+): { nome: string; primeiraHabilitacao?: string } | null {
+  const flat = text.replace(/\s+/g, " ");
+
+  const flatM = flat.match(
+    /NOME\s+E\s+SOBRENOME\s*(?:\d[º°.]?\s*)?(?:1[aªº°]?\s*)?(?:HABILITA[CÇ][AÃ]O\s*)?([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{8,}?)\s+(\d{2}\/\d{2}\/\d{4})/i,
+  );
+  if (flatM && isNomeCnhValido(flatM[1]!)) {
+    return { nome: flatM[1]!.trim(), primeiraHabilitacao: flatM[2] };
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (/NOME\s+E\s+SOBRENOME|NOME\s+COMPLETO/i.test(lines[i]!)) {
+      const prox = lines[i + 1]?.trim();
+      const nm = prox?.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{4,}?)(?:\s+(\d{2}\/\d{2}\/\d{4}))?\s*$/i);
+      if (nm && isNomeCnhValido(nm[1]!)) {
+        return { nome: nm[1]!.trim(), primeiraHabilitacao: nm[2] ?? undefined };
+      }
+    }
+  }
+
+  for (const ln of lines) {
+    const m = ln.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{10,}?)\s+(\d{2}\/\d{2}\/\d{4})$/);
+    if (m && isNomeCnhValido(m[1]!)) return { nome: m[1]!.trim(), primeiraHabilitacao: m[2] };
+  }
+
+  const nomeM = flat.match(
+    /(?:NOME\s+COMPLETO|Nome completo)\s*[:\s]+([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{5,60}?)(?:\s+\d{2}\/|\s+CPF|\s+DOC|$)/i,
+  );
+  if (nomeM && isNomeCnhValido(nomeM[1]!)) return { nome: nomeM[1]!.trim() };
+
+  return null;
+}
+
+function extrairCategoriaCnh(flat: string): string | null {
+  let m = flat.match(/\d{3}\.\d{3}\.\d{3}-\d{2}\s+\d{11}\s+([ABCDE]{1,2})\b/);
+  if (m) return m[1]!.toUpperCase();
+  m = flat.match(/\d{11}\s+([ABCDE]{1,2})\b/);
+  if (m) return m[1]!.toUpperCase();
+  m = flat.match(/\d{11}([ABCDE]{1,2})(?:\s|$)/);
+  if (m) return m[1]!.toUpperCase();
+  m = flat.match(/\bCategoria\s*[:\s]*([ABCDE]{1,2})\b/i);
+  if (m) return m[1]!.toUpperCase();
+  m = flat.match(/\bCAT(?:EGORIA)?\.?\s*[:\s]*([ABCDE]{1,2})\b/i);
+  if (m) return m[1]!.toUpperCase();
+  return null;
+}
+
+function extrairValidadeCnh(flat: string, out: CnhParseResult): string | null {
+  if (out.cnh?.validade) return out.cnh.validade;
+
+  const parEmVal = flat.match(
+    /(?:EMISS[AÃ]O|VALIDADE|4\s*[Bb])[^\d]{0,50}(\d{2}\/\d{2}\/\d{4})[^\d]{0,30}(\d{2}\/\d{2}\/\d{4})/i,
+  );
+  if (parEmVal) return parEmVal[2]!;
+
+  const excluded = new Set(
+    [out.dataNascimento, out.cnh?.primeiraHabilitacao, out.cnh?.dataEmissao].filter(Boolean) as string[],
+  );
+  const dates = [...flat.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)]
+    .map((x) => x[1]!)
+    .filter((d) => !excluded.has(d));
+  if (!dates.length) return null;
+  return dates.sort((a, b) => parseDataBr(b) - parseDataBr(a))[0]!;
 }
 
 function comprovanteParseOk(parsed: ComprovanteParseResult): boolean {
@@ -296,7 +381,7 @@ export function parseCnhText(text: string): CnhParseResult {
     }
   }
 
-  const regPosCpf = flat.match(/\d{3}\.\d{3}\.\d{3}-\d{2}\s+(\d{11})\b/);
+  const regPosCpf = flat.match(/\d{3}\.\d{3}\.\d{3}-\d{2}\s+(\d{11})(?:\s|[ABCDE]{1,2}\b|$)/);
   if (regPosCpf) out.cnh!.numeroRegistro = regPosCpf[1];
 
   const regRotulo =
@@ -312,6 +397,12 @@ export function parseCnhText(text: string): CnhParseResult {
       /(?:REGISTRO|N[°º]\s*REGISTRO|Nº\s*REGISTRO)\s*[:\s]*(\d{11})/i,
     );
     if (regM) out.cnh!.numeroRegistro = regM[1];
+  }
+
+  if (!out.cnh?.numeroRegistro) {
+    const cpfDig = out.cpf ? cpfDigits(out.cpf) : null;
+    const regCat = flat.match(/\b(\d{11})([ABCDE]{1,2})\b/);
+    if (regCat && regCat[1] !== cpfDig) out.cnh!.numeroRegistro = regCat[1];
   }
 
   if (!out.cnh?.numeroRegistro) {
@@ -383,7 +474,7 @@ export function parseCnhText(text: string): CnhParseResult {
     if (/NOME\s+E\s+SOBRENOME|NOME\s+COMPLETO/i.test(lines[i]!)) {
       const prox = lines[i + 1]?.trim();
       const nm = prox?.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{4,}?)(?:\s+\d{2}\/\d{2}\/\d{4})?\s*$/i);
-      if (nm && nm[1]!.trim().split(/\s+/).length >= 2) {
+      if (nm && isNomeCnhValido(nm[1]!)) {
         out.nome = nm[1]!.replace(/\s+/g, " ").trim();
         if (!out.cnh!.primeiraHabilitacao) {
           const dm = prox!.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
@@ -397,7 +488,7 @@ export function parseCnhText(text: string): CnhParseResult {
   if (!out.nome) {
     for (const ln of lines) {
       const m = ln.match(/^([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{10,}?)\s+(\d{2}\/\d{2}\/\d{4})$/);
-      if (m && !/CNH|BRASIL|MINIST|NOME|HABILIT|CARTEIRA|SECRETARIA/i.test(m[1]!)) {
+      if (m && isNomeCnhValido(m[1]!)) {
         out.nome = m[1]!.replace(/\s+/g, " ").trim();
         if (!out.cnh!.primeiraHabilitacao) out.cnh!.primeiraHabilitacao = m[2];
         break;
@@ -405,12 +496,17 @@ export function parseCnhText(text: string): CnhParseResult {
     }
   }
 
-  if (!out.nome) {
-    const nomeM = flat.match(
-      /(?:NOME\s+COMPLETO|Nome completo)\s*[:\s]+([A-ZÀ-Ú][A-ZÀ-Ú\s'.-]{5,60}?)(?:\s+\d{2}\/|\s+CPF|\s+DOC|$)/i,
-    );
-    if (nomeM) out.nome = nomeM[1]!.replace(/\s+/g, " ").trim();
-  }
+  const nomeExtraido = extrairNomeCnh(text, lines);
+  if (nomeExtraido) {
+    out.nome = nomeExtraido.nome;
+    if (nomeExtraido.primeiraHabilitacao) out.cnh!.primeiraHabilitacao = nomeExtraido.primeiraHabilitacao;
+  } else if (out.nome && !isNomeCnhValido(out.nome)) delete out.nome;
+
+  const catExtraida = extrairCategoriaCnh(flat);
+  if (catExtraida) out.cnh!.categoria = catExtraida;
+
+  const valExtraida = extrairValidadeCnh(flat, out);
+  if (valExtraida) out.cnh!.validade = valExtraida;
 
   const filIdx = lines.findIndex((l) => /FILIA/i.test(l));
   if (filIdx >= 0) {

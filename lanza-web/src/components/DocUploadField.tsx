@@ -37,12 +37,25 @@ function deveTentarOcrLocal(tipo: DocUploadTipo): boolean {
   return tipo === "cnh" || tipo === "comprovante-residencia";
 }
 
+function isNomeCnhValido(nome: string): boolean {
+  const t = nome.trim();
+  if (t.length < 8) return false;
+  const u = t.toUpperCase();
+  if (u === "E SOBRENOME" || u === "SOBRENOME" || /\bSOBRENOME$/i.test(u)) return false;
+  if (/^(NOME|E)\b|HABILIT|CNH|BRASIL|MINIST|CARTEIRA|SECRETARIA|TRANSPORTE/i.test(u)) return false;
+  return t.split(/\s+/).filter(Boolean).length >= 2;
+}
+
 function camposDocumentoOk(tipo: DocUploadTipo, campos: Record<string, unknown>): boolean {
   if (tipo === "cnh") {
-    if (typeof campos.cpf === "string" && campos.cpf.replace(/\D/g, "").length === 11) return true;
+    const cpfOk = typeof campos.cpf === "string" && campos.cpf.replace(/\D/g, "").length === 11;
     const cnh = campos.cnh as Record<string, unknown> | undefined;
     const reg = cnh?.numeroRegistro;
-    return typeof reg === "string" && reg.replace(/\D/g, "").length >= 9;
+    const regOk = typeof reg === "string" && reg.replace(/\D/g, "").length >= 9;
+    const nome = typeof campos.nome === "string" ? campos.nome.trim() : "";
+    const nomeOk = nome.length > 0 && isNomeCnhValido(nome);
+    if (!cpfOk || !regOk || !nomeOk) return false;
+    return true;
   }
   if (tipo === "comprovante-residencia") {
     const e = campos.endereco as Record<string, unknown> | undefined;
