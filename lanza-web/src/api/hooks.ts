@@ -46,7 +46,9 @@ export function useContratos(params?: {
 
 export function useDespesasCliente(params?: {
   emAberto?: boolean;
+  ativo?: boolean;
   clienteId?: string;
+  veiculoId?: string;
   placa?: string;
   categoria?: string;
 }) {

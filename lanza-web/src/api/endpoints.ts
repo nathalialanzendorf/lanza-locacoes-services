@@ -75,7 +75,9 @@ export const lanzaApi = {
 
   listarDespesasCliente: (params?: {
     emAberto?: boolean;
+    ativo?: boolean;
     clienteId?: string;
+    veiculoId?: string;
     placa?: string;
     categoria?: string;
   }) => apiRequest<ListEnvelope<ClienteDespesa>>("/api/despesas", { params }),

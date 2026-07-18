@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -11,26 +12,49 @@ import { LanzaApiError } from "@/api/client";
 import { formatBrl, formatPlaca } from "@/lib/format";
 import type { ClienteDespesa } from "@/api/types";
 
+const CATEGORIAS = [
+  "Manutenção",
+  "Locação semanal",
+  "Caução",
+  "Outros",
+  "Pedágio",
+  "Infração",
+  "Estacionamento",
+] as const;
+
+type FiltroStatus = "ativos" | "inativos" | "todos";
+type FiltroPagamento = "em_aberto" | "pago" | "todos";
+
 function placaDespesa(d: ClienteDespesa): string {
   return formatPlaca(d.placa ?? d.veiculoId);
 }
 
 export function DespesasClienteListSection() {
   const qc = useQueryClient();
-  const [emAberto, setEmAberto] = useState(true);
-  const [placa, setPlaca] = useState("");
+  const [status, setStatus] = useState<FiltroStatus>("ativos");
+  const [pagamento, setPagamento] = useState<FiltroPagamento>("em_aberto");
+  const [clienteId, setClienteId] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
   const [categoria, setCategoria] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const query = useDespesasCliente({
-    emAberto,
-    placa: placa.trim() || undefined,
-    categoria: categoria.trim() || undefined,
+    ativo: status === "ativos" ? true : status === "inativos" ? false : undefined,
+    emAberto: pagamento === "em_aberto" ? true : pagamento === "pago" ? false : undefined,
+    clienteId: clienteId || undefined,
+    veiculoId: veiculoId || undefined,
+    categoria: categoria || undefined,
   });
 
+  const rows = query.data?.items ?? [];
+  const temFiltro =
+    status !== "ativos" ||
+    pagamento !== "em_aberto" ||
+    Boolean(clienteId || veiculoId || categoria);
+
   const total = useMemo(
-    () => (query.data?.items ?? []).reduce((sum, d) => sum + (Number(d.valorMulta) || 0), 0),
-    [query.data],
+    () => rows.reduce((sum, d) => sum + (Number(d.valorMulta) || 0), 0),
+    [rows],
   );
 
   async function excluir(despesa: ClienteDespesa) {
@@ -50,20 +74,49 @@ export function DespesasClienteListSection() {
   return (
     <>
       <ListToolbar addTo="/despesas/cliente/novo">
-        <input className="input" placeholder="Filtrar placa" value={placa} onChange={(e) => setPlaca(e.target.value)} />
-        <input
-          className="input"
-          placeholder="Categoria"
+        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
+        <VeiculoSelect
+          value={veiculoId}
+          onChange={setVeiculoId}
+          valueField="id"
+          emptyLabel="Todos os veículos"
+        />
+        <select
+          className="select"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as FiltroStatus)}
+          aria-label="Status"
+        >
+          <option value="ativos">Ativos</option>
+          <option value="inativos">Inativos</option>
+          <option value="todos">Todos</option>
+        </select>
+        <select
+          className="select"
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
-        />
-        <label className="checkbox-label">
-          <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
-          Só em aberto
-        </label>
+          aria-label="Categoria"
+        >
+          <option value="">Todas</option>
+          {CATEGORIAS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          value={pagamento}
+          onChange={(e) => setPagamento(e.target.value as FiltroPagamento)}
+          aria-label="Pagamento"
+        >
+          <option value="em_aberto">Em aberto</option>
+          <option value="pago">Pago</option>
+          <option value="todos">Todos</option>
+        </select>
         {!query.isLoading ? (
           <span className="badge badge--muted">
-            {query.data?.total ?? 0} lançamento{(query.data?.total ?? 0) === 1 ? "" : "s"} · {formatBrl(total)}
+            {rows.length} lançamento{rows.length === 1 ? "" : "s"} · {formatBrl(total)}
           </span>
         ) : null}
       </ListToolbar>
@@ -76,8 +129,9 @@ export function DespesasClienteListSection() {
 
       <DataTable
         loading={query.isLoading}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(d) => d.id}
+        emptyMessage={temFiltro ? "Nenhuma despesa corresponde aos filtros." : "Nenhuma despesa registada."}
         columns={[
           { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
           { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
