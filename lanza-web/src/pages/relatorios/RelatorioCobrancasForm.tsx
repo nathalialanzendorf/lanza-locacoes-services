@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
+import { DateInput } from "@/components/DateInput";
 import { Field } from "@/components/FormCard";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -24,8 +26,10 @@ const TIPOS_PADRAO = [
 export function RelatorioCobrancasForm() {
   const meta = useQuery({ queryKey: ["cobrancas-meta"], queryFn: () => lanzaApi.metaCobrancas() });
   const [tipos, setTipos] = useState<string[]>(["pagamento-semanal"]);
-  const [placa, setPlaca] = useState("");
-  const [cliente, setCliente] = useState("");
+  const [dataInicial, setDataInicial] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
+  const [veiculoPlaca, setVeiculoPlaca] = useState("");
+  const [clienteId, setClienteId] = useState("");
   const [armazenarServidor, setArmazenarServidor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +40,16 @@ export function RelatorioCobrancasForm() {
 
   function toggleTipo(id: string) {
     setTipos((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  }
+
+  function onClienteChange(id: string) {
+    setClienteId(id);
+    if (id) setVeiculoPlaca("");
+  }
+
+  function onVeiculoChange(placa: string) {
+    setVeiculoPlaca(placa);
+    if (placa) setClienteId("");
   }
 
   async function entregar(modo: RelatorioModoEntrega) {
@@ -50,8 +64,10 @@ export function RelatorioCobrancasForm() {
         tipos: tipos.length ? tipos : undefined,
         armazenarServidor,
         filtro: {
-          placa: placa.trim() || undefined,
-          cliente: cliente.trim() || undefined,
+          placa: veiculoPlaca.trim() || undefined,
+          clienteId: clienteId || undefined,
+          dataInicial: dataInicial.trim() || undefined,
+          dataFinal: dataFinal.trim() || undefined,
         },
       });
       const payload = r.data;
@@ -80,7 +96,29 @@ export function RelatorioCobrancasForm() {
       <section className="form-card">
         <h2 className="form-card__title">Parâmetros</h2>
         <div className="form-grid">
-          <Field label="Tipos de cobrança">
+          <Field label="Data inicial">
+            <DateInput value={dataInicial} onChange={setDataInicial} disabled={loading} />
+          </Field>
+          <Field label="Data final">
+            <DateInput value={dataFinal} onChange={setDataFinal} disabled={loading} />
+          </Field>
+          <Field label="Cliente" hint="Opcional — exclui filtro por veículo">
+            <ClienteSelect
+              value={clienteId}
+              onChange={onClienteChange}
+              emptyLabel="Todos os clientes"
+              disabled={loading || Boolean(veiculoPlaca)}
+            />
+          </Field>
+          <Field label="Veículo" hint="Opcional — exclui filtro por cliente">
+            <VeiculoSelect
+              value={veiculoPlaca}
+              onChange={onVeiculoChange}
+              emptyLabel="Todos os veículos"
+              disabled={loading || Boolean(clienteId)}
+            />
+          </Field>
+          <Field label="Tipos de cobrança" span="full">
             <div className="checkbox-group">
               {opcoes.map((t) => (
                 <label key={t.id} className="checkbox-label">
@@ -89,12 +127,6 @@ export function RelatorioCobrancasForm() {
                 </label>
               ))}
             </div>
-          </Field>
-          <Field label="Placa (opcional)">
-            <input className="input" value={placa} onChange={(e) => setPlaca(e.target.value)} />
-          </Field>
-          <Field label="Cliente (opcional)" hint="Nome parcial ou CPF">
-            <input className="input" value={cliente} onChange={(e) => setCliente(e.target.value)} />
           </Field>
         </div>
         {error ? <p className="form-card__error">{error}</p> : null}

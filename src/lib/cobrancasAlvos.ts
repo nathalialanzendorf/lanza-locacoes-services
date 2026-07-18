@@ -11,6 +11,7 @@ import {
 } from "./clienteDespesasDb.js";
 import { loadClientesDb } from "./clientesDb.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
+import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   contratoMaisRecentePar,
   loadContratosDb,
@@ -341,14 +342,15 @@ function filtrarPagamentoSemanal(
   db: ReturnType<typeof loadClienteDespesasDb>,
   veiculos: ReturnType<typeof veiculosAtivos>,
   clientes: ReturnType<typeof clientesAtivos>,
-  placaFiltro?: string,
+  filtro?: FiltroAlvosCobranca,
 ): AlvoCobranca[] {
-  const alvoPlaca = placaFiltro ? compactPlaca(placaFiltro) : null;
+  const alvoPlaca = filtro?.placa ? compactPlaca(filtro.placa) : null;
   const porChave = new Map<string, AlvoCobranca>();
   const dataReferencia = hojeBr();
 
   for (const d of db.clienteDespesas) {
     if (!despesaAberta(d)) continue;
+    if (!despesaNoPeriodo(d, filtro ?? {})) continue;
     if (d.categoria !== "Locação semanal") continue;
     if (!/ATRASADO/i.test(d.descricao)) continue;
     const vencSemanal = vencimentoDespesaSemanalBr(
@@ -426,7 +428,38 @@ export type FiltroAlvosCobranca = {
   placa?: string;
   /** Limita a um cliente (nome, CPF ou id — resolvido em clientes.json). */
   clienteId?: string;
+  /** Período inclusivo (DD/MM/AAAA) sobre a data da despesa (`dataAutuacao` / `pagaEm`). */
+  dataInicial?: string;
+  dataFinal?: string;
 };
+
+function parseDataBrDia(s: string): Date | null {
+  const m = String(s ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!m) return null;
+  const dt = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 0, 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function dataDespesaParaFiltro(d: ClienteDespesaRegistro): Date | null {
+  return parseDataAutuacao(d.dataAutuacao) ?? parseDataBrDia(d.pagaEm ?? "");
+}
+
+export function despesaNoPeriodo(
+  d: ClienteDespesaRegistro,
+  filtro: Pick<FiltroAlvosCobranca, "dataInicial" | "dataFinal"> = {},
+): boolean {
+  if (!filtro.dataInicial?.trim() && !filtro.dataFinal?.trim()) return true;
+  const dt = dataDespesaParaFiltro(d);
+  if (!dt) return false;
+  const ini = filtro.dataInicial?.trim() ? parseDataBrDia(filtro.dataInicial) : null;
+  const fim = filtro.dataFinal?.trim() ? parseDataBrDia(filtro.dataFinal) : null;
+  if (ini && dt < ini) return false;
+  if (fim) {
+    const fimFim = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999);
+    if (dt > fimFim) return false;
+  }
+  return true;
+}
 
 /**
  * Contratos ativos de locação elegíveis para relatório/canvas (1 por placa).
@@ -519,7 +552,7 @@ export function listarAlvosCobranca(
   let alvos: AlvoCobranca[];
 
   if (tipo === "pagamento-semanal") {
-    alvos = filtrarPagamentoSemanal(db, veiculos, clientes, placaFiltro);
+    alvos = filtrarPagamentoSemanal(db, veiculos, clientes, filtro);
   } else {
     const categoriaMap: Record<
       Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">,
@@ -535,6 +568,7 @@ export function listarAlvosCobranca(
       const despesas = db.clienteDespesas.filter((d) => {
         if (!infracaoIncluirListagemRelatorio(d)) return false;
         if (!despesaCobravelLocatario(d)) return false;
+        if (!despesaNoPeriodo(d, filtro ?? {})) return false;
         if (placaFiltro && compactPlaca(d.veiculoId) !== compactPlaca(placaFiltro)) {
           return false;
         }
@@ -547,6 +581,7 @@ export function listarAlvosCobranca(
       const despesas = db.clienteDespesas.filter((d) => {
         if (!despesaAberta(d)) return false;
         if (!despesaCobravelLocatario(d)) return false;
+        if (!despesaNoPeriodo(d, filtro ?? {})) return false;
         if (tipo === "manutencao" && !isCategoriaManutencao(d.categoria)) return false;
         if (tipo !== "manutencao" && (d.categoria ?? "") !== categoria) return false;
         if (tipo === "manutencao" && d.valorMulta <= 0) return false;

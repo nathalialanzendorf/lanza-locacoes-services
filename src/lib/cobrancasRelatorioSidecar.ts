@@ -39,6 +39,7 @@ import { montarRelatorioInfracoesBlocos } from "./relatorioInfracoesBlocos.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
 import {
   listarEscoposContratosAtivosCobranca,
+  despesaNoPeriodo,
   ROTULO_TIPO_COBRANCA,
   type FiltroAlvosCobranca,
   type ModoCanvasCobranca,
@@ -188,6 +189,9 @@ export function coletarInfracoesRelatorio(
       continue;
     }
     if (filtro.clienteId && !despesaDoCliente(d, filtro.clienteId)) {
+      continue;
+    }
+    if (!despesaNoPeriodo(d, filtro)) {
       continue;
     }
 
@@ -371,6 +375,9 @@ export function coletarTodasDespesasAbertas(filtro: FiltroAlvosCobranca): Client
       continue;
     }
     if (filtro.clienteId && !despesaDoCliente(d, filtro.clienteId)) {
+      continue;
+    }
+    if (!despesaNoPeriodo(d, filtro)) {
       continue;
     }
 

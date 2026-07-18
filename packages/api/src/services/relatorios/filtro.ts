@@ -10,28 +10,37 @@ export type FiltroRelatorioInput = {
   placa?: string;
   clienteId?: string;
   clienteQuery?: string;
+  dataInicial?: string;
+  dataFinal?: string;
 };
 
 export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): FiltroAlvosCobranca {
   const placa = input.placa?.trim();
   const clienteId = input.clienteId?.trim();
   const clienteQuery = input.clienteQuery?.trim();
+  const dataInicial = input.dataInicial?.trim();
+  const dataFinal = input.dataFinal?.trim();
 
   if (placa && (clienteId || clienteQuery)) {
     throw new HttpError(400, "Use apenas placa OU cliente — não ambos");
   }
+
+  const periodo = {
+    ...(dataInicial ? { dataInicial } : {}),
+    ...(dataFinal ? { dataFinal } : {}),
+  };
 
   if (clienteQuery) {
     const c = resolverCliente(clienteQuery);
     if (!c.id) {
       throw new HttpError(400, `Cliente sem id em clientes.json: ${c.nome}`);
     }
-    return { clienteId: c.id };
+    return { clienteId: c.id, ...periodo };
   }
 
-  if (clienteId) return { clienteId };
-  if (placa) return { placa };
-  return {};
+  if (clienteId) return { clienteId, ...periodo };
+  if (placa) return { placa, ...periodo };
+  return periodo;
 }
 
 export function hojeBr(): string {
