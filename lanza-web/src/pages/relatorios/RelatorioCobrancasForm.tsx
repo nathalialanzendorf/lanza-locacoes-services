@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field } from "@/components/FormCard";
-import { ResultPanel } from "@/components/ResultPanel";
+import { CobrancasVisualizacao } from "@/components/relatorios/CobrancasVisualizacao";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { LABEL } from "@/lib/labels";
 import {
   downloadArquivoTexto,
   downloadPdfViaImpressao,
+  extrairBlocosCobrancas,
   textoCobrancas,
   type RelatorioModoEntrega,
 } from "@/lib/relatorioDownload";
@@ -37,9 +38,9 @@ export function RelatorioCobrancasForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
-  const [textoVisivel, setTextoVisivel] = useState<string | undefined>();
 
   const opcoes = meta.data?.tipos ?? TIPOS_PADRAO.map((id) => ({ id, rotulo: id }));
+  const rotulosTipo = Object.fromEntries(opcoes.map((t) => [t.id, t.rotulo]));
 
   function onClienteChange(id: string) {
     setClienteId(id);
@@ -56,7 +57,6 @@ export function RelatorioCobrancasForm() {
     setError(null);
     if (modo !== "visualizar") {
       setResult(null);
-      setTextoVisivel(undefined);
     }
     try {
       const r = await lanzaApi.gerarCobrancas({
@@ -71,14 +71,17 @@ export function RelatorioCobrancasForm() {
         },
       });
       const payload = r.data;
-      const texto = textoCobrancas(payload);
-      if (!texto.trim()) {
+      const totalMensagens = extrairBlocosCobrancas(payload, rotulosTipo).reduce(
+        (n, b) => n + b.mensagens.length,
+        0,
+      );
+      if (totalMensagens === 0) {
         throw new Error("Nenhuma mensagem gerada para os filtros selecionados.");
       }
+      const texto = textoCobrancas(payload, rotulosTipo);
       const nome = `cobrancas-${new Date().toISOString().slice(0, 10)}`;
       if (modo === "visualizar") {
         setResult(payload);
-        setTextoVisivel(texto);
       } else if (modo === "txt") {
         downloadArquivoTexto(nome, texto);
       } else {
@@ -190,7 +193,7 @@ export function RelatorioCobrancasForm() {
         {error ? <p className="form-card__error">{error}</p> : null}
       </section>
 
-      <ResultPanel title="Visualização" texto={textoVisivel} data={result} />
+      <CobrancasVisualizacao data={result} rotulos={rotulosTipo} />
     </>
   );
 }

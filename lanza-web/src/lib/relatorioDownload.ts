@@ -1,25 +1,88 @@
 /** Extrai texto plano de respostas de relatório para download / visualização. */
 
-export function textoCobrancas(data: unknown): string {
-  if (!data || typeof data !== "object") return "";
+export type CobrancaMensagemBloco = {
+  titulo?: string;
+  texto: string;
+  cliente?: string | null;
+  placa?: string;
+};
+
+export type CobrancaTipoBloco = {
+  tipo: string;
+  rotulo: string;
+  mensagens: CobrancaMensagemBloco[];
+};
+
+const ROTULO_TIPO_COBRANCA: Record<string, string> = {
+  "pagamento-semanal": "Pagamento semanal",
+  renegociacao: "Renegociação",
+  infracoes: "Infrações",
+  pedagio: "Pedágio",
+  "estacionamento-rotativo": "Estacionamento rotativo",
+  manutencao: "Manutenção",
+};
+
+function rotuloTipo(tipo: string, rotulos?: Record<string, string>): string {
+  return rotulos?.[tipo] ?? ROTULO_TIPO_COBRANCA[tipo] ?? tipo;
+}
+
+export function extrairBlocosCobrancas(
+  data: unknown,
+  rotulos?: Record<string, string>,
+): CobrancaTipoBloco[] {
+  if (!data || typeof data !== "object") return [];
   const lotes = (data as { lotes?: unknown[] }).lotes ?? [];
-  const blocos: string[] = [];
+  const blocos: CobrancaTipoBloco[] = [];
+
   for (const lote of lotes) {
     if (!lote || typeof lote !== "object") continue;
     const tipo = String((lote as { tipo?: string }).tipo ?? "cobrança");
+    const bloco: CobrancaTipoBloco = {
+      tipo,
+      rotulo: rotuloTipo(tipo, rotulos),
+      mensagens: [],
+    };
     const items = (lote as { items?: unknown[] }).items ?? [];
     for (const item of items) {
       if (!item || typeof item !== "object") continue;
+      const alvo = (item as { alvo?: { clienteNome?: string | null; placa?: string } }).alvo;
+      const cliente = alvo?.clienteNome ?? null;
+      const placa = alvo?.placa;
       const resultados = (item as { resultados?: unknown[] }).resultados ?? [];
       for (const r of resultados) {
         if (!r || typeof r !== "object") continue;
         const texto = (r as { texto?: string }).texto;
-        if (texto?.trim()) blocos.push(texto.trim());
+        if (!texto?.trim()) continue;
+        bloco.mensagens.push({
+          titulo: (r as { titulo?: string }).titulo,
+          texto: texto.trim(),
+          cliente,
+          placa,
+        });
       }
     }
-    if (items.length === 0) blocos.push(`[${tipo}] sem mensagens`);
+    blocos.push(bloco);
   }
-  return blocos.join("\n\n---\n\n");
+
+  return blocos;
+}
+
+export function textoCobrancas(data: unknown, rotulos?: Record<string, string>): string {
+  const blocos = extrairBlocosCobrancas(data, rotulos);
+  const partes: string[] = [];
+  for (const bloco of blocos) {
+    if (!bloco.mensagens.length) {
+      partes.push(`=== ${bloco.rotulo} ===\n(sem mensagens)`);
+      continue;
+    }
+    const msgs = bloco.mensagens.map((m) => {
+      const cabecalho = [m.cliente, m.placa].filter(Boolean).join(" · ");
+      if (cabecalho) return `${cabecalho}\n\n${m.texto}`;
+      return m.texto;
+    });
+    partes.push(`=== ${bloco.rotulo} ===\n\n${msgs.join("\n\n---\n\n")}`);
+  }
+  return partes.join("\n\n\n");
 }
 
 export function textoPrestacaoContas(data: unknown): string {
