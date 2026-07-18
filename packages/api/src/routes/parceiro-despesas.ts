@@ -3,6 +3,7 @@ import {
   compileRoute,
   json,
   notFound,
+  parseAtivoQuery,
   parseEmAbertoQuery,
   readJsonBody,
   routeAsync,
@@ -40,11 +41,24 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     pattern: list.regex,
     paramNames: list.paramNames,
     handler: (ctx) => {
+      const ativo = parseAtivoQuery(ctx.query.get("ativo"));
+      const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
+
+      if (ctx.query.has("ativo") && ativo === undefined) {
+        return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
+      }
+      if (ctx.query.has("emAberto") && emAberto === undefined) {
+        return badRequest(ctx, 'Query "emAberto" inválida — use true ou false');
+      }
+
       json(ctx.res, 200, parceiroDespService.listarParceiroDespesas({
         placa: ctx.query.get("placa") ?? undefined,
+        veiculoId: ctx.query.get("veiculoId") ?? undefined,
+        parceiroId: ctx.query.get("parceiroId") ?? undefined,
         categoria: ctx.query.get("categoria") ?? undefined,
         competencia: ctx.query.get("competencia") ?? undefined,
-        emAberto: parseEmAbertoQuery(ctx.query.get("emAberto")),
+        emAberto,
+        veiculoAtivo: ativo,
       }));
     },
   });

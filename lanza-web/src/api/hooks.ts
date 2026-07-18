@@ -60,6 +60,9 @@ export function useDespesasCliente(params?: {
 
 export function useDespesasParceiro(params?: {
   emAberto?: boolean;
+  ativo?: boolean;
+  parceiroId?: string;
+  veiculoId?: string;
   placa?: string;
   categoria?: string;
   competencia?: string;

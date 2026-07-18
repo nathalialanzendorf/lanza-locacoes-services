@@ -1,36 +1,66 @@
 import {
+  findVeiculoById,
+  findVeiculoByPlaca,
   gravarParceiroDespesaManual,
+  isVeiculoAtivo,
   lancarRastreadorFixo,
   loadParceiroDespesasDb,
   marcarBaixaParceiroDespesa,
   saveParceiroDespesasDb,
-  findVeiculoByPlaca,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import { listarVinculos } from "./parceiros.js";
 
 export type ListarParceiroDespesasOpts = {
   placa?: string;
+  veiculoId?: string;
+  parceiroId?: string;
   categoria?: string;
   competencia?: string;
   emAberto?: boolean;
+  /** Filtra pelo status ativo/inativo do veículo vinculado à despesa. */
+  veiculoAtivo?: boolean;
 };
 
 function emAberto(d: ParceiroDespesaRegistro): boolean {
   return !String(d.baixa ?? "").trim();
 }
 
+function veiculoDaDespesa(d: ParceiroDespesaRegistro) {
+  if (d.veiculoId) return findVeiculoById(d.veiculoId);
+  if (d.placa) return findVeiculoByPlaca(d.placa);
+  return null;
+}
+
+function veiculoIdsDoParceiro(parceiroId: string): Set<string> {
+  return new Set(listarVinculos({ parceiroId }).items.map((v) => v.veiculoId));
+}
+
+function despesaDoParceiro(d: ParceiroDespesaRegistro, veiculoIds: Set<string>): boolean {
+  if (d.veiculoId && veiculoIds.has(d.veiculoId)) return true;
+  const veiculo = veiculoDaDespesa(d);
+  return veiculo ? veiculoIds.has(veiculo.id) : false;
+}
+
 export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
   let items = loadParceiroDespesasDb().parceiroDespesas;
 
-  if (opts.placa?.trim()) {
+  if (opts.parceiroId?.trim()) {
+    const veiculoIds = veiculoIdsDoParceiro(opts.parceiroId.trim());
+    items = items.filter((d) => despesaDoParceiro(d, veiculoIds));
+  }
+
+  if (opts.veiculoId?.trim()) {
+    const id = opts.veiculoId.trim();
+    items = items.filter((d) => d.veiculoId === id || veiculoDaDespesa(d)?.id === id);
+  } else if (opts.placa?.trim()) {
     const v = findVeiculoByPlaca(opts.placa);
     const placaNorm = opts.placa.trim().toUpperCase();
     items = items.filter(
       (d) =>
-        d.placa.toUpperCase().replace(/[^A-Z0-9]/g, "") ===
-          placaNorm.replace(/[^A-Z0-9]/g, "") ||
+        d.placa.toUpperCase().replace(/[^A-Z0-9]/g, "") === placaNorm.replace(/[^A-Z0-9]/g, "") ||
         (v && d.veiculoId === v.id),
     );
   }
@@ -42,6 +72,18 @@ export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
 
   if (opts.competencia?.trim()) {
     items = items.filter((d) => d.competencia === opts.competencia!.trim());
+  }
+
+  if (opts.veiculoAtivo === true) {
+    items = items.filter((d) => {
+      const veiculo = veiculoDaDespesa(d);
+      return veiculo ? isVeiculoAtivo(veiculo) : false;
+    });
+  } else if (opts.veiculoAtivo === false) {
+    items = items.filter((d) => {
+      const veiculo = veiculoDaDespesa(d);
+      return veiculo ? !isVeiculoAtivo(veiculo) : true;
+    });
   }
 
   if (opts.emAberto === true) items = items.filter(emAberto);

@@ -84,6 +84,9 @@ export const lanzaApi = {
 
   listarDespesasParceiro: (params?: {
     emAberto?: boolean;
+    ativo?: boolean;
+    parceiroId?: string;
+    veiculoId?: string;
     placa?: string;
     categoria?: string;
     competencia?: string;
