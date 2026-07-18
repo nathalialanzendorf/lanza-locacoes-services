@@ -714,6 +714,17 @@ function pathsFipe(): OpenApiPaths {
         ],
       }),
     }),
+    "/api/fipe/consultar": pathItem({
+      post: op("post", "FIPE", "Consultar valor FIPE por placa (cadastrado ou manual)", {
+        operationId: "fipeConsultar",
+        requestBody: jsonBody({
+          placa: { type: "string" },
+          marcaModelo: { type: "string" },
+          anoModelo: { type: "string" },
+          persist: { type: "boolean" },
+        }),
+      }),
+    }),
     "/api/fipe/atualizar-veiculo": pathItem({
       post: op("post", "FIPE", "Atualizar veículo com valor FIPE", {
         operationId: "fipeAtualizarVeiculo",

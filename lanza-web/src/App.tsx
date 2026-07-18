@@ -16,7 +16,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 
 import { DespesasPage } from "@/pages/DespesasPage";
 
-import { RelatorioInfracoesSection } from "@/pages/relatorios/RelatorioInfracoesSection";
+import { RelatorioFipeSection } from "@/pages/relatorios/RelatorioFipeSection";
 
 import { LoginPage } from "@/pages/LoginPage";
 
@@ -120,6 +120,8 @@ export default function App() {
                   <Route path="encerramento" element={<RelatorioEncerramentoForm />} />
 
                   <Route path="infracoes" element={<RelatorioInfracoesSection />} />
+
+                  <Route path="fipe" element={<RelatorioFipeSection />} />
 
                 </Route>
 

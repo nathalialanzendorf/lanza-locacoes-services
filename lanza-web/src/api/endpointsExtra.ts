@@ -26,6 +26,12 @@ export const lanzaApiExtra = {
     apiRequest<DataEnvelope<Veiculo>>(`/api/veiculos/${encodeURIComponent(id)}`),
   removerVeiculo: (id: string) =>
     apiRequest<DataEnvelope<Veiculo>>(`/api/veiculos/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  consultarFipe: (body: {
+    placa: string;
+    marcaModelo?: string;
+    anoModelo?: string;
+    persist?: boolean;
+  }) => apiRequest<unknown>("/api/fipe/consultar", { method: "POST", body }),
   atualizarFipeVeiculo: (placa: string) =>
     apiRequest<unknown>("/api/fipe/atualizar-veiculo", { method: "POST", body: { placa } }),
   importarCrlv: (body: Record<string, unknown> = {}) =>

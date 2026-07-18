@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
+import { VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -13,30 +14,10 @@ import type { Veiculo } from "@/api/types";
 
 type Filtro = "ativos" | "inativos" | "todos";
 
-function normPlaca(placa?: string | null): string {
-  return (placa ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-}
-
-function marcaDoVeiculo(veiculo: Veiculo): string {
-  if (veiculo.marca?.trim()) return veiculo.marca.trim();
-  const mm = veiculo.marcaModelo ?? "";
-  const slash = mm.indexOf("/");
-  return slash >= 0 ? mm.slice(0, slash).trim() : mm.trim();
-}
-
-function modeloDoVeiculo(veiculo: Veiculo): string {
-  if (veiculo.modelo?.trim()) return veiculo.modelo.trim();
-  const mm = veiculo.marcaModelo ?? "";
-  const slash = mm.indexOf("/");
-  return slash >= 0 ? mm.slice(slash + 1).trim() : "";
-}
-
 export function VeiculosListSection() {
   const qc = useQueryClient();
   const [filtro, setFiltro] = useState<Filtro>("ativos");
-  const [placa, setPlaca] = useState("");
-  const [marca, setMarca] = useState("");
-  const [modelo, setModelo] = useState("");
+  const [veiculoId, setVeiculoId] = useState("");
   const [parceiroId, setParceiroId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
@@ -66,20 +47,14 @@ export function VeiculosListSection() {
 
   const rows = useMemo(() => {
     const items = query.data?.items ?? [];
-    const qPlaca = normPlaca(placa);
-    const qMarca = marca.trim().toLowerCase();
-    const qModelo = modelo.trim().toLowerCase();
-
     return items.filter((v) => {
-      if (qPlaca && !normPlaca(v.placa).includes(qPlaca)) return false;
-      if (qMarca && !marcaDoVeiculo(v).toLowerCase().includes(qMarca)) return false;
-      if (qModelo && !modeloDoVeiculo(v).toLowerCase().includes(qModelo)) return false;
+      if (veiculoId && v.id !== veiculoId) return false;
       if (parceiroId && parceiroIdPorVeiculoId.get(v.id) !== parceiroId) return false;
       return true;
     });
-  }, [query.data, placa, marca, modelo, parceiroId, parceiroIdPorVeiculoId]);
+  }, [query.data, veiculoId, parceiroId, parceiroIdPorVeiculoId]);
 
-  const temFiltroTexto = Boolean(placa.trim() || marca.trim() || modelo.trim() || parceiroId);
+  const temFiltro = Boolean(veiculoId || parceiroId);
 
   function parceiroDoVeiculo(veiculo: Veiculo): string {
     return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
@@ -105,29 +80,18 @@ export function VeiculosListSection() {
   return (
     <>
       <ListToolbar addTo="/veiculos/novo" importTo="/veiculos/importar">
-        <input
-          className="input"
-          placeholder="Filtrar placa"
-          value={placa}
-          onChange={(e) => setPlaca(e.target.value)}
+        <VeiculoSelect
+          value={veiculoId}
+          onChange={setVeiculoId}
+          valueField="id"
+          ativo={ativo}
+          emptyLabel="Todos os veículos"
         />
         <select className="select" value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Status">
           <option value="ativos">Ativos</option>
           <option value="inativos">Inativos</option>
           <option value="todos">Todos</option>
         </select>
-        <input
-          className="input"
-          placeholder="Filtrar marca"
-          value={marca}
-          onChange={(e) => setMarca(e.target.value)}
-        />
-        <input
-          className="input"
-          placeholder="Filtrar modelo"
-          value={modelo}
-          onChange={(e) => setModelo(e.target.value)}
-        />
         <select
           className="select"
           value={parceiroId}
@@ -157,7 +121,7 @@ export function VeiculosListSection() {
         rows={rows}
         keyFn={(v) => v.id}
         emptyMessage={
-          temFiltroTexto ? "Nenhum veículo corresponde aos filtros." : "Nenhum veículo registado."
+          temFiltro ? "Nenhum veículo corresponde aos filtros." : "Nenhum veículo registado."
         }
         columns={[
           { key: "placa", header: "Placa", render: (v) => <strong>{formatPlaca(v.placa)}</strong> },

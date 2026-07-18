@@ -69,6 +69,59 @@ function resolverVeiculo(idOuPlaca: string) {
   throw new HttpError(404, `Veículo não encontrado: ${idOuPlaca}`);
 }
 
+export type ConsultarFipeInput = {
+  placa: string;
+  marcaModelo?: string;
+  anoModelo?: string;
+  marca?: string;
+  modelo?: string;
+  ano?: number;
+  /** Grava em veiculos.json se o veículo já estiver cadastrado (default false). */
+  persist?: boolean;
+};
+
+export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
+  const placa = input.placa?.trim();
+  if (!placa) throw new HttpError(400, "Informe a placa.");
+
+  const brands = await listarMarcas();
+  const cadastrado = findVeiculoByPlaca(placa) ?? findVeiculoById(placa);
+
+  if (cadastrado) {
+    const fipe = await resolverFipeVeiculo(cadastrado, brands);
+    if (input.persist) {
+      const data = editarVeiculo(cadastrado.id, fipe);
+      return { cadastrado: true as const, data, fipe };
+    }
+    return { cadastrado: true as const, data: cadastrado, fipe };
+  }
+
+  const marcaModelo = input.marcaModelo?.trim();
+  const marca = input.marca?.trim();
+  const anoModelo = input.anoModelo?.trim();
+  const ano = input.ano;
+  const temDadosManual =
+    Boolean(marcaModelo) || (Boolean(marca) && Boolean(anoModelo || ano));
+
+  if (!temDadosManual) {
+    throw new HttpError(
+      404,
+      "Veículo não cadastrado. Informe marca/modelo (ex.: VW/GOL) e ano (ex.: 2018/2018).",
+    );
+  }
+
+  const data = {
+    placa,
+    marcaModelo,
+    anoModelo,
+    marca,
+    modelo: input.modelo?.trim(),
+    ano,
+  };
+  const fipe = await resolverFipeVeiculo(data, brands);
+  return { cadastrado: false as const, data, fipe };
+}
+
 export async function atualizarFipeVeiculo(idOuPlaca: string) {
   const v = resolverVeiculo(idOuPlaca);
   const brands = await listarMarcas();

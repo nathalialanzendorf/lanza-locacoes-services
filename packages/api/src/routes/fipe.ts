@@ -67,6 +67,35 @@ export function registerFipeRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const consultar = compileRoute("/api/fipe/consultar");
+  routes.push({
+    method: "POST",
+    pattern: consultar.regex,
+    paramNames: consultar.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<{
+        placa?: string;
+        marcaModelo?: string;
+        anoModelo?: string;
+        marca?: string;
+        modelo?: string;
+        ano?: number;
+        persist?: boolean;
+      }>(ctx.req);
+      if (!body.placa?.trim()) return badRequest(ctx, "Informe a placa.");
+      const data = await fipeService.consultarFipeVeiculo({
+        placa: body.placa,
+        marcaModelo: body.marcaModelo,
+        anoModelo: body.anoModelo,
+        marca: body.marca,
+        modelo: body.modelo,
+        ano: body.ano,
+        persist: body.persist,
+      });
+      json(ctx.res, 200, data);
+    }),
+  });
+
   const atualizar = compileRoute("/api/fipe/atualizar-veiculo");
   routes.push({
     method: "POST",
