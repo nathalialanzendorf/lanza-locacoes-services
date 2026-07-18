@@ -1989,10 +1989,10 @@
       "cpf": "877.654.620-91",
       "dataInicio": "04/06/2026",
       "dataFimPrevista": "07/06/2026",
-      "dataEncerramento": null,
-      "quebraContrato": false,
-      "motivoEncerramento": null,
-      "status": "ativo",
+      "dataEncerramento": "20/06/2026",
+      "quebraContrato": true,
+      "motivoEncerramento": "devolvido",
+      "status": "encerrado",
       "prazoDias": 3,
       "tipoContrato": "semanal",
       "diaPagamentoSemana": null,
@@ -2003,7 +2003,7 @@
       "valorDiaria": 120,
       "valorCaucao": 500,
       "cadastradoEm": "2026-06-28T16:58:47.422Z",
-      "atualizadoEm": "2026-06-28T17:20:06.048Z"
+      "atualizadoEm": "2026-07-18T13:55:29.663Z"
     },
     {
       "id": "58faa27f-24d9-47d6-9e2d-c0bc1c30f5fb",
