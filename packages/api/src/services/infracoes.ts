@@ -1,10 +1,12 @@
 import {
   reconciliarCondutores,
   confirmarDebitoParceiroInfracao,
+  compactPlaca,
   findInfracaoByNumeroAuto,
   findVeiculoById,
   findVeiculoByPlaca,
   loadInfracoesDb,
+  placasIguais,
   vincularClienteDespesaInfracao,
   type InfracaoRegistro,
 } from "../lib-imports.js";
@@ -27,6 +29,29 @@ function infracaoEmAberto(i: InfracaoRegistro): boolean {
   return i.quitadaDetran !== true && !/quitad|pago|paga/i.test(String(i.situacao ?? i.status ?? ""));
 }
 
+/** Em infracoes.json, `veiculoId` guarda a placa (DETRAN), não o uuid do veículo. */
+function infracaoPertenceVeiculo(
+  infracao: InfracaoRegistro,
+  veiculo: { id: string; placa: string },
+): boolean {
+  if (infracao.veiculoId === veiculo.id) return true;
+  return placasIguais(infracao.veiculoId, veiculo.placa);
+}
+
+function filtrarInfracoesPorVeiculoRef(
+  items: InfracaoRegistro[],
+  idOuPlaca: string,
+): InfracaoRegistro[] {
+  const ref = idOuPlaca.trim();
+  const veiculo = findVeiculoById(ref) ?? findVeiculoByPlaca(ref);
+  if (veiculo) {
+    return items.filter((i) => infracaoPertenceVeiculo(i, veiculo));
+  }
+  return items.filter(
+    (i) => i.veiculoId === ref || placasIguais(i.veiculoId, ref),
+  );
+}
+
 export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
   total: number;
   items: InfracaoRegistro[];
@@ -34,12 +59,9 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
   let items = loadInfracoesDb().infracoes;
 
   if (opts.veiculoId?.trim()) {
-    const veiculoId = opts.veiculoId.trim();
-    items = items.filter((i) => i.veiculoId === veiculoId);
+    items = filtrarInfracoesPorVeiculoRef(items, opts.veiculoId);
   } else if (opts.placa?.trim()) {
-    const v = findVeiculoByPlaca(opts.placa);
-    if (!v) return { total: 0, items: [] };
-    items = items.filter((i) => i.veiculoId === v.id);
+    items = filtrarInfracoesPorVeiculoRef(items, opts.placa);
   }
 
   if (opts.ativo === true) {
@@ -68,11 +90,19 @@ export function listarInfracoes(opts: ListarInfracoesOpts = {}): {
 
   if (opts.parceiroId?.trim()) {
     const pid = opts.parceiroId.trim();
-    const veiculoIds = new Set(
-      listarVinculos({ parceiroId: pid }).items.map((v) => v.veiculoId),
-    );
+    const vinculos = listarVinculos({ parceiroId: pid }).items;
+    const veiculoIds = new Set(vinculos.map((v) => v.veiculoId));
+    const placaKeys = new Set<string>();
+    for (const vid of veiculoIds) {
+      placaKeys.add(compactPlaca(vid));
+      const veiculo = findVeiculoById(vid);
+      if (veiculo) placaKeys.add(compactPlaca(veiculo.placa));
+    }
     items = items.filter(
-      (i) => i.debitoParceiroId === pid || veiculoIds.has(i.veiculoId),
+      (i) =>
+        i.debitoParceiroId === pid ||
+        veiculoIds.has(i.veiculoId) ||
+        placaKeys.has(compactPlaca(i.veiculoId)),
     );
   }
 
