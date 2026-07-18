@@ -68,7 +68,12 @@ export function useDespesasParceiro(params?: {
   });
 }
 
-export function useLocacoes(params?: { abertas?: boolean; placa?: string; situacao?: string }) {
+export function useLocacoes(params?: {
+  abertas?: boolean;
+  placa?: string;
+  situacao?: string;
+  clienteId?: string;
+}) {
   return useQuery({
     queryKey: ["locacoes", params],
     queryFn: () => lanzaApi.listarLocacoes(params),

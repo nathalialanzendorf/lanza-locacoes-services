@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
@@ -19,16 +20,23 @@ function normPlaca(placa?: string | null): string {
 export function MovimentacaoListSection() {
   const qc = useQueryClient();
   const [emAberto, setEmAberto] = useState(true);
-  const [placa, setPlaca] = useState("");
+  const [veiculoPlaca, setVeiculoPlaca] = useState("");
+  const [situacao, setSituacao] = useState("");
+  const [clienteId, setClienteId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const query = useLocacoes({
     abertas: emAberto ? true : undefined,
-    placa: placa.trim() || undefined,
+    placa: veiculoPlaca || undefined,
+    situacao: situacao || undefined,
+    clienteId: clienteId || undefined,
   });
   const clientesQuery = useClientes();
   const veiculosQuery = useVeiculos();
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
+
+  const rows = query.data?.items ?? [];
+  const temFiltro = Boolean(veiculoPlaca || situacao || clienteId || !emAberto);
 
   const nomesCliente = useMemo(
     () =>
@@ -112,16 +120,33 @@ export function MovimentacaoListSection() {
   return (
     <>
       <ListToolbar addTo="/movimentacao/novo">
-        <input
-          className="input"
-          placeholder="Filtrar placa"
-          value={placa}
-          onChange={(e) => setPlaca(e.target.value)}
+        <VeiculoSelect
+          value={veiculoPlaca}
+          onChange={setVeiculoPlaca}
+          valueField="placa"
+          emptyLabel="Todos os veículos"
         />
+        <select
+          className="select"
+          value={situacao}
+          onChange={(e) => setSituacao(e.target.value)}
+          aria-label="Situação"
+        >
+          <option value="">Todas</option>
+          <option value="locado">Locado</option>
+          <option value="reserva">Reserva</option>
+          <option value="manutencao">Manutenção</option>
+        </select>
+        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
         <label className="checkbox-label">
           <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
           Só períodos abertos
         </label>
+        {!query.isLoading ? (
+          <span className="badge badge--muted">
+            {rows.length} movimentaç{rows.length === 1 ? "ão" : "ões"}
+          </span>
+        ) : null}
       </ListToolbar>
       {query.isError ? (
         <QueryError
@@ -130,8 +155,9 @@ export function MovimentacaoListSection() {
       ) : null}
       <DataTable
         loading={query.isLoading || loadingExtra}
-        rows={query.data?.items ?? []}
+        rows={rows}
         keyFn={(l) => l.id}
+        emptyMessage={temFiltro ? "Nenhuma movimentação corresponde aos filtros." : "Nenhuma movimentação registada."}
         columns={[
           { key: "placa", header: "Placa", render: (l) => <strong>{formatPlaca(l.placa)}</strong> },
           {

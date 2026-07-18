@@ -87,8 +87,12 @@ export const lanzaApi = {
     competencia?: string;
   }) => apiRequest<ListEnvelope<ParceiroDespesa>>("/api/parceiro-despesas", { params }),
 
-  listarLocacoes: (params?: { abertas?: boolean; placa?: string; situacao?: string }) =>
-    apiRequest<ListEnvelope<Locacao>>("/api/locacoes", { params }),
+  listarLocacoes: (params?: {
+    abertas?: boolean;
+    placa?: string;
+    situacao?: string;
+    clienteId?: string;
+  }) => apiRequest<ListEnvelope<Locacao>>("/api/locacoes", { params }),
   salvarLocacao: (body: Record<string, unknown>) =>
     apiRequest<{ data: Locacao }>("/api/locacoes", { method: "POST", body }),
   removerLocacao: (id: string) =>
