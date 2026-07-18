@@ -96,6 +96,40 @@ export function RelatorioCobrancasForm() {
       <section className="form-card">
         <h2 className="form-card__title">Parâmetros</h2>
         <div className="form-grid">
+          <Field label="Veículo" hint="Opcional — exclui filtro por cliente">
+            <VeiculoSelect
+              value={veiculoPlaca}
+              onChange={onVeiculoChange}
+              ativo
+              emptyLabel="Todos os veículos ativos"
+              disabled={loading || Boolean(clienteId)}
+            />
+          </Field>
+          <Field label="Cliente" hint="Opcional — exclui filtro por veículo">
+            <ClienteSelect
+              value={clienteId}
+              onChange={onClienteChange}
+              ativo
+              emptyLabel="Todos os clientes ativos"
+              disabled={loading || Boolean(veiculoPlaca)}
+            />
+          </Field>
+          <Field label="Tipo de cobrança">
+            <select
+              className="select"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              disabled={loading || meta.isLoading}
+              aria-label="Tipo de cobrança"
+            >
+              <option value="">{meta.isLoading ? "A carregar…" : "Todos os tipos"}</option>
+              {opcoes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.rotulo}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Data inicial">
             <DateInput value={dataInicial} onChange={setDataInicial} disabled={loading} />
           </Field>
@@ -113,40 +147,6 @@ export function RelatorioCobrancasForm() {
               <option value="em_aberto">Em aberto</option>
               <option value="pago">Pago</option>
               <option value="todos">Todas</option>
-            </select>
-          </Field>
-          <Field label="Cliente" hint="Opcional — exclui filtro por veículo">
-            <ClienteSelect
-              value={clienteId}
-              onChange={onClienteChange}
-              ativo
-              emptyLabel="Todos os clientes ativos"
-              disabled={loading || Boolean(veiculoPlaca)}
-            />
-          </Field>
-          <Field label="Veículo" hint="Opcional — exclui filtro por cliente">
-            <VeiculoSelect
-              value={veiculoPlaca}
-              onChange={onVeiculoChange}
-              ativo
-              emptyLabel="Todos os veículos ativos"
-              disabled={loading || Boolean(clienteId)}
-            />
-          </Field>
-          <Field label="Tipo de cobrança">
-            <select
-              className="select"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              disabled={loading || meta.isLoading}
-              aria-label="Tipo de cobrança"
-            >
-              <option value="">{meta.isLoading ? "A carregar…" : "Todos os tipos"}</option>
-              {opcoes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.rotulo}
-                </option>
-              ))}
             </select>
           </Field>
         </div>
