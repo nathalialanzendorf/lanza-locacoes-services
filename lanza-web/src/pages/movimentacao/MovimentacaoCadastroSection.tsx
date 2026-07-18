@@ -7,6 +7,7 @@ import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
+import { useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 
@@ -14,9 +15,14 @@ type Props = {
   locacaoId?: string;
 };
 
+function normPlaca(placa?: string | null): string {
+  return (placa ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
 export function MovimentacaoCadastroSection({ locacaoId }: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const veiculosQuery = useVeiculos();
   const editando = Boolean(locacaoId);
 
   const [veiculoPlaca, setVeiculoPlaca] = useState("");
@@ -60,6 +66,20 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
       cancelado = true;
     };
   }, [locacaoId]);
+
+  function onVeiculoChange(placa: string) {
+    setVeiculoPlaca(placa);
+    if (!placa) return;
+    const v = (veiculosQuery.data?.items ?? []).find((x) => normPlaca(x.placa) === normPlaca(placa));
+    if (v?.clienteVinculadoId) setClienteId(v.clienteVinculadoId);
+  }
+
+  function onClienteChange(id: string) {
+    setClienteId(id);
+    if (!id || !veiculoPlaca) return;
+    const v = (veiculosQuery.data?.items ?? []).find((x) => normPlaca(x.placa) === normPlaca(veiculoPlaca));
+    if (v?.clienteVinculadoId && v.clienteVinculadoId !== id) setVeiculoPlaca("");
+  }
 
   async function submit() {
     setLoading(true);
@@ -107,19 +127,47 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         loading={loading}
         error={error}
       >
-        <Field label="Veículo">
-          <VeiculoSelect value={veiculoPlaca} onChange={setVeiculoPlaca} required disabled={loading} />
-        </Field>
-        <Field label="Situação">
-          <select className="select" value={situacao} onChange={(e) => setSituacao(e.target.value)}>
-            <option value="locado">Locado</option>
-            <option value="reserva">Reserva</option>
-            <option value="manutencao">Manutenção</option>
-          </select>
-        </Field>
+        <div className="form-grid">
+          <Field label="Veículo">
+            <VeiculoSelect
+              value={veiculoPlaca}
+              onChange={onVeiculoChange}
+              clienteId={clienteId || undefined}
+              required
+              disabled={loading}
+              emptyLabel="Selecione o veículo"
+            />
+          </Field>
+          <Field label="Cliente">
+            <ClienteSelect
+              value={clienteId}
+              onChange={onClienteChange}
+              disabled={loading}
+              emptyLabel="— Sem cliente —"
+            />
+          </Field>
+          <Field label="Tipo">
+            <select
+              className="select"
+              value={situacao}
+              onChange={(e) => setSituacao(e.target.value)}
+              disabled={loading}
+              aria-label="Tipo"
+            >
+              <option value="locado">Locado</option>
+              <option value="reserva">Reserva</option>
+              <option value="manutencao">Manutenção</option>
+            </select>
+          </Field>
+        </div>
         {situacao === "locado" ? (
           <Field label="Tipo de locação">
-            <select className="select" value={tipoLocacao} onChange={(e) => setTipoLocacao(e.target.value)}>
+            <select
+              className="select"
+              value={tipoLocacao}
+              onChange={(e) => setTipoLocacao(e.target.value)}
+              disabled={loading}
+            >
               <option value="diaria">Diária</option>
               <option value="semanal">Semanal</option>
               <option value="mensal">Mensal</option>
@@ -132,16 +180,8 @@ export function MovimentacaoCadastroSection({ locacaoId }: Props) {
         <Field label="Fim (opcional)">
           <DateInput value={fim} onChange={setFim} disabled={loading} />
         </Field>
-        <Field label="Cliente">
-          <ClienteSelect
-            value={clienteId}
-            onChange={setClienteId}
-            disabled={loading}
-            emptyLabel="— Sem cliente —"
-          />
-        </Field>
         <Field label="Observação">
-          <input className="input" value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+          <input className="input" value={observacao} onChange={(e) => setObservacao(e.target.value)} disabled={loading} />
         </Field>
       </FormCard>
       <ResultPanel title="Movimentação gravada" data={result} />

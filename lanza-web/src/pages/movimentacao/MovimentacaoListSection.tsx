@@ -97,6 +97,20 @@ export function MovimentacaoListSection() {
     return "—";
   }
 
+  function onVeiculoChange(placa: string) {
+    setVeiculoPlaca(placa);
+    if (!placa) return;
+    const v = (veiculosQuery.data?.items ?? []).find((x) => normPlaca(x.placa) === normPlaca(placa));
+    if (v?.clienteVinculadoId) setClienteId(v.clienteVinculadoId);
+  }
+
+  function onClienteChange(id: string) {
+    setClienteId(id);
+    if (!id || !veiculoPlaca) return;
+    const v = (veiculosQuery.data?.items ?? []).find((x) => normPlaca(x.placa) === normPlaca(veiculoPlaca));
+    if (v?.clienteVinculadoId && v.clienteVinculadoId !== id) setVeiculoPlaca("");
+  }
+
   async function excluir(locacao: Locacao) {
     const label = `${locacao.situacao ?? "movimentação"} · ${formatPlaca(locacao.placa)}`;
     if (!window.confirm(`Excluir ${label}? Esta ação não pode ser desfeita.`)) return;
@@ -122,22 +136,23 @@ export function MovimentacaoListSection() {
       <ListToolbar addTo="/movimentacao/novo">
         <VeiculoSelect
           value={veiculoPlaca}
-          onChange={setVeiculoPlaca}
+          onChange={onVeiculoChange}
           valueField="placa"
+          clienteId={clienteId || undefined}
           emptyLabel="Todos os veículos"
         />
+        <ClienteSelect value={clienteId} onChange={onClienteChange} emptyLabel="Todos os clientes" />
         <select
           className="select"
           value={situacao}
           onChange={(e) => setSituacao(e.target.value)}
-          aria-label="Situação"
+          aria-label="Tipo"
         >
-          <option value="">Todas</option>
+          <option value="">Todos os tipos</option>
           <option value="locado">Locado</option>
           <option value="reserva">Reserva</option>
           <option value="manutencao">Manutenção</option>
         </select>
-        <ClienteSelect value={clienteId} onChange={setClienteId} emptyLabel="Todos os clientes" />
         <label className="checkbox-label">
           <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
           Só períodos abertos
