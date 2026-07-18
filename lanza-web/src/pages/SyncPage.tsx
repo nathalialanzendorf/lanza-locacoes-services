@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader, QueryError } from "@/components/PageHeader";
 import { VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
+import { Toggle } from "@/components/Toggle";
 import { useSyncJobs, useSyncMeta } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -179,19 +180,19 @@ export function SyncPage() {
             />
             <span className="field__hint">Infrações, IPVA, pedágio e FIPE — um veículo</span>
           </label>
-          <label className="field checkbox-label">
-            <input
-              type="checkbox"
-              checked={asyncMode}
-              disabled={dryRun}
-              onChange={(e) => setAsyncMode(e.target.checked)}
-            />
-            Executar em background (recomendado)
-          </label>
-          <label className="field checkbox-label">
-            <input type="checkbox" checked={dryRun} onChange={(e) => toggleDryRun(e.target.checked)} />
-            Dry-run (simular, não grava)
-          </label>
+          <Toggle
+            className="field"
+            checked={asyncMode}
+            onChange={setAsyncMode}
+            disabled={dryRun}
+            label="Executar em background (recomendado)"
+          />
+          <Toggle
+            className="field"
+            checked={dryRun}
+            onChange={toggleDryRun}
+            label="Dry-run (simular, não grava)"
+          />
         </div>
         {dryRun ? (
           <p className="field__hint sync-dryrun-hint">

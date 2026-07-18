@@ -4,6 +4,7 @@ import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
 import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
+import { Toggle } from "@/components/Toggle";
 import { useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -310,7 +311,12 @@ export function RecebimentosManualSection() {
                 {plano.linhas.map((l: LinhaPlanoBaixa) => (
                   <tr key={l.num}>
                     <td>
-                      <input type="checkbox" checked={linhasSel.has(l.num)} onChange={() => toggleLinha(l.num)} />
+                      <Toggle
+                        checked={linhasSel.has(l.num)}
+                        onChange={() => toggleLinha(l.num)}
+                        size="compact"
+                        aria-label={`Selecionar linha ${l.num}`}
+                      />
                     </td>
                     <td>{l.num}</td>
                     <td>{l.operacao}</td>

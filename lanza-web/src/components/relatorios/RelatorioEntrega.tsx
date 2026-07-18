@@ -1,3 +1,4 @@
+import { Toggle } from "@/components/Toggle";
 import { LABEL } from "@/lib/labels";
 import type { RelatorioModoEntrega } from "@/lib/relatorioDownload";
 
@@ -19,15 +20,13 @@ export function RelatorioEntrega({
   return (
     <section className="form-card relatorio-entrega">
       <h2 className="form-card__title">Entrega</h2>
-      <label className="field checkbox-label relatorio-entrega__check">
-        <input
-          type="checkbox"
-          checked={armazenarServidor}
-          onChange={(e) => onArmazenarServidorChange(e.target.checked)}
-          disabled={loading}
-        />
-        Armazenar no servidor
-      </label>
+      <Toggle
+        className="field relatorio-entrega__check"
+        checked={armazenarServidor}
+        onChange={onArmazenarServidorChange}
+        disabled={loading}
+        label="Armazenar no servidor"
+      />
       <p className="field__hint">
         Se marcado, grava ficheiros e espelha no armazenamento configurado (ex.: Vercel Blob).
       </p>

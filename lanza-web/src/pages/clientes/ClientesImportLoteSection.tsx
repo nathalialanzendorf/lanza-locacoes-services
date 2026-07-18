@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { Field, FormCard } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { ResultPanel } from "@/components/ResultPanel";
 import { useRastreameEspelho } from "@/hooks/useRastreameEspelho";
 import { lanzaApi } from "@/api/endpoints";
@@ -62,10 +63,7 @@ export function ClientesImportLoteSection() {
         <Field label="Raiz documentos" hint="Pasta Aluguel Carros (opcional — usa config)">
           <input className="input" value={raizCnh} onChange={(e) => setRaizCnh(e.target.value)} />
         </Field>
-        <label className="field checkbox-label">
-          <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
-          Dry-run (simular)
-        </label>
+        <Toggle className="field" checked={dryRun} onChange={setDryRun} label="Dry-run (simular)" />
       </FormCard>
       <button type="button" className="btn btn--ghost" disabled={loading} onClick={() => void previewCnh()}>
         {LABEL.consultar}

@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
-import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
-import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
-import { ListToolbar } from "@/components/ListToolbar";
+import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import {
@@ -17,11 +14,9 @@ import { useContratos, useClientes, useParceiros, useVeiculos, useVinculosParcei
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatPlaca, clienteExibicaoPorId } from "@/lib/format";
-import { ordenarAtivoDepoisAlfabetico, rowClassInativo } from "@/lib/listagemCadastro";
+import { ordenarAtivoDepoisAlfabetico } from "@/lib/listagemCadastro";
 import { periodoPreenchido } from "@/lib/periodoRelatorio";
-import type { Cliente, Contrato } from "@/api/types";
-
-type FiltroStatus = "ativo" | "encerrado" | "todos";
+import type { Contrato } from "@/api/types";
 
 function terminoContrato(contrato: Contrato): string {
   if (contrato.dataEncerramento?.trim()) return contrato.dataEncerramento;
@@ -37,24 +32,13 @@ function veiculoUuid(contrato: Contrato, placaParaId: Map<string, string>): stri
   return placaParaId.get(placa.trim().toUpperCase());
 }
 
-function nomeClienteOrdenacao(contrato: Contrato, clientes: Cliente[] | undefined): string {
-  const id = contrato.clienteId?.trim();
-  if (id) {
-    const c = clientes?.find((x) => x.id === id);
-    if (c?.nome?.trim()) return c.nome.trim();
-  }
-  return contrato.clienteNome?.trim() ?? "";
-}
-
 export function ContratosListSection() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState<FiltroStatus>("ativo");
   const [clienteId, setClienteId] = useState("");
   const [veiculoId, setVeiculoId] = useState("");
   const [periodo, setPeriodo] = useState<RelatorioPeriodo>(PERIODO_VAZIO);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const query = useContratos({
-    status: status === "todos" ? undefined : status,
     clienteId: clienteId || undefined,
     veiculoId: veiculoId || undefined,
     dataInicial: periodo.dataInicial.trim() || undefined,
@@ -69,11 +53,10 @@ export function ContratosListSection() {
     const items = query.data?.items ?? [];
     return ordenarAtivoDepoisAlfabetico(items, {
       ativoDe: (c) => c.status === "ativo",
-      rotuloDe: (c) => nomeClienteOrdenacao(c, clientesQuery.data?.items) || "\uffff",
+      rotuloDe: (c) => formatPlaca(c.placa ?? c.veiculo?.placa ?? c.id),
     });
-  }, [query.data, clientesQuery.data]);
-  const temFiltro =
-    status !== "ativo" || Boolean(clienteId || veiculoId || periodoPreenchido(periodo));
+  }, [query.data]);
+  const temFiltro = Boolean(clienteId || veiculoId || periodoPreenchido(periodo));
 
   const parceiroPorVeiculoId = useMemo(() => {
     const nomes = new Map((parceirosQuery.data?.items ?? []).map((p) => [p.id, p.nome]));
@@ -123,12 +106,6 @@ export function ContratosListSection() {
 
   return (
     <>
-      <ListToolbar addTo="/contratos/cadastrar">
-        <Link to="/contratos/encerrar" className="btn btn--ghost btn--sm">
-          Encerrar
-        </Link>
-      </ListToolbar>
-
       <section className="form-card">
         <h2 className="form-card__title">Filtros</h2>
         <div className="form-grid">
@@ -144,20 +121,6 @@ export function ContratosListSection() {
           <label className="field">
             <span className="field__label">Cliente</span>
             <ClienteSelect value={clienteId} onChange={setClienteId} variant="filtro" />
-          </label>
-          <label className="field">
-            <span className="field__label">Status</span>
-            <NativeSelect
-              value={status}
-              onChange={(v) => setStatus(v as FiltroStatus)}
-              variant="filtro"
-              allowEmpty={false}
-              aria-label="Status"
-            >
-              <option value="ativo">Ativos</option>
-              <option value="encerrado">Encerrados</option>
-              <option value="todos">{SELECT_LABEL_TODOS}</option>
-            </NativeSelect>
           </label>
           <RelatorioPeriodoFiltro
             value={periodo}
@@ -181,7 +144,9 @@ export function ContratosListSection() {
         loading={query.isLoading || loadingExtra}
         rows={rows}
         keyFn={(c) => c.id}
-        rowClassName={(c) => rowClassInativo(c.status === "ativo")}
+        rowClassName={(c) =>
+          c.status === "ativo" ? undefined : "row--inativo row--inativo-amber"
+        }
         emptyMessage={temFiltro ? "Nenhum contrato corresponde aos filtros." : "Nenhum contrato registado."}
         columns={[
           {
@@ -214,7 +179,7 @@ export function ContratosListSection() {
             key: "status",
             header: "Status",
             render: (c) => (
-              <span className={c.status === "ativo" ? "badge badge--ok" : "badge badge--muted"}>
+              <span className={c.status === "ativo" ? "badge badge--ok" : "badge badge--amber"}>
                 {c.status ?? "—"}
               </span>
             ),
@@ -230,7 +195,6 @@ export function ContratosListSection() {
                 variant="contrato"
                 editTo={`/contratos/${c.id}/editar`}
                 renovarTo={c.status === "ativo" ? `/contratos/renovar?id=${encodeURIComponent(c.id)}` : undefined}
-                encerrarTo={c.status === "ativo" ? `/contratos/encerrar?id=${encodeURIComponent(c.id)}` : undefined}
                 deleting={excluindoId === c.id}
                 onDelete={() => void excluir(c)}
               />

@@ -4,6 +4,7 @@ import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
 import { ClienteSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { ResultPanel } from "@/components/ResultPanel";
+import { Toggle } from "@/components/Toggle";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatBrl } from "@/lib/format";
@@ -242,14 +243,12 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
             required
           />
         </Field>
-        <label className="field checkbox-label">
-          <input
-            type="checkbox"
-            checked={apenasVencidos}
-            onChange={(e) => setApenasVencidos(e.target.checked)}
-          />
-          Só débitos vencidos (ATRASADO ou data passada)
-        </label>
+        <Toggle
+          className="field"
+          checked={apenasVencidos}
+          onChange={setApenasVencidos}
+          label="Só débitos vencidos (ATRASADO ou data passada)"
+        />
       </FormCard>
 
       {resumo ? (
@@ -277,10 +276,11 @@ export function RenegociacaoClientePanel({ clienteIdInicial = "", placaInicial =
                     {resumo.debitos.map((d) => (
                       <tr key={String(d.id)}>
                         <td>
-                          <input
-                            type="checkbox"
+                          <Toggle
                             checked={selIds.has(String(d.id))}
                             onChange={() => toggleDebito(d.id)}
+                            size="compact"
+                            aria-label={`Selecionar débito ${d.id}`}
                           />
                         </td>
                         <td>{String(d.id)}</td>

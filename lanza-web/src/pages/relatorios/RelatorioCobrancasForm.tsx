@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { Field } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { CobrancasVisualizacao } from "@/components/relatorios/CobrancasVisualizacao";
 import {
   PERIODO_VAZIO,
@@ -152,15 +153,13 @@ export function RelatorioCobrancasForm() {
             </NativeSelect>
           </Field>
         </div>
-        <label className="field checkbox-label relatorio-entrega__check">
-          <input
-            type="checkbox"
-            checked={armazenarServidor}
-            onChange={(e) => setArmazenarServidor(e.target.checked)}
-            disabled={loading}
-          />
-          Armazenar no servidor
-        </label>
+        <Toggle
+          className="field relatorio-entrega__check"
+          checked={armazenarServidor}
+          onChange={setArmazenarServidor}
+          disabled={loading}
+          label="Armazenar no servidor"
+        />
         <p className="field__hint">
           Se marcado, grava ficheiros e espelha no armazenamento configurado (ex.: Vercel Blob).
         </p>

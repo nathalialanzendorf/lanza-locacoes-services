@@ -67,13 +67,9 @@ export function clienteExibicaoPorId(
 }
 
 export function statusLabel(ativo?: boolean): string {
-  if (ativo === false) return "Inativo";
-  if (ativo === true) return "Ativo";
-  return "—";
+  return ativo === false ? "Inativo" : "Ativo";
 }
 
 export function statusClass(ativo?: boolean): string {
-  if (ativo === false) return "badge badge--muted";
-  if (ativo === true) return "badge badge--ok";
-  return "badge";
+  return ativo === false ? "badge badge--muted" : "badge badge--ok";
 }

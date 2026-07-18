@@ -10,11 +10,7 @@ import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatVeiculoLabel, formatClienteLabel, statusClass, statusLabel } from "@/lib/format";
 import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
-import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
-import { NativeSelect } from "@/components/EntitySelects";
 import type { Cliente, Contrato } from "@/api/types";
-
-type Filtro = "todos" | "ativos" | "inativos";
 
 function formatCnh(cnh: Cliente["cnh"]): string {
   if (!cnh) return "—";
@@ -39,12 +35,10 @@ function veiculoDoContrato(contrato: Contrato): string {
 
 export function ClientesListSection() {
   const qc = useQueryClient();
-  const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
-  const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
-  const query = useClientes(ativo);
+  const query = useClientes();
   const contratosQuery = useContratos({ status: "ativo" });
 
   const rows = useMemo(() => {
@@ -125,17 +119,6 @@ export function ClientesListSection() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
-        <NativeSelect
-          value={filtro}
-          onChange={(v) => setFiltro(v as Filtro)}
-          variant="filtro"
-          allowEmpty={false}
-          aria-label="Status"
-        >
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">{SELECT_LABEL_TODOS}</option>
-        </NativeSelect>
         {!query.isLoading ? (
           <span className="badge badge--muted">
             {rows.length} cliente{rows.length === 1 ? "" : "s"}
@@ -196,12 +179,8 @@ export function ClientesListSection() {
             render: (c) => (
               <RowActions
                 editTo={`/clientes/${c.id}/editar`}
-                onDesabilitar={
-                  registroAtivo(c.ativo) ? () => void desabilitar(c) : undefined
-                }
-                onHabilitar={
-                  registroAtivo(c.ativo) ? undefined : () => void habilitar(c)
-                }
+                ativo={registroAtivo(c.ativo)}
+                onAtivoChange={(next) => void (next ? habilitar(c) : desabilitar(c))}
                 togglingAtivo={togglingAtivoId === c.id}
                 deleting={excluindoId === c.id}
                 onDelete={() => void excluir(c)}

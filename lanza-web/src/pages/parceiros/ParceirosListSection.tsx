@@ -8,13 +8,9 @@ import { RowActions } from "@/components/RowActions";
 import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
-import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
-import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
-import { NativeSelect } from "@/components/EntitySelects";
+import { formatPlaca, statusLabel } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, registroAtivo } from "@/lib/listagemCadastro";
 import type { Parceiro } from "@/api/types";
-
-type Filtro = "ativos" | "inativos" | "todos";
 
 type ParceiroLinha = Parceiro & {
   veiculos: number;
@@ -23,12 +19,10 @@ type ParceiroLinha = Parceiro & {
 
 export function ParceirosListSection() {
   const qc = useQueryClient();
-  const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [nome, setNome] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
-  const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
-  const parceirosQuery = useParceiros(ativo);
+  const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
   const veiculosQuery = useVeiculos();
 
@@ -66,7 +60,7 @@ export function ParceirosListSection() {
     });
   }, [nome, parceirosQuery.data, vinculosQuery.data, veiculosQuery.data]);
 
-  const temFiltro = Boolean(nome.trim() || filtro !== "todos");
+  const temFiltro = Boolean(nome.trim());
 
   const erro = parceirosQuery.error ?? vinculosQuery.error ?? veiculosQuery.error ?? null;
 
@@ -121,17 +115,6 @@ export function ParceirosListSection() {
           value={nome}
           onChange={(e) => setNome(e.target.value)}
         />
-        <NativeSelect
-          value={filtro}
-          onChange={(v) => setFiltro(v as Filtro)}
-          variant="filtro"
-          allowEmpty={false}
-          aria-label="Status"
-        >
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">{SELECT_LABEL_TODOS}</option>
-        </NativeSelect>
         {!loading ? (
           <span className="badge badge--muted">
             {linhas.length} parceiro{linhas.length === 1 ? "" : "s"}
@@ -147,7 +130,9 @@ export function ParceirosListSection() {
         loading={loading}
         rows={linhas}
         keyFn={(p) => p.id}
-        rowClassName={(p) => rowClassInativo(registroAtivo(p.ativo))}
+        rowClassName={(p) =>
+          registroAtivo(p.ativo) ? undefined : "row--inativo row--inativo-amber"
+        }
         emptyMessage={temFiltro ? "Nenhum parceiro corresponde aos filtros." : "Nenhum parceiro registado."}
         columns={[
           { key: "nome", header: "Nome", render: (p) => <strong>{p.nome}</strong> },
@@ -167,7 +152,11 @@ export function ParceirosListSection() {
           {
             key: "status",
             header: "Status",
-            render: (p) => <span className={statusClass(p.ativo)}>{statusLabel(p.ativo)}</span>,
+            render: (p) => (
+              <span className={registroAtivo(p.ativo) ? "badge badge--ok" : "badge badge--amber"}>
+                {statusLabel(p.ativo)}
+              </span>
+            ),
           },
           {
             key: "acoes",
@@ -176,12 +165,8 @@ export function ParceirosListSection() {
             render: (p) => (
               <RowActions
                 editTo={`/parceiros/${p.id}/editar`}
-                onDesabilitar={
-                  registroAtivo(p.ativo) ? () => void desabilitar(p) : undefined
-                }
-                onHabilitar={
-                  registroAtivo(p.ativo) ? undefined : () => void habilitar(p)
-                }
+                ativo={registroAtivo(p.ativo)}
+                onAtivoChange={(next) => void (next ? habilitar(p) : desabilitar(p))}
                 togglingAtivo={togglingAtivoId === p.id}
                 deleting={excluindoId === p.id}
                 onDelete={() => void excluir(p)}

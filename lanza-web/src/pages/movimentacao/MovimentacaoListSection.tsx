@@ -6,6 +6,7 @@ import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntityS
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
+import { Toggle } from "@/components/Toggle";
 import {
   PERIODO_VAZIO,
   RelatorioPeriodoFiltro,
@@ -181,10 +182,12 @@ export function MovimentacaoListSection() {
             onChange={setPeriodo}
             hint="Locações que intersectam o período (início/fim da movimentação)"
           />
-          <label className="field checkbox-label">
-            <input type="checkbox" checked={emAberto} onChange={(e) => setEmAberto(e.target.checked)} />
-            Só períodos abertos
-          </label>
+          <Toggle
+            className="field"
+            checked={emAberto}
+            onChange={setEmAberto}
+            label="Só períodos abertos"
+          />
         </div>
         {!query.isLoading ? (
           <p className="field__hint">

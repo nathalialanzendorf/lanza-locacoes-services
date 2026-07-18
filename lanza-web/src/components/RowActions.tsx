@@ -1,33 +1,37 @@
 import { Link } from "react-router-dom";
 
-import { IconDesabilitar, IconEdit, IconEncerrar, IconHabilitar, IconRenovar, IconTrash } from "@/components/icons";
+import { IconEdit, IconEncerrar, IconRenovar, IconTrash } from "@/components/icons";
+import { Toggle } from "@/components/Toggle";
 import { LABEL } from "@/lib/labels";
 
 type Props = {
   editTo: string;
   renovarTo?: string;
   encerrarTo?: string;
-  onHabilitar?: () => void;
-  onDesabilitar?: () => void;
+  ativo?: boolean;
+  onAtivoChange?: (ativo: boolean) => void;
   togglingAtivo?: boolean;
   onDelete: () => void;
   deleting?: boolean;
   deleteLabel?: string;
   /** Contratos: encerrar → renovar → editar → excluir */
   variant?: "default" | "contrato";
+  /** Veículos: rótulo «Inativar» em vez de «Desabilitar». */
+  toggleAtivoMode?: "desabilitar" | "inativar";
 };
 
 export function RowActions({
   editTo,
   renovarTo,
   encerrarTo,
-  onHabilitar,
-  onDesabilitar,
+  ativo = true,
+  onAtivoChange,
   togglingAtivo,
   onDelete,
   deleting,
   deleteLabel = LABEL.excluir,
   variant = "default",
+  toggleAtivoMode = "desabilitar",
 }: Props) {
   const busy = deleting || togglingAtivo;
 
@@ -37,30 +41,23 @@ export function RowActions({
     </Link>
   );
 
-  const habilitar = onHabilitar ? (
-    <button
-      type="button"
-      className="btn btn--icon btn--icon-ok"
-      disabled={busy}
-      onClick={onHabilitar}
-      aria-label={LABEL.habilitar}
-      title={LABEL.habilitar}
-    >
-      <IconHabilitar className="row-actions__icon" />
-    </button>
-  ) : null;
+  const toggleAtivoLabel =
+    toggleAtivoMode === "inativar"
+      ? ativo
+        ? LABEL.inativar
+        : LABEL.habilitar
+      : ativo
+        ? LABEL.desabilitar
+        : LABEL.habilitar;
 
-  const desabilitar = onDesabilitar ? (
-    <button
-      type="button"
-      className="btn btn--icon btn--icon-warn"
+  const toggleAtivo = onAtivoChange ? (
+    <Toggle
+      checked={ativo}
+      onChange={onAtivoChange}
       disabled={busy}
-      onClick={onDesabilitar}
-      aria-label={LABEL.desabilitar}
-      title={LABEL.desabilitar}
-    >
-      <IconDesabilitar className="row-actions__icon" />
-    </button>
+      size="compact"
+      aria-label={toggleAtivoLabel}
+    />
   ) : null;
 
   const renovar = renovarTo ? (
@@ -87,8 +84,6 @@ export function RowActions({
       <IconTrash className="row-actions__icon" />
     </button>
   );
-
-  const toggleAtivo = habilitar ?? desabilitar;
 
   const actions =
     variant === "contrato"

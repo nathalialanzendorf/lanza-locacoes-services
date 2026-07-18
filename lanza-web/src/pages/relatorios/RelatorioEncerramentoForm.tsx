@@ -8,6 +8,7 @@ import { DateInput } from "@/components/DateInput";
 import { QueryError } from "@/components/PageHeader";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import { ResultPanel } from "@/components/ResultPanel";
+import { Toggle } from "@/components/Toggle";
 import { useContratos, useClientes } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -328,15 +329,12 @@ export function RelatorioEncerramentoForm() {
           </NativeSelect>
         </Field>
         <Field label="Quebra de contrato">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={quebraContrato}
-              onChange={(e) => setQuebraContrato(e.target.checked)}
-              disabled={loadingEncerrar || motivo === "troca"}
-            />
-            Registrar quebra (retenção proporcional de caução)
-          </label>
+          <Toggle
+            checked={quebraContrato}
+            onChange={setQuebraContrato}
+            disabled={loadingEncerrar || motivo === "troca"}
+            label="Registrar quebra (retenção proporcional de caução)"
+          />
           {motivo === "troca" ? (
             <span className="field__hint">Troca de veículo não é quebra — a caução transfere para o novo contrato.</span>
           ) : null}

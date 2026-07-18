@@ -3,28 +3,28 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { DataTable } from "@/components/DataTable";
 import { VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
-import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import { useParceiros, useVeiculos, useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatPlaca, statusClass, statusLabel } from "@/lib/format";
-import { ordenarAtivoDepoisAlfabetico, registroAtivo, rowClassInativo } from "@/lib/listagemCadastro";
+import { formatPlaca } from "@/lib/format";
+import { ordenarAtivoDepoisAlfabetico, registroAtivo } from "@/lib/listagemCadastro";
+import {
+  statusVeiculoClass,
+  statusVeiculoLabel,
+  statusVeiculoOperacional,
+} from "@/lib/statusVeiculo";
 import type { Veiculo } from "@/api/types";
-
-type Filtro = "ativos" | "inativos" | "todos";
 
 export function VeiculosListSection() {
   const qc = useQueryClient();
-  const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [veiculoId, setVeiculoId] = useState("");
   const [parceiroId, setParceiroId] = useState("");
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [togglingAtivoId, setTogglingAtivoId] = useState<string | null>(null);
-  const ativo = filtro === "ativos" ? true : filtro === "inativos" ? false : undefined;
-  const query = useVeiculos({ ativo });
+  const query = useVeiculos();
   const parceirosQuery = useParceiros();
   const vinculosQuery = useVinculosParceiro();
 
@@ -57,7 +57,7 @@ export function VeiculosListSection() {
     });
     return ordenarAtivoDepoisAlfabetico(filtrados, {
       ativoDe: (v) => registroAtivo(v.ativo),
-      rotuloDe: (v) => v.placa ?? "",
+      rotuloDe: (v) => formatPlaca(v.placa ?? v.id),
     });
   }, [query.data, veiculoId, parceiroId, parceiroIdPorVeiculoId]);
 
@@ -67,16 +67,16 @@ export function VeiculosListSection() {
     return parceiroPorVeiculoId.get(veiculo.id) ?? "—";
   }
 
-  async function desabilitar(veiculo: Veiculo) {
+  async function inativar(veiculo: Veiculo) {
     const label = formatPlaca(veiculo.placa ?? veiculo.id);
-    if (!window.confirm(`Desabilitar o veículo ${label}?`)) return;
+    if (!window.confirm(`Inativar o veículo ${label}?`)) return;
     setTogglingAtivoId(veiculo.id);
     try {
       await lanzaApi.atualizarVeiculo(veiculo.id, { ativo: false });
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
       void qc.invalidateQueries({ queryKey: ["resumo"] });
     } catch (err) {
-      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao desabilitar veículo.");
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao inativar veículo.");
     } finally {
       setTogglingAtivoId(null);
     }
@@ -84,14 +84,14 @@ export function VeiculosListSection() {
 
   async function habilitar(veiculo: Veiculo) {
     const label = formatPlaca(veiculo.placa ?? veiculo.id);
-    if (!window.confirm(`Habilitar o veículo ${label}?`)) return;
+    if (!window.confirm(`Reativar o veículo ${label}?`)) return;
     setTogglingAtivoId(veiculo.id);
     try {
       await lanzaApi.atualizarVeiculo(veiculo.id, { ativo: true });
       void qc.invalidateQueries({ queryKey: ["veiculos"] });
       void qc.invalidateQueries({ queryKey: ["resumo"] });
     } catch (err) {
-      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao habilitar veículo.");
+      window.alert(err instanceof LanzaApiError ? err.message : "Falha ao reativar veículo.");
     } finally {
       setTogglingAtivoId(null);
     }
@@ -121,20 +121,8 @@ export function VeiculosListSection() {
           value={veiculoId}
           onChange={setVeiculoId}
           valueField="id"
-          ativo={ativo}
           variant="filtro"
         />
-        <NativeSelect
-          value={filtro}
-          onChange={(v) => setFiltro(v as Filtro)}
-          variant="filtro"
-          allowEmpty={false}
-          aria-label="Status"
-        >
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-          <option value="todos">{SELECT_LABEL_TODOS}</option>
-        </NativeSelect>
         <NativeSelect value={parceiroId} onChange={setParceiroId} variant="filtro" aria-label="Parceiro">
           {parceirosOrdenados.map((p) => (
             <option key={p.id} value={p.id}>
@@ -157,7 +145,9 @@ export function VeiculosListSection() {
         loading={query.isLoading || loadingExtra}
         rows={rows}
         keyFn={(v) => v.id}
-        rowClassName={(v) => rowClassInativo(registroAtivo(v.ativo))}
+        rowClassName={(v) =>
+          registroAtivo(v.ativo) ? undefined : "row--inativo row--inativo-amber"
+        }
         emptyMessage={
           temFiltro ? "Nenhum veículo corresponde aos filtros." : "Nenhum veículo registado."
         }
@@ -169,7 +159,12 @@ export function VeiculosListSection() {
           {
             key: "status",
             header: "Status",
-            render: (v) => <span className={statusClass(v.ativo)}>{statusLabel(v.ativo)}</span>,
+            render: (v) => {
+              const status = statusVeiculoOperacional(v);
+              return (
+                <span className={statusVeiculoClass(status)}>{statusVeiculoLabel(status)}</span>
+              );
+            },
           },
           {
             key: "acoes",
@@ -178,12 +173,9 @@ export function VeiculosListSection() {
             render: (v) => (
               <RowActions
                 editTo={`/veiculos/${v.id}/editar`}
-                onDesabilitar={
-                  registroAtivo(v.ativo) ? () => void desabilitar(v) : undefined
-                }
-                onHabilitar={
-                  registroAtivo(v.ativo) ? undefined : () => void habilitar(v)
-                }
+                toggleAtivoMode="inativar"
+                ativo={registroAtivo(v.ativo)}
+                onAtivoChange={(next) => void (next ? habilitar(v) : inativar(v))}
                 togglingAtivo={togglingAtivoId === v.id}
                 deleting={excluindoId === v.id}
                 onDelete={() => void excluir(v)}

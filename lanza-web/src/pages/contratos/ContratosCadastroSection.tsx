@@ -5,6 +5,7 @@ import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { DateInput } from "@/components/DateInput";
 import { Field, FormCard } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { ResultPanel } from "@/components/ResultPanel";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -422,15 +423,13 @@ export function ContratosCadastroSection({
 
         {modo === "criar" || mostrarParcelarCaucaoRenovacao ? (
           <>
-            <label className="field checkbox-label">
-              <input
-                type="checkbox"
-                checked={parcelarCaucao}
-                onChange={(e) => setParcelarCaucao(e.target.checked)}
-                disabled={loading}
-              />
-              Parcelar caução
-            </label>
+            <Toggle
+              className="field"
+              checked={parcelarCaucao}
+              onChange={setParcelarCaucao}
+              disabled={loading}
+              label="Parcelar caução"
+            />
             {modo === "renovar" && caucaoAnterior != null && caucaoComplementoRenovacao != null ? (
               <p className="field__hint">
                 Caução anterior {caucaoAnterior.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -461,15 +460,13 @@ export function ContratosCadastroSection({
 
         {modo === "criar" ? (
           <>
-            <label className="field checkbox-label">
-              <input
-                type="checkbox"
-                checked={parcelarSemana}
-                onChange={(e) => setParcelarSemana(e.target.checked)}
-                disabled={loading}
-              />
-              Parcelar 1ª semana
-            </label>
+            <Toggle
+              className="field"
+              checked={parcelarSemana}
+              onChange={setParcelarSemana}
+              disabled={loading}
+              label="Parcelar 1ª semana"
+            />
             {parcelarSemana ? (
               <ParcelamentoFields
                 titulo="Parcelamento da 1ª semana (cláusula 3.2)"

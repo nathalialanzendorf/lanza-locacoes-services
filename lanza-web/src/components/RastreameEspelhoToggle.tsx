@@ -1,3 +1,4 @@
+import { Toggle } from "@/components/Toggle";
 import { useRastreameEspelho } from "@/hooks/useRastreameEspelho";
 
 export function RastreameEspelhoToggle() {
@@ -7,15 +8,13 @@ export function RastreameEspelhoToggle() {
 
   return (
     <div className="rastreame-espelho">
-      <label className="rastreame-espelho__label" title="Fonte da verdade: Lanza (database). Rastreame é espelho opcional.">
-        <input
-          type="checkbox"
-          checked={ativo}
-          disabled={loading || !config.editavelViaApi}
-          onChange={(e) => void setAtivo(e.target.checked)}
-        />
-        <span>Espelhar no Rastreame</span>
-      </label>
+      <Toggle
+        checked={ativo}
+        onChange={(next) => void setAtivo(next)}
+        disabled={loading || !config.editavelViaApi}
+        label="Espelhar no Rastreame"
+        aria-label="Espelhar no Rastreame"
+      />
       {!config.editavelViaApi ? (
         <span className="rastreame-espelho__hint">via env</span>
       ) : (

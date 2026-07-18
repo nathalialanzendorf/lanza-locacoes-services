@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Field, FormCard } from "@/components/FormCard";
 import { DateInput } from "@/components/DateInput";
 import { ResultPanel } from "@/components/ResultPanel";
+import { Toggle } from "@/components/Toggle";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
 import { formatBrl } from "@/lib/format";
@@ -111,7 +112,12 @@ export function PagBankRecebimentosSection() {
                 {lote.planos.map((p, i) => (
                   <tr key={p.pagbank.id}>
                     <td>
-                      <input type="checkbox" checked={sel.has(i)} onChange={() => toggle(i)} />
+                      <Toggle
+                        checked={sel.has(i)}
+                        onChange={() => toggle(i)}
+                        size="compact"
+                        aria-label={`Selecionar crédito ${i + 1}`}
+                      />
                     </td>
                     <td>{p.clienteQuery}</td>
                     <td className="num">{formatBrl(p.pagbank.valor)}</td>

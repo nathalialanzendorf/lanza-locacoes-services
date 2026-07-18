@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DataFieldsPanel } from "@/components/DataFieldsPanel";
 import { VeiculoSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -170,15 +171,12 @@ export function FipeConsultaForm({
         ) : null}
         {showPersistOption && cadastrado ? (
           <Field label="Gravar">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={persist}
-                onChange={(e) => setPersist(e.target.checked)}
-                disabled={loading}
-              />
-              Atualizar cadastro com valor FIPE
-            </label>
+            <Toggle
+              checked={persist}
+              onChange={setPersist}
+              disabled={loading}
+              label="Atualizar cadastro com valor FIPE"
+            />
           </Field>
         ) : null}
       </FormCard>

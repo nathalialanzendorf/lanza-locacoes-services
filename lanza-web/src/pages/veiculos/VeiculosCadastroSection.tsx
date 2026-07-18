@@ -3,12 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
-import { AtivoIconToggle } from "@/components/AtivoIconToggle";
+import { Toggle } from "@/components/Toggle";
 import { ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
 import { useVinculosParceiro } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
+import {
+  statusVeiculoClass,
+  statusVeiculoLabel,
+  statusVeiculoOperacional,
+} from "@/lib/statusVeiculo";
 
 type Props = {
   veiculoId?: string;
@@ -32,6 +37,7 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
   const [ufRegistro, setUfRegistro] = useState("SC");
   const [parceiroId, setParceiroId] = useState("");
   const [ativo, setAtivo] = useState(true);
+  const [clienteVinculadoId, setClienteVinculadoId] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(editando);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,8 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
     if (typeof v.cor === "string") setCor(v.cor);
     if (typeof v.ufRegistro === "string") setUfRegistro(v.ufRegistro);
     if (typeof v.ativo === "boolean") setAtivo(v.ativo);
+    if (typeof v.clienteVinculadoId === "string") setClienteVinculadoId(v.clienteVinculadoId);
+    else if (v.clienteVinculadoId === null) setClienteVinculadoId(null);
   }
 
   useEffect(() => {
@@ -155,13 +163,26 @@ export function VeiculosCadastroSection({ veiculoId }: Props) {
         <Field label="Parceiro (proprietário)">
           <ParceiroSelect value={parceiroId} onChange={setParceiroId} variant="cadastro" disabled={loading} />
         </Field>
-        <AtivoIconToggle
-          label="Status"
-          ativo={ativo}
-          onChange={setAtivo}
-          disabled={loading}
-          hint="Veículo ativo na frota"
-        />
+        <Field label="Status operacional">
+          <span
+            className={statusVeiculoClass(
+              statusVeiculoOperacional({ ativo, clienteVinculadoId }),
+            )}
+          >
+            {statusVeiculoLabel(statusVeiculoOperacional({ ativo, clienteVinculadoId }))}
+          </span>
+          <span className="field__hint">
+            Locado vem do contrato ativo. Use o toggle abaixo para inativar ou reativar.
+          </span>
+        </Field>
+        <Field label="Frota" hint="Inativo sai da frota operacional">
+          <Toggle
+            checked={ativo}
+            onChange={setAtivo}
+            disabled={loading}
+            aria-label="Veículo ativo na frota"
+          />
+        </Field>
       </FormCard>
     </>
   );

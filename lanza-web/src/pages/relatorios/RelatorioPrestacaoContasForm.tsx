@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { ParceiroSelect, VeiculoSelect } from "@/components/EntitySelects";
 import { RelatorioEntrega } from "@/components/relatorios/RelatorioEntrega";
 import {
@@ -286,10 +287,12 @@ export function RelatorioPrestacaoContasForm() {
           <Field label="Parceiro" hint="Opcional">
             <ParceiroSelect value={parceiroId} onChange={onParceiroChange} ativo variant="filtro" />
           </Field>
-          <label className="field checkbox-label">
-            <input type="checkbox" checked={modoAvancado} onChange={(e) => setModoAvancado(e.target.checked)} />
-            Modo avançado (JSON manual)
-          </label>
+          <Toggle
+            className="field"
+            checked={modoAvancado}
+            onChange={setModoAvancado}
+            label="Modo avançado (JSON manual)"
+          />
         </div>
         {!loadingVeiculos ? (
           <p className="field__hint">
@@ -321,12 +324,14 @@ export function RelatorioPrestacaoContasForm() {
                 {temFiltro ? "Nenhum veículo ativo corresponde aos filtros." : "Nenhum veículo ativo."}
               </p>
             ) : (
-              <div className="checkbox-group">
+              <div className="toggle-group">
                 {veiculosFiltrados.map((v) => (
-                  <label key={v.id} className="checkbox-label">
-                    <input type="checkbox" checked={sel.has(v.id)} onChange={() => toggleVeiculo(v.id)} />
-                    {formatVeiculoLabel(v)}
-                  </label>
+                  <Toggle
+                    key={v.id}
+                    checked={sel.has(v.id)}
+                    onChange={() => toggleVeiculo(v.id)}
+                    label={formatVeiculoLabel(v)}
+                  />
                 ))}
               </div>
             )}

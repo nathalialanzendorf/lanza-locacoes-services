@@ -6,6 +6,7 @@ import { CadastroBackLink } from "@/components/CadastroBackLink";
 import { DocUploadField } from "@/components/DocUploadField";
 import { matchParceiroIdPorNome, ParceiroSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { useParceiros } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
@@ -120,10 +121,12 @@ export function VeiculosImportarSection() {
         <Field label="Parceiro (proprietário)">
           <ParceiroSelect value={parceiroId} onChange={setParceiroId} variant="cadastro" disabled={loading} />
         </Field>
-        <label className="field checkbox-label">
-          <input type="checkbox" checked={atualizarFipe} onChange={(e) => setAtualizarFipe(e.target.checked)} />
-          Consultar FIPE após salvar
-        </label>
+        <Toggle
+          className="field"
+          checked={atualizarFipe}
+          onChange={setAtualizarFipe}
+          label="Consultar FIPE após salvar"
+        />
       </FormCard>
     </>
   );

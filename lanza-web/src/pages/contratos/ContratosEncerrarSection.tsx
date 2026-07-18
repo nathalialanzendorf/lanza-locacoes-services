@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/DataTable";
 import { ClienteSelect, VeiculoSelect, NativeSelect } from "@/components/EntitySelects";
 import { Field, FormCard } from "@/components/FormCard";
+import { Toggle } from "@/components/Toggle";
 import { DateInput } from "@/components/DateInput";
 import { QueryError } from "@/components/PageHeader";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -245,15 +246,12 @@ export function ContratosEncerrarSection() {
           </NativeSelect>
         </Field>
         <Field label="Quebra de contrato">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={quebraContrato}
-              onChange={(e) => setQuebraContrato(e.target.checked)}
-              disabled={loading || motivo === "troca"}
-            />
-            Registrar quebra (retenção proporcional de caução)
-          </label>
+          <Toggle
+            checked={quebraContrato}
+            onChange={setQuebraContrato}
+            disabled={loading || motivo === "troca"}
+            label="Registrar quebra (retenção proporcional de caução)"
+          />
           {motivo === "troca" ? (
             <span className="field__hint">Troca de veículo não é quebra — a caução transfere para o novo contrato.</span>
           ) : null}

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CadastroBackLink } from "@/components/CadastroBackLink";
-import { AtivoIconToggle } from "@/components/AtivoIconToggle";
+import { Toggle } from "@/components/Toggle";
 import { DocUploadField } from "@/components/DocUploadField";
 import { Field, FormCard } from "@/components/FormCard";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -130,24 +130,18 @@ export function ParceirosCadastroSection({ parceiroId }: Props) {
           <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} required />
         </Field>
         {editando ? (
-          <AtivoIconToggle
-            label="Status"
-            ativo={ativo}
-            onChange={setAtivo}
-            disabled={loading}
-            hint="Parceiro ativo na operação"
-          />
+          <Field label="Status" hint="Parceiro ativo na operação">
+            <Toggle checked={ativo} onChange={setAtivo} disabled={loading} aria-label="Parceiro ativo" />
+          </Field>
         ) : null}
         {!editando ? (
           <>
-            <label className="field checkbox-label">
-              <input
-                type="checkbox"
-                checked={cadastrarVeiculo}
-                onChange={(e) => setCadastrarVeiculo(e.target.checked)}
-              />
-              Cadastrar veículo do CRLV e vincular ao parceiro
-            </label>
+            <Toggle
+              className="field"
+              checked={cadastrarVeiculo}
+              onChange={setCadastrarVeiculo}
+              label="Cadastrar veículo do CRLV e vincular ao parceiro"
+            />
             {cadastrarVeiculo ? (
               <>
                 <Field label="Placa">
