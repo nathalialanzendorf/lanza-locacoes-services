@@ -16,6 +16,7 @@ import {
   type CobrancasDbContext,
 } from "./cobrancasDbContext.js";
 import type { ContratoRegistro } from "./contratosDb.js";
+import { compararDataBrAsc } from "./contratoExtrair.js";
 import { diaPagamentoParaDow } from "./caucaoParcelas.js";
 import { hojeBr, hojeDowBr, nomeDiaSemanaBr, parseDataBrOuIsoDia } from "./dataBr.js";
 import {
@@ -183,6 +184,17 @@ function ordenarLinhas(a: DashboardRecebimentoLinha, b: DashboardRecebimentoLinh
   return (a.descricao ?? "").localeCompare(b.descricao ?? "", "pt-BR");
 }
 
+/** Em atraso: cliente → vencimento mais antigo → placa → descrição. */
+function ordenarLinhasAtraso(a: DashboardRecebimentoLinha, b: DashboardRecebimentoLinha): number {
+  const na = (a.clienteNome ?? "").localeCompare(b.clienteNome ?? "", "pt-BR");
+  if (na !== 0) return na;
+  const venc = compararDataBrAsc(a.vencimentoBr ?? "", b.vencimentoBr ?? "");
+  if (venc !== 0) return venc;
+  const pa = a.placa.localeCompare(b.placa, "pt-BR");
+  if (pa !== 0) return pa;
+  return (a.descricao ?? "").localeCompare(b.descricao ?? "", "pt-BR");
+}
+
 function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebimentoLinha[] {
   const linhas: DashboardRecebimentoLinha[] = [];
   const chavesComDespesa = new Set<string>();
@@ -286,7 +298,7 @@ function listarAtrasados(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
     }
   }
 
-  return linhas.sort(ordenarLinhas);
+  return linhas.sort(ordenarLinhasAtraso);
 }
 
 function somaCategoria(categoria: string, ctx: CobrancasDbContext): number {
