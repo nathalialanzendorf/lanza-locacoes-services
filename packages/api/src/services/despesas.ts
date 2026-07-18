@@ -11,6 +11,7 @@ import {
   gravarClienteDespesa,
   isClienteDespesaAtiva,
   loadClienteDespesasDb,
+  loadClientesDb,
   compactPlaca,
   formatPlacaHyphen,
   formatVeiculoLabel,
@@ -65,11 +66,19 @@ function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
 export type DespesaClienteListagem = ClienteDespesaRegistro & {
   placa: string;
   veiculoLabel: string;
+  clienteNome: string | null;
   vencimentoBr: string | null;
 };
 
 function veiculoDaDespesaCliente(d: ClienteDespesaRegistro) {
   return findVeiculoById(d.veiculoId) ?? findVeiculoByPlaca(d.veiculoId);
+}
+
+function clienteNomeDespesa(d: ClienteDespesaRegistro): string | null {
+  const id = d.condutorId?.trim();
+  if (!id) return null;
+  const nome = loadClientesDb().clientes.find((c) => c.id === id)?.nome?.trim();
+  return nome || null;
 }
 
 function enriquecerDespesaCliente(d: ClienteDespesaRegistro): DespesaClienteListagem {
@@ -85,6 +94,7 @@ function enriquecerDespesaCliente(d: ClienteDespesaRegistro): DespesaClienteList
         anoModelo: null,
       },
     ),
+    clienteNome: clienteNomeDespesa(d),
     vencimentoBr: vencimentoClienteDespesaBr(d),
   };
 }

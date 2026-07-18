@@ -7,10 +7,10 @@ import { SELECT_LABEL_TODOS } from "@/lib/selectLabels";
 import { ListToolbar } from "@/components/ListToolbar";
 import { QueryError } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useDespesasCliente, useVeiculos } from "@/api/hooks";
+import { useClientes, useDespesasCliente, useVeiculos } from "@/api/hooks";
 import { lanzaApi } from "@/api/endpoints";
 import { LanzaApiError } from "@/api/client";
-import { formatBrl, formatVeiculoLabel } from "@/lib/format";
+import { clienteExibicaoPorId, formatBrl, formatVeiculoLabel } from "@/lib/format";
 import type { ClienteDespesa, Veiculo } from "@/api/types";
 
 const CATEGORIAS = [
@@ -38,6 +38,18 @@ function veiculoDespesa(d: ClienteDespesa, veiculos: Veiculo[] | undefined): str
   return formatVeiculoLabel({ placa: d.placa ?? d.veiculoId });
 }
 
+function statusDespesa(d: ClienteDespesa): string {
+  const situacao = d.situacao?.trim();
+  if (situacao) return situacao;
+  return d.paga ? "Pago" : "Em aberto";
+}
+
+function badgeStatusDespesa(d: ClienteDespesa): "ok" | "warn" | "muted" {
+  if (d.paga || d.situacao?.toLowerCase() === "registrado") return "ok";
+  if (d.ativo === false) return "muted";
+  return "warn";
+}
+
 export function DespesasClienteListSection() {
   const qc = useQueryClient();
   const [pagamento, setPagamento] = useState<FiltroPagamento>("em_aberto");
@@ -55,6 +67,8 @@ export function DespesasClienteListSection() {
     categoria: categoria || undefined,
     competencia: competencia.trim() || undefined,
   });
+  const clientesQuery = useClientes();
+  const clientes = clientesQuery.data?.items;
   const veiculosQuery = useVeiculos();
   const veiculos = veiculosQuery.data?.items;
 
@@ -145,9 +159,35 @@ export function DespesasClienteListSection() {
             header: "Veículo",
             render: (d) => d.veiculoLabel?.trim() || veiculoDespesa(d, veiculos),
           },
-          { key: "desc", header: "Descrição", render: (d) => d.descricao ?? "—" },
-          { key: "categoria", header: "Categoria", render: (d) => d.categoria ?? "—" },
+          {
+            key: "cliente",
+            header: "Cliente",
+            render: (d) =>
+              clienteExibicaoPorId(
+                clientes,
+                d.clienteId ?? d.condutorId,
+                d.clienteNome,
+              ),
+          },
+          { key: "titulo", header: "Título", render: (d) => d.titulo?.trim() || "—" },
+          { key: "desc", header: "Descrição", render: (d) => d.descricao?.trim() || "—" },
           { key: "vencimento", header: "Vencimento", render: (d) => d.vencimentoBr?.trim() || "—" },
+          {
+            key: "valor",
+            header: "Valor",
+            className: "num",
+            render: (d) => formatBrl(Number(d.valorMulta) || 0),
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (d) => {
+              const tone = badgeStatusDespesa(d);
+              return (
+                <span className={`badge badge--${tone}`}>{statusDespesa(d)}</span>
+              );
+            },
+          },
           {
             key: "acoes",
             header: "Ações",
