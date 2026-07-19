@@ -14,8 +14,8 @@ import { json } from "./http.js";
 
 async function bootstrapPostgres(): Promise<void> {
   if (!process.env.VERCEL || getDbBackend() === "file") return;
+  if (process.env.LANZA_RUN_MIGRATION !== "1") return;
   try {
-    setVercelPostgresPool(createVercelPostgresPool());
     await runSchemaMigration(false);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -52,6 +52,15 @@ function buildServer(): Server {
 }
 
 const server = buildServer();
+
+if (process.env.VERCEL && getDbBackend() !== "file") {
+  try {
+    setVercelPostgresPool(createVercelPostgresPool());
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[lanza] pool Postgres (Vercel):", msg);
+  }
+}
 
 server.listen(port, host, () => {
   logStartup(port, host);

@@ -1,5 +1,11 @@
 import { API_VERSION, apiPublicUrl } from "../config.js";
-import { getDbBackend, getVercelPostgresPool, pgQuery } from "@lanza/db";
+import {
+  createVercelPostgresPool,
+  getDbBackend,
+  getVercelPostgresPool,
+  pgQuery,
+  setVercelPostgresPool,
+} from "@lanza/db";
 import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "../lib-imports.js";
 import { obterRastreameEspelhoConfig } from "../lib-imports.js";
 
@@ -25,14 +31,41 @@ export type SystemStatus = {
   };
 };
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} (timeout ${ms}ms)`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function pingPostgres(): Promise<{ ok: boolean; error?: string }> {
   try {
-    const vercelPool = getVercelPostgresPool();
-    if (vercelPool) {
-      await vercelPool.query("SELECT 1");
-      return { ok: true };
-    }
-    await pgQuery("SELECT 1");
+    await withTimeout(
+      (async () => {
+        let vercelPool = getVercelPostgresPool();
+        if (!vercelPool && process.env.VERCEL && getDbBackend() !== "file") {
+          setVercelPostgresPool(createVercelPostgresPool());
+          vercelPool = getVercelPostgresPool();
+        }
+        if (vercelPool) {
+          await vercelPool.query("SELECT 1");
+          return;
+        }
+        if (process.env.VERCEL) {
+          throw new Error("pool Postgres Vercel indisponível");
+        }
+        await pgQuery("SELECT 1");
+      })(),
+      3_000,
+      "ping Postgres",
+    );
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
