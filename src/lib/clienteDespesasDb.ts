@@ -19,6 +19,7 @@ import {
   stripAtrasadoSemanal,
 } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
 import { loadContratosDb } from "./contratosDb.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
 import { espelharClienteDespesaSemLocatario } from "./espelharSemLocatarioParceiro.js";
@@ -155,6 +156,8 @@ export type ClienteDespesaInput = {
   rastreameRastreavelKey?: string | null;
   rastreameDataIso?: string | null;
   rastreameTipo?: string | null;
+  /** Locatário responsável — quando informado, não depende de inferência/contrato ativo. */
+  condutorId?: string | null;
 };
 
 /** @deprecated use ClienteDespesaRegistro */
@@ -533,13 +536,19 @@ async function pushAposPersistir(
   return pushClienteDespesaRegistrosNoRastreame(regs, opts);
 }
 
+function resolvePlacaVeiculoCadastro(veiculoIdRaw: string): string {
+  const veiculo = findVeiculoInDb(loadVeiculosDb(), veiculoIdRaw);
+  if (veiculo?.placa?.trim()) return formatPlacaHyphen(veiculo.placa);
+  return formatPlacaHyphen(veiculoIdRaw);
+}
+
 export async function gravarClienteDespesa(
   veiculoIdRaw: string,
   input: ClienteDespesaInput,
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
   const db = await loadDespesasMut();
-  const veiculoId = formatPlacaHyphen(veiculoIdRaw);
+  const veiculoId = resolvePlacaVeiculoCadastro(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || "Infração";
 
@@ -580,6 +589,13 @@ export async function gravarClienteDespesa(
       naoIdentificado = res.naoIdentificado;
       aviso = res.aviso;
     }
+  }
+
+  if (input.condutorId?.trim()) {
+    condutorId = input.condutorId.trim();
+    condutorConfirmado = true;
+    naoIdentificado = false;
+    revisarManual = false;
   }
 
   const ts = nowIso();
@@ -1044,7 +1060,8 @@ export function despesaAtribuidaACliente(
     return false;
   }
 
-  const vigente = contratoAtivoPorPlacaDb(d.veiculoId);
+  const placa = resolvePlacaVeiculoCadastro(d.veiculoId);
+  const vigente = contratoAtivoPorPlacaDb(placa);
   return vigente?.clienteId === clienteId;
 }
 
@@ -1178,7 +1195,7 @@ export async function editarClienteDespesa(
     m.rastreameRastreavelKey = patch.rastreameRastreavelKey;
   }
   if (patch.rastreameDataIso !== undefined) m.rastreameDataIso = patch.rastreameDataIso;
-  if (patch.veiculoId !== undefined) m.veiculoId = formatPlacaHyphen(patch.veiculoId);
+  if (patch.veiculoId !== undefined) m.veiculoId = resolvePlacaVeiculoCadastro(patch.veiculoId);
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
   if (m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)) {

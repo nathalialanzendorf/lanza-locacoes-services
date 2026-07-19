@@ -118,8 +118,7 @@ export function findVeiculoByRastreameKey(key: string | number): VeiculoRegistro
 }
 
 export function findVeiculoById(id: string): VeiculoRegistro | null {
-  const db = loadVeiculosDb();
-  return db.veiculos.find((v) => v.id === id) ?? null;
+  return findVeiculoInDb(loadVeiculosDb(), id);
 }
 
 export function findVeiculoInDb(db: VeiculosDb, idOrPlaca: string): VeiculoRegistro | null {
@@ -148,11 +147,22 @@ export type VeiculoPatch = Partial<
   >
 >;
 
+function veiculoIdCompacto(id: string): string {
+  return id.trim().replace(/-/g, "").toLowerCase();
+}
+
+function veiculoIdsEquivalentes(a: string, b: string): boolean {
+  if (a.trim() === b.trim()) return true;
+  const ca = veiculoIdCompacto(a);
+  const cb = veiculoIdCompacto(b);
+  return ca.length >= 32 && cb.length >= 32 && ca === cb;
+}
+
 function findVeiculoIndexInDb(db: VeiculosDb, idOrPlaca: string): number {
   const key = idOrPlaca.trim();
   return db.veiculos.findIndex(
     (v) =>
-      v.id === key ||
+      veiculoIdsEquivalentes(v.id, key) ||
       placasIguais(v.placa, key) ||
       compactPlaca(v.placa) === compactPlaca(key),
   );

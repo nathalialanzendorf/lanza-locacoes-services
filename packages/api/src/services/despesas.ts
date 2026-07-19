@@ -131,7 +131,10 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   const placaKey = resolvePlacaFiltro(opts, catalogo.veiculos);
 
   if (placaKey) {
-    items = items.filter((d) => compactPlaca(d.veiculoId) === placaKey);
+    items = items.filter((d) => {
+      const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
+      return compactPlaca(veiculo?.placa ?? d.veiculoId) === placaKey;
+    });
   }
 
   if (opts.categoria?.trim()) {
