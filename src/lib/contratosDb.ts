@@ -196,7 +196,7 @@ function normNome(s: string): string {
 type ClienteJson = {
   id?: string;
   nome: string;
-  cpf: string;
+  cpf?: string | null;
   rg?: string | null;
   telefone?: string | null;
   email?: string | null;
@@ -220,7 +220,7 @@ function snapshotCliente(c: ClienteJson): ContratoCliente {
   return {
     id: c.id ?? null,
     nome: c.nome,
-    cpf: c.cpf,
+    cpf: c.cpf ?? null,
     rg: c.rg ?? null,
     telefone: c.telefone ?? null,
     email: c.email ?? null,
@@ -686,10 +686,11 @@ export function validarContratoVigenteParaEncerramento(
   placa: string,
   cpf: string | null,
   clienteNome: string,
+  contratos?: ContratoRegistro[],
 ): ContratoRegistro | undefined {
   const pasta = resolverPastaContrato(pastaOuDocx);
   const pastaKey = normPath(pasta);
-  const vigente = contratoMaisRecentePar({ placa, cpf, clienteNome });
+  const vigente = contratoMaisRecentePar({ placa, cpf, clienteNome }, contratos);
   if (!vigente) return undefined;
 
   if (normPath(vigente.pastaContrato) !== pastaKey) {

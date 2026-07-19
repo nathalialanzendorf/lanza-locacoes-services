@@ -24,7 +24,7 @@ import {
 } from "./cobrancasAlvos.js";
 import type { CobrancasDbContext } from "./cobrancasDbContext.js";
 import { loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
-import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import {
   filtrarVencimentosAposDataInicioJuros,
   filtrarVencimentosCalculoSemanal,

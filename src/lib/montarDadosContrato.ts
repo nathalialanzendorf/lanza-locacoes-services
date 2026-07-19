@@ -31,6 +31,24 @@ const DEFAULT_TEMPLATE = path.join(
 
 export type ClienteDb = ClienteRegistro;
 
+type EnderecoCliente = {
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+};
+
+function enderecoCliente(c: ClienteDb): EnderecoCliente {
+  const raw = c.endereco;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as EnderecoCliente;
+  }
+  return {};
+}
+
 export type VeiculoDb = VeiculoRegistro & {
   /**
    * Pasta do veículo em "Aluguel Carros" onde ficam os contratos (ex.:
@@ -200,7 +218,7 @@ export function periodoParaDias(periodo?: string, dias?: number): number {
 }
 
 function validarEnderecoCliente(c: ClienteDb): void {
-  const e = c.endereco ?? {};
+  const e = enderecoCliente(c);
   const faltando: string[] = [];
   if (!strField(e.logradouro)) faltando.push("logradouro");
   if (!strField(e.bairro)) faltando.push("bairro");
@@ -354,7 +372,7 @@ function montarDadosContratoCore(
 ): GerarContratoDados {
   validarEnderecoCliente(cliente);
 
-  const end = cliente.endereco ?? {};
+  const end = enderecoCliente(cliente);
   const inicio = input.inicio?.trim() || fmtDataBr(new Date());
   const dias = periodoParaDias(input.periodo, input.dias);
   const parcelamento = resolverParcelamentoContrato(input);
@@ -388,7 +406,12 @@ function montarDadosContratoCore(
       caucao: input.caucao,
       diaria: input.diaria ?? 120,
     },
-    cnhCategoria: strField(cliente.cnh?.categoria) || "B",
+    cnhCategoria:
+    strField(
+      cliente.cnh && typeof cliente.cnh === "object" && !Array.isArray(cliente.cnh)
+        ? (cliente.cnh as { categoria?: string }).categoria
+        : undefined,
+    ) || "B",
     ...parcelamento,
     assinatura: input.assinatura ?? {
       cidade: "Tubarão",

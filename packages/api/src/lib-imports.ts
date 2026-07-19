@@ -354,6 +354,7 @@ export {
   loadParceiroDespesasDb,
   loadParceiroDespesasDbAsync,
   saveParceiroDespesasDb,
+  saveParceiroDespesasDbAsync,
   gravarParceiroDespesaManual,
   gravarParceiroDespesaManualAsync,
   marcarBaixaParceiroDespesa,
