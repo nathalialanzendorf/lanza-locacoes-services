@@ -8,6 +8,7 @@ import {
   encerrarContratoDbAsync,
   excluirContratoAsync,
   gerar,
+  gerarDespesasIniciaisContratoAsync,
   montarDadosContratoFromDbAsync,
   registrarContratoAsync,
   validarModoContratoAsync,
@@ -81,6 +82,22 @@ async function executarContratoModo(
     });
   }
 
+  let despesasIniciais = null;
+  if (modo === "criar" && reg) {
+    const montarInput =
+      "placa" in input && input.placa && "semana" in input && input.semana != null
+        ? (input as MontarContratoDbInput)
+        : null;
+    try {
+      despesasIniciais = await gerarDespesasIniciaisContratoAsync(reg, dados, montarInput);
+    } catch (err) {
+      throw new HttpError(
+        500,
+        `Contrato criado, mas falha ao gerar despesas iniciais: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   return {
     modo,
     proximaVersao,
@@ -89,6 +106,7 @@ async function executarContratoModo(
     pdf: gerado.pdf,
     contrato: reg,
     clienteStatus,
+    despesasIniciais,
   };
 }
 

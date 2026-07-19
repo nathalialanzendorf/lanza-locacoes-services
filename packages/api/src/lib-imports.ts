@@ -394,6 +394,12 @@ export {
   desativarClienteDoContrato,
 } from "../../../src/lib/contratoClienteStatus.js";
 
+export {
+  gerarDespesasIniciaisContratoAsync,
+  contratoTemParcelamento,
+  type DespesasIniciaisContratoResult,
+} from "../../../src/lib/contratoDespesasIniciais.js";
+
 export { gerar, type GerarContratoDados } from "../../../src/lib/docxGerar.js";
 
 export {

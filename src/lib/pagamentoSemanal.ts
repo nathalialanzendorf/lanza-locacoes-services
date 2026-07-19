@@ -16,6 +16,8 @@ const MULTA_ATRASO_SEMANAL_RE =
 const JUROS_DESC_RE =
   /^(?:ATRASADO\s*[-–—]?\s*)?Juros e multa\s*-\s*Pagamento semanal\s+(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})\s*$/i;
 
+import { diaPagamentoParaDow, parseDataBrToDate } from "./caucaoParcelas.js";
+
 const DOW_JS: Record<string, number> = {
   domingo: 0,
   segunda: 1,
@@ -27,6 +29,16 @@ const DOW_JS: Record<string, number> = {
   sabado: 6,
   sábado: 6,
 };
+
+const DOW_JS_LABELS = [
+  "Domingo",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+] as const;
 
 export type PagamentoSemanalParsed = {
   diaSemanaLabel: string;
@@ -175,6 +187,54 @@ export function montarDescricaoSemanal(
   diaMes: number,
 ): string {
   return `Pagamento semanal - ${parsed.diaSemanaLabel} ${pad2(diaMes)}`;
+}
+
+/** 1.º dia de pagamento semanal (dia da semana do contrato) na data de início ou depois. */
+export function primeiroDiaPagamentoContrato(
+  inicioBr: string,
+  diaPagamento?: string | null,
+): Date {
+  const dow = diaPagamentoParaDow(diaPagamento);
+  const d = parseDataBrToDate(inicioBr);
+  while (d.getDay() !== dow) {
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/** Descrição da 1.ª semana paga na retirada (sem parcelamento ou entrada parcial). */
+export function montarDescricaoPrimeiraSemanalContrato(
+  inicioBr: string,
+  diaPagamento?: string | null,
+): string {
+  const d = primeiroDiaPagamentoContrato(inicioBr, diaPagamento);
+  const label = DOW_JS_LABELS[d.getDay()]!;
+  const key = label
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+  return montarDescricaoSemanal(
+    {
+      diaSemanaLabel: label,
+      diaSemanaKey: key.replace("ç", "c"),
+      diaMes: d.getDate(),
+      dowJs: d.getDay(),
+    },
+    d.getDate(),
+  );
+}
+
+/** Parcelas do saldo da 1.ª semana — sufixo `{n}x{N}` (igual ao de caução). */
+export function infoParcelaPrimeiraSemana(
+  parcelaAtual: number,
+  totalParcelas: number,
+  opts?: { atrasado?: boolean },
+): string {
+  const suffix = `${parcelaAtual}x${totalParcelas}`;
+  if (opts?.atrasado === false) {
+    return `Pagamento 1ª semana - ${suffix}`;
+  }
+  return `ATRASADO Pagamento 1ª semana - ${suffix}`;
 }
 
 export function montarDescricaoAtrasadoSemanal(
