@@ -11,6 +11,14 @@ export type SyncId =
   | "seguro"
   | "manutencao";
 
+export const RASTREAME_SYNC_IDS: readonly SyncId[] = [
+  "motoristas",
+  "rastreaveis",
+  "rastreaveis-enviar",
+  "recebimentos",
+  "manutencao",
+] as const;
+
 export const SYNC_IDS: readonly SyncId[] = [
   "pedagios",
   "infracoes",
@@ -30,13 +38,8 @@ export const SYNC_COMPLETO_ORDEM: readonly SyncId[] = [
   "infracoes",
   "ipva-licenciamento",
   "detran-rs",
-  "rastreaveis",
   "fipe",
   "seguro",
-  "motoristas",
-  "rastreaveis-enviar",
-  "recebimentos",
-  "manutencao",
 ];
 
 export type SyncDirecao = "buscar" | "enviar";
@@ -48,6 +51,8 @@ export type SyncCatalogEntry = {
   interativo: boolean;
   direcao: SyncDirecao;
   nota?: string;
+  /** Integração Rastreame descontinuada — evitar uso. */
+  depreciado?: boolean;
 };
 
 export const SYNC_CATALOG: SyncCatalogEntry[] = [
@@ -89,7 +94,8 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "clientes.json → Rastreame",
     interativo: false,
     direcao: "enviar",
-    nota: "Apenas envio — não busca dados do Rastreame.",
+    depreciado: true,
+    nota: "Descontinuado — Lanza não espelha mais no Rastreame.",
   },
   {
     id: "rastreaveis",
@@ -97,7 +103,8 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "Rastreame → veiculos.json",
     interativo: false,
     direcao: "buscar",
-    nota: "Pull de rastreáveis. Não inclui FIPE — use o sync FIPE à parte.",
+    depreciado: true,
+    nota: "Descontinuado — não busca mais dados do Rastreame.",
   },
   {
     id: "rastreaveis-enviar",
@@ -105,7 +112,8 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "veiculos.json → Rastreame",
     interativo: false,
     direcao: "enviar",
-    nota: "Push de veículos ativos. Inativos não são enviados ao Rastreame.",
+    depreciado: true,
+    nota: "Descontinuado — Lanza não envia mais veículos ao Rastreame.",
   },
   {
     id: "fipe",
@@ -121,7 +129,8 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "cliente-despesas.json → Rastreame",
     interativo: false,
     direcao: "enviar",
-    nota: "Apenas envio — não busca gastos do Rastreame.",
+    depreciado: true,
+    nota: "Descontinuado — despesas ficam só no Lanza.",
   },
   {
     id: "seguro",
@@ -137,7 +146,8 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "parceiro-despesas.json → Rastreame (Manutenção)",
     interativo: false,
     direcao: "enviar",
-    nota: "Apenas envio de despesas de parceiro.",
+    depreciado: true,
+    nota: "Descontinuado — despesas de parceiro ficam só no Lanza.",
   },
 ];
 

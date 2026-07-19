@@ -6,10 +6,8 @@ import {
   categoriaInfereCondutor,
   inativarEspelhoClienteInfracao,
   isClienteDespesaAtiva,
-  isInfracaoSemDataAutuacao,
   isInfracaoTransito,
   loadClienteDespesasDb,
-  resolverCondutorVigencia,
   saveClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
@@ -30,6 +28,7 @@ import {
   type GravarParceiroDespesaResult,
   type ParceiroDespesaInput,
 } from "./parceiroDespesasDb.js";
+import { parceiroDebitoConfirmado } from "./responsavelDebito.js";
 
 export function origemParceiroPedagioSemLocatario(placa: string, autoInfracao: string): string {
   const placaKey = compactPlaca(placa);
@@ -86,27 +85,21 @@ export function clienteDespesaDeveEspelharParceiro(d: ClienteDespesaRegistro): b
   if (d.condutorId) return false;
   if (Number(d.valorMulta) <= 0) return false;
   if (isInfracaoTransito(d) && infracaoNaoCobravelDetran(d)) return false;
-  return (
-    d.condutorNaoIdentificado === true ||
-    d.revisarManual === true ||
-    (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) ||
-    (!d.condutorId && !!d.condutorContrato)
-  );
+  return parceiroDebitoConfirmado(d);
 }
 
 /** Cobrança WhatsApp de locatário — exclui débitos do parceiro. */
 export function despesaCobravelLocatario(d: ClienteDespesaRegistro): boolean {
   if (!isClienteDespesaAtiva(d)) return false;
   if (clienteDespesaDeveEspelharParceiro(d)) return false;
-  if (d.condutorNaoIdentificado === true) return false;
+  if (d.condutorNaoIdentificado === true && !d.condutorId) return false;
   if (isInfracaoTransito(d)) {
     if (infracaoNaoCobravelDetran(d)) return false;
-    if (isInfracaoSemDataAutuacao(d) && !d.condutorId) return false;
-    if (!d.condutorId && d.condutorContrato) return false;
+    if (!d.condutorConfirmado) return false;
     return !!d.condutorId;
   }
   if ((d.categoria ?? "") === "Pedágio") {
-    return !!d.condutorId;
+    return !!d.condutorId && d.condutorConfirmado === true;
   }
   return true;
 }
@@ -158,21 +151,18 @@ export type ReconciliarParceiroResult = {
 };
 
 /**
- * Espelha em parceiro-despesas todas as infrações/pedágios sem locatário
- * (infracoes.json + cliente-despesas.json) e inativa o espelho cliente.
+ * Espelha em parceiro-despesas infrações/pedágios com débito ao parceiro **confirmado**
+ * e inativa o espelho cliente quando aplicável.
  */
 export function reconciliarEspelhosParceiro(opts?: {
   dryRun?: boolean;
   placa?: string;
-  prazoDias?: number;
 }): ReconciliarParceiroResult {
   const filtro = opts?.placa ? compactPlaca(opts.placa) : null;
-  const prazoDias = opts?.prazoDias ?? 90;
   const itens: ReconciliarParceiroItem[] = [];
   let espelhados = 0;
 
   const infracoesDb = loadInfracoesDb();
-  let mutouInfracoes = false;
 
   for (const reg of infracoesDb.infracoes ?? []) {
     if (filtro && compactPlaca(reg.veiculoId) !== filtro) continue;
@@ -185,11 +175,6 @@ export function reconciliarEspelhosParceiro(opts?: {
     };
 
     if (!opts?.dryRun) {
-      if (!reg.condutorNaoIdentificado && !reg.revisarManual) {
-        reg.condutorNaoIdentificado = true;
-        reg.condutorConfirmado = true;
-        mutouInfracoes = true;
-      }
       espelharInfracaoParceiro(reg);
       espelhados++;
     }
@@ -197,41 +182,17 @@ export function reconciliarEspelhosParceiro(opts?: {
   }
 
   const db = loadClienteDespesasDb();
-  let mutouCliente = false;
 
   for (const d of db.clienteDespesas) {
     if (!isClienteDespesaAtiva(d)) continue;
     if (!categoriaInfereCondutor(d.categoria)) continue;
-    if (isInfracaoTransito(d)) continue;
     if (filtro && compactPlaca(d.veiculoId) !== filtro) continue;
-    if (d.condutorId) continue;
-    if (d.paga === true) continue;
-    if (Number(d.valorMulta) <= 0) continue;
-
-    const data = String(d.dataAutuacao ?? "").trim();
-    if (data && parseDataAutuacao(data)) {
-      const res = resolverCondutorVigencia(d.veiculoId, d.dataAutuacao, prazoDias);
-      if (res.condutorId) continue;
-      if (!res.naoIdentificado && !opts?.dryRun) {
-        d.condutorNaoIdentificado = true;
-        d.condutorConfirmado = true;
-        mutouCliente = true;
-      }
-    } else if (!d.condutorNaoIdentificado && !d.revisarManual) {
-      if (!opts?.dryRun) {
-        d.revisarManual = true;
-        d.condutorNaoIdentificado = true;
-        d.condutorConfirmado = true;
-        mutouCliente = true;
-      }
-    }
-
     if (!clienteDespesaDeveEspelharParceiro(d)) continue;
 
     const base = {
       placa: formatPlacaHyphen(d.veiculoId),
       chave: d.autoInfracao,
-      tipo: "pedagio" as const,
+      tipo: isInfracaoTransito(d) ? ("infracao" as const) : ("pedagio" as const),
     };
 
     if (!opts?.dryRun) {
@@ -240,38 +201,6 @@ export function reconciliarEspelhosParceiro(opts?: {
     }
     itens.push({ ...base, acao: opts?.dryRun ? "ignorado" : "espelhado" });
   }
-
-  for (const d of db.clienteDespesas) {
-    if (!isClienteDespesaAtiva(d)) continue;
-    if (!isInfracaoTransito(d)) continue;
-    if (filtro && compactPlaca(d.veiculoId) !== filtro) continue;
-    if (!clienteDespesaDeveEspelharParceiro(d)) continue;
-
-    const canon = infracoesDb.infracoes?.find(
-      (r) => r.numeroAuto.trim().toUpperCase() === d.autoInfracao.trim().toUpperCase(),
-    );
-    if (canon && infracaoDeveEspelharParceiroDespesa(canon)) continue;
-
-    const base = {
-      placa: formatPlacaHyphen(d.veiculoId),
-      chave: d.autoInfracao,
-      tipo: "infracao" as const,
-    };
-
-    if (!opts?.dryRun) {
-      if (!d.condutorNaoIdentificado) {
-        d.condutorNaoIdentificado = true;
-        d.condutorConfirmado = true;
-        mutouCliente = true;
-      }
-      espelharClienteDespesaSemLocatario(d);
-      espelhados++;
-    }
-    itens.push({ ...base, acao: opts?.dryRun ? "ignorado" : "espelhado" });
-  }
-
-  if (mutouInfracoes && !opts?.dryRun) saveInfracoesDb(infracoesDb);
-  if (mutouCliente && !opts?.dryRun) saveClienteDespesasDb(db);
 
   return {
     espelhados,

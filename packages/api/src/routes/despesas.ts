@@ -42,6 +42,8 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
+      const semCondutor = parseAtivoQuery(ctx.query.get("semCondutor"));
+      const semCliente = parseAtivoQuery(ctx.query.get("semCliente"));
 
       if (ctx.query.has("ativo") && ativo === undefined) {
         return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
@@ -56,8 +58,11 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         placa: ctx.query.get("placa") ?? undefined,
         categoria: ctx.query.get("categoria") ?? undefined,
         competencia: ctx.query.get("competencia") ?? undefined,
+        dataInicial: ctx.query.get("dataInicial") ?? undefined,
+        dataFinal: ctx.query.get("dataFinal") ?? undefined,
         ativo,
         emAberto,
+        semCliente: semCliente === true || semCondutor === true ? true : undefined,
       }));
     }),
   });
@@ -148,5 +153,44 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     pattern: confirmarLegado.regex,
     paramNames: confirmarLegado.paramNames,
     handler: confirmarHandler,
+  });
+
+  const confirmarParceiro = compileRoute("/api/despesas/:id/confirmar-parceiro");
+  routes.push({
+    method: "POST",
+    pattern: confirmarParceiro.regex,
+    paramNames: confirmarParceiro.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<{ parceiroId?: string | null }>(ctx.req).catch(
+        (): { parceiroId?: string | null } => ({}),
+      );
+      const item = await despesasService.obterDespesaAsync(ctx.params.id);
+      if (!item) return notFound(ctx, "Despesa");
+      const data = await despesasService.confirmarParceiroDespesa(
+        item.autoInfracao,
+        body.parceiroId,
+      );
+      json(ctx.res, 200, { data });
+    }),
+  });
+
+  const atribuir = compileRoute("/api/despesas/atribuir-clientes");
+  routes.push({
+    method: "POST",
+    pattern: atribuir.regex,
+    paramNames: atribuir.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          dryRun?: boolean;
+          placa?: string;
+          prazoDias?: number;
+        }>(ctx.req).catch(() => ({}));
+        const data = await despesasService.atribuirClientesDespesas(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
   });
 }

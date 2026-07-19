@@ -8,7 +8,8 @@ import {
   isCategoriaInfracao,
   pareceTituloMulta,
   stripAtrasado,
-  tituloInfracaoBase,
+  normalizarCamposInfracaoCliente,
+  descricaoInfracaoCliente,
 } from "./infracaoTitulo.js";
 import {
   dataVencimentoSemanalBr,
@@ -22,7 +23,9 @@ import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
 import { loadContratosDb } from "./contratosDb.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
-import { espelharClienteDespesaSemLocatario } from "./espelharSemLocatarioParceiro.js";
+import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
+import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
+import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
 export const DB_CLIENTE_DESPESAS = path.join(
@@ -65,9 +68,9 @@ export type ClienteDespesaRegistro = {
   veiculoId: string;
   autoInfracao: string;
   /** Texto cru do DETRAN (ex.: "TRANSITAR EM VEL SUPERIOR À MÁXIMA…"). */
-  descricao: string;
-  /** Rótulo curto do Gastos Gerais (ex.: "Multa velocidade P0cc2001pu - 30/03/2026 09:40"). Só infrações. */
   titulo?: string;
+  /** Rótulo de cobrança (ex.: "ATRASADO Multa velocidade - 30/03/2026 09:40"). */
+  descricao: string;
   /** Número do auto DETRAN — igual a `autoInfracao`; vínculo autuação ↔ débito. */
   numeroAuto?: string;
   localInfracao: string;
@@ -87,6 +90,10 @@ export type ClienteDespesaRegistro = {
   condutorContrato: string | null;
   /** true = sem contrato/locatário na data da autuação — débito vai a parceiro-despesas, não cliente. */
   condutorNaoIdentificado?: boolean;
+  /** Operador confirmou: débito do parceiro/dono (não cobrar locatário). */
+  debitoParceiroConfirmado?: boolean;
+  /** Parceiro confirmado manualmente (uuid → parceiros.json). */
+  debitoParceiroId?: string | null;
   /** true = precisa revisão manual (ex.: infração sem data de autuação no DETRAN). */
   revisarManual?: boolean;
   /** Motivo da revisão manual (texto curto). */
@@ -478,10 +485,10 @@ export type CondutorResolvido = {
 /**
  * Resolve o condutor de uma infração/pedágio pela **vigência do contrato** e
  * **`database/locacoes.json`** (reserva enquanto o principal está em manutenção):
- * - contrato + cliente encontrados → vincula e **confirma**;
+ * - contrato + cliente encontrados → **sugere** cliente (confirmação manual);
  * - débito na **placa reserva** com `substituiPlaca` → usa o contrato do veículo principal;
- * - **nenhum contrato ativo** na data → **"Não identificado"** (confirmado, sem cliente);
- * - contrato achado mas cliente fora de `clientes.json` → **pendente** (não confirma).
+ * - **nenhum contrato ativo** na data → **sugere parceiro** (`condutorNaoIdentificado`);
+ * - contrato achado mas cliente fora de `clientes.json` → **sugere parceiro** (confirmação manual).
  *
  * Requer data de autuação válida — o chamador trata o caso sem data (revisão manual).
  */
@@ -495,7 +502,7 @@ export function resolverCondutorVigencia(
     return {
       condutorId: sug.condutorId,
       condutorContrato: sug.condutorContrato,
-      condutorConfirmado: true,
+      condutorConfirmado: false,
       naoIdentificado: false,
       aviso: sug.aviso,
     };
@@ -504,7 +511,7 @@ export function resolverCondutorVigencia(
     return {
       condutorId: null,
       condutorContrato: null,
-      condutorConfirmado: true,
+      condutorConfirmado: false,
       naoIdentificado: true,
       aviso: sug.aviso,
     };
@@ -513,7 +520,7 @@ export function resolverCondutorVigencia(
     condutorId: null,
     condutorContrato: sug.condutorContrato,
     condutorConfirmado: false,
-    naoIdentificado: false,
+    naoIdentificado: true,
     aviso: sug.aviso,
   };
 }
@@ -599,16 +606,33 @@ export async function gravarClienteDespesa(
   }
 
   const ts = nowIso();
+  const situacaoIn = String(input.situacao).trim();
+  let tituloIn = input.titulo?.trim();
+  let descricaoIn = String(input.descricao).trim();
+
+  if (isCategoriaInfracao(categoria)) {
+    const auto = String(input.numeroAuto ?? input.autoInfracao).trim();
+    const campos = normalizarCamposInfracaoCliente({
+      textoDetran: tituloIn || descricaoIn,
+      dataAutuacao: String(input.dataAutuacao).trim(),
+      numeroAuto: auto,
+      paga: input.paga,
+      situacao: situacaoIn,
+    });
+    tituloIn = campos.titulo;
+    descricaoIn = campos.descricao;
+  }
+
   const registro: ClienteDespesaRegistro = {
     id: crypto.randomUUID(),
     categoria,
     veiculoId,
     autoInfracao: String(input.autoInfracao).trim(),
-    descricao: String(input.descricao).trim(),
+    descricao: descricaoIn,
     localInfracao: String(input.localInfracao).trim(),
     dataAutuacao: String(input.dataAutuacao).trim(),
     valorMulta: parseValor(input.valorMulta),
-    situacao: String(input.situacao).trim(),
+    situacao: situacaoIn,
     limiteDefesa: String(input.limiteDefesa).trim(),
     condutorId,
     condutorConfirmado,
@@ -621,11 +645,9 @@ export async function gravarClienteDespesa(
   if (isCategoriaInfracao(categoria)) {
     const auto = String(input.numeroAuto ?? input.autoInfracao).trim();
     registro.numeroAuto = auto || undefined;
-    registro.titulo =
-      input.titulo?.trim() ||
-      tituloInfracaoBase(registro.descricao, registro.dataAutuacao, auto);
-  } else if (input.titulo?.trim()) {
-    registro.titulo = input.titulo.trim();
+    registro.titulo = tituloIn;
+  } else if (tituloIn) {
+    registro.titulo = tituloIn;
   }
 
   if (revisarManual && !quitada) {
@@ -658,16 +680,6 @@ export async function gravarClienteDespesa(
   if (input.rastreameTipo != null) registro.rastreameTipo = input.rastreameTipo;
 
   db.clienteDespesas.push(registro);
-
-  if (registro.condutorNaoIdentificado && categoriaInfereCondutor(categoria)) {
-    await saveDespesasMut(db);
-    espelharClienteDespesaSemLocatario(registro);
-    return {
-      registro,
-      aviso: aviso ?? "Sem locatário — espelhado em parceiro-despesas",
-      duplicado: false,
-    };
-  }
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
@@ -822,29 +834,29 @@ export async function sincronizarClienteDespesa(
   const desejaConfirmar = quitadaFinal && !m.condutorConfirmado;
   const flagRevisarMudou = !!m.revisarManual !== desejaRevisar;
 
-  // Título curto (Gastos Gerais) das infrações: derivado do texto DETRAN + data.
+  // Infração: titulo = DETRAN; descricao = padrão Multa {tipo} - {data}.
   const descricaoDetran = String(input.descricao ?? "").trim();
   const manterDescricaoCobranca =
     isCategoriaInfracao(categoria) &&
     (m.rastreameId != null ||
       /ATRASADO/i.test(m.descricao ?? "") ||
       pareceTituloMulta(m.descricao ?? ""));
-  const desejaTitulo = isCategoriaInfracao(categoria)
-    ? input.titulo?.trim() ||
-      m.titulo?.trim() ||
-      tituloInfracaoBase(
-        descricaoDetran,
-        dataFinal,
-        input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao,
-      )
-    : null;
-  const tituloMudou = desejaTitulo !== null && (m.titulo ?? "") !== desejaTitulo;
+  const tituloDetran = isCategoriaInfracao(categoria) ? descricaoDetran : "";
+  const tituloMudou = isCategoriaInfracao(categoria) && tituloDetran && (m.titulo ?? "") !== tituloDetran;
+  const descricaoPadrao =
+    isCategoriaInfracao(categoria) && tituloDetran && !manterDescricaoCobranca
+      ? descricaoInfracaoCliente(tituloDetran, dataFinal, input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao, {
+          emAberto: !quitadaFinal && m.paga !== true && String(input.situacao ?? m.situacao ?? "").trim().toLowerCase() !== "registrado",
+        })
+      : null;
+  const descricaoMudou = descricaoPadrao !== null && (m.descricao ?? "") !== descricaoPadrao;
 
   if (
     !registroChanged(m, { ...input, categoria }) &&
     !flagRevisarMudou &&
     !desejaConfirmar &&
-    !tituloMudou
+    !tituloMudou &&
+    !descricaoMudou
   ) {
     return { registro: m, aviso: null, acao: "sem_alteracao" };
   }
@@ -874,13 +886,15 @@ export async function sincronizarClienteDespesa(
     m.numeroAuto = m.autoInfracao;
   }
   if (!manterDescricaoCobranca) {
-    if (descricaoDetran && descricaoDetran !== "(sem descrição)") {
+    if (isCategoriaInfracao(categoria) && descricaoPadrao) {
+      m.descricao = descricaoPadrao;
+    } else if (descricaoDetran && descricaoDetran !== "(sem descrição)") {
       m.descricao = descricaoDetran;
     } else if (!quitadaFinal) {
       m.descricao = descricaoDetran;
     }
   }
-  if (desejaTitulo !== null) m.titulo = desejaTitulo;
+  if (tituloDetran) m.titulo = tituloDetran;
   if (input.localInfracao) m.localInfracao = String(input.localInfracao).trim();
   if (input.dataAutuacao) m.dataAutuacao = String(input.dataAutuacao).trim();
   if (input.quitadaDetran === true) m.quitadaDetran = true;
@@ -894,13 +908,15 @@ export async function sincronizarClienteDespesa(
   if (quitadaFinal) {
     if (!m.condutorConfirmado) m.condutorConfirmado = true;
     if (m.condutorNaoIdentificado) m.condutorNaoIdentificado = false;
-  } else if (!m.condutorConfirmado && !m.condutorId && dataFinal && inferCond) {
+  } else if (!despesaResponsavelConfirmado(m) && !m.condutorId && dataFinal && inferCond) {
     if (parseDataAutuacao(dataFinal)) {
       const res = resolverCondutorVigencia(veiculoId, dataFinal, opts?.prazoDias ?? 90);
       m.condutorId = res.condutorId;
       m.condutorContrato = res.condutorContrato;
-      if (res.condutorConfirmado) m.condutorConfirmado = true;
-      if (res.naoIdentificado) m.condutorNaoIdentificado = true;
+      m.condutorNaoIdentificado = res.naoIdentificado;
+      m.condutorConfirmado = false;
+      m.debitoParceiroConfirmado = false;
+      m.debitoParceiroId = null;
     }
   }
 
@@ -910,7 +926,7 @@ export async function sincronizarClienteDespesa(
       m.revisarManual = true;
       m.revisarMotivo = "Sem data de autuação no DETRAN — revisar manualmente";
       m.condutorNaoIdentificado = true;
-      m.condutorConfirmado = true;
+      m.condutorConfirmado = false;
     } else if (m.revisarManual) {
       m.revisarManual = false;
       m.revisarMotivo = null;
@@ -920,7 +936,7 @@ export async function sincronizarClienteDespesa(
   db.clienteDespesas[idx] = m;
   saveClienteDespesasDb(db);
 
-  if (m.condutorNaoIdentificado && categoriaInfereCondutor(categoria)) {
+  if (parceiroDebitoConfirmado(m) && categoriaInfereCondutor(categoria)) {
     espelharClienteDespesaSemLocatario(m);
     return {
       registro: m,
@@ -984,11 +1000,43 @@ export async function confirmarCondutorClienteDespesa(
   const m = db.clienteDespesas[idx]!;
   if (condutorId !== undefined) m.condutorId = condutorId;
   m.condutorConfirmado = true;
+  m.condutorNaoIdentificado = false;
+  m.debitoParceiroConfirmado = false;
+  m.debitoParceiroId = null;
+  m.revisarManual = false;
+  m.revisarMotivo = null;
   m.atualizadoEm = nowIso();
+  removerParceiroDespesaPorOrigem(
+    origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
+  );
   db.clienteDespesas[idx] = m;
   await saveDespesasMut(db);
   const [synced] = await pushAposPersistir([m], opts);
   return synced ?? m;
+}
+
+export async function confirmarDebitoParceiroDespesa(
+  autoInfracao: string,
+  parceiroId?: string | null,
+): Promise<ClienteDespesaRegistro | null> {
+  const db = await loadDespesasMut();
+  const key = autoInfracao.trim().toUpperCase();
+  const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
+  if (idx < 0) return null;
+
+  const m = db.clienteDespesas[idx]!;
+  m.debitoParceiroConfirmado = true;
+  if (parceiroId !== undefined) m.debitoParceiroId = parceiroId;
+  m.condutorNaoIdentificado = true;
+  m.condutorConfirmado = true;
+  m.condutorId = null;
+  m.revisarManual = false;
+  m.revisarMotivo = null;
+  m.atualizadoEm = nowIso();
+  db.clienteDespesas[idx] = m;
+  await saveDespesasMut(db);
+  espelharClienteDespesaSemLocatario(m);
+  return m;
 }
 
 /** @deprecated use confirmarCondutorClienteDespesa */
@@ -1499,15 +1547,23 @@ export function upsertRecebimentoFromRastreame(
   const isInfra = isCategoriaInfracao(input.categoria);
 
   if (idx < 0) {
+    const camposInfracao = isInfra
+      ? normalizarCamposInfracaoCliente({
+          textoDetran: input.titulo?.trim() || input.descricao,
+          dataAutuacao: input.dataAutuacao,
+          numeroAuto: autoKey,
+          paga: input.paga,
+          situacao: input.situacao,
+          descricaoRastreame: /^(ATRASADO\s+)?Multa\s/i.test(input.descricao) ? input.descricao : null,
+        })
+      : null;
     const registro: ClienteDespesaRegistro = {
       id: crypto.randomUUID(),
       categoria: input.categoria,
       veiculoId,
       autoInfracao: autoKey,
-      descricao: input.descricao,
-      titulo: isInfra
-        ? input.titulo?.trim() || tituloInfracaoBase(input.descricao, input.dataAutuacao)
-        : input.titulo?.trim() || undefined,
+      descricao: camposInfracao?.descricao ?? input.descricao,
+      titulo: camposInfracao?.titulo ?? (input.titulo?.trim() || undefined),
       localInfracao: "",
       dataAutuacao: input.dataAutuacao,
       valorMulta: input.valorMulta,

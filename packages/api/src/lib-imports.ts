@@ -58,6 +58,7 @@ export {
   editarClienteDespesa,
   excluirClienteDespesa,
   confirmarCondutorClienteDespesa,
+  confirmarDebitoParceiroDespesa,
   findClienteDespesaByIdAsync,
   type ClienteDespesaRegistro,
   type ClienteDespesaInput,
@@ -440,7 +441,17 @@ export {
 } from "../../../src/lib/locacoesDb.js";
 
 export {
+  espelharInfracaoParceiro,
+} from "../../../src/lib/espelharSemLocatarioParceiro.js";
+
+export {
+  infracaoResponsavelConfirmado,
+  despesaResponsavelConfirmado,
+} from "../../../src/lib/responsavelDebito.js";
+
+export {
   reconciliarCondutores,
+  confirmarClienteInfracao,
   type ReconResult,
 } from "../../../src/lib/atribuirCondutores.js";
 

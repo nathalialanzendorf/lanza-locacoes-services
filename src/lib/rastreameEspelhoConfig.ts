@@ -15,6 +15,8 @@ export type RastreameEspelhoConfig = {
   origem: "env" | "config" | "default";
   /** Env pode ser alterado só no servidor (Vercel / variáveis de utilizador). */
   editavelViaApi: boolean;
+  /** Integração descontinuada — mantida só por compatibilidade. */
+  depreciado: boolean;
 };
 
 function parseBoolEnv(raw: string): boolean | null {
@@ -45,19 +47,13 @@ export function rastreameEspelhoGlobal(): boolean {
   const cfg = readConfigFile();
   if (typeof cfg.rastreameEspelho === "boolean") return cfg.rastreameEspelho;
 
-  // Cloud (Vercel): Lanza é a verdade; espelho desligado por defeito.
-  if (process.env.VERCEL) return false;
-
-  // Ambiente local legado: mantém espelho ligado até desligar explicitamente.
-  return true;
+  // Espelho desligado por defeito (integração Rastreame descontinuada).
+  return false;
 }
 
-/**
- * Cliente (motorista) e ciclo de vida de contrato sempre replicam no Rastreame,
- * independentemente de `rastreameEspelho` (despesas, veículos e syncs em lote).
- */
+/** @deprecated Integração Rastreame descontinuada — não replica clientes/contratos. */
 export function rastreameClienteContratoObrigatorio(): boolean {
-  return true;
+  return false;
 }
 
 function runtimeReadOnly(): boolean {
@@ -65,9 +61,15 @@ function runtimeReadOnly(): boolean {
 }
 
 export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
+  const depreciado = true;
   const envRaw = process.env.LANZA_RASTREAME_ESPELHO?.trim();
   if (envRaw && parseBoolEnv(envRaw) != null) {
-    return { ativo: rastreameEspelhoGlobal(), origem: "env", editavelViaApi: false };
+    return {
+      ativo: rastreameEspelhoGlobal(),
+      origem: "env",
+      editavelViaApi: false,
+      depreciado,
+    };
   }
 
   const cfg = readConfigFile();
@@ -76,6 +78,7 @@ export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
       ativo: cfg.rastreameEspelho,
       origem: "config",
       editavelViaApi: !runtimeReadOnly(),
+      depreciado,
     };
   }
 
@@ -83,6 +86,7 @@ export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
     ativo: rastreameEspelhoGlobal(),
     origem: "default",
     editavelViaApi: !runtimeReadOnly(),
+    depreciado,
   };
 }
 

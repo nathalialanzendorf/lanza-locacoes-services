@@ -7,7 +7,6 @@ import {
   fetchMotoristaByKey,
   fetchRastreameToken,
   findMotorista,
-  lancarSemanalRastreame,
   listMotoristas,
   loginRastreame,
   postGasto,
@@ -131,13 +130,9 @@ export async function atualizarGastoRastreame(id: string | number, body: unknown
   }
 }
 
-export async function lancarPagamentosSemanais(input: LancarSemanalRastreameOpts) {
-  if (!input.inicio || !input.fim) {
-    throw new HttpError(400, 'Campos "inicio" e "fim" (YYYY-MM-DD) são obrigatórios');
-  }
-  try {
-    return await lancarSemanalRastreame(input);
-  } catch (err) {
-    throw new HttpError(502, err instanceof Error ? err.message : String(err));
-  }
+export async function lancarPagamentosSemanais(_input: LancarSemanalRastreameOpts) {
+  throw new HttpError(
+    410,
+    "Lançamento semanal em lote descontinuado. Cada baixa ou cadastro de contrato já cria automaticamente a parcela ATRASADO da semana seguinte.",
+  );
 }

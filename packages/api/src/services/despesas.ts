@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 
 import {
   confirmarCondutorClienteDespesa,
+  confirmarDebitoParceiroDespesa,
+  despesaResponsavelConfirmado,
   despesaAtribuidaACliente,
   editarClienteDespesa,
   excluirClienteDespesa,
@@ -26,6 +28,8 @@ import {
   type ClienteRegistro,
   type VeiculoRegistro,
   resolveSyncRastreame,
+  reconciliarCondutores,
+  dataStringNoPeriodo,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -37,6 +41,11 @@ export type ListarDespesasOpts = {
   competencia?: string;
   emAberto?: boolean;
   ativo?: boolean;
+  semCliente?: boolean;
+  /** @deprecated use semCliente */
+  semCondutor?: boolean;
+  dataInicial?: string;
+  dataFinal?: string;
 };
 
 export type SyncOpts = {
@@ -88,7 +97,18 @@ export type DespesaClienteListagem = ClienteDespesaRegistro & {
   veiculoLabel: string;
   clienteNome: string | null;
   vencimentoBr: string | null;
+  pagaEmBr: string | null;
 };
+
+function pagaEmDespesaBr(d: ClienteDespesaRegistro): string | null {
+  const raw = String(d.pagaEm ?? "").trim();
+  if (!raw) return null;
+  const br = raw.match(/^(\d{2}\/\d{2}\/\d{4}(?:\s+\d{2}:\d{2})?)/);
+  if (br) return br[1]!;
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return raw;
+}
 
 function veiculoDaDespesaCliente(d: ClienteDespesaRegistro, veiculos: VeiculoRegistro[]) {
   return (
@@ -124,6 +144,7 @@ function enriquecerDespesaCliente(
     ),
     clienteNome: clienteNomeDespesa(d, catalogo.clientes),
     vencimentoBr: vencimentoClienteDespesaBr(d),
+    pagaEmBr: pagaEmDespesaBr(d),
   };
 }
 
@@ -162,6 +183,20 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   if (opts.clienteId?.trim()) {
     const clienteId = opts.clienteId.trim();
     items = items.filter((d) => despesaAtribuidaACliente(d, clienteId));
+  }
+
+  const semCliente = opts.semCliente === true || opts.semCondutor === true;
+  if (semCliente) {
+    items = items.filter((d) => !despesaResponsavelConfirmado(d));
+  }
+
+  if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
+    items = items.filter((d) =>
+      dataStringNoPeriodo(d.dataAutuacao, {
+        dataInicial: opts.dataInicial,
+        dataFinal: opts.dataFinal,
+      }),
+    );
   }
 
   return items;
@@ -270,10 +305,14 @@ export async function removerDespesa(idOrAuto: string, opts?: SyncOpts) {
 }
 
 export async function confirmarClienteDespesa(
-  autoInfracao: string,
+  idOuAuto: string,
   clienteId?: string | null,
   opts?: SyncOpts,
 ) {
+  let autoInfracao = idOuAuto;
+  const porId = await findClienteDespesaByIdAsync(idOuAuto);
+  if (porId) autoInfracao = porId.autoInfracao;
+
   const item = await confirmarCondutorClienteDespesa(autoInfracao, clienteId, {
     syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
@@ -285,6 +324,14 @@ export async function confirmarClienteDespesa(
 
 /** @deprecated use confirmarClienteDespesa */
 export const confirmarCondutorDespesa = confirmarClienteDespesa;
+
+export async function confirmarParceiroDespesa(autoInfracao: string, parceiroId?: string | null) {
+  const item = await confirmarDebitoParceiroDespesa(autoInfracao, parceiroId);
+  if (!item) {
+    throw new HttpError(404, "Despesa não encontrada");
+  }
+  return item;
+}
 
 /** Resolve placa a partir do veiculoId (útil para o frontend). */
 export function placaDoVeiculoId(veiculoId: string): string | null {
@@ -317,4 +364,12 @@ export function patchParaInput(
     rastreameDataIso: patch.rastreameDataIso ?? defaults?.rastreameDataIso,
     origem: defaults?.origem ?? "api",
   };
+}
+
+export async function atribuirClientesDespesas(opts: {
+  dryRun?: boolean;
+  placa?: string;
+  prazoDias?: number;
+}) {
+  return reconciliarCondutores({ ...opts, somentePedagios: true, incluirPedagios: true });
 }

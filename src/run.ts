@@ -27,7 +27,7 @@ Comandos:
   baixa-recebimento plano --cliente NOME --valor R$ --data DD/MM/AAAA [--hora HH:MM] [--comprovante T] [--json]
   baixa-recebimento pagbank [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--json]
   pagbank check | pagbank creditos list [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--json] | pagbank match [--inicio] [--fim] [--json]
-  rastreame-lancar-semanal [--inicio YYYY-MM-DD] [--fim YYYY-MM-DD] [--prazo-dias N] [--execute]
+  rastreame-lancar-semanal (descontinuado — use baixa/contrato; cria semana seguinte automaticamente)
   fipe marca <texto> | fipe modelos <code> [filtros...] | fipe anos ... | fipe valor ...
   atualizar-fipe-veiculos [--placa PLACA]
   sincronizar-veiculos-crlv [--dry-run] [--placa PLACA]

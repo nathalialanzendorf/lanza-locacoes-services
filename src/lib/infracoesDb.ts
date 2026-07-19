@@ -13,6 +13,7 @@ import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran }
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { espelharInfracaoParceiro } from "./espelharSemLocatarioParceiro.js";
 import type { ParceiroDespesaInput } from "./parceiroDespesasDb.js";
 import { competenciaFromData } from "./parceiroDespesasDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -331,17 +332,19 @@ export function infracaoDeveEspelharParceiroDespesa(reg: Pick<
   | "statusInfracao"
   | "statusDetran"
   | "condutorNaoIdentificado"
-  | "revisarManual"
+  | "condutorConfirmado"
+  | "debitoParceiroConfirmado"
   | "condutorId"
-  | "condutorContrato"
   | "valorMulta"
 >): boolean {
   if (!reg.numeroAuto?.trim()) return false;
   if (infracaoNaoCobravelDetran(reg)) return false;
   if (parseValor(reg.valorMulta) <= 0) return false;
-  if (reg.condutorNaoIdentificado === true || reg.revisarManual === true) return true;
-  if (!reg.condutorId && reg.condutorContrato) return true;
-  return false;
+  if (reg.condutorId) return false;
+  return (
+    reg.debitoParceiroConfirmado === true ||
+    (reg.condutorNaoIdentificado === true && reg.condutorConfirmado === true)
+  );
 }
 
 /** Origem idempotente em parceiro-despesas para multa sem locatário identificado. */
@@ -519,6 +522,7 @@ export function confirmarDebitoParceiroInfracao(
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
   saveInfracoesDb(db);
+  espelharInfracaoParceiro(reg);
   return reg;
 }
 
@@ -540,6 +544,7 @@ export async function confirmarDebitoParceiroInfracaoAsync(
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
   await saveInfracoesDbAsync(db);
+  espelharInfracaoParceiro(reg);
   return reg;
 }
 

@@ -1,13 +1,11 @@
 /**
- * Lança no Rastreame os gastos semanais (OUTROS) para contratos ativos numa semana,
- * evitando duplicado (mesmo info + motorista + rastreável).
+ * Lança no Rastreame os gastos semanais (OUTROS) para contratos ativos numa semana.
  *
- * Uso (raiz do repo):
- *   npx tsx src/run.ts rastreame-lancar-semanal --inicio 2026-06-29 --fim 2026-07-05 [--prazo-dias 90]
- *   npx tsx src/run.ts rastreame-lancar-semanal ... --execute
- *   (Sem `--info` / `--data-iso`, deriva a segunda da semana do `--inicio` e 23:59 America/Recife.)
+ * @deprecated Descontinuado — cada baixa ou cadastro de contrato já cria a parcela
+ * ATRASADO da semana seguinte (`criarProximaParcelaSemanalSeNecessario`).
  *
- * Requer RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA (ver `.cursor/tools/rastreame/`).
+ * Uso (raiz do repo) — bloqueado na CLI; endpoint API retorna 410:
+ *   npx tsx src/run.ts rastreame-lancar-semanal ...
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -170,42 +168,6 @@ function jaExisteDuplicado(
     if (mk === motoristaKey && rk === rastreavelKey && inf === info) return true;
   }
   return false;
-}
-
-function parseArgs(argv: string[]): {
-  inicio: Date;
-  fim: Date;
-  prazoDias: number;
-  execute: boolean;
-  info: string;
-  dataIso: string;
-} {
-  let inicioS = "2026-06-22";
-  let fimS = "2026-06-28";
-  let prazoDias = 90;
-  let execute = false;
-  let infoOverride: string | undefined;
-  let dataIsoOverride: string | undefined;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === "--inicio" && argv[i + 1]) inicioS = argv[++i]!;
-    else if (a === "--fim" && argv[i + 1]) fimS = argv[++i]!;
-    else if (a === "--prazo-dias" && argv[i + 1])
-      prazoDias = Number(argv[++i]!);
-    else if (a === "--execute") execute = true;
-    else if (a === "--info" && argv[i + 1]) infoOverride = argv[++i]!;
-    else if (a === "--data-iso" && argv[i + 1]) dataIsoOverride = argv[++i]!;
-  }
-  const inicio = new Date(inicioS + "T12:00:00");
-  const fim = new Date(fimS + "T12:00:00");
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
-    console.error("Datas inválidas");
-    process.exit(2);
-  }
-  const derived = infoEDataPadraoParaSemana(inicio);
-  const info = infoOverride ?? derived.info;
-  const dataIso = dataIsoOverride ?? derived.dataIso;
-  return { inicio, fim, prazoDias, execute, info, dataIso };
 }
 
 export type LancarSemanalRastreameOpts = {
@@ -371,44 +333,10 @@ export async function lancarSemanalRastreame(
   };
 }
 
-export async function main(argv: string[]): Promise<void> {
-  const { inicio, fim, prazoDias, execute, info, dataIso } = parseArgs(argv);
-  const root = defaultContratosDir();
+const MSG_LANCAR_SEMANAL_DESCONTINUADO =
+  "Lançamento semanal em lote descontinuado. Cada baixa ou cadastro de contrato já cria automaticamente a parcela ATRASADO da semana seguinte.";
 
-  console.log(`contratosDir: ${root}`);
-  console.log(
-    `Semana ${inicio.toISOString().slice(0, 10)}–${fim.toISOString().slice(0, 10)} | prazo ${prazoDias}d`,
-  );
-  console.log(`info: "${info}" | data: ${dataIso}`);
-  console.log(execute ? "MODO: EXECUTAR POST" : "MODO: dry-run (use --execute)");
-
-  let r: LancarSemanalRastreameResult;
-  try {
-    r = await lancarSemanalRastreame({
-      inicio: inicio.toISOString().slice(0, 10),
-      fim: fim.toISOString().slice(0, 10),
-      prazoDias,
-      execute,
-      info,
-      dataIso,
-    });
-  } catch (e) {
-    console.error(
-      "Falha ao falar com a API Rastreame. Defina RASTREAME_AUTH ou RASTREAME_LOGIN+RASTREAME_SENHA.",
-    );
-    console.error(e);
-    process.exit(2);
-  }
-
-  console.log(`candidatos: ${r.candidatos}`);
-  for (const item of r.itens) {
-    if (item.acao === "preview") {
-      console.log(
-        `[POST?] ${item.cliente} | ${item.placa} | R$ ${item.valor}`,
-      );
-    }
-  }
-  console.log(
-    `\nResumo: criados=${r.criados} | duplicados=${r.duplicados} | falta dados/erro=${r.semDados} | dry-run=${!execute}`,
-  );
+export async function main(_argv: string[]): Promise<void> {
+  console.error(MSG_LANCAR_SEMANAL_DESCONTINUADO);
+  process.exit(1);
 }

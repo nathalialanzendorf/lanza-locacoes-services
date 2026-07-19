@@ -1,9 +1,10 @@
 /**
  * Título e classificação de infrações de trânsito.
  *
- * Convenção Lanza (decisão 28/06/2026):
- * - `descricao` espelha o **info** do Rastreame (`ATRASADO Multa …` quando em aberto).
- * - `titulo` guarda o rótulo curto sem a tag (`Multa {tipo} - {dataAutuacao}`).
+ * Convenção Lanza:
+ * - `titulo` guarda o texto **cru do DETRAN** (ex.: "TRANSITAR EM VEL SUPERIOR…").
+ * - `descricao` segue o padrão de cobrança: `ATRASADO Multa {tipo} - {dataAutuacao}` (em aberto)
+ *   ou `Multa {tipo} - {dataAutuacao}` (pago).
  */
 
 function norm(s: string): string {
@@ -54,6 +55,44 @@ export function tituloInfracaoBase(
   const autoPart = auto ? ` ${auto}` : "";
   const dt = String(dataAutuacao ?? "").trim();
   return dt ? `Multa ${tipo}${autoPart} - ${dt}` : `Multa ${tipo}${autoPart}`;
+}
+
+/** Descrição padrão do registro (Gastos Gerais / grid) a partir do texto DETRAN. */
+export function descricaoInfracaoCliente(
+  textoDetran: string,
+  dataAutuacao: string,
+  numeroAuto?: string,
+  opts?: { emAberto?: boolean },
+): string {
+  const base = tituloInfracaoBase(textoDetran, dataAutuacao, numeroAuto);
+  if (opts?.emAberto === false) return base;
+  return `ATRASADO ${base}`;
+}
+
+/** Normaliza titulo (DETRAN) + descricao (padrão Lanza) ao gravar infração. */
+export function normalizarCamposInfracaoCliente(args: {
+  textoDetran: string;
+  dataAutuacao: string;
+  numeroAuto?: string;
+  paga?: boolean;
+  situacao?: string;
+  /** Quando já veio do Rastreame (`ATRASADO Multa …`), preserva em `descricao`. */
+  descricaoRastreame?: string | null;
+}): { titulo: string; descricao: string } {
+  const detran = String(args.textoDetran ?? "").trim();
+  const rastreame = String(args.descricaoRastreame ?? "").trim();
+  if (rastreame) {
+    return {
+      titulo: detran || rastreame,
+      descricao: rastreame,
+    };
+  }
+  const situacao = String(args.situacao ?? "").trim().toLowerCase();
+  const emAberto = args.paga !== true && situacao !== "registrado";
+  return {
+    titulo: detran,
+    descricao: descricaoInfracaoCliente(detran, args.dataAutuacao, args.numeroAuto, { emAberto }),
+  };
 }
 
 function normStatusDetran(s?: string | null): string {
@@ -316,18 +355,20 @@ export function gastoClienteEmAberto(reg: RotuloGastoInput): boolean {
   return reg.situacao === "Em aberto";
 }
 
-/** Rótulo de infração em relatórios e cobranças — sempre `titulo`, nunca o texto DETRAN em `descricao`. */
+/** Rótulo de infração em relatórios e cobranças — usa `descricao` (padrão Multa tipo - data). */
 export function rotuloInfracaoCobranca(reg: RotuloGastoInput): string {
-  const titulo = reg.titulo?.trim();
   const auto = reg.numeroAuto ?? reg.autoInfracao;
-  let base = stripAtrasado(
-    titulo || tituloInfracaoBase(reg.descricao ?? "", reg.dataAutuacao ?? "", auto),
-  );
+  const info = String(reg.descricao ?? "").trim();
+  let base = stripAtrasado(info);
+  if (!/^Multa\s/i.test(base)) {
+    const detran = reg.titulo?.trim() || info;
+    base = stripAtrasado(tituloInfracaoBase(detran, reg.dataAutuacao ?? "", auto));
+  }
   if (!base) return "(sem título)";
   const status = rotuloStatusInfracao(reg);
   base = anexarStatusRotulo(base, status);
   if (reg.paga === true) return base;
-  if (titulo && /^ATRASADO\s/i.test(titulo) && !status) return titulo;
+  if (/^ATRASADO\s/i.test(info) && !status) return info;
   if (status) return base;
   return gastoClienteEmAberto(reg) ? `ATRASADO ${base}` : base;
 }
@@ -335,14 +376,12 @@ export function rotuloInfracaoCobranca(reg: RotuloGastoInput): string {
 /** Rótulo exibido/cobrado — igual ao campo `info` do Rastreame. */
 export function rotuloGastoClienteDespesa(reg: RotuloGastoInput): string {
   if (isCategoriaInfracao(reg.categoria)) {
+    const info = String(reg.descricao ?? "").trim();
+    if (/^(ATRASADO\s+)?Multa\s/i.test(info)) return info;
+    const detran = reg.titulo?.trim() || info;
     const auto = reg.numeroAuto ?? reg.autoInfracao;
-    const base = stripAtrasado(
-      reg.titulo?.trim() ||
-        (pareceTituloMulta(reg.descricao ?? "")
-          ? reg.descricao ?? ""
-          : tituloInfracaoBase(reg.descricao ?? "", reg.dataAutuacao ?? "", auto)),
-    );
-    return reg.paga === true ? base : `ATRASADO ${base}`;
+    const base = tituloInfracaoBase(detran, reg.dataAutuacao ?? "", auto);
+    return gastoClienteEmAberto(reg) ? `ATRASADO ${base}` : base;
   }
   let info = String(reg.descricao ?? "").trim();
   const emAberto = gastoClienteEmAberto(reg);

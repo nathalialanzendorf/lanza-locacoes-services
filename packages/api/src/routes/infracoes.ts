@@ -66,6 +66,27 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const confirmarCliente = compileRoute("/api/infracoes/:numeroAuto/confirmar-cliente");
+  routes.push({
+    method: "POST",
+    pattern: confirmarCliente.regex,
+    paramNames: confirmarCliente.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const body = await readJsonBody<{ clienteId?: string | null; condutorId?: string | null }>(
+        ctx.req,
+      );
+      const clienteId = body.clienteId ?? body.condutorId;
+      if (!clienteId?.trim()) {
+        return badRequest(ctx, 'Campo "clienteId" é obrigatório');
+      }
+      const data = await infracoesService.confirmarClienteInfracaoApi(
+        ctx.params.numeroAuto,
+        clienteId.trim(),
+      );
+      json(ctx.res, 200, { data });
+    }),
+  });
+
   const vincularDespesa = compileRoute("/api/infracoes/:numeroAuto/vincular-despesa");
   routes.push({
     method: "POST",

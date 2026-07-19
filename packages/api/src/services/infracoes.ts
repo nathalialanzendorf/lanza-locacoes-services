@@ -1,6 +1,8 @@
 import {
   reconciliarCondutores,
+  confirmarClienteInfracao,
   confirmarDebitoParceiroInfracaoAsync,
+  infracaoResponsavelConfirmado,
   compactPlaca,
   findInfracaoByNumeroAutoAsync,
   loadInfracoesDb,
@@ -98,9 +100,7 @@ function aplicarFiltrosInfracoes(
 
   const semCliente = opts.semCliente === true || opts.semCondutor === true;
   if (semCliente) {
-    out = out.filter(
-      (i) => !i.condutorId && !i.debitoParceiroConfirmado && !i.condutorNaoIdentificado,
-    );
+    out = out.filter((i) => !infracaoResponsavelConfirmado(i));
   }
 
   if (opts.clienteId?.trim()) {
@@ -186,6 +186,13 @@ export async function obterInfracao(numeroAuto: string): Promise<InfracaoRegistr
 
 export async function confirmarParceiroInfracao(numeroAuto: string, parceiroId?: string | null) {
   const item = await confirmarDebitoParceiroInfracaoAsync(numeroAuto, parceiroId);
+  if (!item) throw new HttpError(404, "Infração não encontrada");
+  return item;
+}
+
+export async function confirmarClienteInfracaoApi(numeroAuto: string, clienteId: string) {
+  if (!clienteId?.trim()) throw new HttpError(400, 'Campo "clienteId" é obrigatório');
+  const item = await confirmarClienteInfracao(numeroAuto, clienteId.trim());
   if (!item) throw new HttpError(404, "Infração não encontrada");
   return item;
 }

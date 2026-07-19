@@ -96,7 +96,7 @@ async function gravarPaga(
       rastreameTipo: "OUTROS",
       ...patch,
     },
-    { syncRastreame: true, skipInferir: true },
+    { syncRastreame: false, skipInferir: true },
   );
   return { registro: r.registro, proximaParcela: r.proximaParcela ?? null };
 }
@@ -120,7 +120,7 @@ async function gravarAberta(
       rastreameTipo: "OUTROS",
       ...patch,
     },
-    { syncRastreame: true, skipInferir: true },
+    { syncRastreame: false, skipInferir: true },
   );
   return r.registro;
 }

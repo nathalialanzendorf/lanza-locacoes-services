@@ -879,20 +879,30 @@ function pathsRastreame(): OpenApiPaths {
       }),
     }),
     "/api/rastreame/lancar-semanal": pathItem({
-      post: op("post", "Rastreame", "Lançar pagamentos semanais (contratos ativos)", {
-        operationId: "rastreameLancarSemanal",
-        requestBody: jsonBody(
-          {
-            inicio: { type: "string", format: "date" },
-            fim: { type: "string", format: "date" },
-            prazoDias: { type: "integer", default: 90 },
-            execute: { type: "boolean", description: "false = preview" },
-            info: { type: "string" },
-            dataIso: { type: "string", format: "date-time" },
+      post: {
+        ...op("post", "Rastreame", "Lançar pagamentos semanais (descontinuado)", {
+          operationId: "rastreameLancarSemanal",
+          description:
+            "Descontinuado — cada baixa ou cadastro de contrato já cria a parcela ATRASADO da semana seguinte.",
+          requestBody: jsonBody(
+            {
+              inicio: { type: "string", format: "date" },
+              fim: { type: "string", format: "date" },
+              prazoDias: { type: "integer", default: 90 },
+              execute: { type: "boolean", description: "false = preview" },
+              info: { type: "string" },
+              dataIso: { type: "string", format: "date-time" },
+            },
+            ["inicio", "fim"],
+          ),
+          responses: {
+            "410": { $ref: "#/components/responses/Error" },
+            "400": { $ref: "#/components/responses/Error" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
           },
-          ["inicio", "fim"],
-        ),
-      }),
+        }),
+        deprecated: true,
+      },
     }),
   };
 }

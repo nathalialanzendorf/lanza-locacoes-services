@@ -9,6 +9,7 @@ import {
 } from "../http.js";
 import * as rastreameService from "../services/rastreame.js";
 
+/** @deprecated Integração Rastreame descontinuada — rotas mantidas só por compatibilidade. */
 export function registerRastreameRoutes(routes: RouteDef[]): void {
   const auth = compileRoute("/api/rastreame/auth");
   routes.push({
@@ -129,6 +130,7 @@ export function registerRastreameRoutes(routes: RouteDef[]): void {
     method: "POST",
     pattern: lancarSemanal.regex,
     paramNames: lancarSemanal.paramNames,
+    /** @deprecated Lançamento em lote descontinuado — próxima semana é criada na baixa/contrato. */
     handler: routeAsync(async (ctx) => {
       try {
         const body = await readJsonBody<{
