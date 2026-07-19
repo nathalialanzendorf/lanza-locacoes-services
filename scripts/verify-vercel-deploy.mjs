@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const entry = path.join(root, "packages/api/src/index.ts");
+const entry = path.join(root, "server.ts");
 
 function loadIgnorePatterns() {
   const file = path.join(root, ".vercelignore");
