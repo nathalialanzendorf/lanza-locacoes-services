@@ -560,6 +560,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   const diff = Math.round((valorDevido - valor) * 100) / 100;
   let tipoBaixa: PlanoBaixaRecebimento["tipoBaixa"];
 
+  if (input.autoInfracaoAlvo?.trim() && valor > valorDevido + 0.009) {
+    throw new Error(
+      `Valor recebido (R$ ${valor.toFixed(2)}) não pode ser maior que o devido (R$ ${valorDevido.toFixed(2)}) na despesa ${alvo.autoInfracao}.`,
+    );
+  }
+
   if (Math.abs(diff) < 0.01) {
     tipoBaixa = "integral";
   } else if (valor < valorDevido && (input.desconto || input.comprovante)) {
