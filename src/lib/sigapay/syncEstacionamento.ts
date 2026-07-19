@@ -243,7 +243,7 @@ export async function sincronizarEstacionamentoFrota(opts?: {
   placa?: string;
   dryRun?: boolean;
 }): Promise<SyncEstacionamentoResult[]> {
-  if (!opts?.dryRun) normalizarCategoriaEstacionamentoNoDb();
+  if (!opts?.dryRun) await normalizarCategoriaEstacionamentoNoDb();
 
   const placas = loadPlacasParaSync(opts?.placa);
   if (placas.length === 0) return [];

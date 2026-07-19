@@ -34,3 +34,4 @@ relatorios/_tmp/
 .vercel
 .env*
 dist/
+server.mjs

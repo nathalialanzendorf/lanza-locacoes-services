@@ -363,7 +363,7 @@ export async function sincronizarPedagiosFrota(opts?: {
   placa?: string;
   dryRun?: boolean;
 }): Promise<SyncPedagiosResult[]> {
-  if (!opts?.dryRun) normalizarCategoriaPedagioNoDb();
+  if (!opts?.dryRun) await normalizarCategoriaPedagioNoDb();
 
   const placas = loadPlacasParaSync(opts?.placa);
   if (placas.length === 0) return [];

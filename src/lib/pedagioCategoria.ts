@@ -4,10 +4,6 @@
  * - **Categoria** do débito em cliente-despesas.json: `Pedágio`
  * - **Portal** (fonte dos dados): Pedágio Digital — pedagiodigital.com
  */
-import {
-  loadClienteDespesasDb,
-  saveClienteDespesasDb,
-} from "./clienteDespesasDb.js";
 
 /** Categoria em cliente-despesas.json (débito de pedágio). */
 export const CATEGORIA_PEDAGIO = "Pedágio";
@@ -30,9 +26,10 @@ export function isCategoriaPedagio(categoria: string | undefined | null): boolea
 }
 
 /** Reescreve categoria legada `Pedágio Digital` → `Pedágio` no database local. */
-export function normalizarCategoriaPedagioNoDb(opts?: {
+export async function normalizarCategoriaPedagioNoDb(opts?: {
   dryRun?: boolean;
-}): { atualizados: number; exemplos: string[] } {
+}): Promise<{ atualizados: number; exemplos: string[] }> {
+  const { loadClienteDespesasDb, saveClienteDespesasDb } = await import("./clienteDespesasDb.js");
   const db = loadClienteDespesasDb();
   let atualizados = 0;
   const exemplos: string[] = [];

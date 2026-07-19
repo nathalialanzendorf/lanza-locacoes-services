@@ -10,6 +10,8 @@ import esbuild from "esbuild";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "dist");
 const outfile = path.join(outDir, "server.mjs");
+// Cópia na raiz — entrypoint declarado em vercel.json (após buildCommand).
+const rootOutfile = path.join(root, "server.mjs");
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -29,4 +31,5 @@ await esbuild.build({
 });
 
 const kb = Math.round(fs.statSync(outfile).size / 1024);
-console.log(`[build:vercel] OK — ${path.relative(root, outfile)} (~${kb} KiB)`);
+fs.copyFileSync(outfile, rootOutfile);
+console.log(`[build:vercel] OK — dist/server.mjs + server.mjs (~${kb} KiB)`);

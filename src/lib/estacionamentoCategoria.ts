@@ -4,10 +4,6 @@
  * - **Categoria** do débito em cliente-despesas.json: `Estacionamento`
  * - **Portal** (fonte dos dados): SigaPay — Zona Azul Brasil
  */
-import {
-  loadClienteDespesasDb,
-  saveClienteDespesasDb,
-} from "./clienteDespesasDb.js";
 
 /** Categoria em cliente-despesas.json (débito de estacionamento rotativo). */
 export const CATEGORIA_ESTACIONAMENTO = "Estacionamento";
@@ -44,9 +40,10 @@ function categoriaEstacionamentoLegada(categoria: string): boolean {
 }
 
 /** Reescreve categoria legada → `Estacionamento` no database local. */
-export function normalizarCategoriaEstacionamentoNoDb(opts?: {
+export async function normalizarCategoriaEstacionamentoNoDb(opts?: {
   dryRun?: boolean;
-}): { atualizados: number; exemplos: string[] } {
+}): Promise<{ atualizados: number; exemplos: string[] }> {
+  const { loadClienteDespesasDb, saveClienteDespesasDb } = await import("./clienteDespesasDb.js");
   const db = loadClienteDespesasDb();
   let atualizados = 0;
   const exemplos: string[] = [];
