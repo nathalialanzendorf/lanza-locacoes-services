@@ -22,9 +22,9 @@ import {
   type FiltroAlvosCobranca,
   type TipoCobrancaAction,
 } from "./cobrancasAlvos.js";
-import { loadContratosDb } from "./contratosDb.js";
+import type { CobrancasDbContext } from "./cobrancasDbContext.js";
+import { loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
 import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
-import { loadClienteDespesasDb } from "./clienteDespesasDb.js";
 import {
   filtrarVencimentosAposDataInicioJuros,
   filtrarVencimentosCalculoSemanal,
@@ -73,9 +73,13 @@ function slug(s: string): string {
     .slice(0, 40);
 }
 
-function contratoAtivoPlaca(placa: string, clienteId?: string | null) {
+function contratoAtivoPlaca(
+  placa: string,
+  clienteId?: string | null,
+  contratos?: ContratoRegistro[],
+) {
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = (contratos ?? loadContratosDb().contratos).filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
   if (clienteId) {
@@ -233,8 +237,9 @@ export function buildSemanalAtrasoParaEscopo(
 export function listarResumoAlvos(
   tipo: TipoCobrancaAction,
   filtro?: FiltroAlvosCobranca,
+  ctx?: CobrancasDbContext,
 ): AlvoCobranca[] {
-  return listarAlvosCobranca(tipo, filtro);
+  return listarAlvosCobranca(tipo, filtro, ctx);
 }
 
 /** Gera cobranças para todos os alvos elegíveis do tipo. */
@@ -247,9 +252,10 @@ export function executarLoteCobranca(
     dataPagamentoBr?: string;
     salvar?: boolean;
     outDir?: string;
+    ctx?: CobrancasDbContext;
   },
 ): LoteCobrancaResult {
-  const alvos = listarAlvosCobranca(tipo, opts?.filtro);
+  const alvos = listarAlvosCobranca(tipo, opts?.filtro, opts?.ctx);
   const salvar = opts?.salvar !== false;
   const outDir = opts?.outDir ?? COBRANCAS_OUT_DIR;
   const dataPagamentoBr = opts?.dataPagamentoBr ?? hojeBr();
@@ -265,7 +271,7 @@ export function executarLoteCobranca(
     };
 
     if (tipo === "pagamento-semanal") {
-      const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
+      const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId, opts?.ctx?.contratos);
       const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
       const vencimentosBr = alvo.vencimentosBr ?? [];
       const vencimentosJuros = filtrarVencimentosAposDataInicioJuros(

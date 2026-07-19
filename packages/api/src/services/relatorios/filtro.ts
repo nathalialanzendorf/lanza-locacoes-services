@@ -1,7 +1,11 @@
 import {
   listarEscoposContratosAtivosCobranca,
   loadClientesDb,
-  resolverCliente,
+  loadClientesDbAsync,
+  loadCobrancasDbContextAsync,
+  normNomeKey,
+  type ClienteRegistro,
+  type CobrancasDbContext,
   type FiltroAlvosCobranca,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
@@ -24,7 +28,43 @@ function normalizarSituacao(raw?: string): "em_aberto" | "pago" | "todos" | unde
   return undefined;
 }
 
+export function resolverClienteFromList(query: string, clientes: ClienteRegistro[]): ClienteRegistro {
+  const q = query.trim();
+  if (!q) throw new Error("Informe --cliente (nome, CPF ou id).");
+
+  const key = q.replace(/\D/g, "");
+  if (key.length === 11) {
+    const byCpf = clientes.find((c) => c.cpf?.replace(/\D/g, "") === key);
+    if (byCpf) return byCpf;
+  }
+
+  const byId = clientes.find((c) => c.id === q);
+  if (byId) return byId;
+
+  const nk = normNomeKey(q);
+  const matches = clientes.filter((c) => {
+    const cn = normNomeKey(c.nome);
+    return cn.includes(nk) || nk.includes(cn);
+  });
+  if (matches.length === 0) {
+    throw new Error(`Cliente "${query}" não encontrado em clientes.json.`);
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `Vários clientes para "${query}": ${matches.map((m) => `${m.nome} (${m.cpf})`).join("; ")} — use CPF ou id.`,
+    );
+  }
+  return matches[0]!;
+}
+
 export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): FiltroAlvosCobranca {
+  return resolverFiltroRelatorioComClientes(input, loadClientesDb().clientes);
+}
+
+function resolverFiltroRelatorioComClientes(
+  input: FiltroRelatorioInput,
+  clientes: ClienteRegistro[],
+): FiltroAlvosCobranca {
   const placa = input.placa?.trim();
   const clienteId = input.clienteId?.trim();
   const clienteQuery = input.clienteQuery?.trim();
@@ -47,7 +87,7 @@ export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): Filtr
   };
 
   if (clienteQuery) {
-    const c = resolverCliente(clienteQuery);
+    const c = resolverClienteFromList(clienteQuery, clientes);
     if (!c.id) {
       throw new HttpError(400, `Cliente sem id em clientes.json: ${c.nome}`);
     }
@@ -59,17 +99,23 @@ export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): Filtr
   return extras;
 }
 
+export async function resolverFiltroRelatorioAsync(
+  input: FiltroRelatorioInput = {},
+  ctx?: CobrancasDbContext,
+): Promise<FiltroAlvosCobranca> {
+  const clientes = ctx?.clientes ?? (await loadClientesDbAsync()).clientes;
+  return resolverFiltroRelatorioComClientes(input, clientes);
+}
+
 export function hojeBr(): string {
   const n = new Date();
   return `${String(n.getDate()).padStart(2, "0")}/${String(n.getMonth() + 1).padStart(2, "0")}/${n.getFullYear()}`;
 }
 
-export function listarEscoposContratosAtivos(): Array<{
-  clienteId: string;
-  clienteNome: string;
-  placas: string[];
-}> {
-  const contratos = listarEscoposContratosAtivosCobranca();
+function mapEscoposContratos(
+  contratos: ReturnType<typeof listarEscoposContratosAtivosCobranca>,
+  clientes: ClienteRegistro[],
+) {
   const porCliente = new Map<string, Set<string>>();
 
   for (const e of contratos) {
@@ -79,7 +125,6 @@ export function listarEscoposContratosAtivos(): Array<{
     porCliente.set(e.clienteId, set);
   }
 
-  const clientes = loadClientesDb().clientes;
   return [...porCliente.entries()]
     .map(([clienteId, placasSet]) => {
       const c = clientes.find((x) => x.id === clienteId);
@@ -90,4 +135,15 @@ export function listarEscoposContratosAtivos(): Array<{
       };
     })
     .sort((a, b) => a.clienteNome.localeCompare(b.clienteNome, "pt-BR"));
+}
+
+export async function listarEscoposContratosAtivosAsync() {
+  const ctx = await loadCobrancasDbContextAsync();
+  const contratos = listarEscoposContratosAtivosCobranca(ctx);
+  return mapEscoposContratos(contratos, ctx.clientes);
+}
+
+export function listarEscoposContratosAtivos() {
+  const contratos = listarEscoposContratosAtivosCobranca();
+  return mapEscoposContratos(contratos, loadClientesDb().clientes);
 }

@@ -130,13 +130,13 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       try {
-        const data = contratosWrite.removerContrato(ctx.params.id);
+        const data = await contratosWrite.removerContrato(ctx.params.id);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);
       }
-    },
+    }),
   });
 }

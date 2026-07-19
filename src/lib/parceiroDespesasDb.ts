@@ -292,10 +292,10 @@ function findMatchingIndices(
   return [...new Set(indices)];
 }
 
-export function sincronizarParceiroDespesa(
+function sincronizarParceiroDespesaOnDb(
+  db: ParceiroDespesasDb,
   input: ParceiroDespesaInput,
 ): GravarParceiroDespesaResult {
-  const db = loadParceiroDespesasDb();
   const valor = parseValor(input.valor);
   const { id: veiculoId, placa } = resolveVeiculo(input.placa);
   const competencia = input.competencia?.trim() || competenciaFromData(input.data);
@@ -332,7 +332,6 @@ export function sincronizarParceiroDespesa(
     if (origem !== "manual") ex.origem = origem;
     const exIdx = db.parceiroDespesas.findIndex((d) => d.id === keepId);
     if (exIdx >= 0) db.parceiroDespesas[exIdx] = ex;
-    saveParceiroDespesasDb(db);
     return {
       registro: ex,
       aviso: veiculoId ? null : "placa não cadastrada em veiculos.json",
@@ -352,12 +351,29 @@ export function sincronizarParceiroDespesa(
     origem,
   };
   db.parceiroDespesas.push(registro);
-  saveParceiroDespesasDb(db);
   return {
     registro,
     aviso: veiculoId ? null : "placa não cadastrada em veiculos.json",
     acao: "novo",
   };
+}
+
+export function sincronizarParceiroDespesa(
+  input: ParceiroDespesaInput,
+): GravarParceiroDespesaResult {
+  const db = loadParceiroDespesasDb();
+  const result = sincronizarParceiroDespesaOnDb(db, input);
+  if (result.acao !== "sem_alteracao") saveParceiroDespesasDb(db);
+  return result;
+}
+
+export async function sincronizarParceiroDespesaAsync(
+  input: ParceiroDespesaInput,
+): Promise<GravarParceiroDespesaResult> {
+  const db = await loadParceiroDespesasDbAsync();
+  const result = sincronizarParceiroDespesaOnDb(db, input);
+  if (result.acao !== "sem_alteracao") await saveParceiroDespesasDbAsync(db);
+  return result;
 }
 
 /** @deprecated use sincronizarParceiroDespesa */
@@ -369,6 +385,12 @@ export function gravarParceiroDespesaManual(
   input: ParceiroDespesaInput,
 ): GravarParceiroDespesaResult {
   return sincronizarParceiroDespesa({ ...input, origem: "manual" });
+}
+
+export async function gravarParceiroDespesaManualAsync(
+  input: ParceiroDespesaInput,
+): Promise<GravarParceiroDespesaResult> {
+  return sincronizarParceiroDespesaAsync({ ...input, origem: "manual" });
 }
 
 /** @deprecated use gravarParceiroDespesaManual */
@@ -394,11 +416,11 @@ export type MarcarBaixaResult = {
  * ou por `placa`+`categoria`(+`competencia`). `data` vazio → quita com hoje;
  * `desfazer:true` → reabre o débito (baixa = null). Idempotente.
  */
-export function marcarBaixaParceiroDespesa(
+function marcarBaixaParceiroDespesaOnDb(
+  db: ParceiroDespesasDb,
   seletor: MarcarBaixaSeletor,
   opts: { data?: string; desfazer?: boolean } = {},
 ): MarcarBaixaResult {
-  const db = loadParceiroDespesasDb();
   const placaKey = seletor.placa ? compactPlaca(seletor.placa) : null;
   const catKey = seletor.categoria ? seletor.categoria.trim().toLowerCase() : null;
   const compKey = seletor.competencia ? seletor.competencia.trim() : null;
@@ -426,8 +448,27 @@ export function marcarBaixaParceiroDespesa(
     reg.baixa = novoValor;
     atualizados.push(reg);
   }
-  if (atualizados.length) saveParceiroDespesasDb(db);
   return { atualizados, semAlteracao };
+}
+
+export function marcarBaixaParceiroDespesa(
+  seletor: MarcarBaixaSeletor,
+  opts: { data?: string; desfazer?: boolean } = {},
+): MarcarBaixaResult {
+  const db = loadParceiroDespesasDb();
+  const result = marcarBaixaParceiroDespesaOnDb(db, seletor, opts);
+  if (result.atualizados.length) saveParceiroDespesasDb(db);
+  return result;
+}
+
+export async function marcarBaixaParceiroDespesaAsync(
+  seletor: MarcarBaixaSeletor,
+  opts: { data?: string; desfazer?: boolean } = {},
+): Promise<MarcarBaixaResult> {
+  const db = await loadParceiroDespesasDbAsync();
+  const result = marcarBaixaParceiroDespesaOnDb(db, seletor, opts);
+  if (result.atualizados.length) await saveParceiroDespesasDbAsync(db);
+  return result;
 }
 
 /**

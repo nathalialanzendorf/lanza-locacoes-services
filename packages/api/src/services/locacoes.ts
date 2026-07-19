@@ -1,8 +1,8 @@
 import {
-  excluirLocacao,
-  gravarLocacao,
-  listarLocacoes as listarLocacoesLib,
-  loadLocacoesDb,
+  excluirLocacaoAsync,
+  gravarLocacaoAsync,
+  listarLocacoesAsync,
+  loadLocacoesDbAsync,
   sugerirLocacoes,
   type LocacaoInput,
   type LocacaoRegistro,
@@ -10,15 +10,15 @@ import {
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
-export function listarLocacoes(opts: {
+export async function listarLocacoes(opts: {
   placa?: string;
   clienteId?: string;
   situacao?: string;
   abertas?: boolean;
   dataInicial?: string;
   dataFinal?: string;
-} = {}): { total: number; items: LocacaoRegistro[] } {
-  const items = listarLocacoesLib({
+} = {}): Promise<{ total: number; items: LocacaoRegistro[] }> {
+  const items = await listarLocacoesAsync({
     placa: opts.placa,
     clienteId: opts.clienteId,
     situacao: opts.situacao as LocacaoInput["situacao"] | undefined,
@@ -29,17 +29,18 @@ export function listarLocacoes(opts: {
   return { total: items.length, items };
 }
 
-export function obterLocacao(id: string): LocacaoRegistro | null {
-  return loadLocacoesDb().locacoes.find((l) => l.id === id) ?? null;
+export async function obterLocacao(id: string): Promise<LocacaoRegistro | null> {
+  const db = await loadLocacoesDbAsync();
+  return db.locacoes.find((l) => l.id === id) ?? null;
 }
 
-export function criarOuAtualizarLocacao(input: LocacaoInput): {
+export async function criarOuAtualizarLocacao(input: LocacaoInput): Promise<{
   data: LocacaoRegistro;
   acao: string;
   aviso: string | null;
-} {
+}> {
   try {
-    const r = gravarLocacao(input);
+    const r = await gravarLocacaoAsync(input);
     return { data: r.registro, acao: r.acao, aviso: r.aviso };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao gravar locação";
@@ -47,16 +48,16 @@ export function criarOuAtualizarLocacao(input: LocacaoInput): {
   }
 }
 
-export function removerLocacao(id: string): LocacaoRegistro {
-  const item = excluirLocacao(id);
+export async function removerLocacao(id: string): Promise<LocacaoRegistro> {
+  const item = await excluirLocacaoAsync(id);
   if (!item) {
     throw new HttpError(404, "Locação não encontrada");
   }
   return item;
 }
 
-export function atualizarLocacao(id: string, patch: Partial<LocacaoInput>) {
-  const atual = obterLocacao(id);
+export async function atualizarLocacao(id: string, patch: Partial<LocacaoInput>) {
+  const atual = await obterLocacao(id);
   if (!atual) throw new HttpError(404, "Locação não encontrada");
   const input: LocacaoInput = {
     id,

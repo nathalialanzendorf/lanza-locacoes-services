@@ -6,12 +6,16 @@ import {
   editarClienteDespesa,
   excluirClienteDespesa,
   findClienteDespesaById,
-  findVeiculoById,
-  findVeiculoByPlaca,
+  findClienteDespesaByIdAsync,
   gravarClienteDespesa,
   isClienteDespesaAtiva,
   loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
   loadClientesDb,
+  loadClientesDbAsync,
+  loadVeiculosDbAsync,
+  findVeiculoById,
+  findVeiculoByPlaca,
   compactPlaca,
   formatPlacaHyphen,
   formatVeiculoLabel,
@@ -19,6 +23,8 @@ import {
   type ClienteDespesaInput,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
+  type ClienteRegistro,
+  type VeiculoRegistro,
   resolveSyncRastreame,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -37,18 +43,32 @@ export type SyncOpts = {
   syncRastreame?: boolean;
 };
 
+type DespesasCatalogo = {
+  despesas: ClienteDespesaRegistro[];
+  clientes: ClienteRegistro[];
+  veiculos: VeiculoRegistro[];
+};
+
 function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
   return d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
 }
 
-function resolvePlacaFiltro(opts: ListarDespesasOpts): string | null {
+function resolvePlacaFiltro(
+  opts: ListarDespesasOpts,
+  veiculos: VeiculoRegistro[],
+): string | null {
   if (opts.placa?.trim()) {
-    const v = findVeiculoByPlaca(opts.placa);
+    const v =
+      veiculos.find((x) => compactPlaca(x.placa) === compactPlaca(opts.placa!)) ??
+      findVeiculoByPlaca(opts.placa);
     return compactPlaca(v?.placa ?? opts.placa);
   }
   if (opts.veiculoId?.trim()) {
     const raw = opts.veiculoId.trim();
-    const v = findVeiculoById(raw) ?? findVeiculoByPlaca(raw);
+    const v =
+      veiculos.find((x) => x.id === raw) ??
+      findVeiculoById(raw) ??
+      findVeiculoByPlaca(raw);
     return compactPlaca(v?.placa ?? raw);
   }
   return null;
@@ -70,19 +90,27 @@ export type DespesaClienteListagem = ClienteDespesaRegistro & {
   vencimentoBr: string | null;
 };
 
-function veiculoDaDespesaCliente(d: ClienteDespesaRegistro) {
-  return findVeiculoById(d.veiculoId) ?? findVeiculoByPlaca(d.veiculoId);
+function veiculoDaDespesaCliente(d: ClienteDespesaRegistro, veiculos: VeiculoRegistro[]) {
+  return (
+    veiculos.find((v) => v.id === d.veiculoId) ??
+    veiculos.find((v) => compactPlaca(v.placa) === compactPlaca(d.veiculoId)) ??
+    findVeiculoById(d.veiculoId) ??
+    findVeiculoByPlaca(d.veiculoId)
+  );
 }
 
-function clienteNomeDespesa(d: ClienteDespesaRegistro): string | null {
+function clienteNomeDespesa(d: ClienteDespesaRegistro, clientes: ClienteRegistro[]): string | null {
   const id = d.condutorId?.trim();
   if (!id) return null;
-  const nome = loadClientesDb().clientes.find((c) => c.id === id)?.nome?.trim();
+  const nome = clientes.find((c) => c.id === id)?.nome?.trim();
   return nome || null;
 }
 
-function enriquecerDespesaCliente(d: ClienteDespesaRegistro): DespesaClienteListagem {
-  const veiculo = veiculoDaDespesaCliente(d);
+function enriquecerDespesaCliente(
+  d: ClienteDespesaRegistro,
+  catalogo: DespesasCatalogo,
+): DespesaClienteListagem {
+  const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
   const placa = veiculo?.placa ?? formatPlacaHyphen(d.veiculoId);
   return {
     ...d,
@@ -94,17 +122,13 @@ function enriquecerDespesaCliente(d: ClienteDespesaRegistro): DespesaClienteList
         anoModelo: null,
       },
     ),
-    clienteNome: clienteNomeDespesa(d),
+    clienteNome: clienteNomeDespesa(d, catalogo.clientes),
     vencimentoBr: vencimentoClienteDespesaBr(d),
   };
 }
 
-export function listarDespesas(opts: ListarDespesasOpts = {}): {
-  total: number;
-  items: DespesaClienteListagem[];
-} {
-  let items = loadClienteDespesasDb().clienteDespesas;
-  const placaKey = resolvePlacaFiltro(opts);
+function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOpts, catalogo: DespesasCatalogo) {
+  const placaKey = resolvePlacaFiltro(opts, catalogo.veiculos);
 
   if (placaKey) {
     items = items.filter((d) => compactPlaca(d.veiculoId) === placaKey);
@@ -137,14 +161,56 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
     items = items.filter((d) => despesaAtribuidaACliente(d, clienteId));
   }
 
+  return items;
+}
+
+async function loadDespesasCatalogo(): Promise<DespesasCatalogo> {
+  const [despesasDb, clientesDb, veiculosDb] = await Promise.all([
+    loadClienteDespesasDbAsync(),
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+  ]);
+  return {
+    despesas: despesasDb.clienteDespesas,
+    clientes: clientesDb.clientes,
+    veiculos: veiculosDb.veiculos,
+  };
+}
+
+export function listarDespesas(opts: ListarDespesasOpts = {}): {
+  total: number;
+  items: DespesaClienteListagem[];
+} {
+  const catalogo: DespesasCatalogo = {
+    despesas: loadClienteDespesasDb().clienteDespesas,
+    clientes: loadClientesDb().clientes,
+    veiculos: [],
+  };
+  const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
   return {
     total: items.length,
-    items: items.map(enriquecerDespesaCliente),
+    items: items.map((d) => enriquecerDespesaCliente(d, catalogo)),
+  };
+}
+
+export async function listarDespesasAsync(opts: ListarDespesasOpts = {}): Promise<{
+  total: number;
+  items: DespesaClienteListagem[];
+}> {
+  const catalogo = await loadDespesasCatalogo();
+  const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
+  return {
+    total: items.length,
+    items: items.map((d) => enriquecerDespesaCliente(d, catalogo)),
   };
 }
 
 export function obterDespesa(id: string): ClienteDespesaRegistro | null {
   return findClienteDespesaById(id);
+}
+
+export async function obterDespesaAsync(id: string): Promise<ClienteDespesaRegistro | null> {
+  return findClienteDespesaByIdAsync(id);
 }
 
 export async function criarDespesa(
@@ -220,6 +286,11 @@ export const confirmarCondutorDespesa = confirmarClienteDespesa;
 /** Resolve placa a partir do veiculoId (útil para o frontend). */
 export function placaDoVeiculoId(veiculoId: string): string | null {
   return findVeiculoById(veiculoId)?.placa ?? null;
+}
+
+export async function placaDoVeiculoIdAsync(veiculoId: string): Promise<string | null> {
+  const veiculosDb = await loadVeiculosDbAsync();
+  return veiculosDb.veiculos.find((v) => v.id === veiculoId)?.placa ?? null;
 }
 
 export function patchParaInput(

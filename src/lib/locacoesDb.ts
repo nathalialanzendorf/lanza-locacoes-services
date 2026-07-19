@@ -231,18 +231,14 @@ export type GravarLocacaoResult = {
   aviso: string | null;
 };
 
-/** Cria ou atualiza (por id) um registro de locação/reserva/manutenção. */
-export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
+function applyGravarLocacao(db: LocacoesDb, input: LocacaoInput): GravarLocacaoResult {
   validar(input);
-  const db = loadLocacoesDb();
   const ts = nowIso();
 
   const { id: veiculoId, placa } = resolveVeiculo(input.placa);
   const refCliente = input.clienteId ?? input.condutor;
   const condutor = resolveCondutor(refCliente);
   const sub = input.substituiPlaca ? resolveVeiculo(input.substituiPlaca) : null;
-  // Valores (tipo/cobrado/pago) valem para `locado` e `reserva` (diária paga ao
-  // parceiro do veículo reserva). `manutencao` é veículo parado, sem valores.
   const comValores = input.situacao !== "manutencao";
 
   const avisos: string[] = [];
@@ -275,7 +271,6 @@ export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
     const existing = db.locacoes[idx]!;
     const registro: LocacaoRegistro = { ...existing, ...base };
     db.locacoes[idx] = registro;
-    saveLocacoesDb(db);
     return { registro, acao: "atualizado", aviso: avisos.join("; ") || null };
   }
 
@@ -285,8 +280,22 @@ export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
     ...base,
   };
   db.locacoes.push(registro);
-  saveLocacoesDb(db);
   return { registro, acao: "novo", aviso: avisos.join("; ") || null };
+}
+
+/** Cria ou atualiza (por id) um registro de locação/reserva/manutenção. */
+export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
+  const db = loadLocacoesDb();
+  const result = applyGravarLocacao(db, input);
+  saveLocacoesDb(db);
+  return result;
+}
+
+export async function gravarLocacaoAsync(input: LocacaoInput): Promise<GravarLocacaoResult> {
+  const db = await loadLocacoesDbAsync();
+  const result = applyGravarLocacao(db, input);
+  await saveLocacoesDbAsync(db);
+  return result;
 }
 
 export function excluirLocacao(id: string): LocacaoRegistro | null {
@@ -295,6 +304,15 @@ export function excluirLocacao(id: string): LocacaoRegistro | null {
   if (idx < 0) return null;
   const [removido] = db.locacoes.splice(idx, 1);
   saveLocacoesDb(db);
+  return removido ?? null;
+}
+
+export async function excluirLocacaoAsync(id: string): Promise<LocacaoRegistro | null> {
+  const db = await loadLocacoesDbAsync();
+  const idx = db.locacoes.findIndex((l) => l.id === id);
+  if (idx < 0) return null;
+  const [removido] = db.locacoes.splice(idx, 1);
+  await saveLocacoesDbAsync(db);
   return removido ?? null;
 }
 
@@ -325,8 +343,19 @@ function locacaoIntersectaPeriodo(
 }
 
 export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegistro[] {
-  const db = loadLocacoesDb();
-  return db.locacoes
+  return listarLocacoesFromDb(loadLocacoesDb().locacoes, filtro);
+}
+
+export async function listarLocacoesAsync(filtro: ListarLocacoesFiltro = {}): Promise<LocacaoRegistro[]> {
+  const db = await loadLocacoesDbAsync();
+  return listarLocacoesFromDb(db.locacoes, filtro);
+}
+
+function listarLocacoesFromDb(
+  locacoes: LocacaoRegistro[],
+  filtro: ListarLocacoesFiltro,
+): LocacaoRegistro[] {
+  return locacoes
     .filter((l) => {
       if (filtro.placa && !placasIguais(l.placa, filtro.placa)) return false;
       if (filtro.clienteId?.trim() && l.clienteId !== filtro.clienteId.trim()) return false;

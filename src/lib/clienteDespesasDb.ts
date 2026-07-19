@@ -383,6 +383,19 @@ export function saveClienteDespesasDb(db: ClienteDespesasDb): void {
   saveJsonDocument(DB_CLIENTE_DESPESAS, db, { description: DEFAULT_DESCRICAO });
 }
 
+async function loadDespesasMut(): Promise<ClienteDespesasDb> {
+  return loadClienteDespesasDbAsync();
+}
+
+async function saveDespesasMut(db: ClienteDespesasDb): Promise<void> {
+  await saveClienteDespesasDbAsync(db);
+}
+
+export async function findClienteDespesaByIdAsync(id: string): Promise<ClienteDespesaRegistro | null> {
+  const db = await loadClienteDespesasDbAsync();
+  return db.clienteDespesas.find((m) => m.id === id) ?? null;
+}
+
 export async function saveClienteDespesasDbAsync(db: ClienteDespesasDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
@@ -525,7 +538,7 @@ export async function gravarClienteDespesa(
   input: ClienteDespesaInput,
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
-  const db = loadClienteDespesasDb();
+  const db = await loadDespesasMut();
   const veiculoId = formatPlacaHyphen(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || "Infração";
@@ -629,9 +642,9 @@ export async function gravarClienteDespesa(
   if (input.rastreameTipo != null) registro.rastreameTipo = input.rastreameTipo;
 
   db.clienteDespesas.push(registro);
-  saveClienteDespesasDb(db);
 
   if (registro.condutorNaoIdentificado && categoriaInfereCondutor(categoria)) {
+    await saveDespesasMut(db);
     espelharClienteDespesaSemLocatario(registro);
     return {
       registro,
@@ -651,15 +664,19 @@ export async function gravarClienteDespesa(
       veiculoId,
       registro.pagaEm,
       registro.rastreameDataIso,
+      db,
     );
     if (venc) {
       proximaParcela = criarProximaParcelaSemanalSeNecessario(
         registro,
         registro.descricao,
         venc,
+        db,
       );
     }
   }
+
+  await saveDespesasMut(db);
 
   const synced = await pushAposPersistir(
     proximaParcela ? [registro, proximaParcela] : [registro],
@@ -943,7 +960,7 @@ export async function confirmarCondutorClienteDespesa(
   condutorId?: string | null,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<ClienteDespesaRegistro | null> {
-  const db = loadClienteDespesasDb();
+  const db = await loadDespesasMut();
   const key = autoInfracao.trim().toUpperCase();
   const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
   if (idx < 0) return null;
@@ -953,7 +970,7 @@ export async function confirmarCondutorClienteDespesa(
   m.condutorConfirmado = true;
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
-  saveClienteDespesasDb(db);
+  await saveDespesasMut(db);
   const [synced] = await pushAposPersistir([m], opts);
   return synced ?? m;
 }
@@ -1122,7 +1139,7 @@ export async function editarClienteDespesa(
   patch: ClienteDespesaPatch,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<EditarClienteDespesaResult | null> {
-  const db = loadClienteDespesasDb();
+  const db = await loadDespesasMut();
   const key = idOrAuto.trim();
   const idx = db.clienteDespesas.findIndex(
     (m) =>
@@ -1179,7 +1196,6 @@ export async function editarClienteDespesa(
 
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
-  saveClienteDespesasDb(db);
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
@@ -1193,9 +1209,12 @@ export async function editarClienteDespesa(
       m,
       descricaoAntes,
       vencimentoAntes,
+      db,
       valorParcelaSemanalContrato(m.veiculoId) ?? undefined,
     );
   }
+
+  await saveDespesasMut(db);
 
   const synced = await pushAposPersistir(
     proximaParcela ? [m, proximaParcela] : [m],
@@ -1221,8 +1240,9 @@ function vencimentoSemanalParaBaixa(
   veiculoId: string,
   pagaEmIso?: string | null,
   rastreameHintIso?: string | null,
+  dbIn?: ClienteDespesasDb,
 ): string | null {
-  const db = loadClienteDespesasDb();
+  const db = dbIn ?? loadClienteDespesasDb();
   const placa = formatPlacaHyphen(veiculoId);
   const norm = normDescSemanal(descricao);
 
@@ -1271,12 +1291,11 @@ function criarProximaParcelaSemanalSeNecessario(
   pago: ClienteDespesaRegistro,
   descricaoAntes: string,
   vencimentoAntes: string,
+  db: ClienteDespesasDb,
   valorParcela?: number,
 ): ClienteDespesaRegistro | null {
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
   if (!prox) return null;
-
-  const db = loadClienteDespesasDb();
   const alvo = normDescSemanal(prox.descricao);
   const dup = db.clienteDespesas.find(
     (d) =>
@@ -1315,7 +1334,6 @@ function criarProximaParcelaSemanalSeNecessario(
     origem: "manual",
   };
   db.clienteDespesas.push(registro);
-  saveClienteDespesasDb(db);
   return registro;
 }
 

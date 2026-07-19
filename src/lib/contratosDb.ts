@@ -640,6 +640,17 @@ export function excluirContrato(pastaOrId: string): ContratoRegistro {
   return removido!;
 }
 
+export async function excluirContratoAsync(pastaOrId: string): Promise<ContratoRegistro> {
+  const db = await loadContratosDbAsync();
+  const idx = findContratoIndex(db, pastaOrId);
+  if (idx < 0) {
+    throw new Error(`Contrato não encontrado: ${pastaOrId}`);
+  }
+  const [removido] = db.contratos.splice(idx, 1);
+  await saveContratosDbAsync(db);
+  return removido!;
+}
+
 /** @deprecated use encerrarContratoDb */
 export function registrarEncerramentoContrato(
   pastaContrato: string,

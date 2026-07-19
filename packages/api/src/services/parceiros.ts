@@ -6,6 +6,7 @@ import {
   loadJsonDocument,
   loadJsonDocumentForApi,
   saveJsonDocument,
+  saveJsonDocumentAsync,
 } from "@lanza/db";
 
 import { REPO_ROOT } from "../lib-imports.js";
@@ -56,6 +57,16 @@ async function loadParceirosDbAsync(): Promise<ParceirosDb> {
   const db = await loadJsonDocumentForApi<ParceirosDb>(DBP, { parceiros: [] });
   if (!Array.isArray(db.parceiros)) db.parceiros = [];
   return db;
+}
+
+async function saveParceirosDbAsync(db: ParceirosDb): Promise<void> {
+  db.atualizadoEm = hoje();
+  await saveJsonDocumentAsync(DBP, db);
+}
+
+async function saveVinculosDbAsync(db: VinculosDb): Promise<void> {
+  db.atualizadoEm = hoje();
+  await saveJsonDocumentAsync(DBL, db);
 }
 
 function saveParceirosDb(db: ParceirosDb): void {
@@ -113,6 +124,18 @@ export async function obterParceiroAsync(idOuNome: string): Promise<Parceiro | n
   );
 }
 
+export async function criarParceiroAsync(nome: string): Promise<Parceiro> {
+  const n = nome.trim();
+  if (!n) throw new HttpError(400, 'Campo "nome" é obrigatório');
+  const db = await loadParceirosDbAsync();
+  const existente = db.parceiros.find((p) => p.nome.toLowerCase() === n.toLowerCase());
+  if (existente) return existente;
+  const parceiro: Parceiro = { id: crypto.randomUUID(), nome: n };
+  db.parceiros.push(parceiro);
+  await saveParceirosDbAsync(db);
+  return parceiro;
+}
+
 export function criarParceiro(nome: string): Parceiro {
   const n = nome.trim();
   if (!n) throw new HttpError(400, 'Campo "nome" é obrigatório');
@@ -130,6 +153,24 @@ export type AtualizarParceiroPatch = {
   ativo?: boolean;
 };
 
+export async function atualizarParceiroAsync(id: string, patch: AtualizarParceiroPatch): Promise<Parceiro> {
+  const db = await loadParceirosDbAsync();
+  const idx = db.parceiros.findIndex((p) => p.id === id);
+  if (idx < 0) throw new HttpError(404, "Parceiro não encontrado");
+  const atual = db.parceiros[idx]!;
+  const nome = patch.nome !== undefined ? patch.nome.trim() : atual.nome;
+  if (!nome) throw new HttpError(400, 'Campo "nome" é obrigatório');
+  const dup = db.parceiros.find((p, i) => i !== idx && p.nome.toLowerCase() === nome.toLowerCase());
+  if (dup) throw new HttpError(400, `Nome já usado por outro parceiro (${dup.id})`);
+  db.parceiros[idx] = {
+    ...atual,
+    nome,
+    ...(patch.ativo !== undefined ? { ativo: patch.ativo } : {}),
+  };
+  await saveParceirosDbAsync(db);
+  return db.parceiros[idx]!;
+}
+
 export function atualizarParceiro(id: string, patch: AtualizarParceiroPatch): Parceiro {
   const db = loadParceirosDb();
   const idx = db.parceiros.findIndex((p) => p.id === id);
@@ -146,6 +187,19 @@ export function atualizarParceiro(id: string, patch: AtualizarParceiroPatch): Pa
   };
   saveParceirosDb(db);
   return db.parceiros[idx]!;
+}
+
+export async function removerParceiroAsync(id: string): Promise<Parceiro> {
+  const db = await loadParceirosDbAsync();
+  const idx = db.parceiros.findIndex((p) => p.id === id);
+  if (idx < 0) throw new HttpError(404, "Parceiro não encontrado");
+  const links = await loadVinculosDbAsync();
+  if (links.vinculos.some((v) => v.parceiroId === id)) {
+    throw new HttpError(400, "Parceiro possui vínculos com veículos — remova os vínculos primeiro");
+  }
+  const [removido] = db.parceiros.splice(idx, 1);
+  await saveParceirosDbAsync(db);
+  return removido!;
 }
 
 export function removerParceiro(id: string): Parceiro {
@@ -175,6 +229,24 @@ export async function listarVinculosAsync(filtro?: { veiculoId?: string; parceir
   return { total: items.length, items };
 }
 
+export async function vincularVeiculoParceiroAsync(
+  veiculoId: string,
+  parceiroId: string,
+): Promise<VinculoParceiro> {
+  const parceiro = await obterParceiroAsync(parceiroId);
+  if (!parceiro) throw new HttpError(404, "Parceiro não encontrado");
+  const db = await loadVinculosDbAsync();
+  db.vinculos = db.vinculos.filter((v) => v.veiculoId !== veiculoId);
+  const vinculo: VinculoParceiro = {
+    id: crypto.randomUUID(),
+    veiculoId,
+    parceiroId: parceiro.id,
+  };
+  db.vinculos.push(vinculo);
+  await saveVinculosDbAsync(db);
+  return vinculo;
+}
+
 export function vincularVeiculoParceiro(veiculoId: string, parceiroId: string): VinculoParceiro {
   const parceiro = obterParceiro(parceiroId);
   if (!parceiro) throw new HttpError(404, "Parceiro não encontrado");
@@ -188,6 +260,15 @@ export function vincularVeiculoParceiro(veiculoId: string, parceiroId: string): 
   db.vinculos.push(vinculo);
   saveVinculosDb(db);
   return vinculo;
+}
+
+export async function removerVinculoAsync(id: string): Promise<VinculoParceiro> {
+  const db = await loadVinculosDbAsync();
+  const idx = db.vinculos.findIndex((v) => v.id === id);
+  if (idx < 0) throw new HttpError(404, "Vínculo não encontrado");
+  const [removido] = db.vinculos.splice(idx, 1);
+  await saveVinculosDbAsync(db);
+  return removido!;
 }
 
 export function removerVinculo(id: string): VinculoParceiro {

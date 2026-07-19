@@ -27,7 +27,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
         data?: string;
         desfazer?: boolean;
       }>(ctx.req);
-      const data = parceiroDespService.baixarParceiroDespesa(body, {
+      const data = await parceiroDespService.baixarParceiroDespesa(body, {
         data: body.data,
         desfazer: body.desfazer,
       });
@@ -40,7 +40,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
 
@@ -51,7 +51,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
         return badRequest(ctx, 'Query "emAberto" inválida — use true ou false');
       }
 
-      json(ctx.res, 200, parceiroDespService.listarParceiroDespesas({
+      json(ctx.res, 200, await parceiroDespService.listarParceiroDespesas({
         placa: ctx.query.get("placa") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         parceiroId: ctx.query.get("parceiroId") ?? undefined,
@@ -60,7 +60,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
         emAberto,
         veiculoAtivo: ativo,
       }));
-    },
+    }),
   });
 
   routes.push({
@@ -69,7 +69,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     paramNames: list.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<ParceiroDespesaInput>(ctx.req);
-      const r = parceiroDespService.criarParceiroDespesa(body);
+      const r = await parceiroDespService.criarParceiroDespesa(body);
       json(ctx.res, 201, r);
     }),
   });
@@ -79,11 +79,11 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = parceiroDespService.obterParceiroDespesa(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await parceiroDespService.obterParceiroDespesa(ctx.params.id);
       if (!item) return notFound(ctx, "Despesa parceiro");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({
@@ -92,7 +92,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     paramNames: one.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<Record<string, unknown>>(ctx.req);
-      const data = parceiroDespService.atualizarParceiroDespesa(ctx.params.id, body);
+      const data = await parceiroDespService.atualizarParceiroDespesa(ctx.params.id, body);
       json(ctx.res, 200, { data });
     }),
   });
@@ -101,10 +101,10 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const data = parceiroDespService.removerParceiroDespesa(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const data = await parceiroDespService.removerParceiroDespesa(ctx.params.id);
       json(ctx.res, 200, { data });
-    },
+    }),
   });
 
   const rastreador = compileRoute("/api/parceiro-despesas/rastreador");

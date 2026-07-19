@@ -34,7 +34,7 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
       if (!body.veiculoId || !body.parceiroId) {
         return badRequest(ctx, 'Campos "veiculoId" e "parceiroId" são obrigatórios');
       }
-      const data = parceirosService.vincularVeiculoParceiro(body.veiculoId, body.parceiroId);
+      const data = await parceirosService.vincularVeiculoParceiroAsync(body.veiculoId, body.parceiroId);
       json(ctx.res, 201, { data });
     }),
   });
@@ -44,10 +44,10 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: vinculoOne.regex,
     paramNames: vinculoOne.paramNames,
-    handler: (ctx) => {
-      const data = parceirosService.removerVinculo(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const data = await parceirosService.removerVinculoAsync(ctx.params.id);
       json(ctx.res, 200, { data });
-    },
+    }),
   });
 
   const list = compileRoute("/api/parceiros");
@@ -71,7 +71,7 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<{ nome?: string }>(ctx.req);
       if (!body.nome?.trim()) return badRequest(ctx, 'Campo "nome" é obrigatório');
-      const data = parceirosService.criarParceiro(body.nome);
+      const data = await parceirosService.criarParceiroAsync(body.nome);
       json(ctx.res, 201, { data });
     }),
   });
@@ -100,7 +100,7 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
       if (body.nome === undefined && body.ativo === undefined) {
         return badRequest(ctx, 'Informe "nome" e/ou "ativo"');
       }
-      const data = parceirosService.atualizarParceiro(ctx.params.id, body);
+      const data = await parceirosService.atualizarParceiroAsync(ctx.params.id, body);
       json(ctx.res, 200, { data });
     }),
   });
@@ -109,9 +109,9 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const data = parceirosService.removerParceiro(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const data = await parceirosService.removerParceiroAsync(ctx.params.id);
       json(ctx.res, 200, { data });
-    },
+    }),
   });
 }

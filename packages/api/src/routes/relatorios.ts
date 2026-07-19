@@ -11,7 +11,7 @@ import * as cobrancasRel from "../services/relatorios/cobrancas.js";
 import * as encerramentoRel from "../services/relatorios/encerramento.js";
 import * as prestacaoRel from "../services/relatorios/prestacaoContas.js";
 import type { PrestacaoContasInput } from "../lib-imports.js";
-import { listarEscoposContratosAtivos } from "../services/relatorios/filtro.js";
+import { listarEscoposContratosAtivosAsync } from "../services/relatorios/filtro.js";
 import * as infracoesRel from "../services/relatorios/infracoes.js";
 import * as documentos from "../services/documentos.js";
 
@@ -29,10 +29,10 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: escopos.regex,
     paramNames: escopos.paramNames,
-    handler: (ctx) => {
-      const items = listarEscoposContratosAtivos();
+    handler: routeAsync(async (ctx) => {
+      const items = await listarEscoposContratosAtivosAsync();
       json(ctx.res, 200, { total: items.length, items });
-    },
+    }),
   });
 
   const alvos = compileRoute("/api/relatorios/cobrancas/alvos");
@@ -40,18 +40,18 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: alvos.regex,
     paramNames: alvos.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const tipo = ctx.query.get("tipo");
       if (!tipo) {
         return badRequest(ctx, 'Query "tipo" é obrigatória');
       }
-      const data = cobrancasRel.listarAlvos(tipo, {
+      const data = await cobrancasRel.listarAlvos(tipo, {
         placa: ctx.query.get("placa") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         clienteQuery: ctx.query.get("cliente") ?? undefined,
       });
       json(ctx.res, 200, data);
-    },
+    }),
   });
 
   const cobrancas = compileRoute("/api/relatorios/cobrancas");
@@ -63,14 +63,14 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
       const body = await readJsonBody<cobrancasRel.GerarCobrancasInput>(ctx.req);
       if (ctx.query.get("listar") === "true") {
         const tipos = body.tipos?.length ? body.tipos : ["pagamento-semanal"];
-        const listagens = tipos.map((tipo) =>
-          cobrancasRel.listarAlvos(tipo, body.filtro),
+        const listagens = await Promise.all(
+          tipos.map((tipo) => cobrancasRel.listarAlvos(tipo, body.filtro)),
         );
         json(ctx.res, 200, { listagens });
         return;
       }
       const armazenar = body.armazenarServidor === true;
-      const data = cobrancasRel.gerarCobrancas({
+      const data = await cobrancasRel.gerarCobrancas({
         ...body,
         salvar: armazenar,
       });

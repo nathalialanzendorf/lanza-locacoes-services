@@ -6,7 +6,7 @@ import {
   atualizarContratoDbAsync,
   desativarClienteDoContrato,
   encerrarContratoDbAsync,
-  excluirContrato,
+  excluirContratoAsync,
   gerar,
   montarDadosContratoFromDbAsync,
   registrarContratoAsync,
@@ -118,9 +118,9 @@ export async function encerrarContrato(input: ContratoEncerrarInput) {
   return { contrato: r, clienteStatus };
 }
 
-export function removerContrato(idOuPasta: string) {
+export async function removerContrato(idOuPasta: string) {
   try {
-    return excluirContrato(idOuPasta);
+    return await excluirContratoAsync(idOuPasta);
   } catch (err) {
     throw new HttpError(404, err instanceof Error ? err.message : String(err));
   }

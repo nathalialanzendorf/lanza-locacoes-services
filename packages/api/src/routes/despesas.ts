@@ -39,7 +39,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
 
@@ -50,7 +50,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         return badRequest(ctx, 'Query "emAberto" inválida — use true ou false');
       }
 
-      json(ctx.res, 200, despesasService.listarDespesas({
+      json(ctx.res, 200, await despesasService.listarDespesasAsync({
         clienteId: ctx.query.get("clienteId") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
         placa: ctx.query.get("placa") ?? undefined,
@@ -59,7 +59,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         ativo,
         emAberto,
       }));
-    },
+    }),
   });
 
   routes.push({
@@ -86,11 +86,11 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = despesasService.obterDespesa(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await despesasService.obterDespesaAsync(ctx.params.id);
       if (!item) return notFound(ctx, "Despesa");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({

@@ -16,8 +16,8 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
-      json(ctx.res, 200, locacoesService.listarLocacoes({
+    handler: routeAsync(async (ctx) => {
+      json(ctx.res, 200, await locacoesService.listarLocacoes({
         placa: ctx.query.get("placa") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         situacao: ctx.query.get("situacao") ?? undefined,
@@ -25,7 +25,7 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
         dataFinal: ctx.query.get("dataFinal") ?? undefined,
         abertas: ctx.query.get("abertas") === "true" || ctx.query.get("abertas") === "1",
       }));
-    },
+    }),
   });
 
   routes.push({
@@ -34,7 +34,7 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     paramNames: list.paramNames,
     handler: routeAsync(async (ctx) => {
       const input = await readJsonBody<LocacaoInput>(ctx.req);
-      const r = locacoesService.criarOuAtualizarLocacao(input);
+      const r = await locacoesService.criarOuAtualizarLocacao(input);
       json(ctx.res, input.id ? 200 : 201, r);
     }),
   });
@@ -60,11 +60,11 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = locacoesService.obterLocacao(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await locacoesService.obterLocacao(ctx.params.id);
       if (!item) return notFound(ctx, "Locação");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   routes.push({
@@ -74,7 +74,7 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       try {
         const patch = await readJsonBody<Partial<LocacaoInput>>(ctx.req);
-        const r = locacoesService.atualizarLocacao(ctx.params.id, patch);
+        const r = await locacoesService.atualizarLocacao(ctx.params.id, patch);
         json(ctx.res, 200, r);
       } catch (err) {
         handleServiceError(ctx, err);
@@ -86,13 +86,13 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     method: "DELETE",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       try {
-        const data = locacoesService.removerLocacao(ctx.params.id);
+        const data = await locacoesService.removerLocacao(ctx.params.id);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);
       }
-    },
+    }),
   });
 }

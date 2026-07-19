@@ -1,19 +1,21 @@
 import {
   findVeiculoById,
   findVeiculoByPlaca,
-  gravarParceiroDespesaManual,
-  isVeiculoAtivo,
-  lancarRastreadorFixo,
-  loadParceiroDespesasDb,
-  marcarBaixaParceiroDespesa,
-  saveParceiroDespesasDb,
   formatPlacaHyphen,
   formatVeiculoLabel,
+  gravarParceiroDespesaManualAsync,
+  isVeiculoAtivo,
+  lancarRastreadorFixo,
+  loadParceiroDespesasDbAsync,
+  loadVeiculosDbAsync,
+  marcarBaixaParceiroDespesaAsync,
+  saveParceiroDespesasDbAsync,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
+  type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
-import { listarVinculos } from "./parceiros.js";
+import { listarVinculosAsync } from "./parceiros.js";
 
 export type ListarParceiroDespesasOpts = {
   placa?: string;
@@ -22,7 +24,6 @@ export type ListarParceiroDespesasOpts = {
   categoria?: string;
   competencia?: string;
   emAberto?: boolean;
-  /** Filtra pelo status ativo/inativo do veículo vinculado à despesa. */
   veiculoAtivo?: boolean;
 };
 
@@ -30,19 +31,27 @@ function emAberto(d: ParceiroDespesaRegistro): boolean {
   return !String(d.baixa ?? "").trim();
 }
 
-function veiculoDaDespesa(d: ParceiroDespesaRegistro) {
-  if (d.veiculoId) return findVeiculoById(d.veiculoId);
-  if (d.placa) return findVeiculoByPlaca(d.placa);
+function veiculoDaDespesa(d: ParceiroDespesaRegistro, veiculos: VeiculoRegistro[]) {
+  if (d.veiculoId) {
+    return veiculos.find((v) => v.id === d.veiculoId) ?? findVeiculoById(d.veiculoId);
+  }
+  if (d.placa) {
+    return (
+      veiculos.find((v) => formatPlacaHyphen(v.placa) === formatPlacaHyphen(d.placa)) ??
+      findVeiculoByPlaca(d.placa)
+    );
+  }
   return null;
 }
 
-function veiculoIdsDoParceiro(parceiroId: string): Set<string> {
-  return new Set(listarVinculos({ parceiroId }).items.map((v) => v.veiculoId));
+async function veiculoIdsDoParceiro(parceiroId: string): Promise<Set<string>> {
+  const vinculos = await listarVinculosAsync({ parceiroId });
+  return new Set(vinculos.items.map((v) => v.veiculoId));
 }
 
-function despesaDoParceiro(d: ParceiroDespesaRegistro, veiculoIds: Set<string>): boolean {
+function despesaDoParceiro(d: ParceiroDespesaRegistro, veiculoIds: Set<string>, veiculos: VeiculoRegistro[]): boolean {
   if (d.veiculoId && veiculoIds.has(d.veiculoId)) return true;
-  const veiculo = veiculoDaDespesa(d);
+  const veiculo = veiculoDaDespesa(d, veiculos);
   return veiculo ? veiculoIds.has(veiculo.id) : false;
 }
 
@@ -51,8 +60,11 @@ export type ParceiroDespesaListagem = ParceiroDespesaRegistro & {
   vencimentoBr: string | null;
 };
 
-function enriquecerParceiroDespesa(d: ParceiroDespesaRegistro): ParceiroDespesaListagem {
-  const veiculo = veiculoDaDespesa(d);
+function enriquecerParceiroDespesa(
+  d: ParceiroDespesaRegistro,
+  veiculos: VeiculoRegistro[],
+): ParceiroDespesaListagem {
+  const veiculo = veiculoDaDespesa(d, veiculos);
   const placa = veiculo?.placa ?? formatPlacaHyphen(d.placa);
   return {
     ...d,
@@ -62,19 +74,24 @@ function enriquecerParceiroDespesa(d: ParceiroDespesaRegistro): ParceiroDespesaL
   };
 }
 
-export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
-  let items = loadParceiroDespesasDb().parceiroDespesas;
+export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
+  const [despesasDb, veiculosDb] = await Promise.all([
+    loadParceiroDespesasDbAsync(),
+    loadVeiculosDbAsync(),
+  ]);
+  let items = despesasDb.parceiroDespesas;
+  const veiculos = veiculosDb.veiculos;
 
   if (opts.parceiroId?.trim()) {
-    const veiculoIds = veiculoIdsDoParceiro(opts.parceiroId.trim());
-    items = items.filter((d) => despesaDoParceiro(d, veiculoIds));
+    const veiculoIds = await veiculoIdsDoParceiro(opts.parceiroId.trim());
+    items = items.filter((d) => despesaDoParceiro(d, veiculoIds, veiculos));
   }
 
   if (opts.veiculoId?.trim()) {
     const id = opts.veiculoId.trim();
-    items = items.filter((d) => d.veiculoId === id || veiculoDaDespesa(d)?.id === id);
+    items = items.filter((d) => d.veiculoId === id || veiculoDaDespesa(d, veiculos)?.id === id);
   } else if (opts.placa?.trim()) {
-    const v = findVeiculoByPlaca(opts.placa);
+    const v = veiculoDaDespesa({ placa: opts.placa } as ParceiroDespesaRegistro, veiculos);
     const placaNorm = opts.placa.trim().toUpperCase();
     items = items.filter(
       (d) =>
@@ -94,12 +111,12 @@ export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
 
   if (opts.veiculoAtivo === true) {
     items = items.filter((d) => {
-      const veiculo = veiculoDaDespesa(d);
+      const veiculo = veiculoDaDespesa(d, veiculos);
       return veiculo ? isVeiculoAtivo(veiculo) : false;
     });
   } else if (opts.veiculoAtivo === false) {
     items = items.filter((d) => {
-      const veiculo = veiculoDaDespesa(d);
+      const veiculo = veiculoDaDespesa(d, veiculos);
       return veiculo ? !isVeiculoAtivo(veiculo) : true;
     });
   }
@@ -109,51 +126,52 @@ export function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
 
   return {
     total: items.length,
-    items: items.map(enriquecerParceiroDespesa),
+    items: items.map((d) => enriquecerParceiroDespesa(d, veiculos)),
   };
 }
 
-export function obterParceiroDespesa(id: string): ParceiroDespesaRegistro | null {
-  return loadParceiroDespesasDb().parceiroDespesas.find((d) => d.id === id) ?? null;
+export async function obterParceiroDespesa(id: string): Promise<ParceiroDespesaRegistro | null> {
+  const db = await loadParceiroDespesasDbAsync();
+  return db.parceiroDespesas.find((d) => d.id === id) ?? null;
 }
 
-export function criarParceiroDespesa(input: ParceiroDespesaInput) {
+export async function criarParceiroDespesa(input: ParceiroDespesaInput) {
   if (!input.placa?.trim()) throw new HttpError(400, 'Campo "placa" é obrigatório');
   if (!input.categoria?.trim()) throw new HttpError(400, 'Campo "categoria" é obrigatório');
-  return gravarParceiroDespesaManual(input);
+  return gravarParceiroDespesaManualAsync(input);
 }
 
-export function atualizarParceiroDespesa(
+export async function atualizarParceiroDespesa(
   id: string,
   patch: Partial<Pick<ParceiroDespesaRegistro, "categoria" | "descricao" | "data" | "valor" | "competencia" | "baixa">>,
 ) {
-  const db = loadParceiroDespesasDb();
+  const db = await loadParceiroDespesasDbAsync();
   const idx = db.parceiroDespesas.findIndex((d) => d.id === id);
   if (idx < 0) throw new HttpError(404, "Despesa parceiro não encontrada");
   const reg = db.parceiroDespesas[idx]!;
   Object.assign(reg, patch);
   db.parceiroDespesas[idx] = reg;
-  saveParceiroDespesasDb(db);
+  await saveParceiroDespesasDbAsync(db);
   return reg;
 }
 
-export function baixarParceiroDespesa(
+export async function baixarParceiroDespesa(
   seletor: { id?: string; placa?: string; categoria?: string; competencia?: string },
   opts?: { data?: string; desfazer?: boolean },
 ) {
-  const r = marcarBaixaParceiroDespesa(seletor, opts);
+  const r = await marcarBaixaParceiroDespesaAsync(seletor, opts);
   if (!r.atualizados.length && !r.semAlteracao.length) {
     throw new HttpError(404, "Nenhuma despesa encontrada para o seletor");
   }
   return r;
 }
 
-export function removerParceiroDespesa(id: string): ParceiroDespesaRegistro {
-  const db = loadParceiroDespesasDb();
+export async function removerParceiroDespesa(id: string): Promise<ParceiroDespesaRegistro> {
+  const db = await loadParceiroDespesasDbAsync();
   const idx = db.parceiroDespesas.findIndex((d) => d.id === id);
   if (idx < 0) throw new HttpError(404, "Despesa parceiro não encontrada");
   const [removido] = db.parceiroDespesas.splice(idx, 1);
-  saveParceiroDespesasDb(db);
+  await saveParceiroDespesasDbAsync(db);
   return removido!;
 }
 

@@ -14,6 +14,7 @@ import {
   gerarEstacionamento,
   gerarMultas,
   gerarSemanal,
+  loadCobrancasDbContextAsync,
   salvarCobranca,
   salvarCobrancasDados,
   jurosMultaDiario,
@@ -36,7 +37,7 @@ import {
   type VarianteCanvasInfracoes,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
-import { hojeBr, resolverFiltroRelatorio, type FiltroRelatorioInput } from "./filtro.js";
+import { hojeBr, resolverFiltroRelatorio, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
 
 export function metaCobrancas() {
   return {
@@ -49,16 +50,17 @@ export function metaCobrancas() {
   };
 }
 
-export function listarAlvos(
+export async function listarAlvos(
   tipo: string,
   filtroInput: FiltroRelatorioInput = {},
-): { tipo: TipoCobrancaAction; total: number; items: ReturnType<typeof listarResumoAlvos> } {
+): Promise<{ tipo: TipoCobrancaAction; total: number; items: ReturnType<typeof listarResumoAlvos> }> {
   const t = normalizarTipoCobrancaAction(tipo);
   if (!t) {
     throw new HttpError(400, `Tipo de cobrança inválido: ${tipo}`);
   }
-  const filtro = resolverFiltroRelatorio(filtroInput);
-  const items = listarResumoAlvos(t, filtro);
+  const ctx = await loadCobrancasDbContextAsync();
+  const filtro = await resolverFiltroRelatorioAsync(filtroInput, ctx);
+  const items = listarResumoAlvos(t, filtro, ctx);
   return { tipo: t, total: items.length, items };
 }
 
@@ -102,9 +104,10 @@ function itemsDoEscopo(
   return items;
 }
 
-export function gerarCobrancas(input: GerarCobrancasInput = {}) {
+export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
   const tipos = resolverTipos(input.tipos);
-  const filtro = resolverFiltroRelatorio(input.filtro);
+  const ctx = await loadCobrancasDbContextAsync();
+  const filtro = await resolverFiltroRelatorioAsync(input.filtro, ctx);
   const salvar = input.salvar !== false;
   const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
   const dataRef = input.dataPagamentoBr ?? hojeBr();
@@ -130,6 +133,7 @@ export function gerarCobrancas(input: GerarCobrancasInput = {}) {
       dataPagamentoBr: dataRef,
       salvar,
       outDir,
+      ctx,
     });
     lotes.push(result);
     totalAlvos += result.resumo.alvos;
