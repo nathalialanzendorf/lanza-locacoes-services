@@ -22,9 +22,10 @@ import {
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
 import { loadContratosDb } from "./contratosDb.js";
-import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
-import { isCategoriaPedagio, CATEGORIA_PEDAGIO } from "./pedagioCategoria.js";
+import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
+import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
+import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
 import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
 import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
 import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
