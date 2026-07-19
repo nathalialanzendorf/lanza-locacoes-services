@@ -4,21 +4,21 @@
  * - **Categoria** do débito em cliente-despesas.json: `Estacionamento`
  * - **Portal** (fonte dos dados): SigaPay — Zona Azul Brasil
  */
+export {
+  CATEGORIA_ESTACIONAMENTO,
+  CATEGORIA_ESTACIONAMENTO_ALIASES,
+} from "./despesaCategorias.js";
 
-/** Categoria em cliente-despesas.json (débito de estacionamento rotativo). */
-export const CATEGORIA_ESTACIONAMENTO = "Estacionamento";
+import {
+  CATEGORIA_ESTACIONAMENTO,
+  CATEGORIA_ESTACIONAMENTO_ALIASES,
+} from "./despesaCategorias.js";
 
 /** Rótulo do portal/app SigaPay — não é a categoria do débito. */
 export const ROTULO_SIGAPAY = "SigaPay";
 
 /** @deprecated Use ROTULO_SIGAPAY */
 export const ROTULO_ESTACIONAMENTO_SIGAPAY = ROTULO_SIGAPAY;
-
-/** Valores legados gravados como categoria — normalizar para `Estacionamento`. */
-export const CATEGORIA_ESTACIONAMENTO_ALIASES = [
-  "Estacionamento rotativo SigaPay",
-  "SigaPay",
-] as const;
 
 /** @deprecated */
 export const CATEGORIA_ESTACIONAMENTO_ALIAS = "Estacionamento rotativo SigaPay";

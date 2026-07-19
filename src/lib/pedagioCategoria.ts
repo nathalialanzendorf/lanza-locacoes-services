@@ -4,15 +4,15 @@
  * - **Categoria** do débito em cliente-despesas.json: `Pedágio`
  * - **Portal** (fonte dos dados): Pedágio Digital — pedagiodigital.com
  */
+export {
+  CATEGORIA_PEDAGIO,
+  CATEGORIA_PEDAGIO_ALIAS,
+} from "./despesaCategorias.js";
 
-/** Categoria em cliente-despesas.json (débito de pedágio). */
-export const CATEGORIA_PEDAGIO = "Pedágio";
+import { CATEGORIA_PEDAGIO, CATEGORIA_PEDAGIO_ALIAS } from "./despesaCategorias.js";
 
 /** Rótulo do portal pedagiodigital.com — não é a categoria do débito. */
 export const ROTULO_PEDAGIO_DIGITAL = "Pedágio Digital";
-
-/** Valor legado gravado como categoria — normalizar para `Pedágio`. */
-export const CATEGORIA_PEDAGIO_ALIAS = "Pedágio Digital";
 
 /** @deprecated Use CATEGORIA_PEDAGIO */
 export const CATEGORIA_PEDAGIO_DIGITAL = CATEGORIA_PEDAGIO_ALIAS;

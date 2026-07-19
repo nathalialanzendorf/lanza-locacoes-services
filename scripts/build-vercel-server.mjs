@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Bundle server.ts para a Vercel (Node não executa @lanza/db → src/index.ts).
+ * Bundle da API para a Vercel (Node não executa @lanza/db → src/index.ts).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const entry = path.join(root, "packages/api/src/index.ts");
 const outDir = path.join(root, "dist");
 const outfile = path.join(outDir, "server.mjs");
 // Cópia na raiz — entrypoint declarado em vercel.json (após buildCommand).
@@ -16,7 +17,7 @@ const rootOutfile = path.join(root, "server.mjs");
 fs.mkdirSync(outDir, { recursive: true });
 
 await esbuild.build({
-  entryPoints: [path.join(root, "server.ts")],
+  entryPoints: [entry],
   bundle: true,
   platform: "node",
   format: "esm",
