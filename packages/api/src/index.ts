@@ -1,5 +1,7 @@
 /// <reference path="./ambient.d.ts" />
 /** Entrypoint serverless @lanza/api (Vercel) — resumo/dashboard via Postgres. */
+import { createServer, type Server } from "node:http";
+
 import {
   createVercelPostgresPool,
   getDbBackend,
@@ -8,6 +10,7 @@ import {
 } from "@lanza/db";
 import { createApp, logStartup } from "./app.js";
 import { apiHost, apiPort } from "./config.js";
+import { json } from "./http.js";
 
 async function bootstrapPostgres(): Promise<void> {
   if (!process.env.VERCEL || getDbBackend() === "file") return;
@@ -31,7 +34,24 @@ function warmupOcrLocal(): void {
 
 const port = apiPort();
 const host = apiHost();
-const server = createApp();
+
+function buildServer(): Server {
+  try {
+    return createApp();
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("[lanza] createApp falhou:", err);
+    return createServer((_req, res) => {
+      json(res, 500, {
+        error: "API não iniciou",
+        detail,
+        hint: "Ver logs Vercel (FUNCTION_INVOCATION_FAILED)",
+      });
+    });
+  }
+}
+
+const server = buildServer();
 
 server.listen(port, host, () => {
   logStartup(port, host);

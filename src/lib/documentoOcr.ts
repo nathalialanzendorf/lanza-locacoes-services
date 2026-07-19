@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createWorker, OEM, PSM, type Worker } from "tesseract.js";
+import type { Worker } from "tesseract.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const WORKER_PATH = path.join(REPO_ROOT, "node_modules/tesseract.js/src/worker-script/node/index.js");
@@ -14,7 +14,17 @@ const CACHE_PATH =
 
 const OCR_TIMEOUT_MS = Number(process.env.LANZA_OCR_TIMEOUT_MS ?? 120_000);
 
+type TesseractModule = typeof import("tesseract.js");
+
+let tesseractPromise: Promise<TesseractModule> | null = null;
 let workerPromise: Promise<Worker> | null = null;
+
+function loadTesseract(): Promise<TesseractModule> {
+  if (!tesseractPromise) {
+    tesseractPromise = import("tesseract.js");
+  }
+  return tesseractPromise;
+}
 
 function ocrWorkerOptions() {
   return {
@@ -29,6 +39,7 @@ function ocrWorkerOptions() {
 async function workerPor(): Promise<Worker> {
   if (!workerPromise) {
     workerPromise = (async () => {
+      const { createWorker, OEM, PSM } = await loadTesseract();
       const worker = await createWorker("por", OEM.LSTM_ONLY, ocrWorkerOptions());
       await worker.setParameters({
         tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
@@ -42,6 +53,7 @@ async function workerPor(): Promise<Worker> {
 
 /** Pré-carrega WASM + idioma (evita timeout na 1.ª leitura na Vercel). */
 export function warmupOcrWorker(): void {
+  if (process.env.VERCEL) return;
   void workerPor().catch((err) => {
     console.warn("[lanza] OCR warmup falhou:", err);
   });
