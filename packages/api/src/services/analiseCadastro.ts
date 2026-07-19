@@ -6,15 +6,15 @@ import {
   analiseClienteDeRegistro,
   caminhoBase,
   executarTriagem,
-  findClienteByCpf,
   gravarRelatorio,
-  listarTriagens,
-  loadTriagemDb,
+  listarTriagensAsync,
+  loadClientesDbAsync,
+  loadTriagemDbAsync,
   montarRelatorio,
   registrarAchadosCliente,
   registrarAnaliseCadastroNoCliente,
-  registrarTriagem,
-  saveTriagemDb,
+  registrarTriagemAsync,
+  saveTriagemDbAsync,
   type DadosLgpd,
   type DadosLocatario,
   type FonteId,
@@ -230,20 +230,20 @@ function validarInput(input: AnaliseCadastroInput): {
   return { locatario, lgpd, aprovado };
 }
 
-export function listarAnalisesCadastro(filtro?: { cpf?: string; comAlerta?: boolean }) {
-  const items = listarTriagens({
+export async function listarAnalisesCadastro(filtro?: { cpf?: string; comAlerta?: boolean }) {
+  const items = await listarTriagensAsync({
     cpf: filtro?.cpf,
     comAlerta: filtro?.comAlerta,
   });
   return { total: items.length, items };
 }
 
-export function obterAnaliseCadastro(idOuCpf: string): TriagemRegistro | null {
+export async function obterAnaliseCadastro(idOuCpf: string): Promise<TriagemRegistro | null> {
   const key = idOuCpf.trim();
-  const db = loadTriagemDb();
+  const db = await loadTriagemDbAsync();
   const byId = db.triagens.find((t) => t.id === key);
   if (byId) return byId;
-  const items = listarTriagens({ cpf: key });
+  const items = await listarTriagensAsync({ cpf: key });
   return items[0] ?? null;
 }
 
@@ -279,7 +279,7 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
   let achados = 0;
 
   if (!input.semBrowser) {
-    const r = registrarTriagem({
+    const r = await registrarTriagemAsync({
       locatario,
       relatorio,
       caminhoJson: arquivos.json,
@@ -295,7 +295,11 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
     }
 
     const clienteIdAchados =
-      cliente?.id ?? findClienteByCpf(locatario.cpf)?.id ?? null;
+      cliente?.id ??
+      (await loadClientesDbAsync()).clientes.find(
+        (c) => c.cpf?.replace(/\D/g, "") === locatario.cpf,
+      )?.id ??
+      null;
     const linhas = registrarAchadosCliente({
       cpf: locatario.cpf,
       cpfFormatado: locatario.cpfFormatado,
@@ -320,15 +324,15 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
   };
 }
 
-export function registrarDecisaoAnalise(id: string, aprovado: boolean) {
-  const db = loadTriagemDb();
+export async function registrarDecisaoAnalise(id: string, aprovado: boolean) {
+  const db = await loadTriagemDbAsync();
   const idx = db.triagens.findIndex((t) => t.id === id);
   if (idx < 0) throw new HttpError(404, "Análise não encontrada");
   const t = db.triagens[idx]!;
   t.aprovado = aprovado;
   t.atualizadoEm = new Date().toISOString();
   db.triagens[idx] = t;
-  saveTriagemDb(db);
+  await saveTriagemDbAsync(db);
 
   const cliente = registrarAnaliseCadastroNoCliente(t.cpf, analiseClienteDeRegistro(t));
   return { registro: t, cliente };

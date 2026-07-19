@@ -122,6 +122,11 @@ export function findVeiculoById(id: string): VeiculoRegistro | null {
   return db.veiculos.find((v) => v.id === id) ?? null;
 }
 
+export function findVeiculoInDb(db: VeiculosDb, idOrPlaca: string): VeiculoRegistro | null {
+  const idx = findVeiculoIndexInDb(db, idOrPlaca);
+  return idx >= 0 ? db.veiculos[idx]! : null;
+}
+
 export type VeiculoPatch = Partial<
   Pick<
     VeiculoRegistro,

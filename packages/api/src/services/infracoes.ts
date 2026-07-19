@@ -1,14 +1,14 @@
 import {
   reconciliarCondutores,
-  confirmarDebitoParceiroInfracao,
+  confirmarDebitoParceiroInfracaoAsync,
   compactPlaca,
-  findInfracaoByNumeroAuto,
+  findInfracaoByNumeroAutoAsync,
   loadInfracoesDb,
   loadInfracoesDbAsync,
   loadVeiculosDb,
   loadVeiculosDbAsync,
   placasIguais,
-  vincularClienteDespesaInfracao,
+  vincularClienteDespesaInfracaoAsync,
   type InfracaoRegistro,
   type VeiculoRegistro,
 } from "../lib-imports.js";
@@ -180,18 +180,18 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
   return { total: items.length, items };
 }
 
-export function obterInfracao(numeroAuto: string): InfracaoRegistro | null {
-  return findInfracaoByNumeroAuto(numeroAuto);
+export async function obterInfracao(numeroAuto: string): Promise<InfracaoRegistro | null> {
+  return findInfracaoByNumeroAutoAsync(numeroAuto);
 }
 
-export function confirmarParceiroInfracao(numeroAuto: string, parceiroId?: string | null) {
-  const item = confirmarDebitoParceiroInfracao(numeroAuto, parceiroId);
+export async function confirmarParceiroInfracao(numeroAuto: string, parceiroId?: string | null) {
+  const item = await confirmarDebitoParceiroInfracaoAsync(numeroAuto, parceiroId);
   if (!item) throw new HttpError(404, "Infração não encontrada");
   return item;
 }
 
-export function vincularDespesaInfracao(numeroAuto: string, clienteDespesaId: string) {
-  const item = vincularClienteDespesaInfracao(numeroAuto, clienteDespesaId);
+export async function vincularDespesaInfracao(numeroAuto: string, clienteDespesaId: string) {
+  const item = await vincularClienteDespesaInfracaoAsync(numeroAuto, clienteDespesaId);
   if (!item) throw new HttpError(404, "Infração não encontrada");
   return item;
 }

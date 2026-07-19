@@ -1,8 +1,10 @@
 import {
   executarRenegociacao,
   fetchGastoById,
-  findClienteById,
-  findVeiculoByPlaca,
+  findClienteInDb,
+  findVeiculoInDb,
+  loadClientesDbAsync,
+  loadVeiculosDbAsync,
   listarDebitosAbertos,
   somarDebitos,
   validarParcelas,
@@ -18,12 +20,12 @@ export type ResolverChavesInput = {
   placa?: string;
 };
 
-export function resolverChavesRenegociacao(input: ResolverChavesInput): {
+export async function resolverChavesRenegociacao(input: ResolverChavesInput): Promise<{
   motoristaKey: string;
   rastreavelKey: string;
   clienteId?: string;
   placa?: string;
-} {
+}> {
   const mkDirect = input.motoristaKey?.trim();
   const rkDirect = input.rastreavelKey?.trim();
   if (mkDirect && rkDirect) {
@@ -39,7 +41,11 @@ export function resolverChavesRenegociacao(input: ResolverChavesInput): {
     );
   }
 
-  const cliente = findClienteById(clienteId);
+  const [clientesDb, veiculosDb] = await Promise.all([
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+  ]);
+  const cliente = findClienteInDb(clientesDb, clienteId);
   if (!cliente) throw new HttpError(404, "Cliente não encontrado");
   const motoristaKey =
     cliente.rastreameMotoristaKey != null && String(cliente.rastreameMotoristaKey).trim()
@@ -49,7 +55,7 @@ export function resolverChavesRenegociacao(input: ResolverChavesInput): {
     throw new HttpError(400, "Cliente sem rastreameMotoristaKey — rode sync-cliente");
   }
 
-  const veiculo = findVeiculoByPlaca(placa);
+  const veiculo = findVeiculoInDb(veiculosDb, placa);
   if (!veiculo) throw new HttpError(404, "Veículo não encontrado");
   const rastreavelKey =
     veiculo.rastreameRastreavelKey != null && String(veiculo.rastreameRastreavelKey).trim()
@@ -78,7 +84,7 @@ function filtrarVencidos(debitos: ResumoDebito[]): ResumoDebito[] {
 export async function resumoRenegociacao(
   input: ResolverChavesInput & { apenasVencidos?: boolean },
 ) {
-  const chaves = resolverChavesRenegociacao(input);
+  const chaves = await resolverChavesRenegociacao(input);
   let debitos = await listarDebitosAbertos(chaves.motoristaKey, chaves.rastreavelKey);
   if (input.apenasVencidos) {
     debitos = filtrarVencidos(debitos);

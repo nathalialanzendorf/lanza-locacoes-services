@@ -1,21 +1,21 @@
 import {
-  derivarInicioLocacoes,
-  gravarInicioLocacoesDerivado,
+  derivarInicioLocacoesAsync,
+  gravarInicioLocacoesDerivadoAsync,
 } from "../lib-imports.js";
 
-export function listarInicioLocacoesDerivado() {
-  const m = derivarInicioLocacoes();
+export async function listarInicioLocacoesDerivado() {
+  const m = await derivarInicioLocacoesAsync();
   const items = [...m.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([placa, data]) => ({ placa, inicio: data }));
   return { total: items.length, items };
 }
 
-export function derivarInicioLocacoesVeiculos(opts: {
+export async function derivarInicioLocacoesVeiculos(opts: {
   sobrescrever?: boolean;
   dryRun?: boolean;
 }) {
-  const resultados = gravarInicioLocacoesDerivado({
+  const resultados = await gravarInicioLocacoesDerivadoAsync({
     sobrescrever: opts.sobrescrever ?? false,
     dryRun: opts.dryRun ?? false,
   });

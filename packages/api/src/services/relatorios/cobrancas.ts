@@ -19,12 +19,9 @@ import {
   salvarCobrancasDados,
   jurosMultaDiario,
   listarResumoAlvos,
-  loadClienteDespesasDb,
-  loadContratosDb,
   montarCobrancaSidecar,
   montarPacoteCobrancaSemanalAtraso,
   normalizarTipoCobrancaAction,
-  resolverCliente,
   resolverModoCanvasCobranca,
   salvarCobrancaSimplesSidecar,
   salvarCobrancasSidecar,
@@ -35,9 +32,12 @@ import {
   type LoteCobrancaResult,
   type TipoCobrancaAction,
   type VarianteCanvasInfracoes,
+  type ClienteDespesaRegistro,
+  type ContratoRegistro,
+  type ClienteRegistro,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
-import { hojeBr, resolverFiltroRelatorio, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
+import { hojeBr, resolverClienteFromList, resolverFiltroRelatorio, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
 
 export function metaCobrancas() {
   return {
@@ -271,19 +271,22 @@ function normPlaca(p: string): string {
   return p.replace(/\W/g, "").toUpperCase();
 }
 
-function contratoAtivoPlaca(placa: string) {
+function contratoAtivoPlaca(placa: string, contratos: ContratoRegistro[]) {
   const p = normPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = contratos.filter(
     (c) => c.status === "ativo" && normPlaca(c.placa ?? "") === p,
   );
   list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   return list[0] ?? null;
 }
 
-function vencimentosAbertosCliente(clienteId: string, placa?: string): string[] {
-  const db = loadClienteDespesasDb();
+function vencimentosAbertosCliente(
+  clienteId: string,
+  clienteDespesas: ClienteDespesaRegistro[],
+  placa?: string,
+): string[] {
   const out = new Set<string>();
-  for (const d of db.clienteDespesas) {
+  for (const d of clienteDespesas) {
     if (d.ativo === false || d.paga === true) continue;
     if (d.categoria !== "Locação semanal" || !/ATRASADO/i.test(d.descricao)) continue;
     if (d.condutorId !== clienteId) continue;
@@ -294,15 +297,24 @@ function vencimentosAbertosCliente(clienteId: string, placa?: string): string[] 
   return [...out].sort(compararDataBrAsc);
 }
 
-export function gerarSemanalAtraso(input: SemanalAtrasoInput) {
+export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
+  const ctx = await loadCobrancasDbContextAsync();
   const dataPagamentoBr = input.dataPagamentoBr ?? hojeBr();
-  let cliente = input.clienteQuery ? resolverCliente(input.clienteQuery) : null;
+  let cliente: ClienteRegistro | null = null;
+  if (input.clienteQuery?.trim()) {
+    try {
+      cliente = resolverClienteFromList(input.clienteQuery, ctx.clientes);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new HttpError(400, msg);
+    }
+  }
   const placa = input.placa?.trim();
 
   if (!cliente && placa) {
-    const c = contratoAtivoPlaca(placa);
+    const c = contratoAtivoPlaca(placa, ctx.contratos);
     if (c?.clienteId) {
-      cliente = resolverCliente(c.clienteId);
+      cliente = ctx.clientes.find((x) => x.id === c.clienteId) ?? null;
     }
   }
 
@@ -313,14 +325,14 @@ export function gerarSemanalAtraso(input: SemanalAtrasoInput) {
   let valorSemanal = input.valorSemanal;
   let valorDiaria = input.valorDiaria;
   if (placa) {
-    const c = contratoAtivoPlaca(placa);
+    const c = contratoAtivoPlaca(placa, ctx.contratos);
     valorSemanal ??= c?.valorSemanal ?? undefined;
     valorDiaria ??= c?.valorDiaria ?? undefined;
   }
 
   let vencimentos = input.vencimentos?.map((v) => v.trim()).filter(Boolean) ?? [];
   if (vencimentos.length === 0) {
-    vencimentos = vencimentosAbertosCliente(cliente.id, placa);
+    vencimentos = vencimentosAbertosCliente(cliente.id, ctx.clienteDespesas, placa);
   }
   if (vencimentos.length === 0) {
     throw new HttpError(404, "Nenhum vencimento em aberto encontrado");

@@ -14,7 +14,9 @@ export function registerInicioLocacoesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => json(ctx.res, 200, inicioLocacoesService.listarInicioLocacoesDerivado()),
+    handler: routeAsync(async (ctx) =>
+      json(ctx.res, 200, await inicioLocacoesService.listarInicioLocacoesDerivado()),
+    ),
   });
 
   const derivar = compileRoute("/api/veiculos/inicio-locacoes/derivar");
@@ -27,7 +29,7 @@ export function registerInicioLocacoesRoutes(routes: RouteDef[]): void {
         const body = await readJsonBody<{ sobrescrever?: boolean; dryRun?: boolean }>(ctx.req).catch(
           () => ({}),
         );
-        const data = inicioLocacoesService.derivarInicioLocacoesVeiculos(body);
+        const data = await inicioLocacoesService.derivarInicioLocacoesVeiculos(body);
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);

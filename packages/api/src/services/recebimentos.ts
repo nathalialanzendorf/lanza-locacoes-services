@@ -1,5 +1,6 @@
 import {
-  montarPlanoBaixa,
+  montarPlanoBaixaAsync,
+  withBaixaPlanoDbContext,
   resolvePlacaLinhaPlanoBaixa,
   resolveSyncRastreame,
   type LinhaPlanoBaixa,
@@ -8,7 +9,7 @@ import {
 import { HttpError } from "../http.js";
 import * as despesasService from "./despesas.js";
 
-export function montarPlano(input: MontarPlanoBaixaInput) {
+export async function montarPlano(input: MontarPlanoBaixaInput) {
   if (!input.clienteQuery?.trim()) {
     throw new HttpError(400, 'Campo "clienteQuery" é obrigatório');
   }
@@ -20,7 +21,7 @@ export function montarPlano(input: MontarPlanoBaixaInput) {
   }
 
   try {
-    return montarPlanoBaixa(input);
+    return await montarPlanoBaixaAsync(input);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao montar plano de baixa";
     throw new HttpError(400, msg);
@@ -64,45 +65,47 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
   };
   const resultados: ExecutarBaixaResultado["resultados"] = [];
 
-  for (const linha of input.linhas) {
-    if (!linha.patch) {
-      throw new HttpError(400, `Linha ${linha.num} sem campo "patch"`);
-    }
-
-    if (linha.operacao === "atualizar") {
-      const alvo = linha.autoInfracao;
-      if (!alvo) {
-        throw new HttpError(400, `Linha ${linha.num}: operação atualizar exige autoInfracao`);
+  return withBaixaPlanoDbContext(async () => {
+    for (const linha of input.linhas) {
+      if (!linha.patch) {
+        throw new HttpError(400, `Linha ${linha.num} sem campo "patch"`);
       }
-      const r = await despesasService.atualizarDespesa(alvo, linha.patch, syncOpts);
-      resultados.push({
-        num: linha.num,
-        operacao: linha.operacao,
-        autoInfracao: alvo,
-        data: r.data,
-        proximaParcela: r.proximaParcela,
-      });
-      continue;
+
+      if (linha.operacao === "atualizar") {
+        const alvo = linha.autoInfracao;
+        if (!alvo) {
+          throw new HttpError(400, `Linha ${linha.num}: operação atualizar exige autoInfracao`);
+        }
+        const r = await despesasService.atualizarDespesa(alvo, linha.patch, syncOpts);
+        resultados.push({
+          num: linha.num,
+          operacao: linha.operacao,
+          autoInfracao: alvo,
+          data: r.data,
+          proximaParcela: r.proximaParcela,
+        });
+        continue;
+      }
+
+      if (linha.operacao === "criar") {
+        const veiculoId = resolveVeiculoIdDaLinha(linha);
+        const item = despesasService.patchParaInput(linha.patch);
+        const r = await despesasService.criarDespesa(veiculoId, item, syncOpts);
+        resultados.push({
+          num: linha.num,
+          operacao: linha.operacao,
+          autoInfracao: r.data.autoInfracao,
+          data: r.data,
+          proximaParcela: r.proximaParcela,
+          aviso: r.aviso,
+          duplicado: r.duplicado,
+        });
+        continue;
+      }
+
+      throw new HttpError(400, `Linha ${linha.num}: operação inválida`);
     }
 
-    if (linha.operacao === "criar") {
-      const veiculoId = resolveVeiculoIdDaLinha(linha);
-      const item = despesasService.patchParaInput(linha.patch);
-      const r = await despesasService.criarDespesa(veiculoId, item, syncOpts);
-      resultados.push({
-        num: linha.num,
-        operacao: linha.operacao,
-        autoInfracao: r.data.autoInfracao,
-        data: r.data,
-        proximaParcela: r.proximaParcela,
-        aviso: r.aviso,
-        duplicado: r.duplicado,
-      });
-      continue;
-    }
-
-    throw new HttpError(400, `Linha ${linha.num}: operação inválida`);
-  }
-
-  return { aplicadas: resultados.length, resultados };
+    return { aplicadas: resultados.length, resultados };
+  });
 }

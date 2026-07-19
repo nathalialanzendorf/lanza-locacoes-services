@@ -492,6 +492,14 @@ export function findInfracaoByNumeroAuto(numeroAuto: string): InfracaoRegistro |
   return db.infracoes.find((i) => autoKey(i.numeroAuto) === key) ?? null;
 }
 
+export async function findInfracaoByNumeroAutoAsync(
+  numeroAuto: string,
+): Promise<InfracaoRegistro | null> {
+  const key = autoKey(numeroAuto);
+  const db = await loadInfracoesDbAsync();
+  return db.infracoes.find((i) => autoKey(i.numeroAuto) === key) ?? null;
+}
+
 /** Marca infração como débito do parceiro/dono (confirmação manual do operador). */
 export function confirmarDebitoParceiroInfracao(
   numeroAuto: string,
@@ -514,6 +522,27 @@ export function confirmarDebitoParceiroInfracao(
   return reg;
 }
 
+export async function confirmarDebitoParceiroInfracaoAsync(
+  numeroAuto: string,
+  parceiroId?: string | null,
+): Promise<InfracaoRegistro | null> {
+  const db = await loadInfracoesDbAsync();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  reg.debitoParceiroConfirmado = true;
+  if (parceiroId !== undefined) reg.debitoParceiroId = parceiroId;
+  reg.condutorNaoIdentificado = true;
+  reg.condutorConfirmado = true;
+  reg.condutorId = null;
+  reg.condutorContrato = null;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  await saveInfracoesDbAsync(db);
+  return reg;
+}
+
 export function vincularClienteDespesaInfracao(
   numeroAuto: string,
   clienteDespesaId: string,
@@ -528,6 +557,23 @@ export function vincularClienteDespesaInfracao(
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
   saveInfracoesDb(db);
+  return reg;
+}
+
+export async function vincularClienteDespesaInfracaoAsync(
+  numeroAuto: string,
+  clienteDespesaId: string,
+): Promise<InfracaoRegistro | null> {
+  const db = await loadInfracoesDbAsync();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  if (reg.clienteDespesaId === clienteDespesaId) return reg;
+  reg.clienteDespesaId = clienteDespesaId;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  await saveInfracoesDbAsync(db);
   return reg;
 }
 

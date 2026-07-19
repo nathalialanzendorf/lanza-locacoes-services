@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { loadParceiroDespesasDb } from "../lib/parceiroDespesasDb.js";
+import { loadJsonDocumentForApi } from "@lanza/db";
+import { loadParceiroDespesasDb, loadParceiroDespesasDbAsync } from "../lib/parceiroDespesasDb.js";
+import { loadVeiculosDbAsync } from "../lib/veiculosDb.js";
 import { rastreadorValorFixo } from "../lib/rastreadorFixo.js";
 import { prestacaoContasBaseDir } from "../lib/lanzaPaths.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
@@ -11,8 +13,55 @@ const DB = path.join(REPO_ROOT, "database");
 
 const SEM_SEGURO = new Set(["luiz paulo", "jhonny", "baiano"]);
 
-function load(name: string): unknown {
-  return JSON.parse(fs.readFileSync(path.join(DB, name), "utf8"));
+type PrestacaoDbSnapshot = {
+  despesas: Record<string, unknown>[];
+  veiculos: Record<string, unknown>[];
+  parceiros: Record<string, { id: string; nome: string }>;
+  donoId: Record<string, string>;
+};
+
+function loadPrestacaoDbSnapshotSync(): PrestacaoDbSnapshot {
+  const load = (name: string): unknown =>
+    JSON.parse(fs.readFileSync(path.join(DB, name), "utf8"));
+  return {
+    despesas: loadParceiroDespesasDb().parceiroDespesas as Record<string, unknown>[],
+    veiculos: (load("veiculos.json") as { veiculos: Record<string, unknown>[] }).veiculos,
+    parceiros: Object.fromEntries(
+      (load("parceiros.json") as { parceiros: { id: string; nome: string }[] }).parceiros.map(
+        (p) => [p.id, p] as const,
+      ),
+    ),
+    donoId: Object.fromEntries(
+      (
+        load("parceiro-veiculo.json") as {
+          vinculos: { veiculoId: string; parceiroId: string }[];
+        }
+      ).vinculos.map((l) => [l.veiculoId, l.parceiroId] as const),
+    ),
+  };
+}
+
+async function loadPrestacaoDbSnapshotAsync(): Promise<PrestacaoDbSnapshot> {
+  const [parceiroDespesasDb, veiculosDb, parceirosDb, vinculosDb] = await Promise.all([
+    loadParceiroDespesasDbAsync(),
+    loadVeiculosDbAsync(),
+    loadJsonDocumentForApi<{ parceiros?: { id: string; nome: string }[] }>(
+      path.join(DB, "parceiros.json"),
+      { parceiros: [] },
+    ),
+    loadJsonDocumentForApi<{ vinculos?: { veiculoId: string; parceiroId: string }[] }>(
+      path.join(DB, "parceiro-veiculo.json"),
+      { vinculos: [] },
+    ),
+  ]);
+  return {
+    despesas: parceiroDespesasDb.parceiroDespesas as Record<string, unknown>[],
+    veiculos: veiculosDb.veiculos as Record<string, unknown>[],
+    parceiros: Object.fromEntries((parceirosDb.parceiros ?? []).map((p) => [p.id, p] as const)),
+    donoId: Object.fromEntries(
+      (vinculosDb.vinculos ?? []).map((l) => [l.veiculoId, l.parceiroId] as const),
+    ),
+  };
 }
 
 function brl(v: number): string {
@@ -93,6 +142,19 @@ export type PrestacaoContasResult = {
 };
 
 export function montarPrestacaoContas(inp: PrestacaoContasInput): PrestacaoContasResult {
+  return montarPrestacaoContasComSnapshot(inp, loadPrestacaoDbSnapshotSync());
+}
+
+export async function montarPrestacaoContasAsync(
+  inp: PrestacaoContasInput,
+): Promise<PrestacaoContasResult> {
+  return montarPrestacaoContasComSnapshot(inp, await loadPrestacaoDbSnapshotAsync());
+}
+
+function montarPrestacaoContasComSnapshot(
+  inp: PrestacaoContasInput,
+  dbSnap: PrestacaoDbSnapshot,
+): PrestacaoContasResult {
   const comp = inp.competencia;
   const [mmComp, aaaaComp] = comp.split("/");
   const pastaComp = `${mmComp}.${aaaaComp}`;
@@ -106,24 +168,12 @@ export function montarPrestacaoContas(inp: PrestacaoContasInput): PrestacaoConta
   const rastValor = Number(inp.rastreadorValor ?? rastreadorValorFixo(comp));
   const rastDia = Number(inp.rastreadorDia ?? 10);
 
-  const despesas = loadParceiroDespesasDb().parceiroDespesas as Record<string, unknown>[];
-  const veiculosArr = (load("veiculos.json") as { veiculos: Record<string, unknown>[] })
-    .veiculos;
+  const despesas = dbSnap.despesas;
   const veiculos = new Map(
-    veiculosArr.map((v) => [norm(String(v.placa)), v] as const),
+    dbSnap.veiculos.map((v) => [norm(String(v.placa)), v] as const),
   );
-  const parceiros = Object.fromEntries(
-    (load("parceiros.json") as { parceiros: { id: string; nome: string }[] }).parceiros.map(
-      (p) => [p.id, p] as const,
-    ),
-  );
-  const donoId = Object.fromEntries(
-    (
-      load("parceiro-veiculo.json") as {
-        vinculos: { veiculoId: string; parceiroId: string }[];
-      }
-    ).vinculos.map((l) => [l.veiculoId, l.parceiroId] as const),
-  );
+  const parceiros = dbSnap.parceiros;
+  const donoId = dbSnap.donoId;
 
   function donoNome(vid: string): string {
     const pid = donoId[vid];

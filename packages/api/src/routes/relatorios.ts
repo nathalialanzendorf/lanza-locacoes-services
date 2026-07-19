@@ -114,7 +114,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<cobrancasRel.SemanalAtrasoInput>(ctx.req);
       const salvar = parseAtivoQuery(ctx.query.get("salvar"));
-      const data = cobrancasRel.gerarSemanalAtraso({
+      const data = await cobrancasRel.gerarSemanalAtraso({
         ...body,
         salvar: salvar ?? body.salvar,
       });
@@ -131,7 +131,10 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: infracoes.regex,
     paramNames: infracoes.paramNames,
-    handler: (ctx) => json(ctx.res, 200, { data: infracoesRel.relatorioInfracoes() }),
+    handler: routeAsync(async (ctx) => {
+      const data = await infracoesRel.relatorioInfracoes();
+      json(ctx.res, 200, { data });
+    }),
   });
 
   const encerramento = compileRoute("/api/relatorios/encerramento");
@@ -142,7 +145,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<encerramentoRel.GerarEncerramentoInput>(ctx.req);
       const armazenar = body.armazenarServidor === true;
-      const data = encerramentoRel.gerarEncerramento({
+      const data = await encerramentoRel.gerarEncerramento({
         ...body,
         salvar: armazenar,
       });
@@ -165,7 +168,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     paramNames: prestacao.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<PrestacaoContasInput & { armazenarServidor?: boolean }>(ctx.req);
-      const data = prestacaoRel.gerarPrestacaoContas(body);
+      const data = await prestacaoRel.gerarPrestacaoContas(body);
       let blob = null;
       if (body.armazenarServidor === true) {
         const paths = [

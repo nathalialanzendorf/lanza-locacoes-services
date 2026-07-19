@@ -25,14 +25,14 @@ export function registerAnaliseCadastroRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: list.regex,
     paramNames: list.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const comAlerta = parseAtivoQuery(ctx.query.get("comAlerta"));
-      const data = analiseService.listarAnalisesCadastro({
+      const data = await analiseService.listarAnalisesCadastro({
         cpf: ctx.query.get("cpf") ?? undefined,
         comAlerta: comAlerta === true ? true : undefined,
       });
       json(ctx.res, 200, data);
-    },
+    }),
   });
 
   routes.push({
@@ -65,7 +65,7 @@ export function registerAnaliseCadastroRoutes(routes: RouteDef[]): void {
       if (body.aprovado !== true && body.aprovado !== false) {
         return badRequest(ctx, 'Campo "aprovado" deve ser true ou false');
       }
-      const data = analiseService.registrarDecisaoAnalise(ctx.params.id, body.aprovado);
+      const data = await analiseService.registrarDecisaoAnalise(ctx.params.id, body.aprovado);
       json(ctx.res, 200, { data });
     }),
   });
@@ -87,10 +87,10 @@ export function registerAnaliseCadastroRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = analiseService.obterAnaliseCadastro(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const item = await analiseService.obterAnaliseCadastro(ctx.params.id);
       if (!item) return notFound(ctx, "Análise");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 }

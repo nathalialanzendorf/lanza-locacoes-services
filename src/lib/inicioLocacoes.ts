@@ -1,11 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
-
-import { loadClienteDespesasDb } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb, loadClienteDespesasDbAsync } from "./clienteDespesasDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { REPO_ROOT } from "./repoRoot.js";
-
-const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
+import { loadVeiculosDb, loadVeiculosDbAsync, saveVeiculosDb, saveVeiculosDbAsync } from "./veiculosDb.js";
 
 /**
  * Categorias que indicam que o veículo já estava em locação (posse de um
@@ -52,13 +47,13 @@ function toIso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function loadVeiculosDb(): VeiculosDb {
-  return JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as VeiculosDb;
+function loadVeiculosDbLocal(): VeiculosDb {
+  return loadVeiculosDb() as VeiculosDb;
 }
 
 /** Mapa placaNormalizada -> Date de início das locações (campo inicioLocacoes). */
 export function loadInicioLocacoesMap(): Map<string, Date> {
-  const db = loadVeiculosDb();
+  const db = loadVeiculosDbLocal();
   const map = new Map<string, Date>();
   for (const v of db.veiculos ?? []) {
     if (!v.placa) continue;
@@ -77,7 +72,18 @@ export function getInicioLocacoes(placa: string): Date | null {
  * mais antigo em cliente-despesas.json (categorias de posse do locatário).
  */
 export function derivarInicioLocacoes(): Map<string, string> {
-  const db = loadClienteDespesasDb();
+  return derivarInicioLocacoesFromDespesas(loadClienteDespesasDb().clienteDespesas);
+}
+
+export async function derivarInicioLocacoesAsync(): Promise<Map<string, string>> {
+  const db = await loadClienteDespesasDbAsync();
+  return derivarInicioLocacoesFromDespesas(db.clienteDespesas);
+}
+
+function derivarInicioLocacoesFromDespesas(
+  despesas: Array<{ veiculoId?: string; categoria?: string; dataAutuacao?: string; ativo?: boolean }>,
+): Map<string, string> {
+  const db = { clienteDespesas: despesas };
   const minPorPlaca = new Map<string, Date>();
   for (const d of db.clienteDespesas ?? []) {
     if (d.ativo === false) continue;
@@ -110,33 +116,77 @@ export function gravarInicioLocacoesDerivado(opts?: {
   sobrescrever?: boolean;
   dryRun?: boolean;
 }): GravarInicioResult[] {
+  return gravarInicioLocacoesDerivadoComDados(
+    derivarInicioLocacoes(),
+    loadVeiculosDb(),
+    opts,
+  );
+}
+
+export async function gravarInicioLocacoesDerivadoAsync(opts?: {
+  sobrescrever?: boolean;
+  dryRun?: boolean;
+}): Promise<GravarInicioResult[]> {
   const sobrescrever = opts?.sobrescrever === true;
-  const derivado = derivarInicioLocacoes();
-  const db = loadVeiculosDb();
+  const [derivado, db] = await Promise.all([derivarInicioLocacoesAsync(), loadVeiculosDbAsync()]);
   const out: GravarInicioResult[] = [];
 
   for (const v of db.veiculos ?? []) {
     if (!v.placa) continue;
     const key = compactPlaca(v.placa);
     const novo = derivado.get(key);
-    const atual = v.inicioLocacoes ?? null;
+    const atual = v.inicioLocacoes != null ? String(v.inicioLocacoes) : null;
 
     if (!novo) {
-      out.push({ placa: formatPlacaHyphen(v.placa), inicio: atual ?? "", acao: "sem-dados" });
+      out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: atual ?? "", acao: "sem-dados" });
       continue;
     }
     if (atual && !sobrescrever) {
-      out.push({ placa: formatPlacaHyphen(v.placa), inicio: atual, acao: "mantido" });
+      out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: atual, acao: "mantido" });
       continue;
     }
     const acao: GravarInicioResult["acao"] = atual ? "atualizado" : "definido";
     if (opts?.dryRun !== true) v.inicioLocacoes = novo;
-    out.push({ placa: formatPlacaHyphen(v.placa), inicio: novo, acao });
+    out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: novo, acao });
   }
 
   if (opts?.dryRun !== true) {
-    db.atualizadoEm = toIso(new Date());
-    fs.writeFileSync(DB_VEICULOS, JSON.stringify(db, null, 2) + "\n", "utf8");
+    db.atualizadoEm = new Date().toISOString();
+    await saveVeiculosDbAsync(db);
+  }
+  return out;
+}
+
+function gravarInicioLocacoesDerivadoComDados(
+  derivado: Map<string, string>,
+  db: ReturnType<typeof loadVeiculosDb>,
+  opts?: { sobrescrever?: boolean; dryRun?: boolean },
+): GravarInicioResult[] {
+  const sobrescrever = opts?.sobrescrever === true;
+  const out: GravarInicioResult[] = [];
+
+  for (const v of db.veiculos ?? []) {
+    if (!v.placa) continue;
+    const key = compactPlaca(v.placa);
+    const novo = derivado.get(key);
+    const atual = v.inicioLocacoes != null ? String(v.inicioLocacoes) : null;
+
+    if (!novo) {
+      out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: atual ?? "", acao: "sem-dados" });
+      continue;
+    }
+    if (atual && !sobrescrever) {
+      out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: atual, acao: "mantido" });
+      continue;
+    }
+    const acao: GravarInicioResult["acao"] = atual ? "atualizado" : "definido";
+    if (opts?.dryRun !== true) v.inicioLocacoes = novo;
+    out.push({ placa: formatPlacaHyphen(String(v.placa)), inicio: novo, acao });
+  }
+
+  if (opts?.dryRun !== true) {
+    db.atualizadoEm = new Date().toISOString();
+    saveVeiculosDb(db);
   }
   return out;
 }

@@ -42,11 +42,11 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: one.regex,
     paramNames: one.paramNames,
-    handler: (ctx) => {
-      const item = infracoesService.obterInfracao(ctx.params.numeroAuto);
+    handler: routeAsync(async (ctx) => {
+      const item = await infracoesService.obterInfracao(ctx.params.numeroAuto);
       if (!item) return notFound(ctx, "Infração");
       json(ctx.res, 200, { data: item });
-    },
+    }),
   });
 
   const confirmarParceiro = compileRoute("/api/infracoes/:numeroAuto/confirmar-parceiro");
@@ -58,7 +58,7 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
       const body = await readJsonBody<{ parceiroId?: string | null }>(ctx.req).catch(
         (): { parceiroId?: string | null } => ({}),
       );
-      const data = infracoesService.confirmarParceiroInfracao(
+      const data = await infracoesService.confirmarParceiroInfracao(
         ctx.params.numeroAuto,
         body.parceiroId,
       );
@@ -76,7 +76,7 @@ export function registerInfracoesRoutes(routes: RouteDef[]): void {
       if (!body.clienteDespesaId) {
         return badRequest(ctx, 'Campo "clienteDespesaId" é obrigatório');
       }
-      const data = infracoesService.vincularDespesaInfracao(
+      const data = await infracoesService.vincularDespesaInfracao(
         ctx.params.numeroAuto,
         body.clienteDespesaId,
       );

@@ -11,16 +11,21 @@
  * também é por dia). Dias diferentes acumulam histórico.
  */
 import crypto from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  loadJsonDocumentForApi,
+  saveJsonDocument,
+  saveJsonDocumentAsync,
+} from "@lanza/db";
+import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "../clientesDb.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import type { DadosLocatario, ResultadoFonte, StatusFonte } from "./tipos.js";
 import type { DadosLgpd, RelatorioTriagem } from "./relatorio.js";
 
 export const DB_TRIAGEM = path.join(REPO_ROOT, "database", "analise-cadastro.json");
-const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
 
 /** Resumo de uma fonte, sem os achados detalhados (que ficam no relatório). */
 export interface FonteResumo {
@@ -91,36 +96,40 @@ function normCpf(cpf: string): string {
   return String(cpf ?? "").replace(/\D/g, "");
 }
 
-type ClienteJson = { id?: string; nome?: string; cpf?: string };
-
-/** Vincula a triagem a um cliente cadastrado, por CPF. */
-function resolveClienteId(cpf: string): string | null {
-  if (!fs.existsSync(DB_CLIENTES)) return null;
-  try {
-    const clientes =
-      (JSON.parse(fs.readFileSync(DB_CLIENTES, "utf8")) as { clientes?: ClienteJson[] })
-        .clientes ?? [];
-    const key = normCpf(cpf);
-    const c = clientes.find((x) => x.cpf && normCpf(x.cpf) === key);
-    return c?.id ?? null;
-  } catch {
-    return null;
-  }
+function emptyTriagemDb(): TriagemDb {
+  return {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: hojeIso(),
+    schemaTriagem: DEFAULT_SCHEMA,
+    triagens: [],
+  };
 }
 
-export function loadTriagemDb(): TriagemDb {
-  if (!jsonDocumentExists(DB_TRIAGEM)) {
-    return {
-      descricao: DEFAULT_DESCRICAO,
-      atualizadoEm: hojeIso(),
-      schemaTriagem: DEFAULT_SCHEMA,
-      triagens: [],
-    };
-  }
-  const db = loadJsonDocument<TriagemDb>(DB_TRIAGEM);
+function normalizeTriagemDb(db: TriagemDb): TriagemDb {
   if (!Array.isArray(db.triagens)) db.triagens = [];
   if (!db.schemaTriagem) db.schemaTriagem = DEFAULT_SCHEMA;
   return db;
+}
+
+/** Vincula a triagem a um cliente cadastrado, por CPF. */
+function resolveClienteIdFromList(cpf: string, clientes: ClienteRegistro[]): string | null {
+  const key = normCpf(cpf);
+  const c = clientes.find((x) => x.cpf && normCpf(x.cpf) === key);
+  return c?.id ?? null;
+}
+
+function resolveClienteId(cpf: string): string | null {
+  return resolveClienteIdFromList(cpf, loadClientesDb().clientes);
+}
+
+export function loadTriagemDb(): TriagemDb {
+  if (!jsonDocumentExists(DB_TRIAGEM)) return emptyTriagemDb();
+  return normalizeTriagemDb(loadJsonDocument<TriagemDb>(DB_TRIAGEM));
+}
+
+export async function loadTriagemDbAsync(): Promise<TriagemDb> {
+  const db = await loadJsonDocumentForApi<TriagemDb>(DB_TRIAGEM, emptyTriagemDb());
+  return normalizeTriagemDb(db);
 }
 
 export function saveTriagemDb(db: TriagemDb): void {
@@ -128,6 +137,16 @@ export function saveTriagemDb(db: TriagemDb): void {
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaTriagem = DEFAULT_SCHEMA;
   saveJsonDocument(DB_TRIAGEM, db, { mkdir: true, trailingNewline: true });
+}
+
+export async function saveTriagemDbAsync(db: TriagemDb): Promise<void> {
+  db.atualizadoEm = hojeIso();
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  db.schemaTriagem = DEFAULT_SCHEMA;
+  await saveJsonDocumentAsync(DB_TRIAGEM, db as unknown as Record<string, unknown>, {
+    mkdir: true,
+    trailingNewline: true,
+  });
 }
 
 function resumirFonte(f: ResultadoFonte): FonteResumo {
@@ -209,6 +228,61 @@ export function registrarTriagem(args: {
   return { registro, acao: "novo" };
 }
 
+export async function registrarTriagemAsync(args: {
+  locatario: DadosLocatario;
+  relatorio: RelatorioTriagem;
+  caminhoJson?: string | null;
+  caminhoTxt?: string | null;
+  aprovado?: boolean | null;
+}): Promise<RegistrarResultado> {
+  const [db, clientesDb] = await Promise.all([loadTriagemDbAsync(), loadClientesDbAsync()]);
+  const { locatario, relatorio } = args;
+  const ts = nowIso();
+  const dataConsulta = (relatorio.geradoEm || ts).slice(0, 10);
+  const cpf = normCpf(locatario.cpf);
+
+  const relativo = (p?: string | null): string | null =>
+    p ? path.relative(REPO_ROOT, p).replace(/\\/g, "/") : null;
+
+  const base: Omit<TriagemRegistro, "id" | "cadastradoEm"> = {
+    clienteId: resolveClienteIdFromList(cpf, clientesDb.clientes),
+    cpf,
+    cpfFormatado: locatario.cpfFormatado,
+    nome: locatario.nome,
+    nascimento: locatario.nascimento,
+    dataConsulta,
+    lgpd: relatorio.lgpd,
+    alertaGeral: relatorio.alertaGeral,
+    aprovado: args.aprovado ?? null,
+    resumo: relatorio.resumo,
+    fontes: relatorio.fontes.map(resumirFonte),
+    relatorioJson: relativo(args.caminhoJson),
+    relatorioTxt: relativo(args.caminhoTxt),
+    atualizadoEm: ts,
+  };
+
+  const idx = db.triagens.findIndex(
+    (t) => normCpf(t.cpf) === cpf && t.dataConsulta === dataConsulta,
+  );
+  if (idx >= 0) {
+    const existente = db.triagens[idx]!;
+    const registro: TriagemRegistro = { ...existente, ...base };
+    if (args.aprovado === undefined) registro.aprovado = existente.aprovado ?? null;
+    db.triagens[idx] = registro;
+    await saveTriagemDbAsync(db);
+    return { registro, acao: "atualizado" };
+  }
+
+  const registro: TriagemRegistro = {
+    id: crypto.randomUUID(),
+    cadastradoEm: ts,
+    ...base,
+  };
+  db.triagens.push(registro);
+  await saveTriagemDbAsync(db);
+  return { registro, acao: "novo" };
+}
+
 export interface ListarTriagemFiltro {
   cpf?: string;
   /** Só triagens com alerta. */
@@ -216,9 +290,19 @@ export interface ListarTriagemFiltro {
 }
 
 export function listarTriagens(filtro: ListarTriagemFiltro = {}): TriagemRegistro[] {
-  const db = loadTriagemDb();
+  return filtrarTriagens(loadTriagemDb().triagens, filtro);
+}
+
+export async function listarTriagensAsync(
+  filtro: ListarTriagemFiltro = {},
+): Promise<TriagemRegistro[]> {
+  const db = await loadTriagemDbAsync();
+  return filtrarTriagens(db.triagens, filtro);
+}
+
+function filtrarTriagens(triagens: TriagemRegistro[], filtro: ListarTriagemFiltro): TriagemRegistro[] {
   const cpfKey = filtro.cpf ? normCpf(filtro.cpf) : null;
-  return db.triagens
+  return triagens
     .filter((t) => {
       if (cpfKey && normCpf(t.cpf) !== cpfKey) return false;
       if (filtro.comAlerta && !t.alertaGeral) return false;

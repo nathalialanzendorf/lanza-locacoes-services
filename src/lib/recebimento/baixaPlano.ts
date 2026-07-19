@@ -2,16 +2,14 @@
  * Monta o plano de baixa de recebimento (pré-visualização — não grava).
  * Usado pela skill cadastro-recebimento (modo unitário e lote PagBank).
  */
-import fs from "node:fs";
-import path from "node:path";
-
 import {
   despesaAtribuidaACliente,
   loadClienteDespesasDb,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
-import { findClienteByCpf, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
+import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
+import { loadCobrancasDbContextAsync, type CobrancasDbContext } from "../cobrancasDbContext.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
 import { loadContratosDb } from "../contratosDb.js";
 import {
@@ -25,12 +23,11 @@ import {
   deveExibirCalculoSemanalAtraso,
   montarPacoteCobrancaSemanalAtraso,
 } from "../pagamentoSemanalCobranca.js";
-import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import {
-  findVeiculoByPlaca,
-  findVeiculoByRastreameKey,
+  loadVeiculosDb,
+  type VeiculoRegistro,
 } from "../veiculosDb.js";
-import { REPO_ROOT } from "../repoRoot.js";
 import {
   verificarIdempotenciaBaixa,
   type IdempotenciaBaixa,
@@ -88,27 +85,42 @@ export type CalculoSemanalAtrasoPlano = {
   payload: Record<string, unknown>;
 };
 
-type VeiculoDb = {
-  placa?: string;
-  id?: string;
-  rastreameLabel?: string;
-};
+type VeiculoDb = Pick<VeiculoRegistro, "placa" | "id" | "rastreameLabel" | "rastreameRastreavelKey">;
 
-function loadVeiculos(): VeiculoDb[] {
-  const p = path.join(REPO_ROOT, "database", "veiculos.json");
-  const j = JSON.parse(fs.readFileSync(p, "utf8")) as { veiculos?: VeiculoDb[] };
-  return j.veiculos ?? [];
+let _baixaPlanoCtx: CobrancasDbContext | null = null;
+
+function clientesList(): ClienteRegistro[] {
+  return _baixaPlanoCtx?.clientes ?? loadClientesDb().clientes;
 }
 
-function loadClientes(): ClienteRegistro[] {
-  const p = path.join(REPO_ROOT, "database", "clientes.json");
-  const j = JSON.parse(fs.readFileSync(p, "utf8")) as { clientes?: ClienteRegistro[] };
-  return j.clientes ?? [];
+function veiculosList(): VeiculoDb[] {
+  return _baixaPlanoCtx?.veiculos ?? loadVeiculosDb().veiculos;
+}
+
+function contratosList() {
+  return _baixaPlanoCtx?.contratos ?? loadContratosDb().contratos;
+}
+
+function clienteDespesasList(): ClienteDespesaRegistro[] {
+  return _baixaPlanoCtx?.clienteDespesas ?? loadClienteDespesasDb().clienteDespesas;
+}
+
+function findVeiculoLocal(placa: string): VeiculoDb | null {
+  return veiculosList().find((v) => placasIguais(v.placa, placa)) ?? null;
+}
+
+function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null {
+  const k = String(key);
+  return (
+    veiculosList().find(
+      (v) => v.rastreameRastreavelKey != null && String(v.rastreameRastreavelKey) === k,
+    ) ?? null
+  );
 }
 
 function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
   const p = compactPlaca(veiculoId);
-  const list = loadContratosDb().contratos.filter(
+  const list = contratosList().filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
   const par = list.find((c) => c.clienteId === clienteId);
@@ -118,9 +130,8 @@ function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
 }
 
 function vencimentosSemanalAbertosCliente(clienteId: string, placa?: string): string[] {
-  const db = loadClienteDespesasDb();
   const placaKey = placa ? compactPlaca(placa) : null;
-  const vencs = db.clienteDespesas
+  const vencs = clienteDespesasList()
     .filter(
       (d) =>
         d.condutorId === clienteId &&
@@ -178,7 +189,7 @@ function montarCalculoSemanalAtrasoPlano(opts: {
 }
 
 export function rastreavelLabel(veiculoId: string): string {
-  const v = loadVeiculos().find((x) => x.placa === veiculoId || x.id === veiculoId);
+  const v = veiculosList().find((x) => x.placa === veiculoId || x.id === veiculoId);
   return v?.rastreameLabel ?? veiculoId;
 }
 
@@ -186,22 +197,22 @@ export function rastreavelLabel(veiculoId: string): string {
 export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
   const fromPatch = linha.patch?.veiculoId?.trim();
   if (fromPatch) {
-    const v = findVeiculoByPlaca(fromPatch);
+    const v = findVeiculoLocal(fromPatch);
     return v?.placa ?? formatPlacaHyphen(fromPatch);
   }
 
   const rKey = linha.patch?.rastreameRastreavelKey;
   if (rKey != null && String(rKey).trim() !== "") {
-    const v = findVeiculoByRastreameKey(rKey);
+    const v = findVeiculoByRastreameKeyLocal(rKey);
     if (v?.placa) return v.placa;
   }
 
-  const direct = findVeiculoByPlaca(linha.rastreavel);
+  const direct = findVeiculoLocal(linha.rastreavel);
   if (direct?.placa) return direct.placa;
 
   const head = linha.rastreavel.split(" - ")[0]?.trim();
   if (head) {
-    const v = findVeiculoByPlaca(head);
+    const v = findVeiculoLocal(head);
     if (v?.placa) return v.placa;
   }
 
@@ -231,10 +242,13 @@ export function resolverCliente(query: string): ClienteRegistro {
   const q = query.trim();
   if (!q) throw new Error("Informe --cliente (nome, CPF ou id).");
 
-  const byCpf = findClienteByCpf(q);
-  if (byCpf) return byCpf;
+  const list = clientesList();
+  const key = q.replace(/\D/g, "");
+  if (key.length === 11) {
+    const byCpf = list.find((c) => c.cpf?.replace(/\D/g, "") === key);
+    if (byCpf) return byCpf;
+  }
 
-  const list = loadClientes();
   const byId = list.find((c) => c.id === q);
   if (byId) return byId;
 
@@ -298,8 +312,7 @@ export function dataHoraToPagaEmIso(dataBr: string, horaBr: string | null): stri
 
 function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: string[] }): ClienteDespesaRegistro[] {
   const excluir = new Set(opts?.excluirCategorias ?? []);
-  const db = loadClienteDespesasDb();
-  return db.clienteDespesas
+  return clienteDespesasList()
     .filter(
       (d) =>
         despesaAtribuidaACliente(d, clienteId) &&
@@ -402,7 +415,7 @@ function resolverDespesaAlvo(
   if (alvoId) {
     const alvo =
       abertas.find((d) => d.autoInfracao === alvoId) ??
-      loadClienteDespesasDb().clienteDespesas.find(
+      clienteDespesasList().find(
         (d) =>
           d.autoInfracao === alvoId &&
           d.ativo !== false &&
@@ -438,9 +451,8 @@ function previewProximaParcela(
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
   if (!prox) return null;
 
-  const db = loadClienteDespesasDb();
   const alvo = stripAtrasadoSemanal(prox.descricao).toLowerCase();
-  const dup = db.clienteDespesas.some(
+  const dup = clienteDespesasList().some(
     (d) =>
       d.ativo !== false &&
       d.veiculoId === pago.veiculoId &&
@@ -721,6 +733,26 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     idempotencia,
     calculoSemanalAtraso,
   };
+}
+
+export async function withBaixaPlanoDbContext<T>(fn: () => T | Promise<T>): Promise<T> {
+  _baixaPlanoCtx = await loadCobrancasDbContextAsync();
+  try {
+    return await fn();
+  } finally {
+    _baixaPlanoCtx = null;
+  }
+}
+
+export async function montarPlanoBaixaAsync(
+  input: MontarPlanoBaixaInput,
+): Promise<PlanoBaixaRecebimento> {
+  _baixaPlanoCtx = await loadCobrancasDbContextAsync();
+  try {
+    return montarPlanoBaixa(input);
+  } finally {
+    _baixaPlanoCtx = null;
+  }
 }
 
 export function formatPlanoTabela(plano: PlanoBaixaRecebimento): string {

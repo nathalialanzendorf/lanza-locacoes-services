@@ -1,5 +1,5 @@
 import {
-  calcularEncerramentoContrato,
+  calcularEncerramentoContratoAsync,
   formatarEncerramentoTexto,
   formatarEncerramentoWhatsApp,
   salvarRelatorioEncerramento,
@@ -16,7 +16,7 @@ export type GerarEncerramentoInput = EncerramentoInput & {
   semJson?: boolean;
 };
 
-export function gerarEncerramento(input: GerarEncerramentoInput) {
+export async function gerarEncerramento(input: GerarEncerramentoInput) {
   if (!input.pastaContrato?.trim()) {
     throw new HttpError(400, 'Campo "pastaContrato" é obrigatório');
   }
@@ -39,7 +39,7 @@ export function gerarEncerramento(input: GerarEncerramentoInput) {
 
   let result: EncerramentoResult;
   try {
-    result = calcularEncerramentoContrato(encInput);
+    result = await calcularEncerramentoContratoAsync(encInput);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao calcular encerramento";
     throw new HttpError(400, msg);

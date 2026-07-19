@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { loadJsonDocumentForApi } from "@lanza/db";
 import { API_VERSION } from "../config.js";
 import { buildOpenApiDocument } from "../openapi/index.js";
 import {
@@ -9,6 +10,34 @@ import {
   obterRastreameEspelhoConfig,
   readLanzaPaths,
 } from "../lib-imports.js";
+
+const DB_FILES = [
+  "clientes.json",
+  "veiculos.json",
+  "contratos.json",
+  "cliente-despesas.json",
+  "parceiro-despesas.json",
+  "infracoes.json",
+  "locacoes.json",
+] as const;
+
+async function dbTimestampAsync(file: string): Promise<string | null> {
+  const p = path.join(REPO_ROOT, "database", file);
+  try {
+    const raw = await loadJsonDocumentForApi<{ atualizadoEm?: string }>(p, {});
+    if (raw.atualizadoEm) return raw.atualizadoEm;
+  } catch {
+    /* fallback abaixo */
+  }
+  if (fs.existsSync(p)) {
+    try {
+      return fs.statSync(p).mtime.toISOString();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 function dbTimestamp(file: string): string | null {
   const p = path.join(REPO_ROOT, "database", file);
@@ -35,7 +64,7 @@ function ultimosRelatoriosSync(limit = 5): { arquivo: string; modificado: string
     .slice(0, limit);
 }
 
-export function obterMeta() {
+function buildMeta(database: Record<string, string | null>) {
   const doc = buildOpenApiDocument();
   return {
     apiVersion: API_VERSION,
@@ -50,15 +79,40 @@ export function obterMeta() {
     repoRoot: REPO_ROOT,
     paths: readLanzaPaths(),
     rastreameEspelho: obterRastreameEspelhoConfig(),
-    database: {
-      clientes: dbTimestamp("clientes.json"),
-      veiculos: dbTimestamp("veiculos.json"),
-      contratos: dbTimestamp("contratos.json"),
-      clienteDespesas: dbTimestamp("cliente-despesas.json"),
-      parceiroDespesas: dbTimestamp("parceiro-despesas.json"),
-      infracoes: dbTimestamp("infracoes.json"),
-      locacoes: dbTimestamp("locacoes.json"),
-    },
+    database,
     ultimosSyncs: ultimosRelatoriosSync(),
   };
+}
+
+export function obterMeta() {
+  return buildMeta({
+    clientes: dbTimestamp("clientes.json"),
+    veiculos: dbTimestamp("veiculos.json"),
+    contratos: dbTimestamp("contratos.json"),
+    clienteDespesas: dbTimestamp("cliente-despesas.json"),
+    parceiroDespesas: dbTimestamp("parceiro-despesas.json"),
+    infracoes: dbTimestamp("infracoes.json"),
+    locacoes: dbTimestamp("locacoes.json"),
+  });
+}
+
+export async function obterMetaAsync() {
+  const [
+    clientes,
+    veiculos,
+    contratos,
+    clienteDespesas,
+    parceiroDespesas,
+    infracoes,
+    locacoes,
+  ] = await Promise.all(DB_FILES.map((file) => dbTimestampAsync(file)));
+  return buildMeta({
+    clientes,
+    veiculos,
+    contratos,
+    clienteDespesas,
+    parceiroDespesas,
+    infracoes,
+    locacoes,
+  });
 }

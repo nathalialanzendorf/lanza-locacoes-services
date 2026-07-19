@@ -8,7 +8,7 @@ export function registerMetaRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: meta.regex,
     paramNames: meta.paramNames,
-    handler: (ctx) => json(ctx.res, 200, metaService.obterMeta()),
+    handler: routeAsync(async (ctx) => json(ctx.res, 200, await metaService.obterMetaAsync())),
   });
 
   const resumo = compileRoute("/api/resumo");

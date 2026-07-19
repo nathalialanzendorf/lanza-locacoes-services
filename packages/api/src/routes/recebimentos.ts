@@ -18,7 +18,7 @@ export function registerRecebimentosRoutes(routes: RouteDef[]): void {
     paramNames: plano.paramNames,
     handler: routeAsync(async (ctx) => {
       const input = await readJsonBody<MontarPlanoBaixaInput>(ctx.req);
-      const data = recebimentosService.montarPlano(input);
+      const data = await recebimentosService.montarPlano(input);
       json(ctx.res, 200, { data });
     }),
   });

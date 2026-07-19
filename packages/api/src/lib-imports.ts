@@ -34,6 +34,7 @@ export {
   excluirVeiculoAsync,
   findVeiculoById,
   findVeiculoByPlaca,
+  findVeiculoInDb,
   isVeiculoAtivo,
   type VeiculoRegistro,
   type VeiculoPatch,
@@ -79,6 +80,8 @@ export type { LocacaoInput } from "../../../src/lib/locacoesDb.js";
 
 export {
   montarPlanoBaixa,
+  montarPlanoBaixaAsync,
+  withBaixaPlanoDbContext,
   resolverCliente,
   resolvePlacaLinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
@@ -130,11 +133,13 @@ export { gerarCobrancaCanvasDeSidecar } from "../../../src/lib/gerarCobrancaCanv
 
 export {
   montarRelatorioInfracoesBlocos,
+  montarRelatorioInfracoesBlocosAsync,
   type RelatorioInfracoesBlocosDados,
 } from "../../../src/lib/relatorioInfracoesBlocos.js";
 
 export {
   calcularEncerramentoContrato,
+  calcularEncerramentoContratoAsync,
   formatarEncerramentoTexto,
   formatarEncerramentoWhatsApp,
   type EncerramentoInput,
@@ -303,9 +308,13 @@ export {
 
 export {
   listarTriagens,
+  listarTriagensAsync,
   loadTriagemDb,
+  loadTriagemDbAsync,
   registrarTriagem,
+  registrarTriagemAsync,
   saveTriagemDb,
+  saveTriagemDbAsync,
   ultimaTriagemPorCpf,
   type TriagemRegistro,
 } from "../../../src/lib/analiseCadastro/triagemDb.js";
@@ -345,8 +354,11 @@ export {
   loadInfracoesDb,
   loadInfracoesDbAsync,
   findInfracaoByNumeroAuto,
+  findInfracaoByNumeroAutoAsync,
   confirmarDebitoParceiroInfracao,
+  confirmarDebitoParceiroInfracaoAsync,
   vincularClienteDespesaInfracao,
+  vincularClienteDespesaInfracaoAsync,
   type InfracaoRegistro,
 } from "../../../src/lib/infracoesDb.js";
 
@@ -445,7 +457,9 @@ export {
 
 export {
   derivarInicioLocacoes,
+  derivarInicioLocacoesAsync,
   gravarInicioLocacoesDerivado,
+  gravarInicioLocacoesDerivadoAsync,
 } from "../../../src/lib/inicioLocacoes.js";
 
 export {

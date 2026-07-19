@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -22,15 +21,42 @@ import {
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
+import { loadCobrancasDbContextAsync, type CobrancasDbContext } from "./cobrancasDbContext.js";
+import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
+import {
+  loadContratosDb,
+  validarContratoVigenteParaEncerramento,
+  type ContratoRegistro,
+} from "./contratosDb.js";
 import {
   infracaoCobravelRelatorio,
   infracaoIncluirListagemRelatorio,
   rotuloGastoClienteDespesa,
 } from "./infracaoTitulo.js";
-import { validarContratoVigenteParaEncerramento } from "./contratosDb.js";
-import { compactPlaca } from "./placa.js";
-import { REPO_ROOT } from "./repoRoot.js";
-import { findVeiculoByPlaca } from "./veiculosDb.js";
+import { compactPlaca, placasIguais } from "./placa.js";
+import { loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+
+let _encCtx: CobrancasDbContext | null = null;
+
+function clienteDespesasEnc(): ClienteDespesaRegistro[] {
+  return _encCtx?.clienteDespesas ?? loadClienteDespesasDb().clienteDespesas;
+}
+
+function clientesEnc(): ClienteRegistro[] {
+  return _encCtx?.clientes ?? loadClientesDb().clientes;
+}
+
+function veiculosEnc(): VeiculoRegistro[] {
+  return _encCtx?.veiculos ?? loadVeiculosDb().veiculos;
+}
+
+function contratosEnc(): ContratoRegistro[] {
+  return _encCtx?.contratos ?? loadContratosDb().contratos;
+}
+
+function findVeiculoEnc(placa: string): VeiculoRegistro | null {
+  return veiculosEnc().find((v) => placasIguais(v.placa, placa)) ?? null;
+}
 
 export type EncerramentoInput = {
   pastaContrato: string;
@@ -154,16 +180,8 @@ function loadClienteId(cpf: string | null, condutorId?: string | null): string |
   if (!cpf) return null;
   const key = cpfSoDigitos(cpf);
   if (!key) return null;
-  const p = path.join(REPO_ROOT, "database", "clientes.json");
-  try {
-    const j = JSON.parse(fs.readFileSync(p, "utf8")) as {
-      clientes?: { id?: string; cpf?: string }[];
-    };
-    const c = j.clientes?.find((x) => cpfSoDigitos(x.cpf) === key);
-    return c?.id ?? null;
-  } catch {
-    return null;
-  }
+  const c = clientesEnc().find((x) => cpfSoDigitos(x.cpf) === key);
+  return c?.id ?? null;
 }
 
 function infracaoExcluidaAcerto(m: ClienteDespesaRegistro, pagasAuto: Set<string>): boolean {
@@ -357,7 +375,7 @@ function coletarDebitosAbertosDb(
   diversos: ClienteDespesaRegistro[];
   creditos: CreditoDevolucao[];
 } {
-  const db = loadClienteDespesasDb();
+  const db = { clienteDespesas: clienteDespesasEnc() };
   const parcelasSemanal: ClienteDespesaRegistro[] = [];
   const diversos: ClienteDespesaRegistro[] = [];
   const creditos: CreditoDevolucao[] = [];
@@ -451,9 +469,8 @@ function inferirSemanasPagasDoDb(
   vencimentos: Date[],
 ): string[] {
   if (!clienteId || vencimentos.length === 0) return [];
-  const db = loadClienteDespesasDb();
   const limite = addDays(startOfDay(encerramento), 7);
-  const pagasNoPeriodo = db.clienteDespesas.filter((m) => {
+  const pagasNoPeriodo = clienteDespesasEnc().filter((m) => {
     if (!isClienteDespesaAtiva(m)) return false;
     if (m.paga !== true) return false;
     if ((m.categoria ?? "") !== "Locação semanal") return false;
@@ -467,7 +484,7 @@ function inferirSemanasPagasDoDb(
 
 export function calcularEncerramentoContrato(input: EncerramentoInput): EncerramentoResult {
   const contrato = extrairContrato(input.pastaContrato, { paraEncerramento: true });
-  const veicReg = findVeiculoByPlaca(contrato.placa);
+  const veicReg = findVeiculoEnc(contrato.placa);
   if (veicReg?.particular === true) {
     throw new Error(
       `Veículo ${contrato.placa} é PARTICULAR (não-locação) — não há contrato/quebra de contrato.`,
@@ -478,6 +495,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     contrato.placa,
     contrato.cpf,
     contrato.clienteNome,
+    contratosEnc(),
   );
   const encerramento = parseDataBr(input.dataEncerramento);
   if (!encerramento) {
@@ -612,7 +630,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const incluirInfracoesCliente =
     input.incluirInfracoesCliente === true ||
     (input.incluirInfracoesCliente !== false && clienteId != null);
-  const db = loadClienteDespesasDb();
+  const db = { clienteDespesas: clienteDespesasEnc() };
   /** Lançamentos de acerto podem ser no dia do encerramento ou poucos dias depois. */
   const limiteDespesasEncerramento = addDays(startOfDay(encerramento), 7);
   const infracoes = dedupeInfracoesEspelho(
@@ -911,4 +929,15 @@ export function formatarEncerramentoTexto(
 /** Texto pronto para colar no WhatsApp (sem avisos internos ao operador). */
 export function formatarEncerramentoWhatsApp(r: EncerramentoResult): string {
   return formatarEncerramentoTexto(r, { incluirAvisos: false, limparNomeCliente: true });
+}
+
+export async function calcularEncerramentoContratoAsync(
+  input: EncerramentoInput,
+): Promise<EncerramentoResult> {
+  _encCtx = await loadCobrancasDbContextAsync();
+  try {
+    return calcularEncerramentoContrato(input);
+  } finally {
+    _encCtx = null;
+  }
 }

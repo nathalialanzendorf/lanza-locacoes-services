@@ -6,20 +6,23 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { loadClientesDb } from "./clientesDb.js";
-import { loadClienteDespesasDb } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { loadCobrancasDbContextAsync } from "./cobrancasDbContext.js";
+import { parseDataInicio } from "./inicioLocacoes.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
-import { loadInicioLocacoesMap } from "./inicioLocacoes.js";
 import {
   infracaoNaoCobravelDetran,
   infracaoQuitadaDetran,
 } from "./infracaoTitulo.js";
 import {
   loadInfracoesDb,
+  loadInfracoesDbAsync,
   type InfracaoRegistro,
 } from "./infracoesDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
-import { loadVeiculosDb } from "./veiculosDb.js";
+import { loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { loadJsonDocumentForApi } from "@lanza/db";
 
 export type LinhaInfracaoBloco = {
   placa: string;
@@ -358,14 +361,101 @@ function linhaFromRegistro(
 
 /** Agrupa todas as infrações ativas de infracoes.json por bloco e subgrupo. */
 export function montarRelatorioInfracoesBlocos(): RelatorioInfracoesBlocosDados {
-  const db = loadInfracoesDb();
-  const inicioMap = loadInicioLocacoesMap();
-  const pagasLanza = mapaPagasLanza();
-  const clientes = new Map(
-    loadClientesDb().clientes.map((c) => [c.id, c.nome] as const),
+  return montarRelatorioInfracoesBlocosComDados({
+    infracoes: loadInfracoesDb().infracoes,
+    inicioMap: loadInicioLocacoesMapLocal(loadVeiculosDb().veiculos ?? []),
+    pagasLanza: mapaPagasLanzaFromDespesas(loadClienteDespesasDb().clienteDespesas),
+    clientes: new Map(loadClientesDb().clientes.map((c) => [c.id, c.nome] as const)),
+    parceiros: loadParceirosNomes(),
+    particulares: loadVeiculoParticularPorPlaca(),
+  });
+}
+
+export async function montarRelatorioInfracoesBlocosAsync(): Promise<RelatorioInfracoesBlocosDados> {
+  const dbParceiros = path.join(REPO_ROOT, "database", "parceiros.json");
+  const dbVinculos = path.join(REPO_ROOT, "database", "parceiro-veiculo.json");
+  const [infracoesDb, ctx, parceirosDb, vinculosDb] = await Promise.all([
+    loadInfracoesDbAsync(),
+    loadCobrancasDbContextAsync(),
+    loadJsonDocumentForApi<{ parceiros?: Array<{ id: string; nome: string }> }>(dbParceiros, {
+      parceiros: [],
+    }),
+    loadJsonDocumentForApi<{ vinculos?: Array<{ veiculoId: string; parceiroId: string }> }>(
+      dbVinculos,
+      { vinculos: [] },
+    ),
+  ]);
+  return montarRelatorioInfracoesBlocosComDados({
+    infracoes: infracoesDb.infracoes,
+    inicioMap: loadInicioLocacoesMapLocal(ctx.veiculos),
+    pagasLanza: mapaPagasLanzaFromDespesas(ctx.clienteDespesas),
+    clientes: new Map(ctx.clientes.map((c) => [c.id, c.nome] as const)),
+    parceiros: loadParceirosNomesFromData(
+      parceirosDb.parceiros ?? [],
+      vinculosDb.vinculos ?? [],
+      ctx.veiculos,
+    ),
+    particulares: loadVeiculoParticularPorPlacaFrom(ctx.veiculos),
+  });
+}
+
+function loadInicioLocacoesMapLocal(veiculos: VeiculoRegistro[]): Map<string, Date> {
+  const map = new Map<string, Date>();
+  for (const v of veiculos) {
+    if (!v.placa) continue;
+    const dt = parseDataInicio(v.inicioLocacoes != null ? String(v.inicioLocacoes) : null);
+    if (dt) map.set(compactPlaca(v.placa), dt);
+  }
+  return map;
+}
+
+function mapaPagasLanzaFromDespesas(despesas: ClienteDespesaRegistro[]): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const d of despesas ?? []) {
+    if (d.ativo === false) continue;
+    const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
+    if (!auto) continue;
+    if (d.paga === true) map.set(auto, true);
+  }
+  return map;
+}
+
+function loadParceirosNomesFromData(
+  parceirosRaw: Array<{ id: string; nome: string }>,
+  vinculosRaw: Array<{ veiculoId: string; parceiroId: string }>,
+  veiculos: VeiculoRegistro[],
+): { porPlaca: Map<string, string>; porId: Map<string, string> } {
+  const porPlaca = new Map<string, string>();
+  const porId = new Map<string, string>();
+  const nomePorId = new Map(parceirosRaw.map((p) => [p.id, p.nome] as const));
+  for (const [id, nome] of nomePorId) porId.set(id, nome);
+  const parceiroPorVeiculo = new Map(
+    vinculosRaw.map((v) => [v.veiculoId, nomePorId.get(v.parceiroId) ?? ""] as const),
   );
-  const parceiros = loadParceirosNomes();
-  const particulares = loadVeiculoParticularPorPlaca();
+  for (const v of veiculos) {
+    const nome = parceiroPorVeiculo.get(v.id);
+    if (nome) porPlaca.set(compactPlaca(v.placa), nome);
+  }
+  return { porPlaca, porId };
+}
+
+function loadVeiculoParticularPorPlacaFrom(veiculos: VeiculoRegistro[]): Map<string, boolean> {
+  const out = new Map<string, boolean>();
+  for (const v of veiculos) {
+    if (v.particular === true) out.set(compactPlaca(v.placa), true);
+  }
+  return out;
+}
+
+function montarRelatorioInfracoesBlocosComDados(input: {
+  infracoes: InfracaoRegistro[];
+  inicioMap: Map<string, Date>;
+  pagasLanza: Map<string, boolean>;
+  clientes: Map<string, string>;
+  parceiros: { porPlaca: Map<string, string>; porId: Map<string, string> };
+  particulares: Map<string, boolean>;
+}): RelatorioInfracoesBlocosDados {
+  const { infracoes, inicioMap, pagasLanza, clientes, parceiros, particulares } = input;
 
   const subgrupoTitulos = new Map<string, string>();
   for (const b of BLOCOS) {
@@ -377,7 +467,7 @@ export function montarRelatorioInfracoesBlocos(): RelatorioInfracoesBlocosDados 
   const linhasPorSubgrupo = new Map<string, LinhaInfracaoBloco[]>();
   const placas = new Set<string>();
 
-  for (const reg of db.infracoes ?? []) {
+  for (const reg of infracoes ?? []) {
     if (reg.ativo === false) continue;
     if (!reg.numeroAuto?.trim()) continue;
 
