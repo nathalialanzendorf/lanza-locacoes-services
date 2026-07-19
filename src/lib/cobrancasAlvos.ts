@@ -28,6 +28,8 @@ import {
   vencimentoDespesaSemanalBr,
 } from "./pagamentoSemanal.js";
 import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
+import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
+import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadVeiculosDb } from "./veiculosDb.js";
 
@@ -52,7 +54,7 @@ export const ROTULO_TIPO_COBRANCA: Record<TipoCobrancaAction, string> = {
   "pagamento-semanal": "Pagamento semanal",
   renegociacao: "Renegociação",
   infracoes: "Infrações",
-  pedagio: "Pedágio",
+  pedagio: "Pedágio Digital",
   "estacionamento-rotativo": "Estacionamento rotativo",
   manutencao: "Manutenção",
 };
@@ -632,7 +634,18 @@ export function listarAlvosCobranca(
         if (!despesaCobravelLocatario(d)) return false;
         if (!despesaNoPeriodo(d, filtro ?? {})) return false;
         if (tipo === "manutencao" && !isCategoriaManutencao(d.categoria)) return false;
-        if (tipo !== "manutencao" && (d.categoria ?? "") !== categoria) return false;
+        if (tipo === "pedagio" && !isCategoriaPedagio(d.categoria)) return false;
+        if (tipo === "estacionamento-rotativo" && !isCategoriaEstacionamento(d.categoria)) {
+          return false;
+        }
+        if (
+          tipo !== "manutencao" &&
+          tipo !== "pedagio" &&
+          tipo !== "estacionamento-rotativo" &&
+          (d.categoria ?? "") !== categoria
+        ) {
+          return false;
+        }
         if (tipo === "manutencao" && d.valorMulta <= 0) return false;
         if (placaFiltro && compactPlaca(d.veiculoId) !== compactPlaca(placaFiltro)) {
           return false;

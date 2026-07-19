@@ -29,6 +29,7 @@ import {
   type ParceiroDespesaInput,
 } from "./parceiroDespesasDb.js";
 import { parceiroDebitoConfirmado } from "./responsavelDebito.js";
+import { isCategoriaPedagio } from "./pedagioCategoria.js";
 
 export function origemParceiroPedagioSemLocatario(placa: string, autoInfracao: string): string {
   const placaKey = compactPlaca(placa);
@@ -98,7 +99,7 @@ export function despesaCobravelLocatario(d: ClienteDespesaRegistro): boolean {
     if (!d.condutorConfirmado) return false;
     return !!d.condutorId;
   }
-  if ((d.categoria ?? "") === "Pedágio") {
+  if (isCategoriaPedagio(d.categoria)) {
     return !!d.condutorId && d.condutorConfirmado === true;
   }
   return true;

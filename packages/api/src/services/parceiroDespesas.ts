@@ -16,6 +16,7 @@ import {
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 import { listarVinculosAsync } from "./parceiros.js";
+import { dataStringNoPeriodo } from "../lib-imports.js";
 
 export type ListarParceiroDespesasOpts = {
   placa?: string;
@@ -25,6 +26,8 @@ export type ListarParceiroDespesasOpts = {
   competencia?: string;
   emAberto?: boolean;
   veiculoAtivo?: boolean;
+  dataInicial?: string;
+  dataFinal?: string;
 };
 
 function emAberto(d: ParceiroDespesaRegistro): boolean {
@@ -123,6 +126,15 @@ export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = 
 
   if (opts.emAberto === true) items = items.filter(emAberto);
   else if (opts.emAberto === false) items = items.filter((d) => !emAberto(d));
+
+  if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
+    items = items.filter((d) =>
+      dataStringNoPeriodo(d.data, {
+        dataInicial: opts.dataInicial,
+        dataFinal: opts.dataFinal,
+      }),
+    );
+  }
 
   return {
     total: items.length,

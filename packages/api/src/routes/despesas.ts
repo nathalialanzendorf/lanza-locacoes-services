@@ -185,6 +185,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
           dryRun?: boolean;
           placa?: string;
           prazoDias?: number;
+          escopo?: "pedagio" | "estacionamento";
         }>(ctx.req).catch(() => ({}));
         const data = await despesasService.atribuirClientesDespesas(body);
         json(ctx.res, 200, { data });

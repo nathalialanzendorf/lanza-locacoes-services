@@ -14,6 +14,7 @@ import {
 } from "../clienteDespesasDb.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
+import { CATEGORIA_PEDAGIO, isCategoriaPedagio, normalizarCategoriaPedagioNoDb } from "../pedagioCategoria.js";
 import { PedagioAuthError } from "./client.js";
 import {
   extrairPassagens,
@@ -100,7 +101,7 @@ export function normalizarTitulosPedagioNoDb(opts?: {
 
   for (const m of db.clienteDespesas) {
     if (m.ativo === false) continue;
-    if ((m.categoria ?? "") !== "Pedágio" && !isDescricaoPedagio(m.descricao ?? "")) continue;
+    if (!isCategoriaPedagio(m.categoria) && !isDescricaoPedagio(m.descricao ?? "")) continue;
     const nova = normalizarDescricaoPedagioLegado(m.descricao ?? "", m.paga);
     if (!nova || nova === m.descricao) continue;
     if (exemplos.length < 3) {
@@ -139,7 +140,7 @@ async function aplicarPassagem(
       result: {
         registro: {
           id: "(dry-run)",
-          categoria: "Pedágio",
+          categoria: CATEGORIA_PEDAGIO,
           veiculoId: formatPlacaHyphen(placa),
           autoInfracao,
           descricao,
@@ -171,7 +172,7 @@ async function aplicarPassagem(
     valorMulta: p.valor,
     situacao: "Em aberto",
     limiteDefesa: "",
-    categoria: "Pedágio",
+    categoria: CATEGORIA_PEDAGIO,
     origem: "pedagio-digital",
     rastreameTipo: "PEDAGIO",
   });
@@ -362,6 +363,8 @@ export async function sincronizarPedagiosFrota(opts?: {
   placa?: string;
   dryRun?: boolean;
 }): Promise<SyncPedagiosResult[]> {
+  if (!opts?.dryRun) normalizarCategoriaPedagioNoDb();
+
   const placas = loadPlacasParaSync(opts?.placa);
   if (placas.length === 0) return [];
 

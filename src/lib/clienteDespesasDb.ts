@@ -23,6 +23,8 @@ import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
 import { loadContratosDb } from "./contratosDb.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
+import { isCategoriaPedagio, CATEGORIA_PEDAGIO } from "./pedagioCategoria.js";
+import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
 import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
 import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
@@ -42,7 +44,7 @@ export const CATEGORIAS_SYNC_RASTREAME = new Set([
   "Outros",
   "Caução",
   "Estacionamento",
-  "Pedágio",
+  CATEGORIA_PEDAGIO,
   "Manutenção",
   "Quebra contrato",
 ]);
@@ -53,7 +55,7 @@ export const CATEGORIAS_SYNC_RASTREAME = new Set([
  */
 export function categoriaInfereCondutor(categoria: string | undefined | null): boolean {
   const c = (categoria ?? "Infração").trim();
-  return c === "Infração" || c === "Pedágio";
+  return c === "Infração" || isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
 /** Manutenção cobrável do locatário (lavação entra aqui; categoria legada "Lavação" ainda aceita). */
@@ -1062,7 +1064,7 @@ export function isInfracaoSemDataAutuacao(r: ClienteDespesaRegistro): boolean {
 /** Pedágio e estacionamento — locatário na data do evento, não o contrato ativo hoje. */
 export function categoriaAtribuiPorDataEvento(categoria: string | undefined | null): boolean {
   const c = (categoria ?? "").trim();
-  return c === "Pedágio" || c === "Estacionamento";
+  return isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
 function contratoAtivoPorPlacaDb(placa: string) {

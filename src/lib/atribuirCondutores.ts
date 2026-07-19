@@ -20,6 +20,8 @@ import {
 
 } from "./clienteDespesasDb.js";
 
+import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
+import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
 
 import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
@@ -320,6 +322,10 @@ export async function reconciliarCondutores(opts?: {
 
   somentePedagios?: boolean;
 
+  somenteEstacionamento?: boolean;
+
+  escopoDespesa?: "pedagio" | "estacionamento";
+
 }): Promise<ReconResult> {
 
   const filtro = opts?.placa ? compactPlaca(opts.placa) : null;
@@ -340,7 +346,7 @@ export async function reconciliarCondutores(opts?: {
 
 
 
-  if (!opts?.somentePedagios) {
+  if (!opts?.somentePedagios && !opts?.somenteEstacionamento) {
 
     for (const r of infracoesDb.infracoes ?? []) {
 
@@ -408,7 +414,19 @@ export async function reconciliarCondutores(opts?: {
 
 
 
-  const processarPedagios = opts?.incluirPedagios === true || opts?.somentePedagios === true;
+  const processarDespesasEvento =
+    opts?.incluirPedagios === true ||
+    opts?.somentePedagios === true ||
+    opts?.somenteEstacionamento === true;
+
+  function despesaNoEscopo(categoria: string | undefined | null): boolean {
+    const escopo = opts?.escopoDespesa;
+    if (escopo === "pedagio") return isCategoriaPedagio(categoria);
+    if (escopo === "estacionamento") return isCategoriaEstacionamento(categoria);
+    if (opts?.somentePedagios) return isCategoriaPedagio(categoria);
+    if (opts?.somenteEstacionamento) return isCategoriaEstacionamento(categoria);
+    return categoriaInfereCondutor(categoria);
+  }
 
   const db = loadClienteDespesasDb();
 
@@ -416,10 +434,8 @@ export async function reconciliarCondutores(opts?: {
 
     if (!elegivelReconciliarDespesa(r)) continue;
 
-    const elegivel = processarPedagios
-
-      ? categoriaInfereCondutor(r.categoria)
-
+    const elegivel = processarDespesasEvento
+      ? despesaNoEscopo(r.categoria)
       : isInfracaoTransito(r);
 
     if (!elegivel) continue;

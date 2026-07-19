@@ -30,6 +30,8 @@ import {
   resolveSyncRastreame,
   reconciliarCondutores,
   dataStringNoPeriodo,
+  isCategoriaPedagio,
+  isCategoriaEstacionamento,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -159,8 +161,14 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   }
 
   if (opts.categoria?.trim()) {
-    const cat = opts.categoria.trim().toLowerCase();
-    items = items.filter((d) => (d.categoria ?? "").trim().toLowerCase() === cat);
+    const cat = opts.categoria.trim();
+    if (isCategoriaPedagio(cat)) {
+      items = items.filter((d) => isCategoriaPedagio(d.categoria));
+    } else if (isCategoriaEstacionamento(cat)) {
+      items = items.filter((d) => isCategoriaEstacionamento(d.categoria));
+    } else {
+      items = items.filter((d) => (d.categoria ?? "").trim().toLowerCase() === cat.toLowerCase());
+    }
   }
 
   if (opts.competencia?.trim()) {
@@ -370,6 +378,19 @@ export async function atribuirClientesDespesas(opts: {
   dryRun?: boolean;
   placa?: string;
   prazoDias?: number;
+  escopo?: "pedagio" | "estacionamento";
 }) {
-  return reconciliarCondutores({ ...opts, somentePedagios: true, incluirPedagios: true });
+  if (opts.escopo === "estacionamento") {
+    return reconciliarCondutores({
+      ...opts,
+      escopoDespesa: "estacionamento",
+      somenteEstacionamento: true,
+    });
+  }
+  return reconciliarCondutores({
+    ...opts,
+    escopoDespesa: "pedagio",
+    somentePedagios: true,
+    incluirPedagios: true,
+  });
 }

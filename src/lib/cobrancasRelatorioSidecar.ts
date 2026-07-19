@@ -498,7 +498,7 @@ const ROTULO_TIPO_WHATSAPP: Record<string, string> = {
   "semanal-atraso": "Atraso semanal (juros e multa)",
   infracoes: "Infrações",
   renegociacao: "Renegociação",
-  pedagio: "Pedágio",
+  pedagio: "Pedágio Digital",
   "estacionamento-rotativo": "Estacionamento rotativo",
   manutencao: "Manutenção",
   "despesas-em-aberto": "Despesas em aberto",

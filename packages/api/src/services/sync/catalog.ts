@@ -5,6 +5,7 @@ export type SyncId =
   | "fipe"
   | "recebimentos"
   | "pedagios"
+  | "estacionamento"
   | "infracoes"
   | "ipva-licenciamento"
   | "detran-rs"
@@ -21,6 +22,7 @@ export const RASTREAME_SYNC_IDS: readonly SyncId[] = [
 
 export const SYNC_IDS: readonly SyncId[] = [
   "pedagios",
+  "estacionamento",
   "infracoes",
   "ipva-licenciamento",
   "detran-rs",
@@ -35,6 +37,7 @@ export const SYNC_IDS: readonly SyncId[] = [
 
 export const SYNC_COMPLETO_ORDEM: readonly SyncId[] = [
   "pedagios",
+  "estacionamento",
   "infracoes",
   "ipva-licenciamento",
   "detran-rs",
@@ -63,6 +66,14 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     interativo: true,
     direcao: "buscar",
     nota: "Sessão BFF expira em minutos; modo offline com jsonPath",
+  },
+  {
+    id: "estacionamento",
+    rotulo: "SigaPay",
+    destino: "cliente-despesas.json",
+    interativo: true,
+    direcao: "buscar",
+    nota: "ACT/avisos Zona Azul; sessão via SIGAPAY_COOKIE+TOKEN ou jsonPath offline",
   },
   {
     id: "infracoes",
@@ -161,6 +172,7 @@ export function normalizarSyncId(raw: string): SyncId | null {
   }
   if (k === "sync-fipe" || k === "atualizar-fipe-veiculos") return "fipe";
   if (k === "sync-pedagios") return "pedagios";
+  if (k === "sync-estacionamento" || k === "sync-sigapay") return "estacionamento";
   if (k === "sync-infracoes") return "infracoes";
   if (k === "sync-ipva-licenciamento") return "ipva-licenciamento";
   if (k === "sync-detran-rs") return "detran-rs";

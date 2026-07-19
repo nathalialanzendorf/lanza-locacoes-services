@@ -217,6 +217,14 @@ export {
 } from "../../../src/lib/pedagioDigital/syncPedagios.js";
 
 export {
+  sincronizarEstacionamentoFrota,
+  sincronizarEstacionamentoVeiculo,
+  processarAvisosJson,
+  processarAvisosJsonLote,
+  loadPlacasParaSync as loadPlacasParaSyncEstacionamento,
+} from "../../../src/lib/sigapay/syncEstacionamento.js";
+
+export {
   loadVeiculosParaSync,
   processarRespostaDetranSc,
   sincronizarMultasFrotaDetranSc,
@@ -441,6 +449,23 @@ export {
 } from "../../../src/lib/locacoesDb.js";
 
 export {
+  CATEGORIA_PEDAGIO,
+  ROTULO_PEDAGIO_DIGITAL,
+  CATEGORIA_PEDAGIO_DIGITAL,
+  CATEGORIA_PEDAGIO_LEGADO,
+  isCategoriaPedagio,
+} from "../../../src/lib/pedagioCategoria.js";
+
+export {
+  CATEGORIA_ESTACIONAMENTO,
+  ROTULO_SIGAPAY,
+  ROTULO_ESTACIONAMENTO_SIGAPAY,
+  CATEGORIA_ESTACIONAMENTO_ROTATIVO,
+  CATEGORIA_ESTACIONAMENTO_LEGADO,
+  isCategoriaEstacionamento,
+} from "../../../src/lib/estacionamentoCategoria.js";
+
+export {
   espelharInfracaoParceiro,
 } from "../../../src/lib/espelharSemLocatarioParceiro.js";
 
@@ -505,6 +530,17 @@ export {
   listarPassagens,
   type PassagemStatus,
 } from "../../../src/lib/pedagioDigital/passagens.js";
+
+export {
+  listarAvisos,
+  type AvisoStatus,
+} from "../../../src/lib/sigapay/avisos.js";
+
+export {
+  listarVeiculosSigapay,
+  registrarPlacaSigapay,
+  excluirPlacaSigapayPorPlaca,
+} from "../../../src/lib/sigapay/veiculos.js";
 
 export {
   sincronizarVeiculosCrlv,

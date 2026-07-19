@@ -226,6 +226,7 @@ export function tipoRastreame(categoria?: string): string {
     case "Renegociação":
       return "DOCUMENTACAO";
     case "Pedágio":
+    case "Pedágio Digital":
     case "Estacionamento":
       return "PEDAGIO";
     case "Infração":

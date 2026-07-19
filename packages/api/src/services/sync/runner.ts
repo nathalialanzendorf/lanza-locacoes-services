@@ -13,6 +13,9 @@ import {
   processarDespesasDetranSc,
   processarPassagensJson,
   processarPassagensJsonLote,
+  processarAvisosJson,
+  processarAvisosJsonLote,
+  loadPlacasParaSyncEstacionamento,
   processarRespostaDetranRs,
   processarRespostaDetranSc,
   pushManutencoesToRastreame,
@@ -28,6 +31,8 @@ import {
   sincronizarParceiroDespesa,
   sincronizarPedagiosFrota,
   sincronizarPedagiosVeiculo,
+  sincronizarEstacionamentoFrota,
+  sincronizarEstacionamentoVeiculo,
   sincronizarVeiculoDetranRs,
   syncMotoristas,
   syncRastreaveis,
@@ -77,6 +82,10 @@ export type SyncPedagiosOpts = SyncBaseOpts & {
   normalizarTitulos?: boolean;
 };
 
+export type SyncEstacionamentoOpts = SyncBaseOpts & {
+  jsonPath?: string;
+};
+
 export type SyncSeguroOpts = {
   anos?: string[];
   boletosPath?: string;
@@ -94,6 +103,7 @@ export type SyncInput = SyncBaseOpts &
   SyncFipeOpts &
   SyncDetranScOpts &
   SyncPedagiosOpts &
+  SyncEstacionamentoOpts &
   SyncSeguroOpts &
   SyncManutencaoOpts;
 
@@ -215,6 +225,42 @@ async function runPedagios(opts: SyncPedagiosOpts) {
   }
 
   return { modo: opts.jsonPath ? "json-lote" : "frota", ...resumo, push, relatorioPath };
+}
+
+async function runEstacionamento(opts: SyncEstacionamentoOpts) {
+  if (opts.jsonPath && opts.placa) {
+    loadPlacasParaSyncEstacionamento(opts.placa);
+    const r = await processarAvisosJson(opts.placa, opts.jsonPath, {
+      dryRun: opts.dryRun,
+    });
+    return { modo: "json-placa", resultado: r };
+  }
+
+  if (opts.placa) {
+    loadPlacasParaSyncEstacionamento(opts.placa);
+    const r = await sincronizarEstacionamentoVeiculo(opts.placa, { dryRun: opts.dryRun });
+    return { modo: "placa", resultado: r };
+  }
+
+  const results = opts.jsonPath
+    ? await processarAvisosJsonLote(opts.jsonPath, { dryRun: opts.dryRun })
+    : await sincronizarEstacionamentoFrota({ dryRun: opts.dryRun });
+
+  const resumo = resumoLista(results);
+  let relatorioPath: string | null = null;
+
+  if (!opts.dryRun) {
+    ensureRelatoriosDirs();
+    relatorioPath = path.join(RELATORIOS_SYNC_DIR, "_sync_estacionamento.json");
+    fs.mkdirSync(path.dirname(relatorioPath), { recursive: true });
+    fs.writeFileSync(
+      relatorioPath,
+      JSON.stringify({ sincronizadoEm: new Date().toISOString(), results }, null, 2),
+      "utf8",
+    );
+  }
+
+  return { modo: opts.jsonPath ? "json-lote" : "frota", ...resumo, relatorioPath };
 }
 
 async function runInfracoes(opts: SyncDetranScOpts) {
@@ -482,6 +528,8 @@ export async function executarSync(syncRaw: string, input: SyncInput = {}) {
       return { sync, ...(await runRecebimentos(opts)) };
     case "pedagios":
       return { sync, ...(await runPedagios(opts)) };
+    case "estacionamento":
+      return { sync, ...(await runEstacionamento(opts)) };
     case "infracoes":
       return { sync, ...(await runInfracoes(opts)) };
     case "ipva-licenciamento":

@@ -48,6 +48,7 @@ Comandos:
   locacoes <add|listar|excluir|sugerir> [opções]   (movimentação: locado/reserva/manutenção — skill cadastro-movimentacao)
   movimentacao   (alias de locacoes)
   sync-pedagios [--placa PLACA] [--dry-run] [--json resposta.json]
+  sync-estacionamento [--placa PLACA] [--dry-run] [--json resposta.json]
   pedagio-digital register --placa PLACA [--modelo X] | veiculos | passagens --placa PLACA [--status aberto|pago]
   sync-gastos-gerais [--dry-run] [--pull-only] [--push-only] [--force-pull] [--motorista KEY]  (alias: sync-recebimentos)
   sync-manutencao [--placa PLACA] [--categoria CAT] [--dry-run]  (despesa parceiro → tela Manutenção)
@@ -200,6 +201,10 @@ Comandos:
       break;
     case "sync-pedagios":
       await (await import("./cli/syncPedagios.js")).main(rest);
+      break;
+    case "sync-estacionamento":
+    case "sync-sigapay":
+      await (await import("./cli/syncEstacionamento.js")).main(rest);
       break;
     case "pedagio-digital":
       await (await import("./cli/pedagioDigital.js")).main(rest);

@@ -57,6 +57,8 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
         parceiroId: ctx.query.get("parceiroId") ?? undefined,
         categoria: ctx.query.get("categoria") ?? undefined,
         competencia: ctx.query.get("competencia") ?? undefined,
+        dataInicial: ctx.query.get("dataInicial") ?? undefined,
+        dataFinal: ctx.query.get("dataFinal") ?? undefined,
         emAberto,
         veiculoAtivo: ativo,
       }));
