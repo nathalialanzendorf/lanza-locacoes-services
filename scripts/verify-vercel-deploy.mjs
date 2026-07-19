@@ -68,6 +68,10 @@ async function main() {
       platform: "node",
       format: "esm",
       packages: "external",
+      alias: {
+        "@lanza/db": path.join(root, "packages/db/src/index.ts"),
+        "@lanza/storage": path.join(root, "packages/storage/src/index.ts"),
+      },
       write: false,
       metafile: true,
       logLevel: "silent",

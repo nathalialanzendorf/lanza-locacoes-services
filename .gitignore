@@ -33,3 +33,4 @@ lanza-web/dist/
 relatorios/_tmp/
 .vercel
 .env*
+dist/
