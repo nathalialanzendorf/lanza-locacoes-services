@@ -12,11 +12,12 @@ import { warmupOcrWorker } from "../../../src/lib/documentoOcr.js";
 
 async function bootstrapPostgres(): Promise<void> {
   if (!process.env.VERCEL || getDbBackend() === "file") return;
-  setVercelPostgresPool(createVercelPostgresPool());
   try {
+    setVercelPostgresPool(createVercelPostgresPool());
     await runSchemaMigration(false);
   } catch (err) {
-    console.error("[lanza] falha ao aplicar migrações SQL:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[lanza] bootstrap Postgres (Vercel) — API sobe em modo degradado:", msg);
   }
 }
 
@@ -32,3 +33,5 @@ const server = createApp();
 server.listen(port, host, () => {
   logStartup(port, host);
 });
+
+export default server;

@@ -107,3 +107,20 @@ Com `LANZA_DB_BACKEND=dual`:
   }
 }
 ```
+
+## HTTP 500 em produção
+
+Se `https://api.lanzalocacoes.vercel.app/health` devolve **500** (e o frontend mostra "Falha na ligação à API"):
+
+1. **Dashboard Vercel** → projeto **API** → Settings → Environment Variables  
+   Confirme: `PGHOST`, `AWS_ROLE_ARN`, `AWS_REGION`, `LANZA_DB_BACKEND` (e restantes da tabela acima).
+
+2. **Integração AWS na Vercel** (OIDC → RDS): o projeto precisa de permissão para assumir `AWS_ROLE_ARN` e ligar ao cluster RDS.
+
+3. **Redeploy** após alterar variáveis (Deployments → ⋮ → Redeploy).
+
+4. **Contorno rápido** (sem RDS): defina `LANZA_DB_BACKEND=file` — a API usa os JSON em `database/` (só leitura na Vercel; adequado para dashboard/consulta).
+
+5. **Com Postgres OK mas vazio**: `POST /api/admin/migrar` (com `X-Migrate-Secret` ou bootstrap) importa `database/*.json`.
+
+6. **Login**: defina `LANZA_JWT_SECRET` na Vercel e crie admin (`scripts/sql/create-admin-user-pgadmin.sql` no RDS ou registo bootstrap).

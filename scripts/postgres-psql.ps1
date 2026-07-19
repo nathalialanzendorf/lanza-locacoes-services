@@ -46,8 +46,35 @@ if (-not $pgHost) {
 }
 
 if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
+  $awsCandidates = @(
+    "$env:LOCALAPPDATA\Programs\Amazon\AWSCLIV2\aws.exe",
+    "C:\Program Files\Amazon\AWSCLIV2\aws.exe"
+  )
+  foreach ($candidate in $awsCandidates) {
+    if (Test-Path $candidate) {
+      $env:Path = "$(Split-Path $candidate -Parent);$env:Path"
+      break
+    }
+  }
+}
+
+if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
   Write-Host "AWS CLI nao encontrado. Instale: https://aws.amazon.com/cli/" -ForegroundColor Red
   exit 1
+}
+
+if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
+  $psqlCandidates = @(
+    "C:\Program Files\PostgreSQL\16\bin\psql.exe",
+    "C:\Program Files\PostgreSQL\15\bin\psql.exe",
+    "C:\Program Files\PostgreSQL\14\bin\psql.exe"
+  )
+  foreach ($candidate in $psqlCandidates) {
+    if (Test-Path $candidate) {
+      $env:Path = "$(Split-Path $candidate -Parent);$env:Path"
+      break
+    }
+  }
 }
 
 if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {

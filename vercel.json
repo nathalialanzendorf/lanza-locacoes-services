@@ -5,7 +5,7 @@
     "packages/api/src/index.ts": {
       "maxDuration": 300,
       "memory": 1024,
-      "includeFiles": "node_modules/tesseract.js-core/**,node_modules/tesseract.js/src/worker-script/**,node_modules/@tesseract.js-data/por/4.0.0_best_int/**"
+      "includeFiles": "node_modules/tesseract.js-core/**,node_modules/tesseract.js/src/worker-script/**,node_modules/@tesseract.js-data/por/4.0.0_best_int/**,packages/db/sql/**,database/**"
     }
   }
 }
