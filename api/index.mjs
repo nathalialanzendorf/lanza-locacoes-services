@@ -17,12 +17,28 @@ function writeJson(res, status, body) {
   res.end(data);
 }
 
-function pathname(req) {
+function requestPath(req) {
+  const headerPath =
+    req.headers["x-vercel-forwarded-path"] ||
+    req.headers["x-invoke-path"] ||
+    req.headers["x-matched-path"];
+  const raw = headerPath || req.url || "/";
   try {
-    return new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).pathname.replace(/\/+$/, "") || "/";
+    const p = new URL(String(raw), `http://${req.headers.host ?? "localhost"}`).pathname;
+    return p.replace(/\/+$/, "") || "/";
   } catch {
     return "/";
   }
+}
+
+function pathname(req) {
+  return requestPath(req);
+}
+
+function isHealthRequest(req) {
+  if (req.method !== "GET" && req.method !== "HEAD") return false;
+  const p = requestPath(req);
+  return p === "/health" || p === "/api/health";
 }
 
 /** @type {Promise<((req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => void) | null> | null} */
@@ -49,8 +65,12 @@ function loadHandler() {
 
 /** Handler exportado para a Vercel (sem listen). */
 async function handler(req, res) {
-  const p = pathname(req);
-  if (req.method === "GET" && p === "/health") {
+  if (isHealthRequest(req)) {
+    if (req.method === "HEAD") {
+      res.writeHead(200);
+      res.end();
+      return;
+    }
     writeJson(res, 200, {
       status: "ok",
       service: "@lanza/api",
