@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -164,6 +164,9 @@ export function loadLocacoesDb(): LocacoesDb {
 }
 
 export async function loadLocacoesDbAsync(): Promise<LocacoesDb> {
+  if (await useRelationalStore()) {
+    return (await loadLocacoesFromSql()) as LocacoesDb;
+  }
   const db = await loadJsonDocumentForApi<LocacoesDb>(DB_LOCACOES, {
     descricao: DEFAULT_DESCRICAO,
     atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -186,6 +189,11 @@ export async function saveLocacoesDbAsync(db: LocacoesDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaLocacao = DEFAULT_SCHEMA;
+  if (await useRelationalStore()) {
+    await saveLocacoesToSql(db);
+    exportJsonBackup("locacoes.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_LOCACOES, db as Record<string, unknown>, { trailingNewline: true });
 }
 

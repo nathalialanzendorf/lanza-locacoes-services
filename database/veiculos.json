@@ -1,6 +1,6 @@
 {
   "descricao": "Frota de locação de veículos da Nathalia. id = uuid. Chave natural: placa.",
-  "atualizadoEm": "2026-07-18",
+  "atualizadoEm": "2026-07-19",
   "veiculos": [
     {
       "id": "4d5fd2ec-9b50-4835-96b4-89ae4eaa1452",
@@ -621,6 +621,31 @@
       "fipeModelo": "Nivus Highline 1.0 200 TSI Flex Aut.",
       "fipeValor": "R$ 112.807,00",
       "fipeReferencia": "junho de 2026"
+    },
+    {
+      "placa": "IOK-3H21",
+      "marcaModelo": "GM/MONTANA CONQUEST",
+      "marca": "CHEVROLET",
+      "modelo": "MONTANA CONQUEST",
+      "anoModelo": "2007/2008",
+      "ano": 2008,
+      "chassi": "9BGXL80808B219893",
+      "renavam": "00948255250",
+      "cor": "VERMELHA",
+      "combustivel": "ALCOOL/GASOLINA",
+      "categoria": "Carga",
+      "tipo": "Caminhonete",
+      "ufRegistro": "SP",
+      "vencimentoDocumento": "2025-12-31",
+      "ativo": false,
+      "origem": "crlv",
+      "id": "1f46546e-ee6c-4de8-a02b-39df98b870f0",
+      "atualizadoEm": "2026-07-19T21:25:00.000Z",
+      "fipe": "https://veiculos.fipe.org.br?carro/gm-chevrolet/7-2026/004338-9/2008",
+      "fipeCodigo": "004338-9",
+      "fipeModelo": "MONTANA 1.4 8V Conquest ECONOFLEX  2p",
+      "fipeValor": "R$ 27.056,00",
+      "fipeReferencia": "julho de 2026"
     }
   ]
 }

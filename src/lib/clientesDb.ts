@@ -8,6 +8,10 @@ import {
   loadJsonDocumentForApi,
   saveJsonDocument,
   saveJsonDocumentAsync,
+  useRelationalStore,
+  loadClientesFromSql,
+  saveClientesToSql,
+  exportJsonBackup,
 } from "@lanza/db";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
@@ -115,6 +119,9 @@ export function loadClientesDb(): ClientesDb {
 }
 
 export async function loadClientesDbAsync(): Promise<ClientesDb> {
+  if (await useRelationalStore()) {
+    return (await loadClientesFromSql()) as ClientesDb;
+  }
   return loadJsonDocumentForApi<ClientesDb>(DB_CLIENTES, {
     descricao: DEFAULT_DESCRICAO,
     clientes: [],
@@ -141,6 +148,11 @@ export function saveClientesDb(db: ClientesDb): void {
 export async function saveClientesDbAsync(db: ClientesDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  if (await useRelationalStore()) {
+    await saveClientesToSql(db);
+    exportJsonBackup("clientes.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_CLIENTES, db as Record<string, unknown>, {
     description: DEFAULT_DESCRICAO,
   });

@@ -1,5 +1,6 @@
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 import { awaitSync } from "../util/awaitSync.js";
+import { skipJsonStoresWrite } from "../repositories/relationalConfig.js";
 import { FileJsonDocumentAdapter } from "./file.js";
 import { PostgresJsonDocumentAdapter } from "./postgres.js";
 
@@ -58,16 +59,20 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
     // CLI/local: aguarda o espelho no Postgres (evita perder writes se o processo terminar).
     // Vercel: saveAsync nas rotas HTTP; aqui best-effort sem bloquear.
     if (isVercelRuntime()) {
-      void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
-        logMirrorError("PostgreSQL", storeName, err);
-      });
+      if (!skipJsonStoresWrite()) {
+        void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
+          logMirrorError("PostgreSQL", storeName, err);
+        });
+      }
       return;
     }
-    try {
-      awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
-    } catch (err) {
-      logMirrorError("PostgreSQL", storeName, err);
-      throw err;
+    if (!skipJsonStoresWrite()) {
+      try {
+        awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
+      } catch (err) {
+        logMirrorError("PostgreSQL", storeName, err);
+        throw err;
+      }
     }
   }
 
@@ -97,6 +102,9 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
       } catch (err) {
         logMirrorError("ficheiro", storeName, err);
       }
+    }
+    if (skipJsonStoresWrite()) {
+      return;
     }
     await this.postgres.saveAsync(storeName, filePath, data, options);
   }

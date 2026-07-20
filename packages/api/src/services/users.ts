@@ -162,6 +162,30 @@ export async function createUser(input: {
   return toPublic(user);
 }
 
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  if (await postgresReachable()) {
+    const result = await pgQuery(
+      `UPDATE lanza.users SET password_hash = $1, updated_at = $2 WHERE id = $3`,
+      [passwordHash, now, userId],
+    );
+    if ((result.rowCount ?? 0) === 0) {
+      throw new Error("Utilizador não encontrado");
+    }
+    return;
+  }
+
+  const file = readUsersFile();
+  const user = file.users.find((u) => u.id === userId);
+  if (!user) {
+    throw new Error("Utilizador não encontrado");
+  }
+  user.passwordHash = passwordHash;
+  user.updatedAt = now;
+  writeUsersFile(file);
+}
+
 export function toUserPublic(user: UserRecord): UserPublic {
   return toPublic(user);
 }

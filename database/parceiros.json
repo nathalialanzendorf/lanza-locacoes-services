@@ -1,6 +1,6 @@
 {
   "descricao": "Proprietários dos veículos da frota. id = uuid. Chave de negócio: nome (único na prática).",
-  "atualizadoEm": "2026-06-27",
+  "atualizadoEm": "2026-07-19",
   "schemaParceiro": {
     "id": "uuid",
     "nome": "Nome do parceiro",
@@ -38,6 +38,10 @@
     {
       "id": "54c2b0fd-90e2-4ef5-8bbb-14c089c17631",
       "nome": "Felipe"
+    },
+    {
+      "id": "fd75fb0d-a4cf-4f06-837a-a8570cf6d106",
+      "nome": "Nathalia"
     }
   ]
 }

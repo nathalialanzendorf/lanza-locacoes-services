@@ -32,6 +32,42 @@ export {
 export { SchemaMigrator, runSchemaMigration } from "./migration/SchemaMigrator.js";
 export { JsonImporter, importJsonStores, type ImportResult } from "./migration/JsonImporter.js";
 export { migratePostgres, type MigrateOptions } from "./migration/migrate.js";
+export {
+  JsonToRelationalImporter,
+  importJsonToRelational,
+  type RelationalImportOptions,
+  type RelationalImportResult,
+} from "./migration/JsonToRelationalImporter.js";
+
+export {
+  useRelationalStore,
+  skipJsonStoresWrite,
+  exportJsonBackup,
+  loadParceirosFromSql,
+  loadVinculosFromSql,
+  saveParceirosToSql,
+  saveVinculosToSql,
+  loadVeiculosFromSql,
+  saveVeiculosToSql,
+  loadClientesFromSql,
+  saveClientesToSql,
+  loadContratosFromSql,
+  saveContratosToSql,
+  loadLocacoesFromSql,
+  saveLocacoesToSql,
+  loadInfracoesFromSql,
+  saveInfracoesToSql,
+  loadClienteDespesasFromSql,
+  saveClienteDespesasToSql,
+  loadParceiroDespesasFromSql,
+  saveParceiroDespesasToSql,
+  loadTriagensFromSql,
+  saveTriagensToSql,
+  loadClienteAnaliseFromSql,
+  saveClienteAnaliseToSql,
+  type TriagemDbShape,
+  type ClienteAnaliseDbShape,
+} from "./repositories/index.js";
 
 // Document store (file | postgres | dual)
 export {

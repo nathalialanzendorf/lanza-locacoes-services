@@ -8,6 +8,10 @@ import {
   loadJsonDocumentForApi,
   saveJsonDocument,
   saveJsonDocumentAsync,
+  useRelationalStore,
+  loadVeiculosFromSql,
+  saveVeiculosToSql,
+  exportJsonBackup,
 } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -78,6 +82,9 @@ export function loadVeiculosDb(): VeiculosDb {
 }
 
 export async function loadVeiculosDbAsync(): Promise<VeiculosDb> {
+  if (await useRelationalStore()) {
+    return (await loadVeiculosFromSql()) as VeiculosDb;
+  }
   return loadJsonDocumentForApi<VeiculosDb>(DB_VEICULOS, {
     descricao: DEFAULT_DESCRICAO,
     veiculos: [],
@@ -93,6 +100,11 @@ export function saveVeiculosDb(db: VeiculosDb): void {
 export async function saveVeiculosDbAsync(db: VeiculosDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  if (await useRelationalStore()) {
+    await saveVeiculosToSql(db);
+    exportJsonBackup("veiculos.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_VEICULOS, db as Record<string, unknown>, {
     description: DEFAULT_DESCRICAO,
   });

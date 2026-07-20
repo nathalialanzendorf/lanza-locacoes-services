@@ -7,6 +7,12 @@ import {
   loadJsonDocumentForApi,
   saveJsonDocument,
   saveJsonDocumentAsync,
+  useRelationalStore,
+  loadParceirosFromSql,
+  loadVinculosFromSql,
+  saveParceirosToSql,
+  saveVinculosToSql,
+  exportJsonBackup,
 } from "@lanza/db";
 
 import { REPO_ROOT } from "../lib-imports.js";
@@ -54,6 +60,9 @@ function loadParceirosDb(): ParceirosDb {
 }
 
 async function loadParceirosDbAsync(): Promise<ParceirosDb> {
+  if (await useRelationalStore()) {
+    return loadParceirosFromSql();
+  }
   const db = await loadJsonDocumentForApi<ParceirosDb>(DBP, { parceiros: [] });
   if (!Array.isArray(db.parceiros)) db.parceiros = [];
   return db;
@@ -61,11 +70,21 @@ async function loadParceirosDbAsync(): Promise<ParceirosDb> {
 
 async function saveParceirosDbAsync(db: ParceirosDb): Promise<void> {
   db.atualizadoEm = hoje();
+  if (await useRelationalStore()) {
+    await saveParceirosToSql(db);
+    exportJsonBackup("parceiros.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DBP, db);
 }
 
 async function saveVinculosDbAsync(db: VinculosDb): Promise<void> {
   db.atualizadoEm = hoje();
+  if (await useRelationalStore()) {
+    await saveVinculosToSql(db);
+    exportJsonBackup("parceiro-veiculo.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DBL, db);
 }
 
@@ -82,6 +101,9 @@ function loadVinculosDb(): VinculosDb {
 }
 
 async function loadVinculosDbAsync(): Promise<VinculosDb> {
+  if (await useRelationalStore()) {
+    return loadVinculosFromSql();
+  }
   const db = await loadJsonDocumentForApi<VinculosDb>(DBL, { vinculos: [] });
   if (!Array.isArray(db.vinculos)) db.vinculos = [];
   return db;

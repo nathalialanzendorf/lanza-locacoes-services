@@ -1,0 +1,34 @@
+export { useRelationalStore, skipJsonStoresWrite } from "./relationalConfig.js";
+export { exportJsonBackup } from "./jsonExport.js";
+export {
+  loadParceirosFromSql,
+  loadVinculosFromSql,
+  saveParceirosToSql,
+  saveVinculosToSql,
+  loadVeiculosFromSql,
+  saveVeiculosToSql,
+  loadClientesFromSql,
+  saveClientesToSql,
+  type ParceirosDbShape,
+  type VinculosDbShape,
+  type VeiculosDbShape,
+  type ClientesDbShape,
+} from "./coreRepositories.js";
+export {
+  loadContratosFromSql,
+  saveContratosToSql,
+  loadLocacoesFromSql,
+  saveLocacoesToSql,
+  loadInfracoesFromSql,
+  saveInfracoesToSql,
+  loadClienteDespesasFromSql,
+  saveClienteDespesasToSql,
+  loadParceiroDespesasFromSql,
+  saveParceiroDespesasToSql,
+  loadTriagensFromSql,
+  saveTriagensToSql,
+  loadClienteAnaliseFromSql,
+  saveClienteAnaliseToSql,
+  type TriagemDbShape,
+  type ClienteAnaliseDbShape,
+} from "./domainRepositories.js";

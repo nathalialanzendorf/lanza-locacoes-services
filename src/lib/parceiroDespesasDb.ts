@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadParceiroDespesasFromSql, saveParceiroDespesasToSql, exportJsonBackup } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -163,6 +163,9 @@ export function loadParceiroDespesasDb(): ParceiroDespesasDb {
 }
 
 export async function loadParceiroDespesasDbAsync(): Promise<ParceiroDespesasDb> {
+  if (await useRelationalStore()) {
+    return normalizeRawDb(await loadParceiroDespesasFromSql());
+  }
   const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_PARCEIRO_DESPESAS, {
     descricao: DEFAULT_DESCRICAO,
     atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -181,6 +184,11 @@ export function saveParceiroDespesasDb(db: ParceiroDespesasDb): void {
 export async function saveParceiroDespesasDbAsync(db: ParceiroDespesasDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  if (await useRelationalStore()) {
+    await saveParceiroDespesasToSql(db);
+    exportJsonBackup("parceiro-despesas.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_PARCEIRO_DESPESAS, db as Record<string, unknown>, {
     description: DEFAULT_DESCRICAO,
   });

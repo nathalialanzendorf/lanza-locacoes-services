@@ -1,6 +1,7 @@
 import { JsonStoreRepository } from "../stores/JsonStoreRepository.js";
 import { PostgresPool } from "../client/PostgresPool.js";
 import { awaitSync } from "../util/awaitSync.js";
+import { skipJsonStoresWrite } from "../repositories/relationalConfig.js";
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 
 export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
@@ -54,6 +55,7 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): Promise<void> {
+    if (skipJsonStoresWrite()) return;
     await this.stores.save(storeName, data, options?.description);
   }
 }

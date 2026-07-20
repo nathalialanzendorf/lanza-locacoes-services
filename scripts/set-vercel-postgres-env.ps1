@@ -10,7 +10,7 @@
 #   .\scripts\set-vercel-postgres-env.ps1 -DryRun
 
 param(
-  [ValidateSet("postgres", "dual")]
+  [ValidateSet("postgres", "dual", "file")]
   [string]$Backend = "postgres",
   [string]$ProjectName = "lanza-locacoes-services",
   [switch]$DryRun
@@ -21,18 +21,21 @@ $ErrorActionPreference = "Stop"
 # Valores do RDS (mesmos de set-postgres-user-env.ps1 / integração Vercel OIDC)
 $vars = [ordered]@{
   LANZA_DB_BACKEND     = $Backend
-  PGHOST               = "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com"
-  PGPORT               = "5432"
-  PGDATABASE           = "postgres"
-  PGUSER               = "postgres"
-  PGSSLMODE            = "require"
-  AWS_REGION           = "us-east-1"
-  AWS_ACCOUNT_ID       = "154601375525"
-  AWS_RESOURCE_ARN     = "arn:aws:rds:us-east-1:154601375525:cluster:aws-pg-lanza-locacoes"
-  AWS_RESOURCE_TYPE    = "rds"
-  AWS_ROLE_ARN         = "arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes"
   LANZA_WEB_URL        = "https://lanzalocacoes.vercel.app"
   LANZA_API_PUBLIC_URL = "https://api.lanzalocacoes.vercel.app"
+}
+
+if ($Backend -ne "file") {
+  $vars.PGHOST           = "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com"
+  $vars.PGPORT           = "5432"
+  $vars.PGDATABASE       = "postgres"
+  $vars.PGUSER           = "postgres"
+  $vars.PGSSLMODE        = "require"
+  $vars.AWS_REGION       = "us-east-1"
+  $vars.AWS_ACCOUNT_ID   = "154601375525"
+  $vars.AWS_RESOURCE_ARN = "arn:aws:rds:us-east-1:154601375525:cluster:aws-pg-lanza-locacoes"
+  $vars.AWS_RESOURCE_TYPE = "rds"
+  $vars.AWS_ROLE_ARN     = "arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes"
 }
 
 Write-Host "Projeto Vercel: $ProjectName"
@@ -77,6 +80,13 @@ $ErrorActionPreference = "Stop"
 Write-Host ""
 Write-Host "OK. Faca Redeploy do projeto API na Vercel."
 Write-Host "Verificar: curl https://api.lanzalocacoes.vercel.app/health"
+Write-Host ""
+Write-Host 'Esperado (backend file — JSON em database/):'
+Write-Host @'
+{
+  "database": { "backend": "file" }
+}
+'@
 Write-Host ""
 Write-Host 'Esperado (backend postgres):'
 Write-Host @'

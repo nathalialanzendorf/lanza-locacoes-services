@@ -33,5 +33,6 @@ lanza-web/dist/
 relatorios/_tmp/
 .vercel
 .env*
+.pgtoken.tmp
 dist/
 server.mjs

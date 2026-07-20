@@ -1,8 +1,10 @@
 import {
   getDbBackend,
   importJsonStores,
+  importJsonToRelational,
   runSchemaMigration,
   type ImportResult,
+  type RelationalImportResult,
 } from "@lanza/db";
 
 function postgresConfigured(): boolean {
@@ -21,10 +23,10 @@ export type SyncPostgresqlOptions = {
   dryRun?: boolean;
 };
 
-/** Espelha `database/*.json` no PostgreSQL (`lanza.json_stores`). */
+/** Espelha `database/*.json` no PostgreSQL (tabelas relacional ou legado json_stores). */
 export async function syncPostgresql(
   options: SyncPostgresqlOptions = {},
-): Promise<ImportResult> {
+): Promise<ImportResult | RelationalImportResult> {
   if (!postgresConfigured()) {
     throw new Error(
       "PostgreSQL não configurado. Execute .\\scripts\\set-postgres-user-env.ps1 -PromptPassword",
@@ -32,6 +34,15 @@ export async function syncPostgresql(
   }
   const dryRun = options.dryRun ?? false;
   await runSchemaMigration(dryRun);
+
+  const useRelational = process.env.LANZA_DB_RELATIONAL !== "0";
+  if (useRelational) {
+    const stores = options.files?.length
+      ? options.files.map((f) => f.replace(".json", "").replace("parceiro-veiculo", "parceiro_veiculo").replace("cliente-despesas", "cliente_despesas").replace("parceiro-despesas", "parceiro_despesas").replace("analise-cadastro", "triagens").replace("cliente-analise", "cliente_analise"))
+      : undefined;
+    return importJsonToRelational({ dryRun, stores });
+  }
+
   if (options.files?.length) {
     return importJsonStores(dryRun, options.files);
   }

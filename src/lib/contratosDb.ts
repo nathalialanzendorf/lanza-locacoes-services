@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, saveContratosToSql, exportJsonBackup } from "@lanza/db";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
@@ -388,6 +388,10 @@ export async function loadContratosDbAsync(): Promise<ContratosDb> {
     schemaContrato: DEFAULT_SCHEMA,
     contratos: [],
   };
+  if (await useRelationalStore()) {
+    const db = await loadContratosFromSql();
+    return { ...empty, ...db, schemaContrato: DEFAULT_SCHEMA } as ContratosDb;
+  }
   const db = await loadJsonDocumentForApi<ContratosDb>(DB_CONTRATOS, empty);
   if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
   return db;
@@ -407,6 +411,11 @@ export function saveContratosDb(db: ContratosDb): void {
 export async function saveContratosDbAsync(db: ContratosDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   db.schemaContrato = DEFAULT_SCHEMA;
+  if (await useRelationalStore()) {
+    await saveContratosToSql(db);
+    exportJsonBackup("contratos.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_CONTRATOS, db as Record<string, unknown>);
 }
 

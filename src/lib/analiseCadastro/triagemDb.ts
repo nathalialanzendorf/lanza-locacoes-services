@@ -19,6 +19,11 @@ import {
   loadJsonDocumentForApi,
   saveJsonDocument,
   saveJsonDocumentAsync,
+  useRelationalStore,
+  loadTriagensFromSql,
+  saveTriagensToSql,
+  exportJsonBackup,
+  type TriagemDbShape,
 } from "@lanza/db";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "../clientesDb.js";
 import { REPO_ROOT } from "../repoRoot.js";
@@ -128,6 +133,9 @@ export function loadTriagemDb(): TriagemDb {
 }
 
 export async function loadTriagemDbAsync(): Promise<TriagemDb> {
+  if (await useRelationalStore()) {
+    return normalizeTriagemDb((await loadTriagensFromSql()) as unknown as TriagemDb);
+  }
   const db = await loadJsonDocumentForApi<TriagemDb>(DB_TRIAGEM, emptyTriagemDb());
   return normalizeTriagemDb(db);
 }
@@ -143,6 +151,11 @@ export async function saveTriagemDbAsync(db: TriagemDb): Promise<void> {
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaTriagem = DEFAULT_SCHEMA;
+  if (await useRelationalStore()) {
+    await saveTriagensToSql(db as unknown as TriagemDbShape);
+    exportJsonBackup("analise-cadastro.json", db);
+    return;
+  }
   await saveJsonDocumentAsync(DB_TRIAGEM, db as unknown as Record<string, unknown>, {
     mkdir: true,
     trailingNewline: true,

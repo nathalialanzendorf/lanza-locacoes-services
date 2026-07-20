@@ -42,7 +42,14 @@ function Set-UserEnv([string]$Name, [string]$Value) {
 }
 
 if ($PromptPassword) {
-  $secure = Read-Host "PGPASSWORD (senha RDS postgres)" -AsSecureString
+  Write-Host @"
+  Senha ESTATICA do postgres (nao e o token IAM do console).
+  Se ainda nao definiu senha no RDS, use primeiro:
+    .\scripts\postgres-console-token.ps1 -SetPassword "SuaSenha"
+  Token IAM temporario (~15 min): .\scripts\postgres-console-token.ps1 -Check
+
+"@ -ForegroundColor DarkYellow
+  $secure = Read-Host "PGPASSWORD (senha estatica RDS postgres)" -AsSecureString
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try {
     $Password = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
@@ -66,6 +73,11 @@ Set-UserEnv "PGUSER" $PgUser.Trim()
 Set-UserEnv "LANZA_DB_BACKEND" $Backend.Trim()
 
 if ($Password.Trim()) {
+  if ($Password -match "X-Amz-Algorithm|Action=connect") {
+    Write-Host "AVISO: isto parece token IAM (expira ~15 min), nao senha estatica." -ForegroundColor Yellow
+    Write-Host "  Para token temporario: .\scripts\postgres-console-token.ps1 -Check" -ForegroundColor Yellow
+    Write-Host "  Para gravar senha permanente: .\scripts\postgres-console-token.ps1 -SetPassword `"...`"" -ForegroundColor Yellow
+  }
   Set-UserEnv "PGPASSWORD" $Password.Trim()
 } elseif ($UseIam) {
   [Environment]::SetEnvironmentVariable("PGPASSWORD", $null, "User")

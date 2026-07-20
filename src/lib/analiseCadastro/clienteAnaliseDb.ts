@@ -14,7 +14,16 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { jsonDocumentExists, loadJsonDocument, saveJsonDocument } from "@lanza/db";
+import {
+  jsonDocumentExists,
+  loadJsonDocument,
+  saveJsonDocument,
+  useRelationalStore,
+  loadClienteAnaliseFromSql,
+  saveClienteAnaliseToSql,
+  exportJsonBackup,
+  type ClienteAnaliseDbShape,
+} from "@lanza/db";
 import { REPO_ROOT } from "../repoRoot.js";
 
 export const DB_CLIENTE_ANALISE = path.join(REPO_ROOT, "database", "cliente-analise.json");
@@ -113,10 +122,29 @@ export function loadClienteAnaliseDb(): ClienteAnaliseDb {
   return db;
 }
 
+export async function loadClienteAnaliseDbAsync(): Promise<ClienteAnaliseDb> {
+  if (await useRelationalStore()) {
+    return (await loadClienteAnaliseFromSql()) as unknown as ClienteAnaliseDb;
+  }
+  return loadClienteAnaliseDb();
+}
+
 export function saveClienteAnaliseDb(db: ClienteAnaliseDb): void {
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schema = DEFAULT_SCHEMA;
+  saveJsonDocument(DB_CLIENTE_ANALISE, db, { mkdir: true, trailingNewline: true });
+}
+
+export async function saveClienteAnaliseDbAsync(db: ClienteAnaliseDb): Promise<void> {
+  db.atualizadoEm = hojeIso();
+  if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
+  db.schema = DEFAULT_SCHEMA;
+  if (await useRelationalStore()) {
+    await saveClienteAnaliseToSql(db as unknown as ClienteAnaliseDbShape);
+    exportJsonBackup("cliente-analise.json", db);
+    return;
+  }
   saveJsonDocument(DB_CLIENTE_ANALISE, db, { mkdir: true, trailingNewline: true });
 }
 
