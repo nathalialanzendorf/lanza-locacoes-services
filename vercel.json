@@ -3,7 +3,9 @@
   "installCommand": "npm install",
   "buildCommand": "node scripts/build-vercel-server.mjs",
   "rewrites": [
+    { "source": "/api/health", "destination": "/api/health" },
     { "source": "/health", "destination": "/api/health" },
+    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/api" }
   ],
   "functions": {
