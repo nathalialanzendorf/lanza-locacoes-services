@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { loadJsonDocumentForApi } from "@lanza/db";
+import { getDbBackend, pgQuery, loadJsonDocumentForApi } from "@lanza/db";
 import { API_VERSION } from "../config.js";
 import { buildOpenApiDocument } from "../openapi/index.js";
 import {
@@ -21,8 +21,37 @@ const DB_FILES = [
   "locacoes.json",
 ] as const;
 
+const STORE_UPDATED_AT_SQL: Record<string, string> = {
+  "clientes.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.clientes",
+  "veiculos.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.veiculos",
+  "contratos.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.contratos",
+  "cliente-despesas.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.cliente_despesas",
+  "parceiro-despesas.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.parceiro_despesas",
+  "infracoes.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.infracoes",
+  "locacoes.json":
+    "SELECT COALESCE(to_char(MAX(atualizado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD'), to_char(MAX(cadastrado_em AT TIME ZONE 'UTC'), 'YYYY-MM-DD')) AS d FROM lanza.locacoes",
+};
+
 async function dbTimestampAsync(file: string): Promise<string | null> {
   const p = path.join(REPO_ROOT, "database", file);
+  if (getDbBackend() !== "file") {
+    const sql = STORE_UPDATED_AT_SQL[file];
+    if (sql) {
+      try {
+        const r = await pgQuery<{ d: string | null }>(sql);
+        const d = r.rows[0]?.d;
+        if (d) return d;
+      } catch {
+        /* fallback abaixo */
+      }
+    }
+  }
   try {
     const raw = await loadJsonDocumentForApi<{ atualizadoEm?: string }>(p, {});
     if (raw.atualizadoEm) return raw.atualizadoEm;

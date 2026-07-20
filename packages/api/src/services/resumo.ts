@@ -163,27 +163,22 @@ export function obterResumo() {
   );
 }
 
+let resumoCache: { at: number; data: ReturnType<typeof montarResumo> } | null = null;
+const RESUMO_CACHE_MS = 20_000;
+
 export async function obterResumoAsync() {
-  const [
-    clientesDb,
-    veiculosDb,
-    contratosDb,
-    clienteDespesasDb,
-    parceiroDespesasDb,
-    infracoesDb,
-    cobrancasCtx,
-  ] = await Promise.all([
-    loadClientesDbAsync(),
-    loadVeiculosDbAsync(),
-    loadContratosDbAsync(),
-    loadClienteDespesasDbAsync(),
+  if (process.env.VERCEL && resumoCache && Date.now() - resumoCache.at < RESUMO_CACHE_MS) {
+    return resumoCache.data;
+  }
+
+  const [parceiroDespesasDb, infracoesDb, cobrancasCtx] = await Promise.all([
     loadParceiroDespesasDbAsync(),
     loadInfracoesDbAsync(),
     loadCobrancasDbContextAsync(),
   ]);
 
   const stores: ResumoStores = {
-    despesasCliente: clienteDespesasDb.clienteDespesas,
+    despesasCliente: cobrancasCtx.clienteDespesas,
     despesasParceiro: parceiroDespesasDb.parceiroDespesas,
     infracoes: infracoesDb.infracoes,
     cobrancasCtx,
@@ -196,11 +191,13 @@ export async function obterResumoAsync() {
     console.error("[resumo] falha ao calcular recebimentos:", err);
   }
 
-  return montarResumo(
-    clientesDb.clientes,
-    veiculosDb.veiculos,
-    contratosDb.contratos,
+  const data = montarResumo(
+    cobrancasCtx.clientes,
+    cobrancasCtx.veiculos,
+    cobrancasCtx.contratos,
     stores,
     recebimentos,
   );
+  if (process.env.VERCEL) resumoCache = { at: Date.now(), data };
+  return data;
 }

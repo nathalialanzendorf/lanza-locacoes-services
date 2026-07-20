@@ -45,15 +45,19 @@ export type ContratosDbShape = {
 };
 
 export async function loadContratosFromSql(): Promise<ContratosDbShape> {
-  const base = await pgQuery("SELECT * FROM lanza.contratos ORDER BY cadastrado_em");
+  const [base, cliSnaps, veiSnaps] = await Promise.all([
+    pgQuery("SELECT * FROM lanza.contratos ORDER BY cadastrado_em"),
+    pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots"),
+    pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots"),
+  ]);
+  const cliByContrato = new Map(cliSnaps.rows.map((row) => [String(row.contrato_id), row]));
+  const veiByContrato = new Map(veiSnaps.rows.map((row) => [String(row.contrato_id), row]));
   const contratos: Record<string, unknown>[] = [];
 
   for (const row of base.rows) {
     const id = String(row.id);
-    const cliSnap = await pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots WHERE contrato_id = $1", [id]);
-    const veiSnap = await pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots WHERE contrato_id = $1", [id]);
-    const cs = cliSnap.rows[0];
-    const vs = veiSnap.rows[0];
+    const cs = cliByContrato.get(id);
+    const vs = veiByContrato.get(id);
 
     contratos.push({
       id,

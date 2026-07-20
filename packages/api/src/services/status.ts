@@ -63,7 +63,7 @@ async function pingPostgres(): Promise<{ ok: boolean; error?: string }> {
         }
         await pgQuery("SELECT 1");
       })(),
-      3_000,
+      8_000,
       "ping Postgres",
     );
     return { ok: true };

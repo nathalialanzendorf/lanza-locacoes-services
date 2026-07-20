@@ -245,13 +245,16 @@ const DEFAULT_CLIENTES_DESC =
   "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.";
 
 export async function loadClientesFromSql(): Promise<ClientesDbShape> {
-  const base = await pgQuery("SELECT * FROM lanza.clientes ORDER BY nome");
+  const [base, endR] = await Promise.all([
+    pgQuery("SELECT * FROM lanza.clientes ORDER BY nome"),
+    pgQuery("SELECT * FROM lanza.cliente_enderecos"),
+  ]);
+  const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
   const clientes: ClienteRow[] = [];
 
   for (const row of base.rows) {
     const id = String(row.id);
-    const endR = await pgQuery("SELECT * FROM lanza.cliente_enderecos WHERE cliente_id = $1", [id]);
-    const endRow = endR.rows[0];
+    const endRow = endByCliente.get(id);
 
     const cliente: ClienteRow = {
       id,
