@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Bundle da API para a Vercel (Node não executa @lanza/db → src/index.ts).
+ * Bundle da API para a Vercel:
+ * - server.mjs — handler pesado (import dinâmico a partir de api/index.mjs)
+ * - api/index.mjs — entry leve (commitado, não bundlado)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -8,13 +10,8 @@ import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const entry = path.join(root, "packages/api/src/index.ts");
-const outDir = path.join(root, "dist");
-const outfile = path.join(outDir, "server.mjs");
-// Cópia na raiz — entrypoint declarado em vercel.json (após buildCommand).
-const rootOutfile = path.join(root, "server.mjs");
-
-fs.mkdirSync(outDir, { recursive: true });
+const entry = path.join(root, "packages/api/src/handler.ts");
+const outfile = path.join(root, "server.mjs");
 
 await esbuild.build({
   entryPoints: [entry],
@@ -32,5 +29,4 @@ await esbuild.build({
 });
 
 const kb = Math.round(fs.statSync(outfile).size / 1024);
-fs.copyFileSync(outfile, rootOutfile);
-console.log(`[build:vercel] OK — dist/server.mjs + server.mjs (~${kb} KiB)`);
+console.log(`[build:vercel] OK — server.mjs (~${kb} KiB) + api/index.mjs (entry leve)`);
