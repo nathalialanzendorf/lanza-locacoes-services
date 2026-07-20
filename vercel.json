@@ -1,17 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install",
+  "installCommand": "npm install --include=dev",
   "buildCommand": "node scripts/build-vercel-server.mjs",
   "rewrites": [
     { "source": "/health", "destination": "/api/health" },
-    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/api" }
   ],
   "functions": {
-    "api/health.mjs": {
-      "maxDuration": 10,
-      "memory": 256
-    },
     "api/index.mjs": {
       "maxDuration": 300,
       "memory": 1024,

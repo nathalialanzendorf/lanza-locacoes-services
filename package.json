@@ -28,10 +28,12 @@
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "devDependencies": {
     "@types/pg": "^8.11.11",
     "@types/ws": "^8.18.1",
-    "esbuild": "^0.25.12",
     "playwright-core": "^1.61.1",
     "tsx": "^4.19.2",
     "ws": "^8.21.0"
@@ -49,6 +51,7 @@
     "@vercel/functions": "^2.0.0",
     "@vercel/oidc-aws-credentials-provider": "^3.3.0",
     "@xmldom/xmldom": "^0.8.10",
+    "esbuild": "^0.25.12",
     "jose": "^5.10.0",
     "pdf-parse": "^1.1.1",
     "pg": "^8.14.1",
