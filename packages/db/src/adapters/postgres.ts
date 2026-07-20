@@ -2,6 +2,12 @@ import { JsonStoreRepository } from "../stores/JsonStoreRepository.js";
 import { PostgresPool } from "../client/PostgresPool.js";
 import { awaitSync } from "../util/awaitSync.js";
 import { skipJsonStoresWrite } from "../repositories/relationalConfig.js";
+import {
+  hasRelationalStore,
+  loadRelationalStore,
+  relationalStoreExists,
+  saveRelationalStore,
+} from "../repositories/relationalRouter.js";
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 
 export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
@@ -13,6 +19,9 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
 
   exists(storeName: string, _filePath: string): boolean {
     if (process.env.VERCEL) return false;
+    if (skipJsonStoresWrite() && hasRelationalStore(storeName)) {
+      return awaitSync(relationalStoreExists(storeName));
+    }
     return awaitSync(this.stores.exists(storeName));
   }
 
@@ -46,6 +55,9 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
   }
 
   async loadAsync<T>(storeName: string, _filePath: string): Promise<T | null> {
+    if (skipJsonStoresWrite() && hasRelationalStore(storeName)) {
+      return loadRelationalStore<T>(storeName);
+    }
     return this.stores.load<T>(storeName);
   }
 
@@ -55,6 +67,10 @@ export class PostgresJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): Promise<void> {
+    if (skipJsonStoresWrite() && hasRelationalStore(storeName)) {
+      await saveRelationalStore(storeName, data);
+      return;
+    }
     if (skipJsonStoresWrite()) return;
     await this.stores.save(storeName, data, options?.description);
   }

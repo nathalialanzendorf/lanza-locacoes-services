@@ -32,10 +32,10 @@ export function getDbBackend(): DbBackend {
     cachedBackend = raw;
     return raw;
   }
-  // Com RDS configurado: dual por defeito (JSON local + espelho PostgreSQL)
+  // Com RDS configurado: postgres por defeito (fonte da verdade relacional)
   if (postgresConfigured()) {
-    cachedBackend = "dual";
-    return "dual";
+    cachedBackend = "postgres";
+    return "postgres";
   }
   cachedBackend = "file";
   return "file";

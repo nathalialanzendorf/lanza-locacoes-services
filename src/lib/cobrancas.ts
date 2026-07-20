@@ -8,6 +8,8 @@ import {
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
+import { loadClientesDb } from "./clientesDb.js";
+import { loadVeiculosDb } from "./veiculosDb.js";
 import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
 import {
@@ -150,9 +152,7 @@ function primeiroNome(nome: string | null | undefined): string {
 }
 
 function carregarClientesPorId(): Map<string, string> {
-  const raw = JSON.parse(
-    fs.readFileSync(path.join(REPO_ROOT, "database", "clientes.json"), "utf8"),
-  ) as { clientes: { id?: string; nome?: string }[] };
+  const raw = loadClientesDb();
   const m = new Map<string, string>();
   for (const c of raw.clientes) if (c.id && c.nome) m.set(c.id, c.nome);
   return m;
@@ -198,10 +198,8 @@ function brl(v: number): string {
 }
 
 function carregarVeiculos(): Map<string, Veiculo> {
-  const raw = JSON.parse(
-    fs.readFileSync(path.join(REPO_ROOT, "database", "veiculos.json"), "utf8"),
-  ) as { veiculos: Veiculo[] };
-  return new Map(raw.veiculos.map((v) => [compactPlaca(v.placa), v]));
+  const raw = loadVeiculosDb();
+  return new Map((raw.veiculos ?? []).map((v) => [compactPlaca(v.placa), v]));
 }
 
 function buscarVeiculo(placa: string): Veiculo | undefined {

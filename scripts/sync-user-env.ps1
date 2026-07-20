@@ -6,7 +6,12 @@ function Sync-UserEnvToProcess {
     'PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE',
     'LANZA_DB_BACKEND', 'AWS_REGION', 'AWS_ROLE_ARN'
   )
+  $procPgPassword = [Environment]::GetEnvironmentVariable('PGPASSWORD', 'Process')
+  $processHasIamToken =
+    -not [string]::IsNullOrEmpty($procPgPassword) -and
+    ($procPgPassword -match 'X-Amz-Algorithm|Action=connect')
   foreach ($entry in [Environment]::GetEnvironmentVariables('User').GetEnumerator()) {
+    if ($entry.Key -eq 'PGPASSWORD' -and $processHasIamToken) { continue }
     $proc = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
     $force = $forceFromUser -contains $entry.Key
     if (($force -or [string]::IsNullOrEmpty($proc)) -and -not [string]::IsNullOrEmpty($entry.Value)) {

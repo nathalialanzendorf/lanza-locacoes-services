@@ -71,6 +71,7 @@ Set-UserEnv "PGPORT" $PgPort.Trim()
 Set-UserEnv "PGSSLMODE" $PgSslMode.Trim()
 Set-UserEnv "PGUSER" $PgUser.Trim()
 Set-UserEnv "LANZA_DB_BACKEND" $Backend.Trim()
+Set-UserEnv "LANZA_DB_RELATIONAL" "1"
 
 if ($Password.Trim()) {
   if ($Password -match "X-Amz-Algorithm|Action=connect") {

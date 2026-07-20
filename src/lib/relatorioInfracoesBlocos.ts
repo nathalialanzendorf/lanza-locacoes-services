@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { loadJsonDocument, loadJsonDocumentForApi } from "@lanza/db";
 import { loadClientesDb } from "./clientesDb.js";
 import { loadClienteDespesasDb, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadCobrancasDbContextAsync } from "./cobrancasDbContext.js";
@@ -22,7 +23,6 @@ import {
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
-import { loadJsonDocumentForApi } from "@lanza/db";
 
 export type LinhaInfracaoBloco = {
   placa: string;
@@ -170,12 +170,12 @@ function loadParceirosNomes(): {
   const porPlaca = new Map<string, string>();
   const porId = new Map<string, string>();
   try {
-    const parceirosRaw = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, "database", "parceiros.json"), "utf8"),
-    ) as { parceiros?: Array<{ id: string; nome: string }> };
-    const vinculosRaw = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, "database", "parceiro-veiculo.json"), "utf8"),
-    ) as { vinculos?: Array<{ veiculoId: string; parceiroId: string }> };
+    const parceirosRaw = loadJsonDocument<{ parceiros?: Array<{ id: string; nome: string }> }>(
+      path.join(REPO_ROOT, "database", "parceiros.json"),
+    );
+    const vinculosRaw = loadJsonDocument<{ vinculos?: Array<{ veiculoId: string; parceiroId: string }> }>(
+      path.join(REPO_ROOT, "database", "parceiro-veiculo.json"),
+    );
     const nomePorId = new Map(
       (parceirosRaw.parceiros ?? []).map((p) => [p.id, p.nome] as const),
     );

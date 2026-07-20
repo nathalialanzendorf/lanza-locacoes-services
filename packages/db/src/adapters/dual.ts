@@ -1,6 +1,7 @@
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 import { awaitSync } from "../util/awaitSync.js";
 import { skipJsonStoresWrite } from "../repositories/relationalConfig.js";
+import { getDbBackend } from "./index.js";
 import { FileJsonDocumentAdapter } from "./file.js";
 import { PostgresJsonDocumentAdapter } from "./postgres.js";
 
@@ -24,6 +25,9 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
   private readonly postgres = new PostgresJsonDocumentAdapter();
 
   exists(storeName: string, filePath: string): boolean {
+    if (skipJsonStoresWrite()) {
+      return this.postgres.exists(storeName, filePath);
+    }
     if (isVercelRuntime()) {
       // Postgres síncrono usa awaitSync e bloqueia o event loop na Vercel.
       return this.file.exists(storeName, filePath);
@@ -32,6 +36,9 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
   }
 
   load<T>(storeName: string, filePath: string): T {
+    if (skipJsonStoresWrite()) {
+      return this.postgres.load<T>(storeName, filePath);
+    }
     if (isVercelRuntime()) {
       return this.file.load<T>(storeName, filePath);
     }
@@ -47,6 +54,10 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): void {
+    if (skipJsonStoresWrite()) {
+      awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
+      return;
+    }
     if (!isVercelRuntime()) {
       this.file.save(storeName, filePath, data, options);
     } else {
@@ -56,31 +67,23 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
         logMirrorError("ficheiro", storeName, err);
       }
     }
-    // CLI/local: aguarda o espelho no Postgres (evita perder writes se o processo terminar).
-    // Vercel: saveAsync nas rotas HTTP; aqui best-effort sem bloquear.
     if (isVercelRuntime()) {
-      if (!skipJsonStoresWrite()) {
-        void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
-          logMirrorError("PostgreSQL", storeName, err);
-        });
-      }
+      void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
+        logMirrorError("PostgreSQL", storeName, err);
+      });
       return;
     }
-    if (!skipJsonStoresWrite()) {
-      try {
-        awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
-      } catch (err) {
-        logMirrorError("PostgreSQL", storeName, err);
-        throw err;
-      }
+    try {
+      awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
+    } catch (err) {
+      logMirrorError("PostgreSQL", storeName, err);
+      throw err;
     }
   }
 
   async loadAsync<T>(storeName: string, filePath: string): Promise<T | null> {
-    if (isVercelRuntime()) {
-      const fromPg = await this.postgres.loadAsync<T>(storeName, filePath);
-      if (fromPg != null) return fromPg;
-      return this.file.loadAsync<T>(storeName, filePath);
+    if (skipJsonStoresWrite()) {
+      return this.postgres.loadAsync<T>(storeName, filePath);
     }
     if (this.file.exists(storeName, filePath)) {
       return this.file.loadAsync<T>(storeName, filePath);
@@ -94,17 +97,18 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): Promise<void> {
-    if (!isVercelRuntime()) {
+    if (skipJsonStoresWrite()) {
+      await this.postgres.saveAsync(storeName, filePath, data, options);
+      return;
+    }
+    if (!isVercelRuntime() && getDbBackend() === "dual") {
       this.file.save(storeName, filePath, data, options);
-    } else {
+    } else if (isVercelRuntime()) {
       try {
         this.file.save(storeName, filePath, data, options);
       } catch (err) {
         logMirrorError("ficheiro", storeName, err);
       }
-    }
-    if (skipJsonStoresWrite()) {
-      return;
     }
     await this.postgres.saveAsync(storeName, filePath, data, options);
   }

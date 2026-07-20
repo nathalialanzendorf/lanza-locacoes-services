@@ -623,7 +623,37 @@ export async function saveParceiroDespesasToSql(db: ParceiroDespesasDbShape): Pr
   }
 }
 
-// --- Triagens ---
+// --- Triagens / análise (schema v2: lanza.cliente_analise_cadastro) ---
+
+const FONTE_NOMES: Record<string, string> = {
+  bnmp: "CNJ BNMP",
+  "pf-sinic": "PF SINIC",
+  tjsc: "TJSC Certidões",
+};
+
+function mapAnaliseCadastroStatus(alerta: boolean, status: string | null): string {
+  if (alerta) return "reprovado";
+  if (status && ["assistido", "pendente", "erro", "pulado"].includes(status)) return "inconclusivo";
+  return "aprovado";
+}
+
+function unmapAnaliseCadastroStatus(dbStatus: string): { alerta: boolean; status: string } {
+  if (dbStatus === "reprovado") return { alerta: true, status: "ok" };
+  if (dbStatus === "inconclusivo") return { alerta: false, status: "pendente" };
+  return { alerta: false, status: "ok" };
+}
+
+function triagemAprovadoFromStatus(
+  triagemRow: Record<string, unknown> | undefined,
+  fontes: Record<string, unknown>[],
+): boolean | null {
+  if (triagemRow?.status === "reprovado") return false;
+  if (triagemRow?.status === "aprovado") return true;
+  if (triagemRow?.status === "inconclusivo") return null;
+  if (fontes.some((f) => f.alerta === true)) return false;
+  if (fontes.length > 0 && fontes.every((f) => f.status === "ok" && f.alerta !== true)) return true;
+  return null;
+}
 
 export type TriagemDbShape = {
   descricao?: string;
@@ -633,48 +663,66 @@ export type TriagemDbShape = {
 };
 
 export async function loadTriagensFromSql(): Promise<TriagemDbShape> {
-  const base = await pgQuery("SELECT * FROM lanza.triagens ORDER BY data_consulta DESC");
-  const triagens: Record<string, unknown>[] = [];
+  const base = await pgQuery(`
+    SELECT c.*, cl.nome AS cliente_nome, cl.cpf AS cliente_cpf_fmt, cl.data_nascimento AS cliente_nascimento
+    FROM lanza.cliente_analise_cadastro c
+    LEFT JOIN lanza.clientes cl ON cl.id = c.cliente_id
+    ORDER BY c.data_consulta DESC, c.cpf
+  `);
 
+  const groups = new Map<string, Record<string, unknown>[]>();
   for (const row of base.rows) {
-    const id = String(row.id);
-    const lgpdR = await pgQuery("SELECT * FROM lanza.triagem_lgpd WHERE triagem_id = $1", [id]);
-    const fontesR = await pgQuery("SELECT * FROM lanza.triagem_fontes WHERE triagem_id = $1", [id]);
-    const lgpd = lgpdR.rows[0];
+    const dataConsulta = String(row.data_consulta).slice(0, 10);
+    const key = `${row.cpf}|${dataConsulta}`;
+    const list = groups.get(key) ?? [];
+    list.push(row);
+    groups.set(key, list);
+  }
+
+  const triagens: Record<string, unknown>[] = [];
+  for (const rows of groups.values()) {
+    const triagemRow = rows.find((r) => r.origem === "triagem");
+    const fonteRows = rows.filter((r) => r.origem !== "triagem");
+    const anchor = triagemRow ?? rows[0]!;
+
+    const fontes = fonteRows.map((f) => {
+      const { alerta, status } = unmapAnaliseCadastroStatus(String(f.status));
+      const achados = f.achados as unknown[] | null;
+      return {
+        id: String(f.origem),
+        nome: FONTE_NOMES[String(f.origem)] ?? String(f.origem),
+        status,
+        alerta,
+        observacao: String(f.descricao ?? ""),
+        qtdAchados: Array.isArray(achados) ? achados.length : 0,
+        evidencia: f.evidencia as string | null,
+        consultadoEm: rowIso(f.consultado_em) ?? new Date().toISOString(),
+      };
+    });
+
+    const alertaGeral =
+      fontes.some((f) => f.alerta) || String(anchor.status) === "reprovado";
+    const lgpd = anchor.base_legal
+      ? { baseLegal: String(anchor.base_legal), titularConsentimento: null, solicitante: null, finalidade: null }
+      : undefined;
 
     triagens.push({
-      id,
-      clienteId: row.cliente_id,
-      cpf: row.cpf,
-      cpfFormatado: row.cpf_formatado,
-      nome: row.nome,
-      nascimento: row.nascimento,
-      dataConsulta: row.data_consulta,
-      alertaGeral: row.alerta_geral === true,
-      aprovado: row.aprovado,
-      resumo: row.resumo,
-      relatorioJson: row.relatorio_json,
-      relatorioTxt: row.relatorio_txt,
-      cadastradoEm: rowIso(row.cadastrado_em),
-      atualizadoEm: rowIso(row.atualizado_em),
-      lgpd: lgpd
-        ? {
-            baseLegal: lgpd.base_legal,
-            titularConsentimento: lgpd.titular_consentimento,
-            solicitante: lgpd.solicitante,
-            finalidade: lgpd.finalidade,
-          }
-        : undefined,
-      fontes: fontesR.rows.map((f) => ({
-        id: f.fonte_id,
-        nome: f.fonte_nome,
-        status: f.status,
-        alerta: f.alerta === true,
-        observacao: f.observacao,
-        qtdAchados: f.qtd_achados,
-        evidencia: f.evidencia,
-        consultadoEm: rowIso(f.consultado_em),
-      })),
+      id: String(anchor.id),
+      clienteId: anchor.cliente_id,
+      cpf: anchor.cpf,
+      cpfFormatado: anchor.cliente_cpf_fmt,
+      nome: anchor.cliente_nome ?? "?",
+      nascimento: anchor.cliente_nascimento ?? "",
+      dataConsulta: String(anchor.data_consulta).slice(0, 10),
+      alertaGeral,
+      aprovado: triagemAprovadoFromStatus(triagemRow, fontes),
+      resumo: triagemRow ? String(triagemRow.descricao ?? "") : fontes.map((f) => f.observacao).join("; "),
+      relatorioJson: null,
+      relatorioTxt: null,
+      cadastradoEm: rowIso(anchor.cadastrado_em),
+      atualizadoEm: rowIso(anchor.atualizado_em),
+      lgpd,
+      fontes,
     });
   }
 
@@ -687,72 +735,82 @@ export async function loadTriagensFromSql(): Promise<TriagemDbShape> {
 
 export async function saveTriagensToSql(db: TriagemDbShape): Promise<void> {
   for (const t of db.triagens) {
-    const id = asText(t.id) ?? randomUUID();
+    const triagemId = asText(t.id) ?? randomUUID();
     const cpf = normCpf(asText(t.cpf)) ?? asText(t.cpf) ?? "";
-    await pgQuery(
-      `INSERT INTO lanza.triagens (
-        id, cliente_id, cpf, cpf_formatado, nome, nascimento, data_consulta,
-        alerta_geral, aprovado, resumo, relatorio_json, relatorio_txt,
-        cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13::timestamptz, now()), now())
-      ON CONFLICT (cpf, data_consulta) DO UPDATE SET aprovado = EXCLUDED.aprovado, resumo = EXCLUDED.resumo, atualizado_em = now()`,
-      [
-        id,
-        isUuid(asText(t.clienteId)) ? t.clienteId : null,
-        cpf,
-        asText(t.cpfFormatado),
-        asText(t.nome) ?? "?",
-        asText(t.nascimento),
-        asText(t.dataConsulta) ?? "",
-        asBool(t.alertaGeral, false),
-        t.aprovado === true || t.aprovado === false ? t.aprovado : null,
-        asText(t.resumo),
-        asText(t.relatorioJson),
-        asText(t.relatorioTxt),
-        parseIso(asText(t.cadastradoEm)),
-      ],
-    );
-
+    const dataConsulta = asText(t.dataConsulta) ?? "";
+    const clienteId = isUuid(asText(t.clienteId)) ? t.clienteId : null;
     const lgpd = t.lgpd as Record<string, unknown> | undefined;
-    if (lgpd) {
+    const baseLegal = lgpd ? asText(lgpd.baseLegal) : null;
+
+    if (t.aprovado === true || t.aprovado === false) {
       await pgQuery(
-        `INSERT INTO lanza.triagem_lgpd (triagem_id, base_legal, titular_consentimento, solicitante, finalidade, atualizado_em)
-         VALUES ($1,$2,$3,$4,$5,now())
-         ON CONFLICT (triagem_id) DO UPDATE SET base_legal = EXCLUDED.base_legal, atualizado_em = now()`,
-        [
-          id,
-          asText(lgpd.baseLegal) ?? "consentimento",
-          lgpd.titularConsentimento != null ? asBool(lgpd.titularConsentimento) : null,
-          asText(lgpd.solicitante),
-          asText(lgpd.finalidade),
-        ],
+        `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
+         WHERE cpf_norm = $1 OR cpf = $1`,
+        [cpf, t.aprovado],
       );
     }
 
     const fontes = t.fontes as Record<string, unknown>[] | undefined;
     if (Array.isArray(fontes)) {
       for (const f of fontes) {
-        const rowId = randomUUID();
-        const fonteKey = asText(f.id) ?? rowId;
+        const origem = asText(f.id) ?? asText(f.nome) ?? "fonte";
+        const status = mapAnaliseCadastroStatus(asBool(f.alerta, false), asText(f.status));
         await pgQuery(
-          `INSERT INTO lanza.triagem_fontes (
-            id, triagem_id, fonte_id, fonte_nome, status, alerta, observacao, qtd_achados, evidencia, consultado_em, atualizado_em
-          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
-          ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, alerta = EXCLUDED.alerta, atualizado_em = now()`,
+          `INSERT INTO lanza.cliente_analise_cadastro (
+            id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
+            evidencia, base_legal, cadastrado_em, atualizado_em
+          ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
+            COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
+          ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
+            status = EXCLUDED.status, descricao = EXCLUDED.descricao, evidencia = EXCLUDED.evidencia,
+            base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
+            consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
           [
-            rowId,
-            id,
-            fonteKey,
-            asText(f.nome) ?? "?",
-            asText(f.status) ?? "ok",
-            asBool(f.alerta, false),
-            asText(f.observacao),
-            asNumber(f.qtdAchados, 0),
-            asText(f.evidencia),
+            randomUUID(),
+            clienteId,
+            cpf,
+            dataConsulta,
             parseIso(asText(f.consultadoEm)),
+            origem,
+            asText(f.observacao) ?? "",
+            status,
+            asText(f.evidencia),
+            baseLegal,
+            parseIso(asText(t.cadastradoEm)),
+            parseIso(asText(t.atualizadoEm)),
           ],
         );
       }
+    }
+
+    if (dataConsulta) {
+      const triagemStatus =
+        t.aprovado === false
+          ? "reprovado"
+          : t.aprovado === true
+            ? "aprovado"
+            : mapAnaliseCadastroStatus(asBool(t.alertaGeral, false), null);
+      await pgQuery(
+        `INSERT INTO lanza.cliente_analise_cadastro (
+          id, cliente_id, cpf, data_consulta, origem, descricao, status, base_legal,
+          cadastrado_em, atualizado_em
+        ) VALUES ($1,$2,$3,$4::date,'triagem',$5,$6::lanza.analise_cadastro_status,$7,
+          COALESCE($8::timestamptz, now()), COALESCE($9::timestamptz, now()))
+        ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
+          status = EXCLUDED.status, descricao = EXCLUDED.descricao, base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
+          atualizado_em = now()`,
+        [
+          triagemId,
+          clienteId,
+          cpf,
+          dataConsulta,
+          asText(t.resumo) ?? "",
+          triagemStatus,
+          baseLegal,
+          parseIso(asText(t.cadastradoEm)),
+          parseIso(asText(t.atualizadoEm)),
+        ],
+      );
     }
   }
 }
@@ -767,32 +825,42 @@ export type ClienteAnaliseDbShape = {
 };
 
 export async function loadClienteAnaliseFromSql(): Promise<ClienteAnaliseDbShape> {
-  const base = await pgQuery("SELECT * FROM lanza.cliente_analise_registros ORDER BY data_consulta DESC");
+  const base = await pgQuery(`
+    SELECT c.*, cl.nome AS cliente_nome, cl.cpf AS cliente_cpf_fmt
+    FROM lanza.cliente_analise_cadastro c
+    LEFT JOIN lanza.clientes cl ON cl.id = c.cliente_id
+    WHERE c.origem <> 'triagem'
+    ORDER BY c.data_consulta DESC
+  `);
   const registros: Record<string, unknown>[] = [];
 
   for (const row of base.rows) {
-    const id = String(row.id);
-    const achadosR = await pgQuery(
-      "SELECT tipo, descricao FROM lanza.cliente_analise_achados WHERE registro_id = $1 ORDER BY ordem",
-      [id],
-    );
+    const { alerta, status } = unmapAnaliseCadastroStatus(String(row.status));
+    const achadosRaw = row.achados as Record<string, unknown>[] | null;
+    const achados = Array.isArray(achadosRaw)
+      ? achadosRaw.map((a) => ({
+          tipo: asText(a.tipo) ?? "outro",
+          descricao: asText(a.descricao) ?? "",
+        }))
+      : [];
+    const origem = String(row.origem);
     registros.push({
-      id,
+      id: String(row.id),
       clienteId: row.cliente_id,
       cpf: row.cpf,
-      cpfFormatado: row.cpf_formatado,
-      nome: row.nome,
-      fonte: row.fonte,
-      fonteNome: row.fonte_nome,
-      site: row.site,
-      status: row.status,
-      alerta: row.alerta === true,
-      identificado: row.identificado,
-      achados: achadosR.rows.map((a) => ({ tipo: a.tipo, descricao: a.descricao })),
+      cpfFormatado: row.cliente_cpf_fmt,
+      nome: row.cliente_nome ?? "?",
+      fonte: origem,
+      fonteNome: FONTE_NOMES[origem] ?? origem,
+      site: (row.site_raw as Record<string, unknown> | null)?.site ?? null,
+      status,
+      alerta,
+      identificado: row.descricao,
+      achados,
       evidencia: row.evidencia,
-      dataConsulta: row.data_consulta,
-      consultadoEm: rowIso(row.consultado_em),
-      analiseId: row.analise_id,
+      dataConsulta: String(row.data_consulta).slice(0, 10),
+      consultadoEm: rowIso(row.consultado_em) ?? null,
+      analiseId: null,
       cadastradoEm: rowIso(row.cadastrado_em),
       atualizadoEm: rowIso(row.atualizado_em),
     });
@@ -809,44 +877,36 @@ export async function saveClienteAnaliseToSql(db: ClienteAnaliseDbShape): Promis
   for (const r of db.registros) {
     const id = asText(r.id) ?? randomUUID();
     const cpf = normCpf(asText(r.cpf)) ?? asText(r.cpf) ?? "";
+    const origem = asText(r.fonte) ?? asText(r.site) ?? "?";
+    const achados = r.achados as Record<string, unknown>[] | undefined;
+    const achadosJson =
+      Array.isArray(achados) && achados.length
+        ? achados.map((a) => ({ tipo: asText(a.tipo) ?? "outro", descricao: asText(a.descricao) ?? "" }))
+        : null;
+
     await pgQuery(
-      `INSERT INTO lanza.cliente_analise_registros (
-        id, cliente_id, cpf, cpf_formatado, nome, fonte, fonte_nome, site, status, alerta,
-        identificado, evidencia, data_consulta, consultado_em, analise_id,
-        cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,COALESCE($16::timestamptz, now()), now())
-      ON CONFLICT (cpf, fonte, data_consulta) DO UPDATE SET identificado = EXCLUDED.identificado, alerta = EXCLUDED.alerta, atualizado_em = now()`,
+      `INSERT INTO lanza.cliente_analise_cadastro (
+        id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
+        evidencia, achados, cadastrado_em, atualizado_em
+      ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
+        COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
+      ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
+        descricao = EXCLUDED.descricao, status = EXCLUDED.status, evidencia = EXCLUDED.evidencia,
+        achados = EXCLUDED.achados, consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
       [
         id,
         isUuid(asText(r.clienteId)) ? r.clienteId : null,
         cpf,
-        asText(r.cpfFormatado),
-        asText(r.nome) ?? "?",
-        asText(r.fonte) ?? "?",
-        asText(r.fonteNome) ?? asText(r.fonte) ?? "?",
-        asText(r.site),
-        asText(r.status) ?? "ok",
-        asBool(r.alerta, false),
-        asText(r.identificado),
-        asText(r.evidencia),
         asText(r.dataConsulta) ?? "",
         parseIso(asText(r.consultadoEm)),
-        isUuid(asText(r.analiseId)) ? r.analiseId : null,
+        origem,
+        asText(r.identificado) ?? "",
+        mapAnaliseCadastroStatus(asBool(r.alerta, false), asText(r.status)),
+        asText(r.evidencia),
+        achadosJson,
         parseIso(asText(r.cadastradoEm)),
+        parseIso(asText(r.atualizadoEm)),
       ],
     );
-
-    const achados = r.achados as Record<string, unknown>[] | undefined;
-    if (Array.isArray(achados)) {
-      await pgQuery("DELETE FROM lanza.cliente_analise_achados WHERE registro_id = $1", [id]);
-      let ordem = 0;
-      for (const a of achados) {
-        await pgQuery(
-          `INSERT INTO lanza.cliente_analise_achados (id, registro_id, tipo, descricao, ordem, atualizado_em)
-           VALUES ($1,$2,$3,$4,$5,now())`,
-          [randomUUID(), id, asText(a.tipo) ?? "outro", asText(a.descricao) ?? "", ordem++],
-        );
-      }
-    }
   }
 }

@@ -1,8 +1,7 @@
 import {
   createVercelPostgresPool,
   getDefaultPostgresPool,
-  importJsonStores,
-  JsonStoreRepository,
+  importJsonToRelational,
   runSchemaMigration,
   setVercelPostgresPool,
 } from "@lanza/db";
@@ -35,6 +34,13 @@ function ensureVercelPool(): void {
   setVercelPostgresPool(createVercelPostgresPool());
 }
 
+async function countRelationalRows(): Promise<number> {
+  const r = await getDefaultPostgresPool().query(
+    "SELECT COUNT(*)::int AS c FROM lanza.clientes",
+  );
+  return Number(r.rows[0]?.c ?? 0);
+}
+
 export async function obterDbAdminStatus(): Promise<DbAdminStatus> {
   if (!process.env.VERCEL) {
     return {
@@ -49,19 +55,32 @@ export async function obterDbAdminStatus(): Promise<DbAdminStatus> {
     ensureVercelPool();
     await getDefaultPostgresPool().query("SELECT 1");
     try {
-      const stores = await new JsonStoreRepository(getDefaultPostgresPool()).list();
+      const n = await countRelationalRows();
+      const stores =
+        n > 0
+          ? [
+              "clientes",
+              "veiculos",
+              "parceiros",
+              "contratos",
+              "locacoes",
+              "infracoes",
+              "cliente-despesas",
+              "parceiro-despesas",
+            ]
+          : [];
       return {
         vercel: true,
         postgres: { ok: true },
         stores,
-        bootstrapAllowed: stores.length === 0,
+        bootstrapAllowed: n === 0,
       };
     } catch (listErr) {
       const msg = listErr instanceof Error ? listErr.message : String(listErr);
       if (/does not exist/i.test(msg)) {
         return {
           vercel: true,
-          postgres: { ok: true, error: "schema pendente (lanza.json_stores)" },
+          postgres: { ok: true, error: "schema pendente (lanza.*)" },
           stores: [],
           bootstrapAllowed: true,
         };
@@ -81,6 +100,19 @@ export async function obterDbAdminStatus(): Promise<DbAdminStatus> {
   }
 }
 
+/** Converte nome de store JSON (ex. analise-cadastro) para importador relacional. */
+function mapStoreFilter(stores?: string[]): string[] | undefined {
+  if (!stores?.length) return undefined;
+  const map: Record<string, string> = {
+    "analise-cadastro": "triagens",
+    "cliente-analise": "cliente_analise",
+    "parceiro-veiculo": "parceiro_veiculo",
+    "cliente-despesas": "cliente_despesas",
+    "parceiro-despesas": "parceiro_despesas",
+  };
+  return stores.map((s) => map[s] ?? s.replace(/-/g, "_"));
+}
+
 export async function executarMigracaoDb(opts: {
   importJson?: boolean;
   dryRun?: boolean;
@@ -97,12 +129,13 @@ export async function executarMigracaoDb(opts: {
 
   const importJson = opts.importJson !== false;
   const dryRun = opts.dryRun === true;
+  const relationalStores = mapStoreFilter(opts.stores);
 
   if (dryRun) {
     await runSchemaMigration(true);
     const preview = importJson
-      ? await importJsonStores(true, opts.stores)
-      : { imported: [], skipped: [] };
+      ? await importJsonToRelational({ dryRun: true, stores: relationalStores })
+      : { imported: [] as string[], skipped: [] as string[] };
     return {
       dryRun: true,
       importJson,
@@ -114,16 +147,28 @@ export async function executarMigracaoDb(opts: {
 
   await runSchemaMigration(false);
   const { imported, skipped } = importJson
-    ? await importJsonStores(false, opts.stores)
+    ? await importJsonToRelational({ dryRun: false, stores: relationalStores })
     : { imported: [] as string[], skipped: [] as string[] };
-  const stores = await new JsonStoreRepository(getDefaultPostgresPool()).list();
+  const n = await countRelationalRows();
 
   return {
     dryRun: false,
     importJson,
     imported,
     skipped,
-    stores,
+    stores:
+      n > 0
+        ? [
+            "clientes",
+            "veiculos",
+            "parceiros",
+            "contratos",
+            "locacoes",
+            "infracoes",
+            "cliente-despesas",
+            "parceiro-despesas",
+          ]
+        : [],
   };
 }
 
@@ -136,6 +181,7 @@ export async function definirSenhaPostgresMaster(password: string): Promise<{ us
     throw new HttpError(400, "Senha inválida (mínimo 8 caracteres).");
   }
   const role = user.replace(/"/g, '""');
-  await getDefaultPostgresPool().query(`ALTER ROLE "${role}" WITH PASSWORD $1`, [password.trim()]);
+  const passLiteral = `'${password.trim().replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
+  await getDefaultPostgresPool().query(`ALTER ROLE "${role}" WITH PASSWORD ${passLiteral}`);
   return { user };
 }

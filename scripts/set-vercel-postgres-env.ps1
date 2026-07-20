@@ -21,6 +21,7 @@ $ErrorActionPreference = "Stop"
 # Valores do RDS (mesmos de set-postgres-user-env.ps1 / integração Vercel OIDC)
 $vars = [ordered]@{
   LANZA_DB_BACKEND     = $Backend
+  LANZA_DB_RELATIONAL  = "1"
   LANZA_WEB_URL        = "https://lanzalocacoes.vercel.app"
   LANZA_API_PUBLIC_URL = "https://api.lanzalocacoes.vercel.app"
 }

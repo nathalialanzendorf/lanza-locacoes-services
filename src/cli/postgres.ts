@@ -42,6 +42,10 @@ function hasFlag(args: string[], flag: string): boolean {
   return args.includes(flag);
 }
 
+function escapePgLiteral(value: string): string {
+  return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
+}
+
 export async function main(args: string[]): Promise<void> {
   const sub = args[0];
 
@@ -109,7 +113,7 @@ export async function main(args: string[]): Promise<void> {
         });
         try {
           const role = config.user.replace(/"/g, '""');
-          await pool.query(`ALTER ROLE "${role}" WITH PASSWORD $1`, [newPass]);
+          await pool.query(`ALTER ROLE "${role}" WITH PASSWORD ${escapePgLiteral(newPass)}`);
           console.log(`OK — senha definida para "${config.user}".`);
           console.log(`  .\\scripts\\set-postgres-user-env.ps1 -Password "<senha>"`);
           console.log(`  npm run lanza -- postgres check`);

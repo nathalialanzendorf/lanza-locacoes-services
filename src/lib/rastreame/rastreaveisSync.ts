@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { loadJsonDocument } from "@lanza/db";
 import { listarMarcas, resolverFipeVeiculo } from "../fipe/index.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
@@ -76,12 +77,12 @@ export function parseRastreavelValue(value: string): {
 function loadParceiroPorVeiculo(): Map<string, string> {
   const map = new Map<string, string>();
   try {
-    const parc = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, "database", "parceiros.json"), "utf8"),
-    ) as { parceiros?: Parceiro[] };
-    const link = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, "database", "parceiro-veiculo.json"), "utf8"),
-    ) as { vinculos?: Vinculo[] };
+    const parc = loadJsonDocument<{ parceiros?: Parceiro[] }>(
+      path.join(REPO_ROOT, "database", "parceiros.json"),
+    );
+    const link = loadJsonDocument<{ vinculos?: Vinculo[] }>(
+      path.join(REPO_ROOT, "database", "parceiro-veiculo.json"),
+    );
     const parceiros = new Map((parc.parceiros ?? []).map((p) => [p.id, p.nome]));
     for (const v of link.vinculos ?? []) {
       const nome = parceiros.get(v.parceiroId);

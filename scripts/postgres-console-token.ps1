@@ -57,10 +57,15 @@ Write-Host "Host: $($env:PGHOST)  User: $pgUserDisplay" -ForegroundColor DarkGra
 
 if ($SetPassword.Trim()) {
   Write-Host "A definir senha estatica para $pgUserDisplay..." -ForegroundColor Cyan
-  npm run lanza -- postgres set-password $SetPassword --from-env
+  $tsx = Join-Path $repoRoot "node_modules\.bin\tsx.cmd"
+  if (-not (Test-Path $tsx)) {
+    Write-Host "tsx nao encontrado. Execute: npm install" -ForegroundColor Red
+    exit 1
+  }
+  & $tsx src/run.ts postgres set-password $SetPassword --from-env
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   .\scripts\set-postgres-user-env.ps1 -Password $SetPassword
-  npm run lanza -- postgres check
+  & $tsx src/run.ts postgres check
   exit $LASTEXITCODE
 }
 
@@ -92,5 +97,6 @@ if ($Psql) {
 
 # Default: testar conexao
 Write-Host "A testar conexao..." -ForegroundColor Cyan
-npm run lanza -- postgres check
+$tsx = Join-Path $repoRoot "node_modules\.bin\tsx.cmd"
+& $tsx src/run.ts postgres check
 exit $LASTEXITCODE
