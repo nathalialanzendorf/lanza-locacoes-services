@@ -1,16 +1,17 @@
 /// <reference path="./ambient.d.ts" />
 /** Entrypoint serverless @lanza/api (Vercel) — resumo/dashboard via Postgres. */
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import {
   createVercelPostgresPool,
   getDbBackend,
+  getVercelPostgresPool,
   runSchemaMigration,
   setVercelPostgresPool,
 } from "@lanza/db";
-import { createApp, logStartup } from "./app.js";
 import { apiHost, apiPort } from "./config.js";
 import { json } from "./http.js";
+import { obterStatusLite } from "./services/statusLite.js";
 
 async function bootstrapPostgres(): Promise<void> {
   if (!process.env.VERCEL || getDbBackend() === "file") return;
@@ -35,25 +36,13 @@ function warmupOcrLocal(): void {
 const port = apiPort();
 const host = apiHost();
 
-function buildServer(): Server {
-  try {
-    return createApp();
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    console.error("[lanza] createApp falhou:", err);
-    return createServer((_req, res) => {
-      json(res, 500, {
-        error: "API não iniciou",
-        detail,
-        hint: "Ver logs Vercel (FUNCTION_INVOCATION_FAILED)",
-      });
-    });
-  }
-}
+let appServer: Server | null = null;
+let appLoadError: string | null = null;
+let appLoading: Promise<Server> | null = null;
 
-const server = buildServer();
-
-if (process.env.VERCEL && getDbBackend() !== "file") {
+function ensureVercelPool(): void {
+  if (!process.env.VERCEL || getDbBackend() === "file") return;
+  if (getVercelPostgresPool()) return;
   try {
     setVercelPostgresPool(createVercelPostgresPool());
   } catch (err) {
@@ -62,8 +51,104 @@ if (process.env.VERCEL && getDbBackend() !== "file") {
   }
 }
 
+async function loadAppServer(): Promise<Server> {
+  ensureVercelPool();
+  if (appServer) return appServer;
+  if (appLoadError) {
+    return createServer((_req, res) => {
+      json(res, 500, {
+        error: "API não iniciou",
+        detail: appLoadError,
+        hint: "Ver logs Vercel (FUNCTION_INVOCATION_FAILED)",
+      });
+    });
+  }
+  if (!appLoading) {
+    appLoading = import("./app.js")
+      .then(({ createApp, logStartup }) => {
+        try {
+          appServer = createApp();
+          if (!process.env.VERCEL) logStartup(port, host);
+          return appServer;
+        } catch (err) {
+          appLoadError = err instanceof Error ? err.message : String(err);
+          console.error("[lanza] createApp falhou:", err);
+          appServer = createServer((_req, res) => {
+            json(res, 500, {
+              error: "API não iniciou",
+              detail: appLoadError,
+              hint: "Ver logs Vercel (FUNCTION_INVOCATION_FAILED)",
+            });
+          });
+          return appServer;
+        }
+      })
+      .catch((err) => {
+        appLoadError = err instanceof Error ? err.message : String(err);
+        console.error("[lanza] import app falhou:", err);
+        appServer = createServer((_req, res) => {
+          json(res, 500, {
+            error: "API não iniciou",
+            detail: appLoadError,
+            hint: "Ver logs Vercel (FUNCTION_INVOCATION_FAILED)",
+          });
+        });
+        return appServer;
+      });
+  }
+  return appLoading;
+}
+
+function pathnameOf(req: IncomingMessage): string {
+  try {
+    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    return url.pathname.replace(/\/+$/, "") || "/";
+  } catch {
+    return "/";
+  }
+}
+
+function isFastHealth(req: IncomingMessage): boolean {
+  if (req.method !== "GET") return false;
+  const p = pathnameOf(req);
+  return p === "/health" || p === "/health/";
+}
+
+async function handleHealthFull(res: ServerResponse): Promise<void> {
+  const { obterStatusSistema } = await import("./services/status.js");
+  json(res, 200, await obterStatusSistema());
+}
+
+const server = createServer((req, res) => {
+  if (isFastHealth(req)) {
+    const full = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`).searchParams.get(
+      "full",
+    );
+    if (full === "1") {
+      void handleHealthFull(res).catch((err) => {
+        console.error("[lanza] /health?full=1:", err);
+        if (!res.headersSent) json(res, 500, { error: "health check falhou" });
+      });
+      return;
+    }
+    json(res, 200, obterStatusLite());
+    return;
+  }
+
+  void loadAppServer()
+    .then((app) => {
+      app.emit("request", req, res);
+    })
+    .catch((err) => {
+      console.error("[lanza] request:", err);
+      if (!res.headersSent) json(res, 500, { error: "Erro interno do servidor" });
+    });
+});
+
 server.listen(port, host, () => {
-  logStartup(port, host);
+  if (!process.env.VERCEL) {
+    void import("./app.js").then(({ logStartup }) => logStartup(port, host));
+  }
   void bootstrapPostgres();
   warmupOcrLocal();
 });

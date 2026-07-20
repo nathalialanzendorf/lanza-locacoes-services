@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npm install",
+  "buildCommand": "node scripts/build-vercel-server.mjs",
   "functions": {
-    "packages/api/src/index.ts": {
+    "server.mjs": {
       "maxDuration": 300,
       "memory": 1024,
       "includeFiles": "node_modules/tesseract.js-core/**,node_modules/tesseract.js/src/worker-script/**,node_modules/@tesseract.js-data/por/4.0.0_best_int/**,packages/db/sql/**,database/**"
