@@ -1,4 +1,9 @@
-import { pgQuery } from "../client/PostgresPool.js";
+import {
+  ensureVercelPgPool,
+  getPgPool,
+  getVercelPostgresPool,
+  pgQuery,
+} from "../client/PostgresPool.js";
 import { pgWriteQuery } from "../client/pgWrite.js";
 import {
   crlvFieldsToJson,
@@ -60,16 +65,34 @@ export async function saveParceirosToSql(db: ParceirosDbShape): Promise<void> {
 }
 
 export async function upsertParceiroRowToSql(p: ParceiroRow): Promise<ParceiroRow> {
-  const r = await pgWriteQuery<{ id: string; nome: string; ativo: boolean }>(
-    `INSERT INTO lanza.parceiros (id, nome, ativo, atualizado_em) VALUES ($1,$2,$3,now())
-     ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, ativo = EXCLUDED.ativo, atualizado_em = now()
-     RETURNING id, nome, ativo`,
-    [p.id, p.nome, p.ativo !== false],
-  );
-  const row = r.rows[0];
-  if (!row) {
-    throw new Error("Falha ao gravar parceiro no PostgreSQL");
+  ensureVercelPgPool();
+  const pool = getVercelPostgresPool() ?? (await getPgPool());
+
+  const client = await pool.connect();
+  let row: { id: string; nome: string; ativo: boolean };
+  try {
+    await client.query("BEGIN");
+    const inserted = await client.query<{ id: string; nome: string; ativo: boolean }>(
+      `INSERT INTO lanza.parceiros (id, nome, ativo, atualizado_em) VALUES ($1,$2,$3,now())
+       ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, ativo = EXCLUDED.ativo, atualizado_em = now()
+       RETURNING id, nome, ativo`,
+      [p.id, p.nome, p.ativo !== false],
+    );
+    row = inserted.rows[0]!;
+    if (!row) throw new Error("Falha ao gravar parceiro no PostgreSQL");
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw err;
+  } finally {
+    client.release();
   }
+
+  const check = await pool.query<{ id: string }>(`SELECT id FROM lanza.parceiros WHERE id = $1`, [row.id]);
+  if (!check.rows[0]) {
+    throw new Error("Parceiro gravado mas não visível após COMMIT");
+  }
+
   return { id: row.id, nome: row.nome, ativo: row.ativo };
 }
 
