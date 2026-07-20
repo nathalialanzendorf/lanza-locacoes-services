@@ -19,7 +19,6 @@ export function apiKey(): string | null {
 
 const DEFAULT_FRONTEND_ORIGINS = [
   "https://lanzalocacoes.vercel.app",
-  "https://lanza-web-ten.vercel.app",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];

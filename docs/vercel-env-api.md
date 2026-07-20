@@ -1,14 +1,13 @@
 # Variáveis de ambiente — projeto API na Vercel
 
-Projeto Vercel: **`lanza-locacoes-services`** (GitHub: `nathalialanzendorf/lanza-locacoes-services`)
+| Componente | Projeto Vercel | GitHub | URL pública |
+|------------|----------------|--------|-------------|
+| **API** | `lanza-locacoes-services` | `nathalialanzendorf/lanza-locacoes-services` | https://api.lanzalocacoes.vercel.app |
+| **Frontend** | `lanza-locacoes-app` | `nathalialanzendorf/lanza-locacoes-app` | https://lanzalocacoes.vercel.app |
 
-URL pública esperada: `https://api.lanzalocacoes.vercel.app`
-
-> **Importante:** se `api.lanzalocacoes.vercel.app` fica em timeout mas o deploy em
-> `lanza-locacoes-services-*.vercel.app` aparece como *success* no GitHub, o domínio
-> provavelmente ainda aponta para o projeto antigo **`lanza-locacoes`**. No dashboard
-> Vercel → **lanza-locacoes-services** → Settings → Domains → adicionar/mover
-> `api.lanzalocacoes.vercel.app` para este projeto e fazer **Redeploy** em Production.
+> **Domínios:** confirme no dashboard que cada URL está no projeto certo (Settings → Domains).
+> Se a API ou o painel ficarem em timeout/404, o domínio pode ainda apontar para um projeto
+> Vercel antigo (`lanza-locacoes`, `lanza-web`). Remova lá e adicione no projeto actual.
 
 Copie no dashboard Vercel → **Settings → Environment Variables** (Production, Preview e Development).
 

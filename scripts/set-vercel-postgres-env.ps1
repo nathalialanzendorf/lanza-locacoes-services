@@ -1,4 +1,4 @@
-# Define variáveis PostgreSQL/RDS no projeto Vercel da API (lanza-locacoes).
+# Define variáveis PostgreSQL/RDS no projeto Vercel da API (lanza-locacoes-services).
 #
 # Pré-requisito: Vercel CLI autenticado
 #   npx vercel login

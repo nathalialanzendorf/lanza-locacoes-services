@@ -1,7 +1,7 @@
 # Espelha database/*.json no PostgreSQL de produção via API Vercel (sem Postgres local).
 #
 # Pré-requisitos:
-#   1. LANZA_MIGRATE_SECRET definido no projeto Vercel lanza-locacoes (Production)
+#   1. LANZA_MIGRATE_SECRET definido no projeto Vercel lanza-locacoes-services (Production)
 #   2. Redeploy da API após gravar o secret
 #   3. database/*.json commitados e deployados (ou stores já no deploy actual)
 #

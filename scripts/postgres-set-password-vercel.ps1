@@ -1,6 +1,6 @@
 # Define senha estática do postgres no RDS via API Vercel (OIDC/IAM — sem AWS CLI local).
 #
-# 1. Vercel -> lanza-locacoes -> LANZA_MIGRATE_SECRET + redeploy
+# 1. Vercel -> lanza-locacoes-services -> LANZA_MIGRATE_SECRET + redeploy
 # 2. .\scripts\postgres-set-password-vercel.ps1 -Secret "..." -Password "LocaLanza"
 
 param(
