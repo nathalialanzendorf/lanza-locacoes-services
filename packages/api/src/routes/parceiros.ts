@@ -8,6 +8,7 @@ import {
   routeAsync,
   type RouteDef,
 } from "../http.js";
+import { getDbBackend } from "@lanza/db";
 import * as parceirosService from "../services/parceiros.js";
 
 export function registerParceirosRoutes(routes: RouteDef[]): void {
@@ -73,7 +74,10 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
       if (!body.nome?.trim()) return badRequest(ctx, 'Campo "nome" é obrigatório');
       const data = await parceirosService.criarParceiroAsync(body.nome);
       const listed = await parceirosService.listarParceirosAsync();
-      json(ctx.res, 201, { data, meta: { total: listed.total } });
+      json(ctx.res, 201, {
+        data,
+        meta: { total: listed.total, backend: getDbBackend() },
+      });
     }),
   });
 
