@@ -3,11 +3,9 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 import {
-  createVercelPostgresPool,
   getDbBackend,
-  getVercelPostgresPool,
   runSchemaMigration,
-  setVercelPostgresPool,
+  ensureVercelPgPool,
 } from "@lanza/db";
 import { apiHost, apiPort } from "./config.js";
 import { json } from "./http.js";
@@ -39,14 +37,7 @@ let appLoading: Promise<Server> | null = null;
 let bootstrapped = false;
 
 function ensureVercelPool(): void {
-  if (!process.env.VERCEL || getDbBackend() === "file") return;
-  if (getVercelPostgresPool()) return;
-  try {
-    setVercelPostgresPool(createVercelPostgresPool());
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[lanza] pool Postgres (Vercel):", msg);
-  }
+  ensureVercelPgPool();
 }
 
 async function loadAppServer(): Promise<Server> {

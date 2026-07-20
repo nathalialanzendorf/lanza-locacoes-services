@@ -1,5 +1,7 @@
 import pg from "pg";
 
+import { createVercelPostgresPool } from "../auth/vercel.js";
+import { getDbBackend } from "../adapters/index.js";
 import { resolvePgPassword } from "../auth/iam.js";
 import { getPgConfig, pgSslOptions, type PgConfig } from "../config.js";
 
@@ -93,6 +95,13 @@ export function getVercelPostgresPool(): pg.Pool | null {
   return vercelPoolOverride;
 }
 
+/** Garante pool OIDC na Vercel antes de qualquer query (leitura ou gravação). */
+export function ensureVercelPgPool(): void {
+  if (!process.env.VERCEL || getDbBackend() === "file") return;
+  if (vercelPoolOverride) return;
+  setVercelPostgresPool(createVercelPostgresPool());
+}
+
 export function getDefaultPostgresPool(): PostgresPool {
   if (!defaultPool) defaultPool = new PostgresPool();
   return defaultPool;
@@ -106,6 +115,7 @@ export async function pgQuery<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params?: unknown[],
 ): Promise<pg.QueryResult<T>> {
+  ensureVercelPgPool();
   return getDefaultPostgresPool().query<T>(text, params);
 }
 

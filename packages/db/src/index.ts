@@ -15,8 +15,9 @@ export {
   getPgPool,
   pgQuery,
   closePgPool,
-  setVercelPostgresPool,
   getVercelPostgresPool,
+  setVercelPostgresPool,
+  ensureVercelPgPool,
   type PostgresPoolOptions,
 } from "./client/PostgresPool.js";
 

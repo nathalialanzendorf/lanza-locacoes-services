@@ -160,7 +160,12 @@ export async function criarParceiroAsync(nome: string): Promise<Parceiro> {
 
   const parceiro: Parceiro = { id: crypto.randomUUID(), nome: n, ativo: true };
   if (usePostgresStore()) {
-    return upsertParceiroRowToSql(parceiro);
+    const saved = await upsertParceiroRowToSql(parceiro);
+    const check = await loadParceirosFromSql();
+    if (!check.parceiros.some((p) => p.id === saved.id)) {
+      throw new HttpError(500, "Parceiro gravado mas não encontrado ao reler o banco de dados");
+    }
+    return saved;
   }
 
   const db = await loadParceirosDbAsync();
