@@ -13,7 +13,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
-import { vincularVeiculoParceiro, criarParceiro } from "./parceiros.js";
+import { criarParceiroAsync, vincularVeiculoParceiroAsync } from "./parceiros.js";
 
 export type ListarVeiculosOpts = {
   ativo?: boolean;
@@ -127,10 +127,10 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
 
   let vinculo = null;
   if (input.parceiroId) {
-    vinculo = vincularVeiculoParceiro(registro.id, input.parceiroId);
+    vinculo = await vincularVeiculoParceiroAsync(registro.id, input.parceiroId);
   } else if (input.parceiroNome?.trim()) {
-    const p = criarParceiro(input.parceiroNome.trim());
-    vinculo = vincularVeiculoParceiro(registro.id, p.id);
+    const p = await criarParceiroAsync(input.parceiroNome.trim());
+    vinculo = await vincularVeiculoParceiroAsync(registro.id, p.id);
   }
 
   if (input.syncFipe) {
