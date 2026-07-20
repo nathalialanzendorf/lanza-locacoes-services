@@ -30,3 +30,7 @@ await esbuild.build({
 
 const kb = Math.round(fs.statSync(outfile).size / 1024);
 console.log(`[build:vercel] OK — server.mjs (~${kb} KiB) + api/index.mjs (entry leve)`);
+
+// Vercel exige pasta de output se o projecto tiver Output Directory = public no dashboard.
+const publicDir = path.join(root, "public");
+fs.mkdirSync(publicDir, { recursive: true });
