@@ -1,6 +1,14 @@
 # Variáveis de ambiente — projeto API na Vercel
 
-Projeto: **lanza-locacoes** (API em `https://api.lanzalocacoes.vercel.app`)
+Projeto Vercel: **`lanza-locacoes-services`** (GitHub: `nathalialanzendorf/lanza-locacoes-services`)
+
+URL pública esperada: `https://api.lanzalocacoes.vercel.app`
+
+> **Importante:** se `api.lanzalocacoes.vercel.app` fica em timeout mas o deploy em
+> `lanza-locacoes-services-*.vercel.app` aparece como *success* no GitHub, o domínio
+> provavelmente ainda aponta para o projeto antigo **`lanza-locacoes`**. No dashboard
+> Vercel → **lanza-locacoes-services** → Settings → Domains → adicionar/mover
+> `api.lanzalocacoes.vercel.app` para este projeto e fazer **Redeploy** em Production.
 
 Copie no dashboard Vercel → **Settings → Environment Variables** (Production, Preview e Development).
 
@@ -72,7 +80,7 @@ npm run lanza -- postgres sync-all
 ```powershell
 npx vercel login
 cd D:\Dropbox\Aworklanza
-npx vercel link   # projeto lanza-locacoes
+npx vercel link   # projeto lanza-locacoes-services
 .\scripts\set-vercel-postgres-env.ps1
 ```
 
