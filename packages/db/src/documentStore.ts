@@ -1,32 +1,33 @@
 import {
-  FileJsonDocumentAdapter,
   getDbBackend,
   getJsonDocumentAdapter,
   storeNameFromPath,
   type SaveJsonDocumentOptions,
 } from "./adapters/index.js";
+import { awaitSync } from "./util/awaitSync.js";
 
-/** Na Vercel com Postgres, leituras síncronas via `awaitSync` bloqueiam o event loop. */
-function vercelSyncReadsFileOnly(): boolean {
-  return Boolean(process.env.VERCEL) && getDbBackend() !== "file";
-}
-
-function fileAdapter(): FileJsonDocumentAdapter {
-  return new FileJsonDocumentAdapter();
+/** Backend relacional (Postgres) — leituras/gravações síncronas espelham loadAsync/saveAsync. */
+function useRelationalAdapter(): boolean {
+  return getDbBackend() !== "file";
 }
 
 export function jsonDocumentExists(filePath: string): boolean {
   const storeName = storeNameFromPath(filePath);
-  if (vercelSyncReadsFileOnly()) {
-    return fileAdapter().exists(storeName, filePath);
+  if (useRelationalAdapter()) {
+    const data = awaitSync(getJsonDocumentAdapter().loadAsync(storeName, filePath));
+    return data != null;
   }
   return getJsonDocumentAdapter().exists(storeName, filePath);
 }
 
 export function loadJsonDocument<T>(filePath: string): T {
   const storeName = storeNameFromPath(filePath);
-  if (vercelSyncReadsFileOnly()) {
-    return fileAdapter().load<T>(storeName, filePath);
+  if (useRelationalAdapter()) {
+    const data = awaitSync(getJsonDocumentAdapter().loadAsync<T>(storeName, filePath));
+    if (data == null) {
+      throw new Error(`Documento ausente: ${filePath}`);
+    }
+    return data;
   }
   return getJsonDocumentAdapter().load<T>(storeName, filePath);
 }
@@ -51,7 +52,13 @@ export function saveJsonDocument(
   options?: SaveJsonDocumentOptions,
 ): void {
   const storeName = storeNameFromPath(filePath);
-  getJsonDocumentAdapter().save(storeName, filePath, data as Record<string, unknown>, options);
+  const adapter = getJsonDocumentAdapter();
+  const payload = data as Record<string, unknown>;
+  if (useRelationalAdapter()) {
+    awaitSync(adapter.saveAsync(storeName, filePath, payload, options));
+    return;
+  }
+  adapter.save(storeName, filePath, payload, options);
 }
 
 export async function loadJsonDocumentAsync<T>(filePath: string): Promise<T | null> {

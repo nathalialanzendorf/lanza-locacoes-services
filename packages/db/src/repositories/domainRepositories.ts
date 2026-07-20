@@ -146,7 +146,12 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
         cadastrado_em, atualizado_em
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
         COALESCE($27::timestamptz, now()), now())
-      ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, data_encerramento = EXCLUDED.data_encerramento, atualizado_em = now()`,
+      ON CONFLICT (id) DO UPDATE SET
+        status = EXCLUDED.status,
+        data_encerramento = EXCLUDED.data_encerramento,
+        quebra_contrato = EXCLUDED.quebra_contrato,
+        motivo_encerramento = EXCLUDED.motivo_encerramento,
+        atualizado_em = now()`,
       [
         id,
         asNumber(c.versao, 1),
@@ -517,7 +522,36 @@ export async function saveClienteDespesasToSql(db: ClienteDespesasDbShape): Prom
         origem, cadastrado_em, atualizado_em
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
         $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())
-      ON CONFLICT (id) DO UPDATE SET paga = EXCLUDED.paga, situacao = EXCLUDED.situacao, atualizado_em = now()`,
+      ON CONFLICT (id) DO UPDATE SET
+        categoria = EXCLUDED.categoria,
+        veiculo_id = EXCLUDED.veiculo_id,
+        veiculo_placa = EXCLUDED.veiculo_placa,
+        auto_infracao = EXCLUDED.auto_infracao,
+        titulo = EXCLUDED.titulo,
+        descricao = EXCLUDED.descricao,
+        numero_auto = EXCLUDED.numero_auto,
+        local_infracao = EXCLUDED.local_infracao,
+        data_autuacao = EXCLUDED.data_autuacao,
+        valor_multa = EXCLUDED.valor_multa,
+        situacao = EXCLUDED.situacao,
+        limite_defesa = EXCLUDED.limite_defesa,
+        condutor_id = EXCLUDED.condutor_id,
+        condutor_confirmado = EXCLUDED.condutor_confirmado,
+        condutor_contrato = EXCLUDED.condutor_contrato,
+        condutor_nao_identificado = EXCLUDED.condutor_nao_identificado,
+        revisar_manual = EXCLUDED.revisar_manual,
+        paga = EXCLUDED.paga,
+        paga_em = EXCLUDED.paga_em,
+        quitada_detran = EXCLUDED.quitada_detran,
+        rastreame_id = EXCLUDED.rastreame_id,
+        rastreame_motorista_key = EXCLUDED.rastreame_motorista_key,
+        rastreame_rastreavel_key = EXCLUDED.rastreame_rastreavel_key,
+        rastreame_data_iso = EXCLUDED.rastreame_data_iso,
+        rastreame_tipo = EXCLUDED.rastreame_tipo,
+        infracao_id = EXCLUDED.infracao_id,
+        ativo = EXCLUDED.ativo,
+        origem = EXCLUDED.origem,
+        atualizado_em = now()`,
       [
         id,
         asText(d.categoria),

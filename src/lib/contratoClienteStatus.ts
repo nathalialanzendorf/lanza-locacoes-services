@@ -11,6 +11,7 @@
  */
 import {
   editarCliente,
+  editarClienteAsync,
   findClienteById,
   findClienteByCpf,
   normNomeKey,
@@ -21,7 +22,7 @@ import {
   persistirMotoristaKeyLocal,
   vincularClienteVeiculoLocal,
 } from "./contratoVinculoDb.js";
-import { loadContratosDb } from "./contratosDb.js";
+import { loadContratosDb, loadContratosDbAsync } from "./contratosDb.js";
 import { normCpfKey } from "./rastreame/mapMotoristaCliente.js";
 import {
   ativarMotorista,
@@ -103,14 +104,22 @@ function mesmoCliente(
 export function temOutroContratoAtivo(
   cliente: ClienteRegistro,
   excetoContratoId?: string | null,
+  contratos = loadContratosDb().contratos,
 ): boolean {
-  const db = loadContratosDb();
-  return db.contratos.some(
+  return contratos.some(
     (c) =>
       c.status === "ativo" &&
       c.id !== excetoContratoId &&
       mesmoCliente(c.clienteId, c.cpf, c.clienteNome, cliente),
   );
+}
+
+export async function temOutroContratoAtivoAsync(
+  cliente: ClienteRegistro,
+  excetoContratoId?: string | null,
+): Promise<boolean> {
+  const db = await loadContratosDbAsync();
+  return temOutroContratoAtivo(cliente, excetoContratoId, db.contratos);
 }
 
 async function resolverMotoristaKey(cliente: ClienteRegistro): Promise<string | null> {
@@ -299,7 +308,7 @@ export async function desativarClienteDoContrato(
   const veiculo = resolverVeiculo(ref);
   const rastreavelKey = resolverRastreavelKey(ref, veiculo);
   const motoristaKey = await resolverMotoristaKey(cliente);
-  const outroAtivo = temOutroContratoAtivo(cliente, ref.contratoId);
+  const outroAtivo = await temOutroContratoAtivoAsync(cliente, ref.contratoId);
 
   if (opts.dryRun) {
     return {
@@ -361,7 +370,7 @@ export async function desativarClienteDoContrato(
     };
   }
 
-  atualizado = editarCliente(atualizado.id, { ativo: false }) ?? atualizado;
+  atualizado = (await editarClienteAsync(atualizado.id, { ativo: false })) ?? atualizado;
   let rastreame: StatusClienteResult["rastreame"] = "ignorado";
 
   if (motoristaKey && rastreameClienteContratoObrigatorio()) {
