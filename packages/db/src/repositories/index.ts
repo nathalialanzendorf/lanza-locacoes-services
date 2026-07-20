@@ -4,6 +4,8 @@ export {
   loadParceirosFromSql,
   loadVinculosFromSql,
   saveParceirosToSql,
+  upsertParceiroRowToSql,
+  deleteParceiroRowFromSql,
   saveVinculosToSql,
   loadVeiculosFromSql,
   saveVeiculosToSql,

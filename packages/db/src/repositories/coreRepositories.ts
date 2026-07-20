@@ -1,4 +1,5 @@
 import { pgQuery } from "../client/PostgresPool.js";
+import { pgWriteQuery } from "../client/pgWrite.js";
 import {
   crlvFieldsToJson,
   pickCnhFields,
@@ -54,17 +55,32 @@ export async function loadVinculosFromSql(): Promise<VinculosDbShape> {
 
 export async function saveParceirosToSql(db: ParceirosDbShape): Promise<void> {
   for (const p of db.parceiros) {
-    await pgQuery(
-      `INSERT INTO lanza.parceiros (id, nome, ativo, atualizado_em) VALUES ($1,$2,$3,now())
-       ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, ativo = EXCLUDED.ativo, atualizado_em = now()`,
-      [p.id, p.nome, p.ativo !== false],
-    );
+    await upsertParceiroRowToSql(p);
   }
+}
+
+export async function upsertParceiroRowToSql(p: ParceiroRow): Promise<ParceiroRow> {
+  const r = await pgWriteQuery<{ id: string; nome: string; ativo: boolean }>(
+    `INSERT INTO lanza.parceiros (id, nome, ativo, atualizado_em) VALUES ($1,$2,$3,now())
+     ON CONFLICT (id) DO UPDATE SET nome = EXCLUDED.nome, ativo = EXCLUDED.ativo, atualizado_em = now()
+     RETURNING id, nome, ativo`,
+    [p.id, p.nome, p.ativo !== false],
+  );
+  const row = r.rows[0];
+  if (!row) {
+    throw new Error("Falha ao gravar parceiro no PostgreSQL");
+  }
+  return { id: row.id, nome: row.nome, ativo: row.ativo };
+}
+
+export async function deleteParceiroRowFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.parceiros WHERE id = $1`, [id]);
+  return (r.rowCount ?? 0) > 0;
 }
 
 export async function saveVinculosToSql(db: VinculosDbShape): Promise<void> {
   for (const v of db.vinculos) {
-    await pgQuery(
+    await pgWriteQuery(
       `INSERT INTO lanza.parceiro_veiculo_vinculos (id, parceiro_id, veiculo_id, atualizado_em)
        VALUES ($1,$2,$3,now())
        ON CONFLICT (id) DO UPDATE SET parceiro_id = EXCLUDED.parceiro_id, veiculo_id = EXCLUDED.veiculo_id, atualizado_em = now()`,
@@ -166,7 +182,7 @@ export async function loadVeiculosFromSql(): Promise<VeiculosDbShape> {
 export async function saveVeiculosToSql(db: VeiculosDbShape): Promise<void> {
   for (const v of db.veiculos) {
     const placa = formatPlacaHyphen(String(v.placa));
-    await pgQuery(
+    await pgWriteQuery(
       `INSERT INTO lanza.veiculos (
         id, placa, placa_norm, marca_modelo, marca, modelo, ano_modelo, ano, chassi, renavam, cor,
         combustivel, categoria, tipo, licenca_ima, vencimento_documento, uf_registro,
@@ -207,7 +223,7 @@ export async function saveVeiculosToSql(db: VeiculosDbShape): Promise<void> {
 
     const refMes = (v.fipeReferencia as string | undefined) ?? "importado";
     if (v.fipeCodigo || v.fipe || v.fipeModelo) {
-      await pgQuery(
+      await pgWriteQuery(
         `INSERT INTO lanza.veiculo_fipe (
           id, veiculo_id, code_fipe, modelo, valor_texto, referencia_mes, fipe_url, origem, ativo, cadastrado_em, atualizado_em
         ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, true, now(), now())
@@ -328,7 +344,7 @@ export async function saveClientesToSql(db: ClientesDbShape): Promise<void> {
   for (const c of db.clientes) {
     const id = String(c.id);
     const cpf = c.cpf != null ? String(c.cpf) : null;
-    await pgQuery(
+    await pgWriteQuery(
       `INSERT INTO lanza.clientes (
         id, nome, cpf, cpf_norm, rg, rg_orgao_expedidor, data_nascimento, local_nascimento,
         filiacao, telefone, email, cnh_arquivo, pasta_contrato_origem, origem_importacao,
@@ -366,7 +382,7 @@ export async function saveClientesToSql(db: ClientesDbShape): Promise<void> {
 
     const end = c.endereco as Record<string, unknown> | undefined;
     if (end) {
-      await pgQuery(
+      await pgWriteQuery(
         `INSERT INTO lanza.cliente_enderecos (cliente_id, cep, logradouro, numero, complemento, bairro, cidade, uf, atualizado_em)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
          ON CONFLICT (cliente_id) DO UPDATE SET cep = EXCLUDED.cep, logradouro = EXCLUDED.logradouro, atualizado_em = now()`,

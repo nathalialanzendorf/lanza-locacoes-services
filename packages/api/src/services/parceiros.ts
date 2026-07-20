@@ -7,10 +7,12 @@ import {
   loadJsonDocumentForApi,
   saveJsonDocument,
   saveJsonDocumentAsync,
-  useRelationalStore,
+  getDbBackend,
   loadParceirosFromSql,
   loadVinculosFromSql,
   saveParceirosToSql,
+  upsertParceiroRowToSql,
+  deleteParceiroRowFromSql,
   saveVinculosToSql,
   exportJsonBackup,
 } from "@lanza/db";
@@ -59,8 +61,12 @@ function loadParceirosDb(): ParceirosDb {
   return db;
 }
 
+function usePostgresStore(): boolean {
+  return getDbBackend() !== "file";
+}
+
 async function loadParceirosDbAsync(): Promise<ParceirosDb> {
-  if (await useRelationalStore()) {
+  if (usePostgresStore()) {
     return loadParceirosFromSql();
   }
   const db = await loadJsonDocumentForApi<ParceirosDb>(DBP, { parceiros: [] });
@@ -70,7 +76,7 @@ async function loadParceirosDbAsync(): Promise<ParceirosDb> {
 
 async function saveParceirosDbAsync(db: ParceirosDb): Promise<void> {
   db.atualizadoEm = hoje();
-  if (await useRelationalStore()) {
+  if (usePostgresStore()) {
     await saveParceirosToSql(db);
     exportJsonBackup("parceiros.json", db);
     return;
@@ -80,7 +86,7 @@ async function saveParceirosDbAsync(db: ParceirosDb): Promise<void> {
 
 async function saveVinculosDbAsync(db: VinculosDb): Promise<void> {
   db.atualizadoEm = hoje();
-  if (await useRelationalStore()) {
+  if (usePostgresStore()) {
     await saveVinculosToSql(db);
     exportJsonBackup("parceiro-veiculo.json", db);
     return;
@@ -101,7 +107,7 @@ function loadVinculosDb(): VinculosDb {
 }
 
 async function loadVinculosDbAsync(): Promise<VinculosDb> {
-  if (await useRelationalStore()) {
+  if (usePostgresStore()) {
     return loadVinculosFromSql();
   }
   const db = await loadJsonDocumentForApi<VinculosDb>(DBL, { vinculos: [] });
@@ -149,10 +155,15 @@ export async function obterParceiroAsync(idOuNome: string): Promise<Parceiro | n
 export async function criarParceiroAsync(nome: string): Promise<Parceiro> {
   const n = nome.trim();
   if (!n) throw new HttpError(400, 'Campo "nome" é obrigatório');
-  const db = await loadParceirosDbAsync();
-  const existente = db.parceiros.find((p) => p.nome.toLowerCase() === n.toLowerCase());
+  const existente = await obterParceiroAsync(n);
   if (existente) return existente;
-  const parceiro: Parceiro = { id: crypto.randomUUID(), nome: n };
+
+  const parceiro: Parceiro = { id: crypto.randomUUID(), nome: n, ativo: true };
+  if (usePostgresStore()) {
+    return upsertParceiroRowToSql(parceiro);
+  }
+
+  const db = await loadParceirosDbAsync();
   db.parceiros.push(parceiro);
   await saveParceirosDbAsync(db);
   return parceiro;
@@ -184,13 +195,19 @@ export async function atualizarParceiroAsync(id: string, patch: AtualizarParceir
   if (!nome) throw new HttpError(400, 'Campo "nome" é obrigatório');
   const dup = db.parceiros.find((p, i) => i !== idx && p.nome.toLowerCase() === nome.toLowerCase());
   if (dup) throw new HttpError(400, `Nome já usado por outro parceiro (${dup.id})`);
-  db.parceiros[idx] = {
+  const atualizado: Parceiro = {
     ...atual,
     nome,
     ...(patch.ativo !== undefined ? { ativo: patch.ativo } : {}),
   };
+
+  if (usePostgresStore()) {
+    return upsertParceiroRowToSql(atualizado);
+  }
+
+  db.parceiros[idx] = atualizado;
   await saveParceirosDbAsync(db);
-  return db.parceiros[idx]!;
+  return atualizado;
 }
 
 export function atualizarParceiro(id: string, patch: AtualizarParceiroPatch): Parceiro {
@@ -220,6 +237,13 @@ export async function removerParceiroAsync(id: string): Promise<Parceiro> {
     throw new HttpError(400, "Parceiro possui vínculos com veículos — remova os vínculos primeiro");
   }
   const [removido] = db.parceiros.splice(idx, 1);
+
+  if (usePostgresStore()) {
+    const ok = await deleteParceiroRowFromSql(id);
+    if (!ok) throw new HttpError(500, "Falha ao remover parceiro no banco de dados");
+    return removido!;
+  }
+
   await saveParceirosDbAsync(db);
   return removido!;
 }
