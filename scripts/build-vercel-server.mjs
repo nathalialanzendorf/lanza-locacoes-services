@@ -31,6 +31,15 @@ await esbuild.build({
 const kb = Math.round(fs.statSync(outfile).size / 1024);
 console.log(`[build:vercel] OK — server.mjs (~${kb} KiB) + api/index.mjs (entry leve)`);
 
-// Vercel exige pasta de output se o projecto tiver Output Directory = public no dashboard.
+// Pasta estática exigida pela Vercel (Output Directory = public no dashboard).
 const publicDir = path.join(root, "public");
 fs.mkdirSync(publicDir, { recursive: true });
+const indexHtml = path.join(publicDir, "index.html");
+if (!fs.existsSync(indexHtml)) {
+  fs.writeFileSync(
+    indexHtml,
+    `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Lanza API</title><meta http-equiv="refresh" content="0;url=/health"></head><body><p><a href="/health">/health</a></p></body></html>\n`,
+    "utf8",
+  );
+}
+console.log("[build:vercel] public/ OK (outputDirectory)");

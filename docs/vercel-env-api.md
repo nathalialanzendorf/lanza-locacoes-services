@@ -14,8 +14,8 @@ São **dois** projectos Vercel (dois repositórios GitHub). Um único projecto n
 ### 1. Projecto API
 
 1. Vercel → **Add New Project** → importar **`nathalialanzendorf/lanza-locacoes-services`**
-2. Framework: **Other** (usa `vercel.json`: `framework: null`, sem pasta estática)
-3. **Output Directory:** deixar **vazio** (não usar `public` nem `dist` — só serverless em `api/`)
+2. Framework: **Other** (usa `vercel.json`; `outputDirectory`: **`public`** — pasta vazia + `index.html`)
+3. **Output Directory:** **`public`** (deve coincidir com `vercel.json`; não usar `dist`)
 4. **Antes do 1.º deploy:** Settings → **Deployment Protection** → **Vercel Authentication = Disabled** (Production e Preview)
 4. Deploy
 5. Settings → **Domains** → adicionar **`api.lanzalocacoes.vercel.app`**
