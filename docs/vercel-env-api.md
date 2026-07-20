@@ -6,8 +6,51 @@
 | **Frontend** | `lanza-locacoes-app` | `nathalialanzendorf/lanza-locacoes-app` | https://lanzalocacoes.vercel.app |
 
 > **Domínios:** confirme no dashboard que cada URL está no projeto certo (Settings → Domains).
-> Se a API ou o painel ficarem em timeout/404, o domínio pode ainda apontar para um projeto
-> Vercel antigo (`lanza-locacoes`, `lanza-web`). Remova lá e adicione no projeto actual.
+
+## Setup do zero (projectos apagados / novo team)
+
+São **dois** projectos Vercel (dois repositórios GitHub). Um único projecto não serve para API + frontend.
+
+### 1. Projecto API
+
+1. Vercel → **Add New Project** → importar **`nathalialanzendorf/lanza-locacoes-services`**
+2. Framework: **Other** (usa `vercel.json` + `buildCommand` do repo)
+3. **Antes do 1.º deploy:** Settings → **Deployment Protection** → **Vercel Authentication = Disabled** (Production e Preview)
+4. Deploy
+5. Settings → **Domains** → adicionar **`api.lanzalocacoes.vercel.app`**
+6. Settings → **Environment Variables** — tabela abaixo (ou `.\scripts\set-vercel-postgres-env.ps1` após `npx vercel link`)
+7. **Redeploy** após gravar variáveis
+
+### 2. Projecto Frontend
+
+1. **Add New Project** → importar **`nathalialanzendorf/lanza-locacoes-app`**
+2. Framework: **Vite** (detectado; `outputDirectory`: `dist`)
+3. **Deployment Protection → Disabled**
+4. Deploy
+5. Domains → **`lanzalocacoes.vercel.app`**
+6. Variável (opcional se `.env.production` no repo): `VITE_API_BASE_URL=https://api.lanzalocacoes.vercel.app`
+
+### 3. Verificar
+
+```powershell
+curl.exe --ssl-no-revoke https://api.lanzalocacoes.vercel.app/health
+curl.exe --ssl-no-revoke https://lanzalocacoes.vercel.app/
+```
+
+`/health` deve devolver JSON `{"status":"ok",...}` em &lt; 2s.
+
+### CLI (opcional)
+
+```powershell
+# API
+cd D:\Dropbox\Aworklanza\lanza-locacoes-services
+npx vercel login
+npx vercel link
+.\scripts\set-vercel-postgres-env.ps1 -Backend postgres
+.\scripts\fix-vercel-deploy-public.ps1 -ProjectName SEU-NOME-PROJECTO-API
+```
+
+---
 
 Copie no dashboard Vercel → **Settings → Environment Variables** (Production, Preview e Development).
 
