@@ -42,19 +42,9 @@ function parseDatabaseUrl(url: string): PgConfig {
   };
 }
 
-/** Lê PGHOST/PGPORT/… ou DATABASE_URL. */
-export function getPgConfig(): PgConfig {
-  const databaseUrl = env("DATABASE_URL");
-  if (databaseUrl) return parseDatabaseUrl(databaseUrl);
-
+function configFromPgEnv(): PgConfig | null {
   const host = env("PGHOST");
-  if (!host) {
-    throw new Error(
-      "PostgreSQL não configurado: defina PGHOST (ou DATABASE_URL). " +
-        "Use .\\scripts\\set-postgres-user-env.ps1",
-    );
-  }
-
+  if (!host) return null;
   return {
     host,
     port: Number(env("PGPORT") ?? "5432"),
@@ -65,6 +55,26 @@ export function getPgConfig(): PgConfig {
     awsRegion: env("AWS_REGION"),
     awsRoleArn: env("AWS_ROLE_ARN"),
   };
+}
+
+/** Lê PGHOST/PGPORT/… ou DATABASE_URL. */
+export function getPgConfig(): PgConfig {
+  // Na Vercel, PGHOST + OIDC/IAM é a fonte da verdade — DATABASE_URL pode apontar para réplica ou credencial só-leitura.
+  if (process.env.VERCEL && env("AWS_ROLE_ARN")) {
+    const fromEnv = configFromPgEnv();
+    if (fromEnv) return fromEnv;
+  }
+
+  const databaseUrl = env("DATABASE_URL");
+  if (databaseUrl) return parseDatabaseUrl(databaseUrl);
+
+  const fromEnv = configFromPgEnv();
+  if (fromEnv) return fromEnv;
+
+  throw new Error(
+    "PostgreSQL não configurado: defina PGHOST (ou DATABASE_URL). " +
+      "Use .\\scripts\\set-postgres-user-env.ps1",
+  );
 }
 
 export function pgSslOptions(sslMode: PgSslMode): false | { rejectUnauthorized: boolean } {
