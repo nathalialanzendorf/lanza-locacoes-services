@@ -72,7 +72,8 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
       const body = await readJsonBody<{ nome?: string }>(ctx.req);
       if (!body.nome?.trim()) return badRequest(ctx, 'Campo "nome" é obrigatório');
       const data = await parceirosService.criarParceiroAsync(body.nome);
-      json(ctx.res, 201, { data });
+      const listed = await parceirosService.listarParceirosAsync();
+      json(ctx.res, 201, { data, meta: { total: listed.total } });
     }),
   });
 
