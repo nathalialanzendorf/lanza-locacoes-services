@@ -439,14 +439,22 @@ export type ClienteDespesasDbShape = {
 };
 
 export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbShape> {
-  const r = await pgQuery("SELECT * FROM lanza.cliente_despesas ORDER BY data_autuacao");
+  const r = await pgQuery(
+    `SELECT cd.*, v.placa AS veiculo_placa_ref
+     FROM lanza.cliente_despesas cd
+     LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
+     ORDER BY cd.data_autuacao`,
+  );
   return {
     descricao: "Débitos cobráveis do locatário.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
     clienteDespesas: r.rows.map((row) => ({
       id: String(row.id),
       categoria: row.categoria,
-      veiculoId: row.veiculo_placa,
+      veiculoId:
+        asText(row.veiculo_placa) ??
+        asText(row.veiculo_placa_ref) ??
+        (row.veiculo_id != null ? String(row.veiculo_id) : undefined),
       autoInfracao: row.auto_infracao,
       titulo: row.titulo,
       descricao: row.descricao,

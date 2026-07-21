@@ -97,6 +97,8 @@ function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
 export type DespesaClienteListagem = ClienteDespesaRegistro & {
   placa: string;
   veiculoLabel: string;
+  /** Alias de condutorId para o frontend. */
+  clienteId: string | null;
   clienteNome: string | null;
   vencimentoBr: string | null;
   pagaEmBr: string | null;
@@ -144,6 +146,7 @@ function enriquecerDespesaCliente(
         anoModelo: null,
       },
     ),
+    clienteId: d.condutorId ?? null,
     clienteNome: clienteNomeDespesa(d, catalogo.clientes),
     vencimentoBr: vencimentoClienteDespesaBr(d),
     pagaEmBr: pagaEmDespesaBr(d),
@@ -190,7 +193,11 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
 
   if (opts.clienteId?.trim()) {
     const clienteId = opts.clienteId.trim();
-    items = items.filter((d) => despesaAtribuidaACliente(d, clienteId));
+    items = items.filter((d) => {
+      if (despesaAtribuidaACliente(d, clienteId)) return true;
+      const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
+      return veiculo?.clienteVinculadoId === clienteId;
+    });
   }
 
   const semCliente = opts.semCliente === true || opts.semCondutor === true;
@@ -255,8 +262,15 @@ export function obterDespesa(id: string): ClienteDespesaRegistro | null {
   return findClienteDespesaById(id);
 }
 
-export async function obterDespesaAsync(id: string): Promise<ClienteDespesaRegistro | null> {
-  return findClienteDespesaByIdAsync(id);
+export async function obterDespesaAsync(id: string): Promise<DespesaClienteListagem | null> {
+  const catalogo = await loadDespesasCatalogo();
+  const key = id.trim();
+  const item =
+    catalogo.despesas.find((d) => d.id === key) ??
+    catalogo.despesas.find((d) => d.autoInfracao.trim().toLowerCase() === key.toLowerCase()) ??
+    (await findClienteDespesaByIdAsync(key));
+  if (!item) return null;
+  return enriquecerDespesaCliente(item, catalogo);
 }
 
 export async function criarDespesa(
