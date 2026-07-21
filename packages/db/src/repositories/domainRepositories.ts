@@ -438,61 +438,146 @@ export type ClienteDespesasDbShape = {
   clienteDespesas: Record<string, unknown>[];
 };
 
-export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbShape> {
+export type ClienteDespesasSqlFilter = {
+  clienteId?: string;
+  veiculoId?: string;
+  placa?: string;
+  emAberto?: boolean;
+  ativo?: boolean;
+};
+
+function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(row.id),
+    categoria: row.categoria,
+    veiculoId:
+      asText(row.veiculo_placa) ??
+      asText(row.veiculo_placa_ref) ??
+      (row.veiculo_id != null ? String(row.veiculo_id) : undefined),
+    autoInfracao: row.auto_infracao,
+    titulo: row.titulo,
+    descricao: row.descricao,
+    numeroAuto: row.numero_auto,
+    localInfracao: row.local_infracao,
+    dataAutuacao: row.data_autuacao,
+    valorMulta: Number(row.valor_multa),
+    situacao: row.situacao,
+    limiteDefesa: row.limite_defesa,
+    dataLimiteDefesa: row.data_limite_defesa,
+    dataVencimentoOriginal: row.data_vencimento_original,
+    convertidaEmDebito: row.convertida_em_debito === true,
+    condutorId: asText(row.condutor_id),
+    condutorConfirmado: row.condutor_confirmado === true,
+    condutorContrato: row.condutor_contrato,
+    condutorNaoIdentificado: row.condutor_nao_identificado === true,
+    debitoParceiroConfirmado: row.debito_parceiro_confirmado === true,
+    debitoParceiroId: asText(row.debito_parceiro_id),
+    revisarManual: row.revisar_manual === true,
+    revisarMotivo: row.revisar_motivo,
+    paga: row.paga === true,
+    pagaEm: rowIso(row.paga_em),
+    quitadaDetran: row.quitada_detran === true,
+    statusInfracao: row.status_infracao,
+    statusDetran: row.status_detran,
+    rastreameId: row.rastreame_id,
+    rastreameMotoristaKey: row.rastreame_motorista_key,
+    rastreameRastreavelKey: row.rastreame_rastreavel_key,
+    rastreameDataIso: rowIso(row.rastreame_data_iso),
+    rastreameTipo: row.rastreame_tipo,
+    rastreameSyncEm: rowIso(row.rastreame_sync_em),
+    detranAutoInfracao: row.detran_auto_infracao,
+    pdfArquivo: row.pdf_arquivo,
+    ativo: row.ativo !== false,
+    origem: row.origem,
+    cadastradoEm: rowIso(row.cadastrado_em),
+    atualizadoEm: rowIso(row.atualizado_em),
+  };
+}
+
+/** Listagem filtrada no Postgres (evita carregar todas as despesas em memória). */
+export async function queryClienteDespesasFromSql(
+  filter: ClienteDespesasSqlFilter = {},
+): Promise<Record<string, unknown>[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
+
+  if (filter.ativo === true) {
+    where.push("(cd.ativo IS DISTINCT FROM false)");
+  } else if (filter.ativo === false) {
+    where.push("(cd.ativo = false)");
+  }
+
+  if (filter.emAberto === true) {
+    where.push("(cd.paga IS NOT TRUE)");
+  } else if (filter.emAberto === false) {
+    where.push("(cd.paga = true)");
+  }
+
+  if (filter.clienteId?.trim()) {
+    const clienteId = filter.clienteId.trim();
+    params.push(clienteId);
+    where.push(`(
+      cd.condutor_id::text = $${p}
+      OR v.cliente_vinculado_id::text = $${p}
+      OR EXISTS (
+        SELECT 1
+        FROM lanza.contratos c
+        WHERE c.status = 'ativo'
+          AND c.cliente_id::text = $${p}
+          AND (
+            (cd.veiculo_id IS NOT NULL AND c.veiculo_id = cd.veiculo_id)
+            OR (
+              v.placa_norm IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM lanza.veiculos cv
+                WHERE cv.id = c.veiculo_id AND cv.placa_norm = v.placa_norm
+              )
+            )
+          )
+      )
+    )`);
+    p += 1;
+  }
+
+  if (filter.placa?.trim()) {
+    params.push(compactPlaca(filter.placa));
+    where.push(
+      `(upper(replace(coalesce(v.placa, cd.veiculo_placa, ''), '-', '')) = $${p})`,
+    );
+    p += 1;
+  } else if (filter.veiculoId?.trim()) {
+    const ref = filter.veiculoId.trim();
+    if (isUuid(ref)) {
+      params.push(ref);
+      where.push(`(cd.veiculo_id::text = $${p} OR v.id::text = $${p})`);
+      p += 1;
+    } else {
+      params.push(compactPlaca(ref));
+      where.push(
+        `(v.placa_norm = $${p} OR upper(replace(coalesce(cd.veiculo_placa, ''), '-', '')) = $${p})`,
+      );
+      p += 1;
+    }
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const r = await pgQuery(
-    `SELECT cd.*, v.placa AS veiculo_placa_ref
+    `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
      FROM lanza.cliente_despesas cd
      LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
+     ${whereSql}
      ORDER BY cd.data_autuacao`,
+    params,
   );
+  return r.rows.map((row) => mapClienteDespesaRow(row as Record<string, unknown>));
+}
+
+export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbShape> {
   return {
     descricao: "Débitos cobráveis do locatário.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
-    clienteDespesas: r.rows.map((row) => ({
-      id: String(row.id),
-      categoria: row.categoria,
-      veiculoId:
-        asText(row.veiculo_placa) ??
-        asText(row.veiculo_placa_ref) ??
-        (row.veiculo_id != null ? String(row.veiculo_id) : undefined),
-      autoInfracao: row.auto_infracao,
-      titulo: row.titulo,
-      descricao: row.descricao,
-      numeroAuto: row.numero_auto,
-      localInfracao: row.local_infracao,
-      dataAutuacao: row.data_autuacao,
-      valorMulta: Number(row.valor_multa),
-      situacao: row.situacao,
-      limiteDefesa: row.limite_defesa,
-      dataLimiteDefesa: row.data_limite_defesa,
-      dataVencimentoOriginal: row.data_vencimento_original,
-      convertidaEmDebito: row.convertida_em_debito === true,
-      condutorId: row.condutor_id,
-      condutorConfirmado: row.condutor_confirmado === true,
-      condutorContrato: row.condutor_contrato,
-      condutorNaoIdentificado: row.condutor_nao_identificado === true,
-      debitoParceiroConfirmado: row.debito_parceiro_confirmado === true,
-      debitoParceiroId: row.debito_parceiro_id,
-      revisarManual: row.revisar_manual === true,
-      revisarMotivo: row.revisar_motivo,
-      paga: row.paga === true,
-      pagaEm: rowIso(row.paga_em),
-      quitadaDetran: row.quitada_detran === true,
-      statusInfracao: row.status_infracao,
-      statusDetran: row.status_detran,
-      rastreameId: row.rastreame_id,
-      rastreameMotoristaKey: row.rastreame_motorista_key,
-      rastreameRastreavelKey: row.rastreame_rastreavel_key,
-      rastreameDataIso: rowIso(row.rastreame_data_iso),
-      rastreameTipo: row.rastreame_tipo,
-      rastreameSyncEm: rowIso(row.rastreame_sync_em),
-      detranAutoInfracao: row.detran_auto_infracao,
-      pdfArquivo: row.pdf_arquivo,
-      ativo: row.ativo !== false,
-      origem: row.origem,
-      cadastradoEm: rowIso(row.cadastrado_em),
-      atualizadoEm: rowIso(row.atualizado_em),
-    })),
+    clienteDespesas: await queryClienteDespesasFromSql(),
   };
 }
 

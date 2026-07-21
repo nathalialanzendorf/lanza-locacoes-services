@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 
+import { queryClienteDespesasFromSql, useRelationalStore } from "@lanza/db";
 import {
   confirmarCondutorClienteDespesa,
   confirmarDebitoParceiroDespesa,
@@ -194,9 +195,12 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   if (opts.clienteId?.trim()) {
     const clienteId = opts.clienteId.trim();
     items = items.filter((d) => {
-      if (despesaAtribuidaACliente(d, clienteId)) return true;
+      const condutorId = String(d.condutorId ?? "").trim();
+      if (condutorId === clienteId) return true;
       const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
-      return veiculo?.clienteVinculadoId === clienteId;
+      if (veiculo?.clienteVinculadoId === clienteId) return true;
+      if (condutorId && condutorId !== clienteId) return false;
+      return despesaAtribuidaACliente(d, clienteId);
     });
   }
 
@@ -217,12 +221,28 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   return items;
 }
 
-async function loadDespesasCatalogo(): Promise<DespesasCatalogo> {
-  const [despesasDb, clientesDb, veiculosDb] = await Promise.all([
-    loadClienteDespesasDbAsync(),
+async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<DespesasCatalogo> {
+  const [clientesDb, veiculosDb] = await Promise.all([
     loadClientesDbAsync(),
     loadVeiculosDbAsync(),
   ]);
+
+  if (await useRelationalStore()) {
+    const despesas = (await queryClienteDespesasFromSql({
+      clienteId: opts.clienteId,
+      veiculoId: opts.veiculoId,
+      placa: opts.placa,
+      emAberto: opts.emAberto,
+      ativo: opts.ativo,
+    })) as ClienteDespesaRegistro[];
+    return {
+      despesas,
+      clientes: clientesDb.clientes,
+      veiculos: veiculosDb.veiculos,
+    };
+  }
+
+  const despesasDb = await loadClienteDespesasDbAsync();
   return {
     despesas: despesasDb.clienteDespesas,
     clientes: clientesDb.clientes,
@@ -250,7 +270,7 @@ export async function listarDespesasAsync(opts: ListarDespesasOpts = {}): Promis
   total: number;
   items: DespesaClienteListagem[];
 }> {
-  const catalogo = await loadDespesasCatalogo();
+  const catalogo = await loadDespesasCatalogo(opts);
   const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
   return {
     total: items.length,
