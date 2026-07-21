@@ -26,8 +26,10 @@ function postgresConfigured(): boolean {
 
 function resolveDbBackend(): DbBackend {
   const raw = env("LANZA_DB_BACKEND");
-  if (raw === "postgres" || raw === "dual" || raw === "file") return raw;
-  // Com RDS configurado: postgres por defeito (fonte da verdade relacional)
+  if (raw === "file") return "file";
+  if (raw === "postgres" || raw === "dual") {
+    return postgresConfigured() ? raw : "file";
+  }
   if (postgresConfigured()) return "postgres";
   return "file";
 }

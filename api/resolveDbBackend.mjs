@@ -17,7 +17,10 @@ function postgresConfigured() {
 
 export function resolveDbBackend() {
   const raw = env("LANZA_DB_BACKEND");
-  if (raw === "postgres" || raw === "dual" || raw === "file") return raw;
+  if (raw === "file") return "file";
+  if (raw === "postgres" || raw === "dual") {
+    return postgresConfigured() ? raw : "file";
+  }
   if (postgresConfigured()) return "postgres";
   return "file";
 }
