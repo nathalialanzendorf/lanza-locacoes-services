@@ -82,14 +82,14 @@ Write-Host ""
 Write-Host "OK. Faca Redeploy do projeto API na Vercel."
 Write-Host "Verificar: curl https://api.lanzalocacoes.vercel.app/health"
 Write-Host ""
-Write-Host 'Esperado (backend file — JSON em database/):'
+Write-Host 'Esperado após redeploy (backend file — somente leitura na Vercel):'
 Write-Host @'
 {
   "database": { "backend": "file" }
 }
 '@
 Write-Host ""
-Write-Host 'Esperado (backend postgres):'
+Write-Host 'Esperado (backend postgres — gravações persistem):'
 Write-Host @'
 {
   "database": { "backend": "postgres", "postgres": { "ok": true } }

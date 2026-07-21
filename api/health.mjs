@@ -1,4 +1,6 @@
 /** /health — function isolada (sem importar server.mjs). */
+import { resolveDbBackend } from "./resolveDbBackend.mjs";
+
 const API_VERSION = "0.1.0";
 
 export default function handler(_req, res) {
@@ -7,7 +9,7 @@ export default function handler(_req, res) {
     service: "@lanza/api",
     version: API_VERSION,
     route: "api/health",
-    database: { backend: (process.env.LANZA_DB_BACKEND ?? "postgres").trim() },
+    database: { backend: resolveDbBackend() },
     git: {
       commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || undefined,
       ref: process.env.VERCEL_GIT_COMMIT_REF?.trim() || undefined,

@@ -72,6 +72,8 @@ export {
   type ClienteAnaliseDbShape,
 } from "./repositories/index.js";
 
+export { ReadOnlyBackendError } from "./util/readOnlyBackendError.js";
+
 // Document store (file | postgres | dual)
 export {
   jsonDocumentExists,

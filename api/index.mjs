@@ -5,6 +5,7 @@
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveDbBackend } from "./resolveDbBackend.mjs";
 
 const API_VERSION = "0.1.0";
 
@@ -75,7 +76,7 @@ async function handler(req, res) {
       status: "ok",
       service: "@lanza/api",
       version: API_VERSION,
-      database: { backend: (process.env.LANZA_DB_BACKEND ?? "postgres").trim() },
+      database: { backend: resolveDbBackend() },
       git: {
         commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || undefined,
         ref: process.env.VERCEL_GIT_COMMIT_REF?.trim() || undefined,

@@ -48,6 +48,10 @@ export function handleServiceError(ctx: ApiContext, err: unknown): void {
     json(ctx.res, err.status, { error: err.message });
     return;
   }
+  if (err instanceof Error && err.name === "ReadOnlyBackendError") {
+    json(ctx.res, 503, { error: err.message });
+    return;
+  }
   if (err instanceof Error) {
     json(ctx.res, 400, { error: err.message });
     return;

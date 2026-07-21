@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { ReadOnlyBackendError } from "../util/readOnlyBackendError.js";
 import { isReadOnlyServerlessFs } from "../util/serverlessFs.js";
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 
@@ -19,7 +20,9 @@ export class FileJsonDocumentAdapter implements JsonDocumentAdapter {
     data: Record<string, unknown>,
     options?: SaveJsonDocumentOptions,
   ): void {
-    if (isReadOnlyServerlessFs()) return;
+    if (isReadOnlyServerlessFs()) {
+      throw new ReadOnlyBackendError();
+    }
     if (options?.mkdir) {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
     }
