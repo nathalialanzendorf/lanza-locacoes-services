@@ -10,6 +10,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -62,6 +63,21 @@ function loadEnvFile(filePath) {
   }
 }
 
+function resolveJwtSecret() {
+  if (process.env.LANZA_JWT_SECRET?.trim()) {
+    return { value: process.env.LANZA_JWT_SECRET.trim(), generated: false };
+  }
+  loadEnvFile(path.join(root, ".env.local"));
+  if (process.env.LANZA_JWT_SECRET?.trim()) {
+    return { value: process.env.LANZA_JWT_SECRET.trim(), generated: false };
+  }
+  return { value: randomBytes(32).toString("base64url"), generated: true };
+}
+
+const { value: jwtSecretValue, generated: jwtSecretGenerated } = resolveJwtSecret();
+vars.LANZA_JWT_SECRET = jwtSecretValue;
+vars.LANZA_JWT_EXPIRES_IN = process.env.LANZA_JWT_EXPIRES_IN?.trim() || "7d";
+
 function getVercelToken() {
   if (process.env.VERCEL_TOKEN?.trim()) return process.env.VERCEL_TOKEN.trim();
   loadEnvFile(path.join(root, ".env.local"));
@@ -78,7 +94,7 @@ function getVercelToken() {
   return null;
 }
 
-async function upsertEnv(token, key, value) {
+async function upsertEnv(token, key, value, type = "plain") {
   const url = `https://api.vercel.com/v10/projects/${encodeURIComponent(projectName)}/env?upsert=true&teamId=${encodeURIComponent(teamId)}`;
   const res = await fetch(url, {
     method: "POST",
@@ -89,7 +105,7 @@ async function upsertEnv(token, key, value) {
     body: JSON.stringify({
       key,
       value,
-      type: "plain",
+      type,
       target: ["production", "preview", "development"],
     }),
   });
@@ -105,7 +121,16 @@ console.log(`Backend: LANZA_DB_BACKEND=${backend}`);
 console.log("");
 console.log("Variaveis:");
 for (const [k, v] of Object.entries(vars)) {
-  console.log(`  ${k}=${v}`);
+  if (k === "LANZA_JWT_SECRET") {
+    console.log(`  ${k}=*** (${v.length} chars)`);
+  } else {
+    console.log(`  ${k}=${v}`);
+  }
+}
+if (jwtSecretGenerated) {
+  console.log("");
+  console.log("AVISO: LANZA_JWT_SECRET gerado agora — guarde este valor:");
+  console.log(`  ${vars.LANZA_JWT_SECRET}`);
 }
 console.log("");
 
@@ -141,7 +166,8 @@ const failed = [];
 for (const [key, value] of Object.entries(vars)) {
   process.stdout.write(`-> ${key} ... `);
   try {
-    await upsertEnv(token, key, value);
+    const type = key === "LANZA_JWT_SECRET" ? "sensitive" : "plain";
+    await upsertEnv(token, key, value, type);
     console.log("OK");
   } catch (err) {
     console.log("FALHOU");
@@ -157,4 +183,6 @@ if (failed.length) {
 }
 
 console.log("OK. Faca Redeploy Production na Vercel.");
-console.log("Verificar: curl https://api.lanzalocacoes.vercel.app/health");
+console.log("Verificar:");
+console.log("  curl https://api.lanzalocacoes.vercel.app/api/auth/status");
+console.log('  (esperado: "jwtConfigured": true)');

@@ -71,6 +71,24 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 | `AWS_RESOURCE_TYPE` | `rds` |
 | `AWS_ROLE_ARN` | `arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes` |
 
+## Login (JWT)
+
+| Variável | Valor |
+|----------|-------|
+| `LANZA_JWT_SECRET` | string aleatória longa (ex.: 32+ bytes em base64url) — **obrigatório** para login |
+| `LANZA_JWT_EXPIRES_IN` | `7d` *(opcional)* |
+
+Gere e grave com:
+
+```powershell
+node scripts/set-vercel-postgres-env.mjs --print-only
+# ou, com token Vercel:
+$env:VERCEL_TOKEN = "..."
+node scripts/set-vercel-postgres-env.mjs
+```
+
+Verifique: `GET /api/auth/status` → `"jwtConfigured": true`.
+
 > **Nota:** o cluster RDS está em **us-east-1** (não sa-east-1).
 
 ## Autenticação
