@@ -11,7 +11,7 @@ import {
 import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
 import { loadCobrancasDbContextAsync, type CobrancasDbContext } from "../cobrancasDbContext.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
-import { loadContratosDb } from "../contratosDb.js";
+import { loadContratosDb, contratoMaisRecentePar } from "../contratosDb.js";
 import {
   dataBrComHora,
   dataVencimentoSemanalBr,
@@ -25,6 +25,7 @@ import {
 } from "../pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import {
+  findVeiculoInDb,
   loadVeiculosDb,
   type VeiculoRegistro,
 } from "../veiculosDb.js";
@@ -109,6 +110,37 @@ function findVeiculoLocal(placa: string): VeiculoDb | null {
   return veiculosList().find((v) => placasIguais(v.placa, placa)) ?? null;
 }
 
+function findVeiculoPorReferencia(ref: string): VeiculoDb | null {
+  const raw = ref.trim();
+  if (!raw) return null;
+  return findVeiculoInDb({ veiculos: veiculosList() }, raw);
+}
+
+/** Placa canônica — resolve UUID/id do veículo via catálogo (Postgres grava veiculo_id). */
+function resolvePlacaReferencia(veiculoIdRaw: string): string {
+  const v = findVeiculoPorReferencia(veiculoIdRaw);
+  if (v?.placa?.trim()) return formatPlacaHyphen(v.placa);
+  return formatPlacaHyphen(veiculoIdRaw);
+}
+
+function resolvePlacaDespesa(d: ClienteDespesaRegistro): string {
+  return resolvePlacaReferencia(String(d.veiculoId ?? ""));
+}
+
+function despesaPlacaIgual(d: ClienteDespesaRegistro, placa: string): boolean {
+  if (!placa.trim()) return true;
+  return placasIguais(resolvePlacaDespesa(d), placa);
+}
+
+function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
+  return d.ativo !== false && d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
+}
+
+function correspondeAlvoExplicito(d: ClienteDespesaRegistro, alvoId: string): boolean {
+  const key = alvoId.trim();
+  return d.autoInfracao === key || d.id === key;
+}
+
 function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null {
   const k = String(key);
   return (
@@ -119,7 +151,7 @@ function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null 
 }
 
 function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
-  const p = compactPlaca(veiculoId);
+  const p = compactPlaca(resolvePlacaReferencia(veiculoId));
   const list = contratosList().filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
@@ -129,8 +161,19 @@ function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
   return list[0] ?? null;
 }
 
-function vencimentosSemanalAbertosCliente(clienteId: string, placa?: string): string[] {
-  const placaKey = placa ? compactPlaca(placa) : null;
+/** Contrato ativo do par; se encerrado, usa o mais recente (ex-locatário devendo). */
+function contratoReferenciaSemanalAtraso(veiculoId: string, clienteId: string) {
+  const ativo = contratoAtivoVeiculo(veiculoId, clienteId);
+  if (ativo) return ativo;
+  const placa = resolvePlacaReferencia(veiculoId);
+  const encerrado = contratoMaisRecentePar({ placa, clienteId }, contratosList());
+  return encerrado?.status === "encerrado" ? encerrado : null;
+}
+
+function vencimentosSemanalAbertosCliente(clienteId: string, placaOuVeiculoId?: string): string[] {
+  const placaFiltro = placaOuVeiculoId?.trim()
+    ? resolvePlacaReferencia(placaOuVeiculoId)
+    : null;
   const vencs = clienteDespesasList()
     .filter(
       (d) =>
@@ -139,7 +182,7 @@ function vencimentosSemanalAbertosCliente(clienteId: string, placa?: string): st
         d.paga !== true &&
         d.categoria === "Locação semanal" &&
         /ATRASADO/i.test(d.descricao ?? "") &&
-        (!placaKey || compactPlaca(d.veiculoId) === placaKey),
+        (!placaFiltro || placasIguais(resolvePlacaDespesa(d), placaFiltro)),
     )
     .map((d) => dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao)
     .filter(Boolean) as string[];
@@ -162,7 +205,7 @@ function montarCalculoSemanalAtrasoPlano(opts: {
     return null;
   }
 
-  const contrato = contratoAtivoVeiculo(opts.veiculoId, opts.clienteId);
+  const contrato = contratoReferenciaSemanalAtraso(opts.veiculoId, opts.clienteId);
   if (contrato?.valorSemanal == null || contrato?.valorDiaria == null) {
     return null;
   }
@@ -174,7 +217,7 @@ function montarCalculoSemanalAtrasoPlano(opts: {
     dataPagamentoBr: opts.dataPagamentoBr,
     emAberto: false,
     clienteNome: opts.clienteNome,
-    placa: opts.veiculoId,
+    placa: resolvePlacaReferencia(opts.veiculoId),
     clienteId: opts.clienteId,
   });
   if (!pacote) return null;
@@ -415,27 +458,22 @@ function resolverDespesaAlvo(
   const alvoId = opts.autoInfracaoAlvo?.trim();
   if (alvoId) {
     const alvo =
-      abertas.find((d) => d.autoInfracao === alvoId) ??
+      abertas.find((d) => correspondeAlvoExplicito(d, alvoId)) ??
       clienteDespesasList().find(
-        (d) =>
-          d.autoInfracao === alvoId &&
-          d.ativo !== false &&
-          d.paga !== true &&
-          (d.situacao === "Em aberto" || !d.paga),
+        (d) => correspondeAlvoExplicito(d, alvoId) && despesaEmAberto(d),
       ) ??
       null;
     if (!alvo) {
       throw new Error(`Despesa em aberto não encontrada: ${alvoId}.`);
     }
-    const placaKey = opts.placa?.trim() ? compactPlaca(opts.placa) : null;
-    if (placaKey && compactPlaca(alvo.veiculoId) !== placaKey) {
+    if (opts.placa?.trim() && !despesaPlacaIgual(alvo, opts.placa)) {
       throw new Error(`Despesa ${alvoId} não pertence à placa informada.`);
     }
     return alvo;
   }
 
   const pool = opts.placa?.trim()
-    ? abertas.filter((d) => compactPlaca(d.veiculoId) === compactPlaca(opts.placa!))
+    ? abertas.filter((d) => despesaPlacaIgual(d, opts.placa!))
     : abertas;
   return escolherDespesaAlvo(pool, opts.valor, opts.dataRecebimentoBr);
 }
@@ -710,14 +748,14 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       }
     } else {
       const vencs = vencimentosSemanalAbertosCliente(cliente.id!, alvo.veiculoId);
-      const contrato = contratoAtivoVeiculo(alvo.veiculoId, cliente.id!);
+      const contrato = contratoReferenciaSemanalAtraso(alvo.veiculoId, cliente.id!);
       if (
         vencs.length > 0 &&
         deveExibirCalculoSemanalAtraso(dataBr, vencs, false) &&
         (contrato?.valorSemanal == null || contrato?.valorDiaria == null)
       ) {
         avisos.push(
-          "Contrato ativo ou valores semanal/diária não encontrados — sem tabela de juros/multa.",
+          "Contrato ou valores semanal/diária não encontrados — sem tabela de juros/multa.",
         );
       }
     }
