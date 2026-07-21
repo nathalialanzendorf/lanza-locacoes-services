@@ -46,7 +46,12 @@ export type ContratosDbShape = {
 
 export async function loadContratosFromSql(): Promise<ContratosDbShape> {
   const [base, cliSnaps, veiSnaps] = await Promise.all([
-    pgQuery("SELECT * FROM lanza.contratos ORDER BY cadastrado_em"),
+    pgQuery(
+      `SELECT c.*, v.placa AS veiculo_placa_ref
+       FROM lanza.contratos c
+       LEFT JOIN lanza.veiculos v ON v.id = c.veiculo_id
+       ORDER BY c.cadastrado_em`,
+    ),
     pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots"),
     pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots"),
   ]);
@@ -59,16 +64,18 @@ export async function loadContratosFromSql(): Promise<ContratosDbShape> {
     const cs = cliByContrato.get(id);
     const vs = veiByContrato.get(id);
 
+    const placa = asText(vs?.placa) ?? asText(row.veiculo_placa_ref) ?? undefined;
+
     contratos.push({
       id,
       versao: row.versao,
       contratoAnteriorId: row.contrato_anterior_id,
       clienteId: row.cliente_id,
-      veiculoId: row.veiculo_placa ?? row.placa,
+      veiculoId: placa ?? row.veiculo_id,
       pastaContrato: row.pasta_contrato,
-      clienteNome: row.cliente_nome,
-      placa: row.placa,
-      cpf: row.cpf,
+      clienteNome: cs?.nome,
+      placa,
+      cpf: cs?.cpf,
       dataInicio: row.data_inicio,
       dataFimPrevista: row.data_fim_prevista,
       dataEncerramento: row.data_encerramento,
@@ -84,7 +91,6 @@ export async function loadContratosFromSql(): Promise<ContratosDbShape> {
       valorMensal: row.valor_mensal != null ? Number(row.valor_mensal) : null,
       valorDiaria: row.valor_diaria != null ? Number(row.valor_diaria) : null,
       valorCaucao: Number(row.valor_caucao ?? 0),
-      dataInicioJurosMultaBr: row.data_inicio_juros_multa_br,
       cadastradoEm: rowIso(row.cadastrado_em),
       atualizadoEm: rowIso(row.atualizado_em),
       cliente: cs
@@ -138,14 +144,14 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
     const placa = formatPlacaHyphen(asText(c.placa) ?? veiculoRef);
     await pgQuery(
       `INSERT INTO lanza.contratos (
-        id, versao, contrato_anterior_id, cliente_id, veiculo_id, veiculo_placa,
-        pasta_contrato, cliente_nome, placa, cpf, data_inicio, data_fim_prevista,
+        id, versao, contrato_anterior_id, cliente_id, veiculo_id,
+        pasta_contrato, data_inicio, data_fim_prevista,
         data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
         tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
-        valor_semanal, valor_mensal, valor_diaria, valor_caucao, data_inicio_juros_multa_br,
+        valor_semanal, valor_mensal, valor_diaria, valor_caucao,
         cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
-        COALESCE($27::timestamptz, now()), now())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+        COALESCE($22::timestamptz, now()), now())
       ON CONFLICT (id) DO UPDATE SET
         status = EXCLUDED.status,
         data_encerramento = EXCLUDED.data_encerramento,
@@ -158,11 +164,7 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
         isUuid(asText(c.contratoAnteriorId)) ? c.contratoAnteriorId : null,
         isUuid(asText(c.clienteId)) ? c.clienteId : null,
         resolveVeiculoId(veiculoRef, placaMap),
-        placa,
         asText(c.pastaContrato),
-        asText(c.clienteNome) ?? "?",
-        placa,
-        asText(c.cpf),
         asText(c.dataInicio) ?? "",
         asText(c.dataFimPrevista) ?? "",
         asText(c.dataEncerramento),
@@ -178,63 +180,61 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
         c.valorMensal != null ? asNumber(c.valorMensal) : null,
         c.valorDiaria != null ? asNumber(c.valorDiaria) : null,
         asNumber(c.valorCaucao, 0),
-        asText(c.dataInicioJurosMultaBr),
         parseIso(asText(c.cadastradoEm)),
       ],
     );
     const cli = c.cliente as Record<string, unknown> | undefined;
-    if (cli) {
-      const end = cli.endereco as Record<string, unknown> | undefined;
-      const cnh = cli.cnh as Record<string, unknown> | undefined;
-      await pgQuery(
-        `INSERT INTO lanza.contrato_cliente_snapshots (
-          contrato_id, cliente_ref_id, nome, cpf, rg, telefone, email,
-          cnh_categoria, cnh_validade, endereco_cep, endereco_logradouro, endereco_numero,
-          endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf, atualizado_em
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,now())
-        ON CONFLICT (contrato_id) DO UPDATE SET nome = EXCLUDED.nome, atualizado_em = now()`,
-        [
-          id,
-          isUuid(asText(cli.id)) ? cli.id : null,
-          asText(cli.nome) ?? "?",
-          asText(cli.cpf),
-          asText(cli.rg),
-          asText(cli.telefone),
-          asText(cli.email),
-          cnh ? asText(cnh.categoria) : null,
-          cnh ? asText(cnh.validade) : null,
-          end ? asText(end.cep) : null,
-          end ? asText(end.logradouro) : null,
-          end ? asText(end.numero) : null,
-          end ? asText(end.complemento) : null,
-          end ? asText(end.bairro) : null,
-          end ? asText(end.cidade) : null,
-          end ? asText(end.uf) : null,
-        ],
-      );
-    }
+    const end = cli?.endereco as Record<string, unknown> | undefined;
+    const cnh = cli?.cnh as Record<string, unknown> | undefined;
+    await pgQuery(
+      `INSERT INTO lanza.contrato_cliente_snapshots (
+        contrato_id, cliente_ref_id, nome, cpf, rg, telefone, email,
+        cnh_categoria, cnh_validade, endereco_cep, endereco_logradouro, endereco_numero,
+        endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf, atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,now())
+      ON CONFLICT (contrato_id) DO UPDATE SET
+        nome = EXCLUDED.nome,
+        cpf = EXCLUDED.cpf,
+        atualizado_em = now()`,
+      [
+        id,
+        isUuid(asText(cli?.id ?? c.clienteId)) ? (cli?.id ?? c.clienteId) : null,
+        asText(cli?.nome ?? c.clienteNome) ?? "?",
+        asText(cli?.cpf ?? c.cpf),
+        cli ? asText(cli.rg) : null,
+        cli ? asText(cli.telefone) : null,
+        cli ? asText(cli.email) : null,
+        cnh ? asText(cnh.categoria) : null,
+        cnh ? asText(cnh.validade) : null,
+        end ? asText(end.cep) : null,
+        end ? asText(end.logradouro) : null,
+        end ? asText(end.numero) : null,
+        end ? asText(end.complemento) : null,
+        end ? asText(end.bairro) : null,
+        end ? asText(end.cidade) : null,
+        end ? asText(end.uf) : null,
+      ],
+    );
     const vei = c.veiculo as Record<string, unknown> | undefined;
-    if (vei) {
-      await pgQuery(
-        `INSERT INTO lanza.contrato_veiculo_snapshots (
-          contrato_id, veiculo_ref_id, placa, marca_modelo, fipe_modelo, ano_modelo,
-          chassi, renavam, cor, fipe_valor, atualizado_em
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
-        ON CONFLICT (contrato_id) DO UPDATE SET placa = EXCLUDED.placa, atualizado_em = now()`,
-        [
-          id,
-          isUuid(asText(vei.id)) ? vei.id : null,
-          formatPlacaHyphen(asText(vei.placa) ?? placa),
-          asText(vei.marcaModelo),
-          asText(vei.fipeModelo),
-          asText(vei.anoModelo),
-          asText(vei.chassi),
-          asText(vei.renavam),
-          asText(vei.cor),
-          asText(vei.fipeValor),
-        ],
-      );
-    }
+    await pgQuery(
+      `INSERT INTO lanza.contrato_veiculo_snapshots (
+        contrato_id, veiculo_ref_id, placa, marca_modelo, fipe_modelo, ano_modelo,
+        chassi, renavam, cor, fipe_valor, atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
+      ON CONFLICT (contrato_id) DO UPDATE SET placa = EXCLUDED.placa, atualizado_em = now()`,
+      [
+        id,
+        isUuid(asText(vei?.id)) ? vei?.id : null,
+        formatPlacaHyphen(asText(vei?.placa) ?? placa),
+        vei ? asText(vei.marcaModelo) : null,
+        vei ? asText(vei.fipeModelo) : null,
+        vei ? asText(vei.anoModelo) : null,
+        vei ? asText(vei.chassi) : null,
+        vei ? asText(vei.renavam) : null,
+        vei ? asText(vei.cor) : null,
+        vei ? asText(vei.fipeValor) : null,
+      ],
+    );
   }
 }
 
@@ -317,7 +317,12 @@ export type InfracoesDbShape = {
 };
 
 export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
-  const r = await pgQuery("SELECT * FROM lanza.infracoes ORDER BY data_autuacao");
+  const r = await pgQuery(
+    `SELECT i.*, v.placa AS veiculo_placa_ref
+     FROM lanza.infracoes i
+     LEFT JOIN lanza.veiculos v ON v.id = i.veiculo_id
+     ORDER BY i.data_autuacao`,
+  );
   return {
     descricao: "Infrações DETRAN SC.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -325,13 +330,13 @@ export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
       id: String(row.id),
       numeroAuto: row.numero_auto,
       idAutoInfracao: row.id_auto_infracao,
-      veiculoId: row.veiculo_placa,
+      veiculoId: row.veiculo_placa_ref ?? row.veiculo_id,
       descricao: row.descricao,
       dataAutuacao: row.data_autuacao,
       dataHoraAutuacao: row.data_hora_autuacao,
       localInfracao: row.local_infracao,
       valor: Number(row.valor),
-      valorMulta: Number(row.valor_multa),
+      valorMulta: Number(row.valor),
       situacao: row.situacao,
       status: row.status,
       protocolo: row.protocolo,
@@ -348,16 +353,10 @@ export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
       condutorConfirmado: row.condutor_confirmado === true,
       condutorContrato: row.condutor_contrato,
       condutorNaoIdentificado: row.condutor_nao_identificado === true,
-      revisarManual: row.revisar_manual === true,
-      revisarMotivo: row.revisar_motivo,
       pdfArquivo: row.pdf_arquivo,
-      clienteDespesaId: row.cliente_despesa_id,
-      parceiroDespesaId: row.parceiro_despesa_id,
       complemento: row.complemento,
       senhaDetran: row.senha_detran,
       notificacaoPdfArquivo: row.notificacao_pdf_arquivo,
-      debitoParceiroConfirmado: row.debito_parceiro_confirmado === true,
-      debitoParceiroId: row.debito_parceiro_id,
       detranRaw: row.detran_raw,
       origem: row.origem,
       syncEm: rowIso(row.sync_em),
@@ -372,38 +371,34 @@ export async function saveInfracoesToSql(db: InfracoesDbShape): Promise<void> {
   const placaMap = await loadPlacaMap();
   for (const i of db.infracoes) {
     const id = asText(i.id) ?? randomUUID();
-    const placa = formatPlacaHyphen(asText(i.veiculoId) ?? "");
     const raw = i.detranRaw as Record<string, unknown> | undefined;
     const complemento = asText(i.complemento) ?? asText(raw?.complemento);
     const senhaDetran = asText(i.senhaDetran) ?? asText(i.senha) ?? asText(raw?.senha);
-    const debitoParceiroId = asText(i.debitoParceiroId);
 
     await pgQuery(
       `INSERT INTO lanza.infracoes (
-        id, numero_auto, id_auto_infracao, veiculo_id, veiculo_placa, descricao, data_autuacao,
-        data_hora_autuacao, local_infracao, valor, valor_multa, situacao, status, protocolo,
+        id, numero_auto, id_auto_infracao, veiculo_id, descricao, data_autuacao,
+        data_hora_autuacao, local_infracao, valor, situacao, status, protocolo,
         data_limite_defesa, limite_defesa, prazo_defesa_expirado, data_vencimento_original,
         convertida_em_debito, quitada_detran, status_infracao, status_detran, fonte,
         condutor_id, condutor_confirmado, condutor_contrato, condutor_nao_identificado,
-        revisar_manual, revisar_motivo, pdf_arquivo, cliente_despesa_id, parceiro_despesa_id,
-        detran_raw, origem, sync_em, ativo, cadastrado_em, atualizado_em,
-        complemento, senha_detran, notificacao_pdf_arquivo, debito_parceiro_confirmado, debito_parceiro_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,
-        $24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,COALESCE($36::timestamptz, now()), now(),
-        $37,$38,$39,$40,$41)
+        pdf_arquivo, detran_raw, origem, sync_em, ativo, cadastrado_em, atualizado_em,
+        complemento, senha_detran, notificacao_pdf_arquivo
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+        $22,$23,$24,$25,$26,$27,$28,$29,$30,
+        COALESCE($31::timestamptz, now()), now(),
+        $32,$33,$34)
       ON CONFLICT (id) DO UPDATE SET situacao = EXCLUDED.situacao, valor = EXCLUDED.valor, atualizado_em = now()`,
       [
         id,
         asText(i.numeroAuto) ?? id,
         typeof i.idAutoInfracao === "number" ? i.idAutoInfracao : null,
         resolveVeiculoId(asText(i.veiculoId), placaMap),
-        placa,
         asText(i.descricao) ?? "",
         asText(i.dataAutuacao) ?? "",
         asText(i.dataHoraAutuacao),
         asText(i.localInfracao),
         asNumber(i.valor ?? i.valorMulta, 0),
-        asNumber(i.valorMulta ?? i.valor, 0),
         asText(i.situacao),
         asText(i.status),
         asText(i.protocolo),
@@ -420,11 +415,7 @@ export async function saveInfracoesToSql(db: InfracoesDbShape): Promise<void> {
         asBool(i.condutorConfirmado, false),
         asText(i.condutorContrato),
         asBool(i.condutorNaoIdentificado, false),
-        asBool(i.revisarManual, false),
-        asText(i.revisarMotivo),
         asText(i.pdfArquivo),
-        isUuid(asText(i.clienteDespesaId)) ? i.clienteDespesaId : null,
-        isUuid(asText(i.parceiroDespesaId)) ? i.parceiroDespesaId : null,
         i.detranRaw != null ? (i.detranRaw as object) : null,
         asText(i.origem),
         parseIso(asText(i.syncEm)),
@@ -433,8 +424,6 @@ export async function saveInfracoesToSql(db: InfracoesDbShape): Promise<void> {
         complemento,
         senhaDetran,
         asText(i.notificacaoPdfArquivo),
-        asBool(i.debitoParceiroConfirmado, false),
-        isUuid(debitoParceiroId) ? debitoParceiroId : null,
       ],
     );
   }
