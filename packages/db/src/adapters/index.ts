@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { resolvePgHost } from "../config.js";
+import { resolveAwsRoleArn, resolvePgHost } from "../config.js";
 import type { DbBackend, JsonDocumentAdapter } from "./types.js";
 import { FileJsonDocumentAdapter } from "./file.js";
 import { PostgresJsonDocumentAdapter } from "./postgres.js";
@@ -19,8 +19,7 @@ function postgresConfigured(): boolean {
   const hasAuth = Boolean(
     env("PGPASSWORD") ??
       process.env.PGPASSWORD?.trim() ??
-      env("AWS_ROLE_ARN") ??
-      process.env.AWS_ROLE_ARN?.trim(),
+      resolveAwsRoleArn(),
   );
   return hasHost && hasAuth;
 }

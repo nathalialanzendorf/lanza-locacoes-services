@@ -23,6 +23,22 @@ function env(name: string): string | undefined {
 export const LANZA_PRODUCTION_PGHOST =
   "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com";
 
+export const LANZA_PRODUCTION_AWS_ROLE_ARN =
+  "arn:aws:iam::154601375525:role/Vercel/access-pg-lanza-locacoes";
+
+export const LANZA_PRODUCTION_AWS_REGION = "us-east-1";
+
+/** Defaults RDS/OIDC na Vercel — desactivar com LANZA_DB_BACKEND=file. */
+export function vercelPostgresDefaultsEnabled(): boolean {
+  if (!process.env.VERCEL) return false;
+  const backend = env("LANZA_DB_BACKEND")?.trim().toLowerCase();
+  return backend !== "file";
+}
+
+export function resolveAwsRoleArn(): string | undefined {
+  return env("AWS_ROLE_ARN") ?? (vercelPostgresDefaultsEnabled() ? LANZA_PRODUCTION_AWS_ROLE_ARN : undefined);
+}
+
 /** PGHOST explícito, hostname de DATABASE_URL, ou fallback Vercel+OIDC. */
 export function resolvePgHost(): string | undefined {
   const explicit = env("PGHOST");
@@ -37,7 +53,9 @@ export function resolvePgHost(): string | undefined {
     }
   }
 
-  if (process.env.VERCEL && env("AWS_ROLE_ARN")) return LANZA_PRODUCTION_PGHOST;
+  if (vercelPostgresDefaultsEnabled() || (process.env.VERCEL && env("AWS_ROLE_ARN"))) {
+    return LANZA_PRODUCTION_PGHOST;
+  }
   return undefined;
 }
 
@@ -74,15 +92,15 @@ function configFromPgEnv(): PgConfig | null {
     user: env("PGUSER") ?? "postgres",
     password: env("PGPASSWORD"),
     sslMode: parseSslMode(env("PGSSLMODE")),
-    awsRegion: env("AWS_REGION"),
-    awsRoleArn: env("AWS_ROLE_ARN"),
+    awsRegion: env("AWS_REGION") ?? (vercelPostgresDefaultsEnabled() ? LANZA_PRODUCTION_AWS_REGION : undefined),
+    awsRoleArn: resolveAwsRoleArn(),
   };
 }
 
 /** Lê PGHOST/PGPORT/… ou DATABASE_URL. */
 export function getPgConfig(): PgConfig {
-  // Na Vercel, PGHOST + OIDC/IAM é a fonte da verdade — DATABASE_URL só como fallback.
-  if (process.env.VERCEL && env("AWS_ROLE_ARN")) {
+  // Na Vercel, PGHOST + OIDC/IAM (defaults de produção se LANZA_DB_BACKEND ≠ file).
+  if (process.env.VERCEL && resolveAwsRoleArn()) {
     const fromEnv = configFromPgEnv();
     if (fromEnv) return fromEnv;
     const databaseUrl = env("DATABASE_URL");

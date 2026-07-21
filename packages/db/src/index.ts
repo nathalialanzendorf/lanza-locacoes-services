@@ -3,7 +3,11 @@ export {
   getPgConfig,
   pgSslOptions,
   resolvePgHost,
+  resolveAwsRoleArn,
+  vercelPostgresDefaultsEnabled,
   LANZA_PRODUCTION_PGHOST,
+  LANZA_PRODUCTION_AWS_ROLE_ARN,
+  LANZA_PRODUCTION_AWS_REGION,
   type PgConfig,
   type PgSslMode,
 } from "./config.js";
