@@ -1,7 +1,7 @@
 # Cria o utilizador admin do painel Lanza Web no PostgreSQL (lanza.users).
 #
 # Credenciais por defeito:
-#   E-mail: lanza_admin@lanza.local
+#   E-mail: lanza.locacoes@gmail.com
 #   Senha:  LocaLanza
 #
 # Uso:
@@ -14,9 +14,9 @@
 #   2. (Opcional) Fechar e reabrir o terminal após set-postgres-user-env.ps1
 
 param(
-  [string]$Email = "lanza_admin@lanza.local",
+  [string]$Email = "lanza.locacoes@gmail.com",
   [string]$Password = "LocaLanza",
-  [string]$Name = "lanza_admin",
+  [string]$Name = "Lanza ADMIN",
   [switch]$Reset,
   [switch]$SkipMigrate
 )

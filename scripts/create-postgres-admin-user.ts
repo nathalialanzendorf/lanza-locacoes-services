@@ -18,9 +18,9 @@ import { hashPassword } from "../packages/api/src/services/auth.js";
 
 process.env.LANZA_DB_BACKEND = "postgres";
 
-const DEFAULT_EMAIL = "lanza_admin@lanza.local";
+const DEFAULT_EMAIL = "lanza.locacoes@gmail.com";
 const DEFAULT_PASSWORD = "LocaLanza";
-const DEFAULT_NAME = "lanza_admin";
+const DEFAULT_NAME = "Lanza ADMIN";
 
 type CliOptions = {
   email: string;
