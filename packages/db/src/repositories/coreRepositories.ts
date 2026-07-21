@@ -2,6 +2,7 @@ import {
   ensureVercelPgPool,
   getPgPool,
   getVercelPostgresPool,
+  getVercelPoolInitError,
   pgQuery,
 } from "../client/PostgresPool.js";
 import { pgWriteQuery } from "../client/pgWrite.js";
@@ -66,7 +67,18 @@ export async function saveParceirosToSql(db: ParceirosDbShape): Promise<void> {
 
 export async function upsertParceiroRowToSql(p: ParceiroRow): Promise<ParceiroRow> {
   ensureVercelPgPool();
-  const pool = getVercelPostgresPool() ?? (await getPgPool());
+  const pool =
+    getVercelPostgresPool() ??
+    (process.env.VERCEL ? null : await getPgPool());
+  if (!pool) {
+    const detail = getVercelPoolInitError();
+    throw new Error(
+      detail ??
+        (process.env.VERCEL
+          ? "Pool PostgreSQL indisponível na Vercel (AWS_ROLE_ARN / integração OIDC com RDS)"
+          : "PostgreSQL não configurado"),
+    );
+  }
 
   const client = await pool.connect();
   let row: { id: string; nome: string; ativo: boolean };

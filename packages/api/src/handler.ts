@@ -5,7 +5,6 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import {
   getDbBackend,
   runSchemaMigration,
-  ensureVercelPgPool,
   resetJsonDocumentAdapterCache,
 } from "@lanza/db";
 import { apiHost, apiPort } from "./config.js";
@@ -37,12 +36,7 @@ let appLoadError: string | null = null;
 let appLoading: Promise<Server> | null = null;
 let bootstrapped = false;
 
-function ensureVercelPool(): void {
-  ensureVercelPgPool();
-}
-
 async function loadAppServer(): Promise<Server> {
-  ensureVercelPool();
   if (appServer) return appServer;
   if (appLoadError) {
     return createServer((_req, res) => {

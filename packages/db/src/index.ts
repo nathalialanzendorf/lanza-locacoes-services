@@ -18,6 +18,7 @@ export {
   getVercelPostgresPool,
   setVercelPostgresPool,
   ensureVercelPgPool,
+  getVercelPoolInitError,
   type PostgresPoolOptions,
 } from "./client/PostgresPool.js";
 

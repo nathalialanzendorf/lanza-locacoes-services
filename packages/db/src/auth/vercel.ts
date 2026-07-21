@@ -46,6 +46,11 @@ export function createVercelPostgresPool(config?: Partial<PgConfig>): pg.Pool {
     max: 5,
   });
 
-  attachDatabasePool(pool);
+  try {
+    attachDatabasePool(pool);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[lanza/db] attachDatabasePool ignorado:", msg);
+  }
   return pool;
 }

@@ -86,6 +86,7 @@ export class PostgresPool {
 let defaultPool: PostgresPool | null = null;
 /** Pool injetado na Vercel (OIDC) — tem prioridade sobre IAM local. */
 let vercelPoolOverride: pg.Pool | null = null;
+let vercelPoolInitError: string | null = null;
 
 export function setVercelPostgresPool(pool: pg.Pool): void {
   vercelPoolOverride = pool;
@@ -99,7 +100,17 @@ export function getVercelPostgresPool(): pg.Pool | null {
 export function ensureVercelPgPool(): void {
   if (!process.env.VERCEL || getDbBackend() === "file") return;
   if (vercelPoolOverride) return;
-  setVercelPostgresPool(createVercelPostgresPool());
+  if (vercelPoolInitError) return;
+  try {
+    setVercelPostgresPool(createVercelPostgresPool());
+  } catch (err) {
+    vercelPoolInitError = err instanceof Error ? err.message : String(err);
+    console.error("[lanza/db] ensureVercelPgPool:", vercelPoolInitError);
+  }
+}
+
+export function getVercelPoolInitError(): string | null {
+  return vercelPoolInitError;
 }
 
 export function getDefaultPostgresPool(): PostgresPool {
