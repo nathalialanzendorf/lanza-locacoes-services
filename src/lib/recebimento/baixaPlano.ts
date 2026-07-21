@@ -305,7 +305,8 @@ export function resolverCliente(query: string): ClienteRegistro {
     if (byCpf) return byCpf;
   }
 
-  const byId = list.find((c) => c.id === q);
+  const qLower = q.toLowerCase();
+  const byId = list.find((c) => c.id?.toLowerCase() === qLower);
   if (byId) return byId;
 
   const nk = normNomeKey(q);
@@ -811,6 +812,7 @@ export async function montarPlanoBaixaAsync(
   _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync({
     clienteQuery: input.clienteQuery,
     autoInfracaoAlvo: input.autoInfracaoAlvo,
+    placa: input.placa,
   });
   try {
     return montarPlanoBaixa(input);

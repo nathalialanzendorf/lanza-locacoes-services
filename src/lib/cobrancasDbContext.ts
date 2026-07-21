@@ -55,7 +55,8 @@ function resolveClienteIdFromQuery(query: string, clientes: ClienteRegistro[]): 
   const q = query.trim();
   if (!q) return null;
 
-  const byId = clientes.find((c) => c.id === q);
+  const qLower = q.toLowerCase();
+  const byId = clientes.find((c) => c.id?.toLowerCase() === qLower);
   if (byId?.id) return byId.id;
 
   const key = q.replace(/\D/g, "");
@@ -123,8 +124,24 @@ export async function loadCobrancasScopedDbContextAsync(
     ? resolveClienteIdFromQuery(input.clienteQuery, clientesDb.clientes)
     : null;
   const placa = input.placa?.trim() || null;
+  const autoInfracaoAlvo = input.autoInfracaoAlvo?.trim() || null;
 
   if (!clienteId && !placa) {
+    if (autoInfracaoAlvo) {
+      const rowAlvo = await queryClienteDespesaByReferenciaFromSql(autoInfracaoAlvo);
+      if (rowAlvo) {
+        const condutorId = String(rowAlvo.condutor_id ?? "").trim() || null;
+        const rows = condutorId
+          ? await queryClienteDespesasFromSql({ clienteId: condutorId, ativo: true })
+          : [];
+        return {
+          clienteDespesas: mergeDespesaRows(rows, rowAlvo),
+          clientes: clientesDb.clientes,
+          veiculos: veiculosDb.veiculos,
+          contratos: contratosDb.contratos,
+        };
+      }
+    }
     return loadCobrancasDbContextAsync();
   }
 
@@ -134,8 +151,8 @@ export async function loadCobrancasScopedDbContextAsync(
 
   const [rows, rowAlvo] = await Promise.all([
     rowsPromise,
-    input.autoInfracaoAlvo?.trim()
-      ? queryClienteDespesaByReferenciaFromSql(input.autoInfracaoAlvo)
+    autoInfracaoAlvo
+      ? queryClienteDespesaByReferenciaFromSql(autoInfracaoAlvo)
       : Promise.resolve(null),
   ]);
 

@@ -451,8 +451,8 @@ function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unkn
     id: String(row.id),
     categoria: row.categoria,
     veiculoId:
-      asText(row.veiculo_placa) ??
       asText(row.veiculo_placa_ref) ??
+      asText(row.veiculo_placa) ??
       (row.veiculo_id != null ? String(row.veiculo_id) : undefined),
     autoInfracao: row.auto_infracao,
     titulo: row.titulo,

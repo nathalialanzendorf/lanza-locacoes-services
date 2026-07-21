@@ -1097,13 +1097,15 @@ export type DespesaAtribuicaoContext = {
 export function inferirCondutorIdDespesaPorData(
   d: ClienteDespesaRegistro,
   prazoDias = 90,
+  veiculos?: VeiculoRegistro[],
 ): string | null {
   if (d.condutorId) return d.condutorId;
   if (d.condutorNaoIdentificado === true && d.condutorConfirmado === true) return null;
   const data = String(d.dataAutuacao ?? "").trim();
   if (!data || !parseDataAutuacao(data)) return null;
+  const placa = resolvePlacaVeiculoCadastro(String(d.veiculoId ?? ""), veiculos);
   return (
-    inferirCondutorInfracao(formatPlacaHyphen(d.veiculoId), d.dataAutuacao, prazoDias).condutorId ??
+    inferirCondutorInfracao(placa, d.dataAutuacao, prazoDias).condutorId ??
     null
   );
 }
@@ -1123,7 +1125,7 @@ export function despesaAtribuidaACliente(
 
   if (isInfracaoTransito(d) || categoriaAtribuiPorDataEvento(d.categoria)) {
     if (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) return false;
-    const inferido = inferirCondutorIdDespesaPorData(d, prazoDias);
+    const inferido = inferirCondutorIdDespesaPorData(d, prazoDias, ctx?.veiculos);
     if (inferido) return inferido === clienteId;
     return false;
   }
