@@ -6,6 +6,7 @@ import {
   getDbBackend,
   runSchemaMigration,
   ensureVercelPgPool,
+  resetJsonDocumentAdapterCache,
 } from "@lanza/db";
 import { apiHost, apiPort } from "./config.js";
 import { json } from "./http.js";
@@ -152,6 +153,7 @@ export function getGatewayServer(): Server {
 
 /** Entrada para api/index.mjs na Vercel (sem second listen). */
 export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
+  if (process.env.VERCEL) resetJsonDocumentAdapterCache();
   getGatewayServer().emit("request", req, res);
 }
 

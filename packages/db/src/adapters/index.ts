@@ -24,21 +24,22 @@ function postgresConfigured(): boolean {
   return hasHost && hasAuth;
 }
 
+function resolveDbBackend(): DbBackend {
+  const raw = env("LANZA_DB_BACKEND");
+  if (raw === "postgres" || raw === "dual" || raw === "file") return raw;
+  // Com RDS configurado: postgres por defeito (fonte da verdade relacional)
+  if (postgresConfigured()) return "postgres";
+  return "file";
+}
+
 /** Backend ativo: `file` (padrão), `postgres` ou `dual`. */
 export function getDbBackend(): DbBackend {
+  // Vercel/Lambda: não cachear — env pode mudar entre deploys e instâncias quentes
+  // podem ter resolvido "file" antes das variáveis Postgres estarem activas.
+  if (process.env.VERCEL) return resolveDbBackend();
   if (cachedBackend) return cachedBackend;
-  const raw = env("LANZA_DB_BACKEND");
-  if (raw === "postgres" || raw === "dual" || raw === "file") {
-    cachedBackend = raw;
-    return raw;
-  }
-  // Com RDS configurado: postgres por defeito (fonte da verdade relacional)
-  if (postgresConfigured()) {
-    cachedBackend = "postgres";
-    return "postgres";
-  }
-  cachedBackend = "file";
-  return "file";
+  cachedBackend = resolveDbBackend();
+  return cachedBackend;
 }
 
 export function createJsonDocumentAdapter(backend: DbBackend = getDbBackend()): JsonDocumentAdapter {
@@ -53,6 +54,7 @@ export function createJsonDocumentAdapter(backend: DbBackend = getDbBackend()): 
 }
 
 export function getJsonDocumentAdapter(): JsonDocumentAdapter {
+  if (process.env.VERCEL) return createJsonDocumentAdapter();
   if (!cachedAdapter) {
     cachedAdapter = createJsonDocumentAdapter();
   }
