@@ -7,6 +7,7 @@ import {
   ROTULO_TIPO_COBRANCA,
   compararDataBrAsc,
   dataVencimentoSemanalBr,
+  contratoMaisRecentePar,
   ehRelatorioInfracoesGlobal,
   executarLoteCobranca,
   filtrarVencimentosCalculoSemanal,
@@ -280,6 +281,18 @@ function contratoAtivoPlaca(placa: string, contratos: ContratoRegistro[]) {
   return list[0] ?? null;
 }
 
+function contratoReferenciaSemanalAtraso(
+  placa: string,
+  clienteId: string | null | undefined,
+  contratos: ContratoRegistro[],
+): ContratoRegistro | null {
+  const ativo = contratoAtivoPlaca(placa, contratos);
+  if (ativo && (!clienteId || ativo.clienteId === clienteId)) return ativo;
+  if (!clienteId) return null;
+  const encerrado = contratoMaisRecentePar({ placa, clienteId }, contratos);
+  return encerrado?.status === "encerrado" ? encerrado : null;
+}
+
 function vencimentosAbertosCliente(
   clienteId: string,
   clienteDespesas: ClienteDespesaRegistro[],
@@ -312,20 +325,22 @@ export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
   const placa = input.placa?.trim();
 
   if (!cliente && placa) {
-    const c = contratoAtivoPlaca(placa, ctx.contratos);
+    const c =
+      contratoReferenciaSemanalAtraso(placa, null, ctx.contratos) ??
+      contratoAtivoPlaca(placa, ctx.contratos);
     if (c?.clienteId) {
       cliente = ctx.clientes.find((x) => x.id === c.clienteId) ?? null;
     }
   }
 
   if (!cliente?.id) {
-    throw new HttpError(400, "Informe clienteQuery ou placa com contrato ativo");
+    throw new HttpError(400, "Informe clienteQuery ou placa com contrato (ativo ou encerrado com débito)");
   }
 
   let valorSemanal = input.valorSemanal;
   let valorDiaria = input.valorDiaria;
   if (placa) {
-    const c = contratoAtivoPlaca(placa, ctx.contratos);
+    const c = contratoReferenciaSemanalAtraso(placa, cliente.id, ctx.contratos);
     valorSemanal ??= c?.valorSemanal ?? undefined;
     valorDiaria ??= c?.valorDiaria ?? undefined;
   }

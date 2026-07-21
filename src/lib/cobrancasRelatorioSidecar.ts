@@ -39,6 +39,7 @@ import { montarRelatorioInfracoesBlocos } from "./relatorioInfracoesBlocos.js";
 import { buildSemanalAtrasoParaEscopo } from "./cobrancasLote.js";
 import {
   listarEscoposContratosAtivosCobranca,
+  listarEscoposContratosEncerradosComPendencia,
   despesaNaSituacao,
   despesaNoPeriodo,
   ROTULO_TIPO_COBRANCA,
@@ -1028,11 +1029,18 @@ function nomeClientePorId(clienteId: string): string {
  * igual a `--cliente`. Inclui locatários ativos e ex-locatários com pendência no lote.
  * Fallback placa-only só quando o alvo do lote não tem `clienteId`.
  */
-export function listarEscoposSidecar(results: LoteCobrancaResult[]): FiltroAlvosCobranca[] {
+export function listarEscoposSidecar(
+  results: LoteCobrancaResult[],
+  filtro?: FiltroAlvosCobranca,
+): FiltroAlvosCobranca[] {
   const clienteIds = new Set<string>();
   const placasSemCliente = new Set<string>();
 
   for (const escopo of listarEscoposContratosAtivosCobranca()) {
+    if (escopo.clienteId) clienteIds.add(escopo.clienteId);
+  }
+
+  for (const escopo of listarEscoposContratosEncerradosComPendencia(undefined, filtro)) {
     if (escopo.clienteId) clienteIds.add(escopo.clienteId);
   }
 
@@ -1122,7 +1130,7 @@ export function salvarCobrancasSidecar(
   const escopos =
     filtro.clienteId != null || filtro.placa != null
       ? [filtro]
-      : listarEscoposSidecar(results);
+      : listarEscoposSidecar(results, filtro);
   if (escopos.length === 0) return [];
 
   const dir = opts?.outDir ?? COBRANCAS_OUT_DIR;

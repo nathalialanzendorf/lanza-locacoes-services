@@ -23,7 +23,7 @@ import {
   type TipoCobrancaAction,
 } from "./cobrancasAlvos.js";
 import type { CobrancasDbContext } from "./cobrancasDbContext.js";
-import { loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
+import { contratoMaisRecentePar, loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
 import { loadClienteDespesasDb, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import {
   filtrarVencimentosAposDataInicioJuros,
@@ -88,6 +88,22 @@ function contratoAtivoPlaca(
   }
   list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   return list[0] ?? null;
+}
+
+/** Contrato ativo do par; se encerrado, usa o mais recente (ex-locatário devendo). */
+function contratoReferenciaSemanalAtraso(
+  placa: string,
+  clienteId?: string | null,
+  contratos?: ContratoRegistro[],
+): ContratoRegistro | null {
+  const ativo = contratoAtivoPlaca(placa, clienteId, contratos);
+  if (ativo) return ativo;
+  if (!clienteId) return null;
+  const encerrado = contratoMaisRecentePar(
+    { placa, clienteId },
+    contratos ?? loadContratosDb().contratos,
+  );
+  return encerrado?.status === "encerrado" ? encerrado : null;
 }
 
 function somaValorDespesas(despesas: ClienteDespesaRegistro[]): number {
@@ -162,7 +178,7 @@ function buildSemanalAtrasoAlvo(
   dataPagamentoBr: string,
   diaEscalonamento?: number,
 ): SemanalAtrasoPacote | null {
-  const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId);
+  const contrato = contratoReferenciaSemanalAtraso(alvo.placa, alvo.clienteId);
   const valorSemanal = contrato?.valorSemanal ?? null;
   const valorDiaria = contrato?.valorDiaria ?? null;
   const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
@@ -209,7 +225,7 @@ export function buildSemanalAtrasoParaEscopo(
   dataInicioJurosMultaBr?: string | null,
   despesas?: ClienteDespesaRegistro[],
 ): SemanalAtrasoPacote | null {
-  const contrato = contratoAtivoPlaca(placa, clienteId);
+  const contrato = contratoReferenciaSemanalAtraso(placa, clienteId);
   const dataInicio =
     dataInicioJurosMultaBr ?? contrato?.dataInicioJurosMultaBr ?? null;
   const vencJuros = filtrarVencimentosAposDataInicioJuros(vencimentosBr, dataInicio);

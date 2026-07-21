@@ -21,7 +21,7 @@ import {
 } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
-import { loadContratosDb } from "./contratosDb.js";
+import { loadContratosDb, contratoMaisRecentePar } from "./contratosDb.js";
 import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
@@ -1117,6 +1117,18 @@ export function despesaAtribuidaACliente(
     const inferido = inferirCondutorIdDespesaPorData(d, prazoDias);
     if (inferido) return inferido === clienteId;
     return false;
+  }
+
+  const cat = (d.categoria ?? "").trim();
+  if (cat === "Locação semanal" || cat === "Renegociação" || cat === "Caução") {
+    if (d.condutorId === clienteId) return true;
+    if (d.condutorId && d.condutorId !== clienteId) return false;
+    const placa = resolvePlacaVeiculoCadastro(d.veiculoId);
+    const contrato = contratoMaisRecentePar(
+      { placa, clienteId },
+      loadContratosDb().contratos,
+    );
+    return contrato?.clienteId === clienteId;
   }
 
   const placa = resolvePlacaVeiculoCadastro(d.veiculoId);

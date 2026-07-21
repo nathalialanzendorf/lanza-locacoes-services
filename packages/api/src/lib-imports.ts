@@ -45,6 +45,7 @@ export {
   loadContratosDbAsync,
   findContratoInDb,
   contratoAtivoOperacional,
+  contratoMaisRecentePar,
   type ContratoRegistro,
 } from "../../../src/lib/contratosDb.js";
 
@@ -114,6 +115,7 @@ export {
   ROTULO_TIPO_COBRANCA,
   normalizarTipoCobrancaAction,
   listarEscoposContratosAtivosCobranca,
+  listarEscoposContratosEncerradosComPendencia,
   resolverModoCanvasCobranca,
   type FiltroAlvosCobranca,
   type TipoCobrancaAction,

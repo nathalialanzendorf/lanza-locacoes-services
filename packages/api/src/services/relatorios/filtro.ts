@@ -17,6 +17,7 @@ export type FiltroRelatorioInput = {
   dataInicial?: string;
   dataFinal?: string;
   situacao?: "em_aberto" | "pago" | "todos";
+  incluirEncerradosComPendencia?: boolean;
 };
 
 function normalizarSituacao(raw?: string): "em_aberto" | "pago" | "todos" | undefined {
@@ -84,6 +85,11 @@ function resolverFiltroRelatorioComClientes(
     ...(dataInicial ? { dataInicial } : {}),
     ...(dataFinal ? { dataFinal } : {}),
     ...(situacao ? { situacao } : {}),
+    ...(input.incluirEncerradosComPendencia === false
+      ? { incluirEncerradosComPendencia: false as const }
+      : input.incluirEncerradosComPendencia === true
+        ? { incluirEncerradosComPendencia: true as const }
+        : {}),
   };
 
   if (clienteQuery) {

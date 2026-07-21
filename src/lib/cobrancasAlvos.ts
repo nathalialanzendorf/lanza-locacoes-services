@@ -12,14 +12,13 @@ import {
 import { loadClientesDb } from "./clientesDb.js";
 import type { CobrancasDbContext } from "./cobrancasDbContext.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
-import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
+import { parseDataAutuacao, inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import {
   contratoAtivoOperacional,
   contratoMaisRecentePar,
   loadContratosDb,
   type ContratoRegistro,
 } from "./contratosDb.js";
-import { inferirCondutorInfracao } from "./inferirCondutorInfracao.js";
 import { infracaoIncluirListagemRelatorio } from "./infracaoTitulo.js";
 import { despesaCobravelLocatario } from "./espelharSemLocatarioParceiro.js";
 import {
@@ -150,6 +149,52 @@ function temContratoAtivoLocacao(
   if (!clienteId) return false;
   const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
   return contrato?.status === "ativo";
+}
+
+function contratoParEncerrado(
+  clienteId: string | null | undefined,
+  placa: string,
+  contratos: ContratoRegistro[],
+): ContratoRegistro | undefined {
+  if (!clienteId) return undefined;
+  const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
+  return contrato?.status === "encerrado" ? contrato : undefined;
+}
+
+/** Semanal ATRASADO de ex-locatário (contrato encerrado) — cobrança via tipo renegociacao. */
+function despesaRenegociacaoEncerrada(
+  d: ClienteDespesaRegistro,
+  contratos: ContratoRegistro[],
+): boolean {
+  if (d.categoria !== "Locação semanal") return false;
+  if (!/ATRASADO/i.test(d.descricao ?? "")) return false;
+  const placa = formatPlacaHyphen(d.veiculoId);
+  const clienteId = d.condutorId ?? inferirCondutorIdDespesaPorData(d);
+  if (!clienteId) return false;
+  if (temContratoAtivoLocacao(clienteId, placa, contratos)) return false;
+  return Boolean(contratoParEncerrado(clienteId, placa, contratos));
+}
+
+function clienteTemPendenciaEncerrada(
+  clienteId: string,
+  despesas: ClienteDespesaRegistro[],
+  contratos: ContratoRegistro[],
+  situacao: SituacaoCobrancaFiltro = "em_aberto",
+): boolean {
+  for (const c of contratos) {
+    if (c.clienteId !== clienteId || c.status !== "encerrado" || !c.placa) continue;
+    if (temContratoAtivoLocacao(clienteId, c.placa, contratos)) continue;
+    for (const d of despesas) {
+      if (!despesaNaSituacao(d, situacao)) continue;
+      if (!despesaCobravelLocatario(d)) continue;
+      if (compactPlaca(d.veiculoId) !== compactPlaca(c.placa)) continue;
+      if (d.condutorId === clienteId) return true;
+      if (despesaRenegociacaoEncerrada(d, contratos)) return true;
+      const inferido = inferirCondutorIdDespesaPorData(d);
+      if (inferido === clienteId) return true;
+    }
+  }
+  return false;
 }
 
 function contratoAtivoPorPlaca(
@@ -473,6 +518,8 @@ export type FiltroAlvosCobranca = {
   dataFinal?: string;
   /** Situação de pagamento da despesa (padrão: em_aberto). */
   situacao?: SituacaoCobrancaFiltro;
+  /** Inclui ex-locatários com contrato encerrado e débitos em aberto (padrão: true). */
+  incluirEncerradosComPendencia?: boolean;
 };
 
 function parseDataBrDia(s: string): Date | null {
@@ -550,6 +597,47 @@ export function listarEscoposContratosAtivosCobranca(
   );
 }
 
+/**
+ * Clientes com contrato encerrado e débitos em aberto (ex-locatários devendo).
+ * Um escopo por cliente — agrupa todas as placas no relatório completo.
+ */
+export function listarEscoposContratosEncerradosComPendencia(
+  ctx?: CobrancasDbContext,
+  filtro?: Pick<FiltroAlvosCobranca, "situacao" | "dataInicial" | "dataFinal" | "incluirEncerradosComPendencia">,
+): FiltroAlvosCobranca[] {
+  if (filtro?.incluirEncerradosComPendencia === false) return [];
+
+  const clientes = clientesAtivos(ctx);
+  const contratos = contratosLista(ctx);
+  const db = ctx
+    ? { clienteDespesas: ctx.clienteDespesas }
+    : loadClienteDespesasDb();
+  const situacao = filtro?.situacao ?? "em_aberto";
+  const clienteIds = new Set<string>();
+
+  for (const c of clientes.values()) {
+    if (clienteTemPendenciaEncerrada(c.id, db.clienteDespesas, contratos, situacao)) {
+      clienteIds.add(c.id);
+    }
+  }
+
+  const extras = {
+    ...(filtro?.dataInicial ? { dataInicial: filtro.dataInicial } : {}),
+    ...(filtro?.dataFinal ? { dataFinal: filtro.dataFinal } : {}),
+    situacao,
+    incluirEncerradosComPendencia: true as const,
+  };
+
+  return [...clienteIds]
+    .map((clienteId) => ({ clienteId, ...extras }))
+    .sort((a, b) =>
+      (clientes.get(a.clienteId!)?.nome ?? a.clienteId!).localeCompare(
+        clientes.get(b.clienteId!)?.nome ?? b.clienteId!,
+        "pt-BR",
+      ),
+    );
+}
+
 function filtrarAlvosPorEscopo(
   alvos: AlvoCobranca[],
   filtro?: FiltroAlvosCobranca,
@@ -598,6 +686,7 @@ export function listarAlvosCobranca(
   const contratos = contratosLista(ctx);
   const placaFiltro = filtro?.placa;
   const situacao = filtro?.situacao ?? "em_aberto";
+  const incluirEncerrados = filtro?.incluirEncerradosComPendencia !== false;
 
   let alvos: AlvoCobranca[];
 
@@ -638,7 +727,16 @@ export function listarAlvosCobranca(
         if (tipo === "estacionamento-rotativo" && !isCategoriaEstacionamento(d.categoria)) {
           return false;
         }
-        if (
+        if (tipo === "renegociacao") {
+          const cat = (d.categoria ?? "").trim();
+          if (cat === categoriaMap.renegociacao) {
+            // ok
+          } else if (incluirEncerrados && despesaRenegociacaoEncerrada(d, contratos)) {
+            // semanal ATRASADO de contrato encerrado
+          } else {
+            return false;
+          }
+        } else if (
           tipo !== "manutencao" &&
           tipo !== "pedagio" &&
           tipo !== "estacionamento-rotativo" &&
