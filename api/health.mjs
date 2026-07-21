@@ -1,9 +1,25 @@
 /** /health — function isolada (sem importar server.mjs). */
 import { resolveDbBackend } from "./resolveDbBackend.mjs";
+import { applyCorsHeaders, resolveCorsOrigin } from "./cors.mjs";
 
 const API_VERSION = "0.1.0";
 
-export default function handler(_req, res) {
+export default function handler(req, res) {
+  const origin = resolveCorsOrigin(req.headers.origin);
+  applyCorsHeaders(res, origin);
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (req.method === "HEAD") {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
   const body = JSON.stringify({
     status: "ok",
     service: "@lanza/api",

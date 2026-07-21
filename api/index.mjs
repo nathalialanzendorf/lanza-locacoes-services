@@ -6,10 +6,12 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveDbBackend } from "./resolveDbBackend.mjs";
+import { applyCorsHeaders, resolveCorsOrigin } from "./cors.mjs";
 
 const API_VERSION = "0.1.0";
 
-function writeJson(res, status, body) {
+function writeJson(res, status, body, origin) {
+  if (origin) applyCorsHeaders(res, origin);
   const data = JSON.stringify(body);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -36,8 +38,7 @@ function pathname(req) {
   return requestPath(req);
 }
 
-function isHealthRequest(req) {
-  if (req.method !== "GET" && req.method !== "HEAD") return false;
+function isHealthPath(req) {
   const p = requestPath(req);
   return p === "/health" || p === "/api/health";
 }
@@ -66,23 +67,38 @@ function loadHandler() {
 
 /** Handler exportado para a Vercel (sem listen). */
 async function handler(req, res) {
-  if (isHealthRequest(req)) {
+  if (isHealthPath(req)) {
+    const origin = resolveCorsOrigin(req.headers.origin);
+    applyCorsHeaders(res, origin);
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     if (req.method === "HEAD") {
       res.writeHead(200);
       res.end();
       return;
     }
-    writeJson(res, 200, {
-      status: "ok",
-      service: "@lanza/api",
-      version: API_VERSION,
-      database: { backend: resolveDbBackend() },
-      git: {
-        commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || undefined,
-        ref: process.env.VERCEL_GIT_COMMIT_REF?.trim() || undefined,
-      },
-    });
-    return;
+    if (req.method === "GET") {
+      writeJson(
+        res,
+        200,
+        {
+          status: "ok",
+          service: "@lanza/api",
+          version: API_VERSION,
+          database: { backend: resolveDbBackend() },
+          git: {
+            commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || undefined,
+            ref: process.env.VERCEL_GIT_COMMIT_REF?.trim() || undefined,
+          },
+        },
+        origin,
+      );
+      return;
+    }
   }
 
   const handle = await loadHandler();
