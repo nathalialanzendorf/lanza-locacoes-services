@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { resolvePgHost } from "../config.js";
 import type { DbBackend, JsonDocumentAdapter } from "./types.js";
 import { FileJsonDocumentAdapter } from "./file.js";
 import { PostgresJsonDocumentAdapter } from "./postgres.js";
@@ -14,7 +15,7 @@ function env(name: string): string | undefined {
 }
 
 function postgresConfigured(): boolean {
-  const hasHost = Boolean(env("PGHOST") ?? process.env.DATABASE_URL?.trim());
+  const hasHost = Boolean(resolvePgHost());
   const hasAuth = Boolean(
     env("PGPASSWORD") ??
       process.env.PGPASSWORD?.trim() ??

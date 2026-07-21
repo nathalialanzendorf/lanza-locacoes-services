@@ -1,5 +1,12 @@
 // Config
-export { getPgConfig, pgSslOptions, type PgConfig, type PgSslMode } from "./config.js";
+export {
+  getPgConfig,
+  pgSslOptions,
+  resolvePgHost,
+  LANZA_PRODUCTION_PGHOST,
+  type PgConfig,
+  type PgSslMode,
+} from "./config.js";
 
 // Paths
 export { REPO_ROOT, DATABASE_DIR, SQL_DIR, INITIAL_SCHEMA_SQL } from "./paths.js";

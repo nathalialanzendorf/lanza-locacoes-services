@@ -1,11 +1,31 @@
 /** Mesma lógica de packages/db/src/adapters/index.ts — sem importar server.mjs. */
+const LANZA_PRODUCTION_PGHOST =
+  "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com";
+
 function env(name) {
   const v = process.env[name];
   return v != null && v.trim() !== "" ? v.trim().toLowerCase() : undefined;
 }
 
+function resolvePgHost() {
+  const explicit = process.env.PGHOST?.trim();
+  if (explicit) return explicit;
+
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (databaseUrl) {
+    try {
+      return new URL(databaseUrl).hostname;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (process.env.VERCEL && env("AWS_ROLE_ARN")) return LANZA_PRODUCTION_PGHOST;
+  return undefined;
+}
+
 function postgresConfigured() {
-  const hasHost = Boolean(env("PGHOST") ?? process.env.DATABASE_URL?.trim());
+  const hasHost = Boolean(resolvePgHost());
   const hasAuth = Boolean(
     env("PGPASSWORD") ??
       process.env.PGPASSWORD?.trim() ??

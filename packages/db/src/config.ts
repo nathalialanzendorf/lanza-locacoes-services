@@ -19,6 +19,28 @@ function env(name: string): string | undefined {
   return v != null && v.trim() !== "" ? v.trim() : undefined;
 }
 
+/** Host RDS produção (docs/vercel-env-api.md, scripts/set-vercel-postgres-env.ps1). */
+export const LANZA_PRODUCTION_PGHOST =
+  "aws-pg-lanza-locacoes.cluster-c856s8wi6jzs.us-east-1.rds.amazonaws.com";
+
+/** PGHOST explícito, hostname de DATABASE_URL, ou fallback Vercel+OIDC. */
+export function resolvePgHost(): string | undefined {
+  const explicit = env("PGHOST");
+  if (explicit) return explicit;
+
+  const databaseUrl = env("DATABASE_URL");
+  if (databaseUrl) {
+    try {
+      return new URL(databaseUrl).hostname;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (process.env.VERCEL && env("AWS_ROLE_ARN")) return LANZA_PRODUCTION_PGHOST;
+  return undefined;
+}
+
 function parseSslMode(raw: string | undefined): PgSslMode {
   const v = (raw ?? "require").toLowerCase();
   if (v === "disable" || v === "prefer" || v === "require" || v === "verify-full") {
@@ -43,7 +65,7 @@ function parseDatabaseUrl(url: string): PgConfig {
 }
 
 function configFromPgEnv(): PgConfig | null {
-  const host = env("PGHOST");
+  const host = resolvePgHost();
   if (!host) return null;
   return {
     host,
@@ -59,10 +81,12 @@ function configFromPgEnv(): PgConfig | null {
 
 /** Lê PGHOST/PGPORT/… ou DATABASE_URL. */
 export function getPgConfig(): PgConfig {
-  // Na Vercel, PGHOST + OIDC/IAM é a fonte da verdade — DATABASE_URL pode apontar para réplica ou credencial só-leitura.
+  // Na Vercel, PGHOST + OIDC/IAM é a fonte da verdade — DATABASE_URL só como fallback.
   if (process.env.VERCEL && env("AWS_ROLE_ARN")) {
     const fromEnv = configFromPgEnv();
     if (fromEnv) return fromEnv;
+    const databaseUrl = env("DATABASE_URL");
+    if (databaseUrl) return parseDatabaseUrl(databaseUrl);
   }
 
   const databaseUrl = env("DATABASE_URL");
@@ -72,8 +96,9 @@ export function getPgConfig(): PgConfig {
   if (fromEnv) return fromEnv;
 
   throw new Error(
-    "PostgreSQL não configurado: defina PGHOST (ou DATABASE_URL). " +
-      "Use .\\scripts\\set-postgres-user-env.ps1",
+    process.env.VERCEL
+      ? "PostgreSQL na Vercel: defina PGHOST e AWS_ROLE_ARN (ou DATABASE_URL). Veja docs/vercel-env-api.md"
+      : "PostgreSQL não configurado: defina PGHOST (ou DATABASE_URL). Use .\\scripts\\set-postgres-user-env.ps1",
   );
 }
 
