@@ -15,10 +15,41 @@ export type CobrancasDbContext = {
   contratos: ContratoRegistro[];
 };
 
-export type BaixaPlanoDbContextInput = {
+export type CobrancasScopedContextInput = {
   clienteQuery?: string | null;
   autoInfracaoAlvo?: string | null;
+  placa?: string | null;
 };
+
+/** @deprecated use CobrancasScopedContextInput */
+export type BaixaPlanoDbContextInput = CobrancasScopedContextInput;
+
+let _runtimeCtx: CobrancasDbContext | null = null;
+
+export function setCobrancasRuntimeCtx(ctx: CobrancasDbContext | null): void {
+  _runtimeCtx = ctx;
+}
+
+export function getCobrancasRuntimeCtx(): CobrancasDbContext | null {
+  return _runtimeCtx;
+}
+
+/** Evita load*Db síncrono (deadlock awaitSync) dentro de handlers async no Postgres. */
+export function cobrancasRuntimeDespesas(): ClienteDespesaRegistro[] {
+  return _runtimeCtx?.clienteDespesas ?? loadClienteDespesasDb().clienteDespesas;
+}
+
+export function cobrancasRuntimeContratos(): ContratoRegistro[] {
+  return _runtimeCtx?.contratos ?? loadContratosDb().contratos;
+}
+
+export function cobrancasRuntimeVeiculos(): VeiculoRegistro[] {
+  return _runtimeCtx?.veiculos ?? loadVeiculosDb().veiculos;
+}
+
+export function cobrancasRuntimeClientes(): ClienteRegistro[] {
+  return _runtimeCtx?.clientes ?? loadClientesDb().clientes;
+}
 
 function resolveClienteIdFromQuery(query: string, clientes: ClienteRegistro[]): string | null {
   const q = query.trim();
@@ -74,9 +105,9 @@ export async function loadCobrancasDbContextAsync(): Promise<CobrancasDbContext>
   };
 }
 
-/** Contexto enxuto para montar plano de baixa (evita carregar todas as despesas no Postgres). */
-export async function loadBaixaPlanoDbContextAsync(
-  input: BaixaPlanoDbContextInput = {},
+/** Contexto enxuto por cliente/placa (Postgres) — baixa, relatório de cobranças, etc. */
+export async function loadCobrancasScopedDbContextAsync(
+  input: CobrancasScopedContextInput = {},
 ): Promise<CobrancasDbContext> {
   if (!(await useRelationalStore())) {
     return loadCobrancasDbContextAsync();
@@ -91,22 +122,29 @@ export async function loadBaixaPlanoDbContextAsync(
   const clienteId = input.clienteQuery?.trim()
     ? resolveClienteIdFromQuery(input.clienteQuery, clientesDb.clientes)
     : null;
+  const placa = input.placa?.trim() || null;
 
-  if (!clienteId) {
+  if (!clienteId && !placa) {
     return loadCobrancasDbContextAsync();
   }
 
-  const [rowsCliente, rowAlvo] = await Promise.all([
-    queryClienteDespesasFromSql({ clienteId, ativo: true }),
+  const rowsPromise = clienteId
+    ? queryClienteDespesasFromSql({ clienteId, ativo: true })
+    : queryClienteDespesasFromSql({ placa: placa!, ativo: true });
+
+  const [rows, rowAlvo] = await Promise.all([
+    rowsPromise,
     input.autoInfracaoAlvo?.trim()
       ? queryClienteDespesaByReferenciaFromSql(input.autoInfracaoAlvo)
       : Promise.resolve(null),
   ]);
 
   return {
-    clienteDespesas: mergeDespesaRows(rowsCliente, rowAlvo),
+    clienteDespesas: mergeDespesaRows(rows, rowAlvo),
     clientes: clientesDb.clientes,
     veiculos: veiculosDb.veiculos,
     contratos: contratosDb.contratos,
   };
 }
+
+export const loadBaixaPlanoDbContextAsync = loadCobrancasScopedDbContextAsync;

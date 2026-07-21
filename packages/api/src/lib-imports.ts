@@ -169,6 +169,13 @@ export {
 export {
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
+  loadCobrancasScopedDbContextAsync,
+  getCobrancasRuntimeCtx,
+  setCobrancasRuntimeCtx,
+  cobrancasRuntimeDespesas,
+  cobrancasRuntimeContratos,
+  cobrancasRuntimeVeiculos,
+  cobrancasRuntimeClientes,
   type CobrancasDbContext,
 } from "../../../src/lib/cobrancasDbContext.js";
 

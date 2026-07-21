@@ -62,7 +62,7 @@ export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): Filtr
   return resolverFiltroRelatorioComClientes(input, loadClientesDb().clientes);
 }
 
-function resolverFiltroRelatorioComClientes(
+export function resolverFiltroRelatorioComClientes(
   input: FiltroRelatorioInput,
   clientes: ClienteRegistro[],
 ): FiltroAlvosCobranca {

@@ -11,10 +11,8 @@ import {
   despesaAtribuidaACliente,
   isInfracaoTransito,
   isInfracaoSemDataAutuacao,
-  loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
-import { loadClientesDb } from "./clientesDb.js";
 import {
   COBRANCAS_OUT_DIR,
   ensureRodapeWhatsApp,
@@ -49,7 +47,6 @@ import {
 } from "./cobrancasAlvos.js";
 import {
   contratoMaisRecentePar,
-  loadContratosDb,
   type ContratoRegistro,
   type MotivoEncerramento,
 } from "./contratosDb.js";
@@ -68,7 +65,12 @@ import {
   type TabelaCobrancaSemanal,
 } from "./pagamentoSemanalCobranca.js";
 import { rastreavelLabel, tipoRastreame } from "./recebimento/baixaPlano.js";
-import { loadVeiculosDb } from "./veiculosDb.js";
+import {
+  cobrancasRuntimeClientes,
+  cobrancasRuntimeContratos,
+  cobrancasRuntimeDespesas,
+  cobrancasRuntimeVeiculos,
+} from "./cobrancasDbContext.js";
 
 export type LinhaDespesaEmAberto = {
   rastreavel: string;
@@ -180,11 +182,10 @@ function despesaAberta(d: ClienteDespesaRegistro): boolean {
 export function coletarInfracoesRelatorio(
   filtro: FiltroAlvosCobranca,
 ): ClienteDespesaRegistro[] {
-  const db = loadClienteDespesasDb();
   const vistos = new Set<string>();
   const out: ClienteDespesaRegistro[] = [];
 
-  for (const d of db.clienteDespesas) {
+  for (const d of cobrancasRuntimeDespesas()) {
     if (!infracaoIncluirListagemRelatorio(d)) continue;
     if (isInfracaoSemDataAutuacao(d) && !d.condutorId) continue;
     if (d.id && vistos.has(d.id)) continue;
@@ -218,7 +219,7 @@ function isQuebraContrato(d: ClienteDespesaRegistro): boolean {
 
 function veiculoLabelDespesa(d: ClienteDespesaRegistro): string {
   const p = compactPlaca(d.veiculoId);
-  const v = loadVeiculosDb().veiculos.find(
+  const v = cobrancasRuntimeVeiculos().find(
     (x) => x.id === d.veiculoId || compactPlaca(x.placa) === p,
   );
   if (v) return formatVeiculoLabel(v);
@@ -244,7 +245,7 @@ function somaLinhas(linhas: LinhaRelatorioCobranca[]): number {
 
 function veiculoInfo(placa: string): { modelo: string; ano: string } {
   const p = compactPlaca(placa);
-  const v = loadVeiculosDb().veiculos.find((x) => compactPlaca(x.placa) === p);
+  const v = cobrancasRuntimeVeiculos().find((x) => compactPlaca(x.placa) === p);
   return {
     modelo: v?.marcaModelo ?? "—",
     ano: v?.anoModelo ?? "—",
@@ -262,7 +263,7 @@ function contratoAtivoPar(
   clienteId?: string | null,
 ): ContratoRegistro | undefined {
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = cobrancasRuntimeContratos().filter(
     (c) =>
       c.status === "ativo" &&
       compactPlaca(c.placa ?? "") === p &&
@@ -289,7 +290,7 @@ function contratoReferenciaCobranca(
   }
 
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = cobrancasRuntimeContratos().filter(
     (c) => compactPlaca(c.placa ?? "") === p,
   );
   if (list.length === 0) return undefined;
@@ -297,14 +298,14 @@ function contratoReferenciaCobranca(
 }
 
 function ultimoContratoPorCliente(clienteId: string): ContratoRegistro | undefined {
-  const ativos = loadContratosDb().contratos.filter(
+  const ativos = cobrancasRuntimeContratos().filter(
     (c) => c.status === "ativo" && c.clienteId === clienteId,
   );
   if (ativos.length > 0) {
     return ativos.sort(ordenarContratosRecentes)[0];
   }
 
-  const todos = loadContratosDb().contratos.filter((c) => c.clienteId === clienteId);
+  const todos = cobrancasRuntimeContratos().filter((c) => c.clienteId === clienteId);
   if (todos.length === 0) return undefined;
   return todos.sort(ordenarContratosRecentes)[0];
 }
@@ -362,7 +363,10 @@ function contratoInfo(placa: string, clienteId: string | null, dataAtualBr: stri
 }
 
 function despesaDoCliente(d: ClienteDespesaRegistro, clienteId: string): boolean {
-  return despesaAtribuidaACliente(d, clienteId);
+  return despesaAtribuidaACliente(d, clienteId, 90, {
+    contratos: cobrancasRuntimeContratos(),
+    veiculos: cobrancasRuntimeVeiculos(),
+  });
 }
 
 function classificarDespesa(
@@ -377,11 +381,10 @@ function classificarDespesa(
 
 /** Todas as despesas em aberto do escopo (cliente ou placa), exceto quebra e créditos. */
 export function coletarTodasDespesasAbertas(filtro: FiltroAlvosCobranca): ClienteDespesaRegistro[] {
-  const db = loadClienteDespesasDb();
   const vistos = new Set<string>();
   const out: ClienteDespesaRegistro[] = [];
 
-  for (const d of db.clienteDespesas) {
+  for (const d of cobrancasRuntimeDespesas()) {
     if (!despesaNaSituacao(d, filtro.situacao ?? "em_aberto")) continue;
     if (isQuebraContrato(d)) continue;
     if (isCreditoDevolucaoLocatario(d)) continue;
@@ -415,7 +418,7 @@ function resolverMotoristaDespesa(
   fallbackMotorista: string,
 ): string {
   if (d.condutorId) {
-    const c = loadClientesDb().clientes.find((x) => x.id === d.condutorId);
+    const c = cobrancasRuntimeClientes().find((x) => x.id === d.condutorId);
     if (c?.nome) return c.nome;
   }
   const contrato = contratoReferenciaCobranca(d.veiculoId);
@@ -751,7 +754,7 @@ function resolverPlacaPrincipal(
 
 function resolverNomeCliente(filtro: FiltroAlvosCobranca, placa: string): string {
   if (filtro.clienteId) {
-    const c = loadClientesDb().clientes.find((x) => x.id === filtro.clienteId);
+    const c = cobrancasRuntimeClientes().find((x) => x.id === filtro.clienteId);
     if (c?.nome) return c.nome;
   }
   const vigente = contratoReferenciaCobranca(placa, filtro.clienteId);
@@ -1021,7 +1024,7 @@ function itemsLoteDoEscopo(
 }
 
 function nomeClientePorId(clienteId: string): string {
-  return loadClientesDb().clientes.find((x) => x.id === clienteId)?.nome ?? clienteId;
+  return cobrancasRuntimeClientes().find((x) => x.id === clienteId)?.nome ?? clienteId;
 }
 
 /**
@@ -1380,7 +1383,7 @@ type ItemInfracaoResumida = {
 
 function mapaPagasLanzaResumido(): Map<string, boolean> {
   const map = new Map<string, boolean>();
-  for (const d of loadClienteDespesasDb().clienteDespesas) {
+  for (const d of cobrancasRuntimeDespesas()) {
     if (!isInfracaoTransito(d)) continue;
     const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
     if (!auto) continue;
@@ -1391,7 +1394,7 @@ function mapaPagasLanzaResumido(): Map<string, boolean> {
 
 function mapaDespesaPorAutoInfracao(): Map<string, ClienteDespesaRegistro> {
   const map = new Map<string, ClienteDespesaRegistro>();
-  for (const d of loadClienteDespesasDb().clienteDespesas) {
+  for (const d of cobrancasRuntimeDespesas()) {
     if (!isInfracaoTransito(d)) continue;
     const auto = String(d.numeroAuto ?? d.autoInfracao ?? "").trim().toUpperCase();
     if (!auto) continue;
@@ -1402,7 +1405,7 @@ function mapaDespesaPorAutoInfracao(): Map<string, ClienteDespesaRegistro> {
 
 function veiculoParticularPorPlacaResumido(): Map<string, boolean> {
   const out = new Map<string, boolean>();
-  for (const v of loadVeiculosDb().veiculos ?? []) {
+  for (const v of cobrancasRuntimeVeiculos() ?? []) {
     if (v.particular === true) out.set(compactPlaca(v.placa), true);
   }
   return out;
@@ -1500,7 +1503,7 @@ function ordenarGruposInfracoesResumido(
 
 function veiculosElegiveisResumidoInfracoes(): Map<string, boolean> {
   const map = new Map<string, boolean>();
-  for (const v of loadVeiculosDb().veiculos) {
+  for (const v of cobrancasRuntimeVeiculos()) {
     if (v.particular === true) continue;
     map.set(compactPlaca(v.placa), true);
   }
@@ -1509,12 +1512,12 @@ function veiculosElegiveisResumidoInfracoes(): Map<string, boolean> {
 
 function nomeClienteResumidoInfracao(clienteId: string | null): string {
   if (!clienteId) return "— sem cliente";
-  const c = loadClientesDb().clientes.find((x) => x.id === clienteId);
+  const c = cobrancasRuntimeClientes().find((x) => x.id === clienteId);
   return c?.nome?.trim() || "— sem cliente";
 }
 
 function clienteTemContratoAtivo(clienteId: string): boolean {
-  return loadContratosDb().contratos.some(
+  return cobrancasRuntimeContratos().some(
     (c) => c.clienteId === clienteId && c.status === "ativo",
   );
 }
@@ -1527,7 +1530,7 @@ function situacaoContratoClienteInfracao(clienteId: string | null): "ativo" | "e
 function ultimoEncerramentoCliente(clienteId: string | null): string | null {
   if (!clienteId) return "Sem contrato ativo";
   if (clienteTemContratoAtivo(clienteId)) return null;
-  const encerrados = loadContratosDb().contratos.filter(
+  const encerrados = cobrancasRuntimeContratos().filter(
     (c) => c.clienteId === clienteId && c.status === "encerrado",
   );
   if (encerrados.length === 0) return "Sem contrato ativo";
@@ -1563,7 +1566,7 @@ function veiculoContratoCliente(clienteId: string | null): {
   marcaModelo?: string;
 } {
   if (!clienteId) return {};
-  const contratos = loadContratosDb().contratos.filter((c) => c.clienteId === clienteId);
+  const contratos = cobrancasRuntimeContratos().filter((c) => c.clienteId === clienteId);
   const ativos = contratos
     .filter((c) => c.status === "ativo")
     .sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
@@ -1573,7 +1576,7 @@ function veiculoContratoCliente(clienteId: string | null): {
   if (!ref) return {};
   const placa = formatPlacaHyphen(ref.placa ?? ref.veiculoId ?? "");
   if (!placa) return {};
-  const v = loadVeiculosDb().veiculos.find(
+  const v = cobrancasRuntimeVeiculos().find(
     (x) => compactPlaca(x.placa) === compactPlaca(placa),
   );
   const marcaModelo = String(v?.marcaModelo ?? v?.modelo ?? "").trim();

@@ -23,8 +23,9 @@ import {
   type TipoCobrancaAction,
 } from "./cobrancasAlvos.js";
 import type { CobrancasDbContext } from "./cobrancasDbContext.js";
-import { contratoMaisRecentePar, loadContratosDb, type ContratoRegistro } from "./contratosDb.js";
-import { loadClienteDespesasDb, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { cobrancasRuntimeContratos, cobrancasRuntimeDespesas } from "./cobrancasDbContext.js";
+import { contratoMaisRecentePar, type ContratoRegistro } from "./contratosDb.js";
+import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import {
   filtrarVencimentosAposDataInicioJuros,
   filtrarVencimentosCalculoSemanal,
@@ -79,7 +80,7 @@ function contratoAtivoPlaca(
   contratos?: ContratoRegistro[],
 ) {
   const p = compactPlaca(placa);
-  const list = (contratos ?? loadContratosDb().contratos).filter(
+  const list = (contratos ?? cobrancasRuntimeContratos()).filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
   );
   if (clienteId) {
@@ -101,7 +102,7 @@ function contratoReferenciaSemanalAtraso(
   if (!clienteId) return null;
   const encerrado = contratoMaisRecentePar(
     { placa, clienteId },
-    contratos ?? loadContratosDb().contratos,
+    contratos ?? cobrancasRuntimeContratos(),
   );
   return encerrado?.status === "encerrado" ? encerrado : null;
 }
@@ -162,10 +163,13 @@ export type SemanalAtrasoPacote = {
   resumo?: ResumoCobrancaSemanal;
 };
 
-function despesasSemanalEscopo(alvo: AlvoCobranca): ClienteDespesaRegistro[] {
-  const db = loadClienteDespesasDb();
+function despesasSemanalEscopo(
+  alvo: AlvoCobranca,
+  despesas?: ClienteDespesaRegistro[],
+): ClienteDespesaRegistro[] {
+  const list = despesas ?? cobrancasRuntimeDespesas();
   const placaKey = compactPlaca(alvo.placa);
-  return db.clienteDespesas.filter(
+  return list.filter(
     (d) =>
       d.categoria === "Locação semanal" &&
       compactPlaca(d.veiculoId) === placaKey &&
@@ -177,8 +181,13 @@ function buildSemanalAtrasoAlvo(
   alvo: AlvoCobranca,
   dataPagamentoBr: string,
   diaEscalonamento?: number,
+  ctx?: CobrancasDbContext,
 ): SemanalAtrasoPacote | null {
-  const contrato = contratoReferenciaSemanalAtraso(alvo.placa, alvo.clienteId);
+  const contrato = contratoReferenciaSemanalAtraso(
+    alvo.placa,
+    alvo.clienteId,
+    ctx?.contratos ?? cobrancasRuntimeContratos(),
+  );
   const valorSemanal = contrato?.valorSemanal ?? null;
   const valorDiaria = contrato?.valorDiaria ?? null;
   const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
@@ -202,7 +211,7 @@ function buildSemanalAtrasoAlvo(
     placa: alvo.placa,
     clienteId: alvo.clienteId,
     dataInicioJurosMultaBr,
-    despesasSemanal: despesasSemanalEscopo(alvo),
+    despesasSemanal: despesasSemanalEscopo(alvo, ctx?.clienteDespesas),
   });
   if (!pacote) return null;
 
@@ -225,7 +234,11 @@ export function buildSemanalAtrasoParaEscopo(
   dataInicioJurosMultaBr?: string | null,
   despesas?: ClienteDespesaRegistro[],
 ): SemanalAtrasoPacote | null {
-  const contrato = contratoReferenciaSemanalAtraso(placa, clienteId);
+  const contrato = contratoReferenciaSemanalAtraso(
+    placa,
+    clienteId,
+    cobrancasRuntimeContratos(),
+  );
   const dataInicio =
     dataInicioJurosMultaBr ?? contrato?.dataInicioJurosMultaBr ?? null;
   const vencJuros = filtrarVencimentosAposDataInicioJuros(vencimentosBr, dataInicio);
@@ -310,7 +323,7 @@ export function executarLoteCobranca(
       );
       item.diaEscalonamento = dia;
 
-      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr, dia ?? undefined);
+      const semanal = buildSemanalAtrasoAlvo(alvo, dataPagamentoBr, dia ?? undefined, opts?.ctx);
       if (!semanal) {
         if (
           contrato?.valorSemanal == null ||

@@ -15,7 +15,10 @@ import {
   gerarEstacionamento,
   gerarMultas,
   gerarSemanal,
-  loadCobrancasDbContextAsync,
+  getCobrancasRuntimeCtx,
+  loadClientesDbAsync,
+  loadCobrancasScopedDbContextAsync,
+  setCobrancasRuntimeCtx,
   salvarCobranca,
   salvarCobrancasDados,
   jurosMultaDiario,
@@ -38,7 +41,7 @@ import {
   type ClienteRegistro,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
-import { hojeBr, resolverClienteFromList, resolverFiltroRelatorio, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
+import { hojeBr, resolverClienteFromList, resolverFiltroRelatorioComClientes, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
 
 export function metaCobrancas() {
   return {
@@ -59,10 +62,22 @@ export async function listarAlvos(
   if (!t) {
     throw new HttpError(400, `Tipo de cobrança inválido: ${tipo}`);
   }
-  const ctx = await loadCobrancasDbContextAsync();
-  const filtro = await resolverFiltroRelatorioAsync(filtroInput, ctx);
-  const items = listarResumoAlvos(t, filtro, ctx);
-  return { tipo: t, total: items.length, items };
+  const clientesDb = await loadClientesDbAsync();
+  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
+  setCobrancasRuntimeCtx(
+    await loadCobrancasScopedDbContextAsync({
+      clienteQuery: filtroPre.clienteId ?? filtroInput.clienteQuery,
+      placa: filtroPre.placa ?? filtroInput.placa,
+    }),
+  );
+  try {
+    const ctx = getCobrancasRuntimeCtx()!;
+    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes);
+    const items = listarResumoAlvos(t, filtro, ctx);
+    return { tipo: t, total: items.length, items };
+  } finally {
+    setCobrancasRuntimeCtx(null);
+  }
 }
 
 export type GerarCobrancasInput = {
@@ -106,12 +121,22 @@ function itemsDoEscopo(
 }
 
 export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
-  const tipos = resolverTipos(input.tipos);
-  const ctx = await loadCobrancasDbContextAsync();
-  const filtro = await resolverFiltroRelatorioAsync(input.filtro, ctx);
-  const salvar = input.salvar !== false;
-  const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
-  const dataRef = input.dataPagamentoBr ?? hojeBr();
+  const filtroInput = input.filtro ?? {};
+  const clientesDb = await loadClientesDbAsync();
+  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
+  setCobrancasRuntimeCtx(
+    await loadCobrancasScopedDbContextAsync({
+      clienteQuery: filtroPre.clienteId ?? filtroInput.clienteQuery,
+      placa: filtroPre.placa ?? filtroInput.placa,
+    }),
+  );
+  try {
+    const ctx = getCobrancasRuntimeCtx()!;
+    const tipos = resolverTipos(input.tipos);
+    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes);
+    const salvar = input.salvar !== false;
+    const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
+    const dataRef = input.dataPagamentoBr ?? hojeBr();
 
   if (
     tipos.includes("pagamento-semanal") &&
@@ -203,6 +228,9 @@ export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
       canvas: arquivosCanvas,
     },
   };
+  } finally {
+    setCobrancasRuntimeCtx(null);
+  }
 }
 
 export type GerarCobrancaPlacaInput = {
@@ -311,98 +339,109 @@ function vencimentosAbertosCliente(
 }
 
 export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
-  const ctx = await loadCobrancasDbContextAsync();
-  const dataPagamentoBr = input.dataPagamentoBr ?? hojeBr();
-  let cliente: ClienteRegistro | null = null;
-  if (input.clienteQuery?.trim()) {
-    try {
-      cliente = resolverClienteFromList(input.clienteQuery, ctx.clientes);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new HttpError(400, msg);
+  const clientesDb = await loadClientesDbAsync();
+  setCobrancasRuntimeCtx(
+    await loadCobrancasScopedDbContextAsync({
+      clienteQuery: input.clienteQuery,
+      placa: input.placa,
+    }),
+  );
+  try {
+    const ctx = getCobrancasRuntimeCtx()!;
+    const dataPagamentoBr = input.dataPagamentoBr ?? hojeBr();
+    let cliente: ClienteRegistro | null = null;
+    if (input.clienteQuery?.trim()) {
+      try {
+        cliente = resolverClienteFromList(input.clienteQuery, ctx.clientes);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new HttpError(400, msg);
+      }
     }
-  }
-  const placa = input.placa?.trim();
+    const placa = input.placa?.trim();
 
-  if (!cliente && placa) {
-    const c =
-      contratoReferenciaSemanalAtraso(placa, null, ctx.contratos) ??
-      contratoAtivoPlaca(placa, ctx.contratos);
-    if (c?.clienteId) {
-      cliente = ctx.clientes.find((x) => x.id === c.clienteId) ?? null;
+    if (!cliente && placa) {
+      const c =
+        contratoReferenciaSemanalAtraso(placa, null, ctx.contratos) ??
+        contratoAtivoPlaca(placa, ctx.contratos);
+      if (c?.clienteId) {
+        cliente = ctx.clientes.find((x: ClienteRegistro) => x.id === c.clienteId) ?? null;
+      }
     }
+
+    if (!cliente?.id) {
+      throw new HttpError(400, "Informe clienteQuery ou placa com contrato (ativo ou encerrado com débito)");
+    }
+
+    let valorSemanal = input.valorSemanal;
+    let valorDiaria = input.valorDiaria;
+    if (placa) {
+      const c = contratoReferenciaSemanalAtraso(placa, cliente.id, ctx.contratos);
+      valorSemanal ??= c?.valorSemanal ?? undefined;
+      valorDiaria ??= c?.valorDiaria ?? undefined;
+    }
+
+    let vencimentos = input.vencimentos?.map((v) => v.trim()).filter(Boolean) ?? [];
+    if (vencimentos.length === 0) {
+      vencimentos = vencimentosAbertosCliente(cliente.id, ctx.clienteDespesas, placa);
+    }
+    if (vencimentos.length === 0) {
+      throw new HttpError(404, "Nenhum vencimento em aberto encontrado");
+    }
+
+    if (valorSemanal == null || valorDiaria == null) {
+      throw new HttpError(400, "valorSemanal e valorDiaria não encontrados — informe no corpo");
+    }
+
+    const vencElegiveis = filtrarVencimentosCalculoSemanal(vencimentos, dataPagamentoBr, true);
+    if (vencElegiveis.length === 0) {
+      throw new HttpError(400, "Nenhum vencimento elegível para cálculo");
+    }
+
+    const pacote = montarPacoteCobrancaSemanalAtraso({
+      valorSemanal,
+      valorDiaria,
+      vencimentosBr: vencElegiveis,
+      dataPagamentoBr,
+      emAberto: true,
+      clienteNome: cliente.nome,
+      placa: placa ?? undefined,
+      clienteId: cliente.id,
+    });
+
+    if (!pacote) {
+      throw new HttpError(400, "Não foi possível montar tabela de juros/multa");
+    }
+
+    const data = {
+      ...pacote.payload,
+      cliente: { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf ?? null },
+      jurosMultaDiario: jurosMultaDiario(valorSemanal, valorDiaria),
+      markdown: pacote.markdown,
+      totalGeral: pacote.totalGeral,
+      resumo: pacote.resumo,
+    };
+
+    const arquivos: string[] = [];
+    if (input.salvar !== false) {
+      const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
+      fs.mkdirSync(outDir, { recursive: true });
+      const slug = (cliente.nome ?? "cliente")
+        .normalize("NFD")
+        .replace(/\p{M}/gu, "")
+        .replace(/[^\w]+/g, "-")
+        .toLowerCase()
+        .slice(0, 40);
+      const dataArq = dataPagamentoBr.replace(/\//g, "-");
+      const mdPath = path.join(outDir, `semanal-atraso-${slug}-${dataArq}.md`);
+      const jsonPath = path.join(outDir, `dados-semanal-atraso-${slug}-${dataArq}.json`);
+      fs.writeFileSync(mdPath, pacote.markdown, "utf8");
+      fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2), "utf8");
+      arquivos.push(mdPath, jsonPath);
+    }
+
+    return { data, arquivos };
+  } finally {
+    setCobrancasRuntimeCtx(null);
   }
-
-  if (!cliente?.id) {
-    throw new HttpError(400, "Informe clienteQuery ou placa com contrato (ativo ou encerrado com débito)");
-  }
-
-  let valorSemanal = input.valorSemanal;
-  let valorDiaria = input.valorDiaria;
-  if (placa) {
-    const c = contratoReferenciaSemanalAtraso(placa, cliente.id, ctx.contratos);
-    valorSemanal ??= c?.valorSemanal ?? undefined;
-    valorDiaria ??= c?.valorDiaria ?? undefined;
-  }
-
-  let vencimentos = input.vencimentos?.map((v) => v.trim()).filter(Boolean) ?? [];
-  if (vencimentos.length === 0) {
-    vencimentos = vencimentosAbertosCliente(cliente.id, ctx.clienteDespesas, placa);
-  }
-  if (vencimentos.length === 0) {
-    throw new HttpError(404, "Nenhum vencimento em aberto encontrado");
-  }
-
-  if (valorSemanal == null || valorDiaria == null) {
-    throw new HttpError(400, "valorSemanal e valorDiaria não encontrados — informe no corpo");
-  }
-
-  const vencElegiveis = filtrarVencimentosCalculoSemanal(vencimentos, dataPagamentoBr, true);
-  if (vencElegiveis.length === 0) {
-    throw new HttpError(400, "Nenhum vencimento elegível para cálculo");
-  }
-
-  const pacote = montarPacoteCobrancaSemanalAtraso({
-    valorSemanal,
-    valorDiaria,
-    vencimentosBr: vencElegiveis,
-    dataPagamentoBr,
-    emAberto: true,
-    clienteNome: cliente.nome,
-    placa: placa ?? undefined,
-    clienteId: cliente.id,
-  });
-
-  if (!pacote) {
-    throw new HttpError(400, "Não foi possível montar tabela de juros/multa");
-  }
-
-  const data = {
-    ...pacote.payload,
-    cliente: { id: cliente.id, nome: cliente.nome, cpf: cliente.cpf ?? null },
-    jurosMultaDiario: jurosMultaDiario(valorSemanal, valorDiaria),
-    markdown: pacote.markdown,
-    totalGeral: pacote.totalGeral,
-    resumo: pacote.resumo,
-  };
-
-  const arquivos: string[] = [];
-  if (input.salvar !== false) {
-    const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
-    fs.mkdirSync(outDir, { recursive: true });
-    const slug = (cliente.nome ?? "cliente")
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .replace(/[^\w]+/g, "-")
-      .toLowerCase()
-      .slice(0, 40);
-    const dataArq = dataPagamentoBr.replace(/\//g, "-");
-    const mdPath = path.join(outDir, `semanal-atraso-${slug}-${dataArq}.md`);
-    const jsonPath = path.join(outDir, `dados-semanal-atraso-${slug}-${dataArq}.json`);
-    fs.writeFileSync(mdPath, pacote.markdown, "utf8");
-    fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2), "utf8");
-    arquivos.push(mdPath, jsonPath);
-  }
-
-  return { data, arquivos };
 }
