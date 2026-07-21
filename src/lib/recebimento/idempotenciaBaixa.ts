@@ -60,17 +60,23 @@ function resumoRegistro(d: ClienteDespesaRegistro): IdempotenciaBaixa["registroE
   };
 }
 
+function listarDespesasIdempotencia(
+  despesas?: ClienteDespesaRegistro[],
+): ClienteDespesaRegistro[] {
+  return despesas ?? loadClienteDespesasDb().clienteDespesas;
+}
+
 /** PIX / pagamento já lançado como quitado para este motorista. */
 export function buscarPagamentoJaRegistrado(
   clienteId: string,
   valor: number,
   dataBr: string,
   horaBr?: string | null,
+  despesas?: ClienteDespesaRegistro[],
 ): ClienteDespesaRegistro | null {
   const pagaEmIso = horaBr != null ? pagaEmIsoFromBr(dataBr, horaBr) : null;
-  const db = loadClienteDespesasDb();
 
-  for (const d of db.clienteDespesas) {
+  for (const d of listarDespesasIdempotencia(despesas)) {
     if (d.ativo === false || d.condutorId !== clienteId || d.paga !== true) continue;
     if (!valoresProximos(d.valorMulta, valor)) continue;
     if (mesmoDiaPagamento(dataBr, d.pagaEm) || d.dataAutuacao === dataBr) return d;
@@ -79,10 +85,12 @@ export function buscarPagamentoJaRegistrado(
   return null;
 }
 
-function buscarPorOrigemExterna(origemExterna: string): ClienteDespesaRegistro | null {
-  const db = loadClienteDespesasDb();
+function buscarPorOrigemExterna(
+  origemExterna: string,
+  despesas?: ClienteDespesaRegistro[],
+): ClienteDespesaRegistro | null {
   const id = origemExterna.replace(/^pagbank:/, "");
-  for (const d of db.clienteDespesas) {
+  for (const d of listarDespesasIdempotencia(despesas)) {
     if (d.ativo === false) continue;
     const desc = `${d.descricao ?? ""} ${d.autoInfracao ?? ""}`;
     if (desc.includes(id) || d.autoInfracao === origemExterna) return d;
@@ -90,17 +98,20 @@ function buscarPorOrigemExterna(origemExterna: string): ClienteDespesaRegistro |
   return null;
 }
 
-export function verificarIdempotenciaBaixa(input: {
-  clienteId: string;
-  valor: number;
-  dataBr: string;
-  horaBr?: string | null;
-  origemExterna?: string | null;
-  autoInfracaoAlvo?: string | null;
-  descricaoQuitada?: string | null;
-}): IdempotenciaBaixa {
+export function verificarIdempotenciaBaixa(
+  input: {
+    clienteId: string;
+    valor: number;
+    dataBr: string;
+    horaBr?: string | null;
+    origemExterna?: string | null;
+    autoInfracaoAlvo?: string | null;
+    descricaoQuitada?: string | null;
+  },
+  despesas?: ClienteDespesaRegistro[],
+): IdempotenciaBaixa {
   if (input.origemExterna) {
-    const porOrigem = buscarPorOrigemExterna(input.origemExterna);
+    const porOrigem = buscarPorOrigemExterna(input.origemExterna, despesas);
     if (porOrigem?.paga === true) {
       return {
         status: "origem_externa_ja_aplicada",
@@ -115,6 +126,7 @@ export function verificarIdempotenciaBaixa(input: {
     input.valor,
     input.dataBr,
     input.horaBr,
+    despesas,
   );
   if (jaPago) {
     return {
@@ -125,9 +137,11 @@ export function verificarIdempotenciaBaixa(input: {
   }
 
   if (input.autoInfracaoAlvo) {
-    const db = loadClienteDespesasDb();
-    const alvo = db.clienteDespesas.find(
-      (d) => d.autoInfracao === input.autoInfracaoAlvo && d.ativo !== false,
+    const alvoKey = input.autoInfracaoAlvo.trim().toLowerCase();
+    const alvo = listarDespesasIdempotencia(despesas).find(
+      (d) =>
+        d.ativo !== false &&
+        (d.autoInfracao.trim().toLowerCase() === alvoKey || d.id === input.autoInfracaoAlvo?.trim()),
     );
     if (alvo?.paga === true) {
       const descQuitada = input.descricaoQuitada

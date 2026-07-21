@@ -20,8 +20,8 @@ import {
   stripAtrasadoSemanal,
 } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { findVeiculoInDb, loadVeiculosDb } from "./veiculosDb.js";
-import { loadContratosDb, contratoMaisRecentePar } from "./contratosDb.js";
+import { findVeiculoInDb, loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { loadContratosDb, contratoMaisRecentePar, type ContratoRegistro } from "./contratosDb.js";
 import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
@@ -554,8 +554,11 @@ async function pushAposPersistir(
   return pushClienteDespesaRegistrosNoRastreame(regs, opts);
 }
 
-function resolvePlacaVeiculoCadastro(veiculoIdRaw: string): string {
-  const veiculo = findVeiculoInDb(loadVeiculosDb(), veiculoIdRaw);
+function resolvePlacaVeiculoCadastro(
+  veiculoIdRaw: string,
+  veiculos?: VeiculoRegistro[],
+): string {
+  const veiculo = findVeiculoInDb({ veiculos: veiculos ?? loadVeiculosDb().veiculos }, veiculoIdRaw);
   if (veiculo?.placa?.trim()) return formatPlacaHyphen(veiculo.placa);
   return formatPlacaHyphen(veiculoIdRaw);
 }
@@ -1076,14 +1079,19 @@ export function categoriaAtribuiPorDataEvento(categoria: string | undefined | nu
   return isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
-function contratoAtivoPorPlacaDb(placa: string) {
+function contratoAtivoPorPlacaDb(placa: string, contratos?: ContratoRegistro[]) {
   const p = compactPlaca(placa);
-  const list = loadContratosDb().contratos.filter(
+  const list = (contratos ?? loadContratosDb().contratos).filter(
     (c) => c.status === "ativo" && compactPlaca(c.placa ?? c.veiculoId) === p,
   );
   if (list.length === 0) return undefined;
   return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
 }
+
+export type DespesaAtribuicaoContext = {
+  contratos?: ContratoRegistro[];
+  veiculos?: VeiculoRegistro[];
+};
 
 /** Condutor/locatário na data da despesa (placa + dataAutuacao). */
 export function inferirCondutorIdDespesaPorData(
@@ -1108,6 +1116,7 @@ export function despesaAtribuidaACliente(
   d: ClienteDespesaRegistro,
   clienteId: string,
   prazoDias = 90,
+  ctx?: DespesaAtribuicaoContext,
 ): boolean {
   if (d.condutorId === clienteId) return true;
   if (d.condutorId && d.condutorId !== clienteId) return false;
@@ -1123,16 +1132,16 @@ export function despesaAtribuidaACliente(
   if (cat === "Locação semanal" || cat === "Renegociação" || cat === "Caução") {
     if (d.condutorId === clienteId) return true;
     if (d.condutorId && d.condutorId !== clienteId) return false;
-    const placa = resolvePlacaVeiculoCadastro(d.veiculoId);
+    const placa = resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos);
     const contrato = contratoMaisRecentePar(
       { placa, clienteId },
-      loadContratosDb().contratos,
+      ctx?.contratos ?? loadContratosDb().contratos,
     );
     return contrato?.clienteId === clienteId;
   }
 
-  const placa = resolvePlacaVeiculoCadastro(d.veiculoId);
-  const vigente = contratoAtivoPorPlacaDb(placa);
+  const placa = resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos);
+  const vigente = contratoAtivoPorPlacaDb(placa, ctx?.contratos);
   return vigente?.clienteId === clienteId;
 }
 

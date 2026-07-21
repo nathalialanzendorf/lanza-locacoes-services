@@ -25,6 +25,7 @@ export {
   saveInfracoesToSql,
   loadClienteDespesasFromSql,
   queryClienteDespesasFromSql,
+  queryClienteDespesaByReferenciaFromSql,
   saveClienteDespesasToSql,
   type ClienteDespesasSqlFilter,
   loadParceiroDespesasFromSql,

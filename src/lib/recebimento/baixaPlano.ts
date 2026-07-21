@@ -9,7 +9,7 @@ import {
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
 import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
-import { loadCobrancasDbContextAsync, type CobrancasDbContext } from "../cobrancasDbContext.js";
+import { loadCobrancasDbContextAsync, loadBaixaPlanoDbContextAsync, type CobrancasDbContext } from "../cobrancasDbContext.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
 import { loadContratosDb, contratoMaisRecentePar } from "../contratosDb.js";
 import {
@@ -102,6 +102,13 @@ function contratosList() {
   return _baixaPlanoCtx?.contratos ?? loadContratosDb().contratos;
 }
 
+function atribuicaoDespesaCtx() {
+  return {
+    contratos: contratosList(),
+    veiculos: veiculosList(),
+  };
+}
+
 function clienteDespesasList(): ClienteDespesaRegistro[] {
   return _baixaPlanoCtx?.clienteDespesas ?? loadClienteDespesasDb().clienteDespesas;
 }
@@ -138,7 +145,12 @@ function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
 
 function correspondeAlvoExplicito(d: ClienteDespesaRegistro, alvoId: string): boolean {
   const key = alvoId.trim();
-  return d.autoInfracao === key || d.id === key;
+  if (!key) return false;
+  const keyLower = key.toLowerCase();
+  return (
+    d.id === key ||
+    d.autoInfracao.trim().toLowerCase() === keyLower
+  );
 }
 
 function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null {
@@ -356,10 +368,11 @@ export function dataHoraToPagaEmIso(dataBr: string, horaBr: string | null): stri
 
 function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: string[] }): ClienteDespesaRegistro[] {
   const excluir = new Set(opts?.excluirCategorias ?? []);
+  const atribuicaoCtx = atribuicaoDespesaCtx();
   return clienteDespesasList()
     .filter(
       (d) =>
-        despesaAtribuidaACliente(d, clienteId) &&
+        despesaAtribuidaACliente(d, clienteId, 90, atribuicaoCtx) &&
         d.ativo !== false &&
         d.paga !== true &&
         (d.situacao === "Em aberto" || !d.paga) &&
@@ -716,15 +729,18 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     }
   }
 
-  const idempotencia = verificarIdempotenciaBaixa({
-    clienteId: cliente.id!,
-    valor,
-    dataBr,
-    horaBr,
-    origemExterna: input.origemExterna,
-    autoInfracaoAlvo: alvo.autoInfracao,
-    descricaoQuitada: stripAtrasadoSemanal(descricaoAntes),
-  });
+  const idempotencia = verificarIdempotenciaBaixa(
+    {
+      clienteId: cliente.id!,
+      valor,
+      dataBr,
+      horaBr,
+      origemExterna: input.origemExterna,
+      autoInfracaoAlvo: alvo.autoInfracao,
+      descricaoQuitada: stripAtrasadoSemanal(descricaoAntes),
+    },
+    clienteDespesasList(),
+  );
   if (idempotencia.status !== "ok") {
     avisos.push(`Idempotência (${idempotencia.status}): ${idempotencia.motivo}`);
   }
@@ -792,7 +808,10 @@ export async function withBaixaPlanoDbContext<T>(fn: () => T | Promise<T>): Prom
 export async function montarPlanoBaixaAsync(
   input: MontarPlanoBaixaInput,
 ): Promise<PlanoBaixaRecebimento> {
-  _baixaPlanoCtx = await loadCobrancasDbContextAsync();
+  _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync({
+    clienteQuery: input.clienteQuery,
+    autoInfracaoAlvo: input.autoInfracaoAlvo,
+  });
   try {
     return montarPlanoBaixa(input);
   } finally {

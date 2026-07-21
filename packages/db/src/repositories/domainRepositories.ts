@@ -573,6 +573,26 @@ export async function queryClienteDespesasFromSql(
   return r.rows.map((row) => mapClienteDespesaRow(row as Record<string, unknown>));
 }
 
+/** Busca despesa por auto_infracao ou id (Postgres). */
+export async function queryClienteDespesaByReferenciaFromSql(
+  referencia: string,
+): Promise<Record<string, unknown> | null> {
+  const key = referencia.trim();
+  if (!key) return null;
+  const r = await pgQuery(
+    `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
+     FROM lanza.cliente_despesas cd
+     LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
+     WHERE lower(trim(cd.auto_infracao)) = lower(trim($1))
+        OR cd.id::text = $1
+     LIMIT 1`,
+    [key],
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return mapClienteDespesaRow(row as Record<string, unknown>);
+}
+
 export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbShape> {
   return {
     descricao: "Débitos cobráveis do locatário.",
