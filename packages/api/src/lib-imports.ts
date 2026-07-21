@@ -433,8 +433,15 @@ export {
 } from "../../../src/cli/montarRelatorio.js";
 
 export {
+  dataPagamentoParaIso,
   executarRenegociacao,
+  extrairCodigoNegociado,
+  infoMarcadaNegociada,
+  infoParcelaRenegociacao,
+  listarCodigosNegociacaoMotorista,
   listarDebitosAbertos,
+  proximoCodigoNegociado,
+  rastreavelKeyFromGasto,
   somarDebitos,
   validarParcelas,
   type RenegociacaoInput,

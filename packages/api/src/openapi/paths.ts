@@ -811,7 +811,7 @@ function pathsRenegociacao(): OpenApiPaths {
       }),
     }),
     "/api/renegociacao/executar": pathItem({
-      post: op("post", "Renegociação", "Executar renegociação no Rastreame", {
+      post: op("post", "Renegociação", "Salvar renegociação no cadastro (PostgreSQL)", {
         operationId: "renegociacaoExecutar",
         requestBody: { type: "object" },
       }),

@@ -22,15 +22,12 @@ export function registerRenegociacaoRoutes(routes: RouteDef[]): void {
       const placa = ctx.query.get("placa") ?? undefined;
       const apenasVencidosRaw = ctx.query.get("apenasVencidos");
       const apenasVencidos =
-        apenasVencidosRaw == null || apenasVencidosRaw === ""
-          ? true
-          : ["true", "1", "sim"].includes(apenasVencidosRaw.trim().toLowerCase());
+        apenasVencidosRaw != null &&
+        apenasVencidosRaw !== "" &&
+        ["true", "1", "sim"].includes(apenasVencidosRaw.trim().toLowerCase());
 
-      if (!((motoristaKey && rastreavelKey) || (clienteId && placa))) {
-        return badRequest(
-          ctx,
-          'Informe "motoristaKey" + "rastreavelKey" ou "clienteId" + "placa"',
-        );
+      if (!clienteId) {
+        return badRequest(ctx, 'Informe "clienteId" (placa opcional)');
       }
 
       const data = await renegService.resumoRenegociacao({
@@ -63,7 +60,7 @@ export function registerRenegociacaoRoutes(routes: RouteDef[]): void {
     paramNames: executar.paramNames,
     handler: routeAsync(async (ctx) => {
       const body = await readJsonBody<RenegociacaoInput>(ctx.req);
-      const data = await renegService.executarRenegociacaoApi(body, true);
+      const data = await renegService.salvarRenegociacaoApi(body);
       json(ctx.res, 200, data);
     }),
   });

@@ -20,12 +20,16 @@ export type ParcelaRenegociacao = {
 };
 
 export type RenegociacaoInput = {
-  /** Código X em [NEGOCIADO X] */
-  negociacaoCodigo: string;
+  /** Código X em [NEGOCIADO X] — omitir para gerar automaticamente (sequencial por cliente). */
+  negociacaoCodigo?: string;
+  /** Cliente Lanza — usado para calcular o próximo código quando negociacaoCodigo estiver vazio. */
+  clienteId?: string;
+  /** Placa opcional — filtra débitos; omitir para listar todos do cliente. */
+  placa?: string;
   /** IDs dos gastos existentes a marcar como negociados */
   gastosIds: (number | string)[];
-  motoristaKey: string;
-  rastreavelKey: string;
+  motoristaKey?: string;
+  rastreavelKey?: string;
   parcelas: ParcelaRenegociacao[];
 };
 
@@ -54,6 +58,36 @@ export function tagNegociado(codigo: string): string {
   return `[NEGOCIADO ${String(codigo).trim()}]`;
 }
 
+/** Extrai o X de `[NEGOCIADO X]` (case-insensitive). */
+export function extrairCodigoNegociado(texto: string): number | null {
+  const m = String(texto ?? "").match(/\[NEGOCIADO\s+(\d+)\]/i);
+  if (!m) return null;
+  const n = Number.parseInt(m[1]!, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Próximo código sequencial (1 se nenhum existir). */
+export function proximoCodigoNegociado(codigosExistentes: Iterable<number>): string {
+  let max = 0;
+  for (const c of codigosExistentes) {
+    if (Number.isFinite(c) && c > max) max = c;
+  }
+  return String(max + 1);
+}
+
+export async function listarCodigosNegociacaoMotorista(motoristaKey: string): Promise<number[]> {
+  const mk = motoristaKey.trim();
+  if (!mk) return [];
+  const gastos = await fetchAllGastos();
+  const out: number[] = [];
+  for (const g of gastos) {
+    if (refKey(g.motorista) !== mk) continue;
+    const c = extrairCodigoNegociado(String(g.info ?? ""));
+    if (c != null) out.push(c);
+  }
+  return out;
+}
+
 /** Remove a tag ATRASADO (em qualquer posição) e normaliza espaços. */
 export function removerTagAtrasado(info: string): string {
   return String(info ?? "")
@@ -77,13 +111,15 @@ export function infoParcelaRenegociacao(numero: number, totalParcelas: number): 
 export function filtrarDebitosAbertos(
   gastos: GastoRecord[],
   motoristaKey: string,
-  rastreavelKey: string,
+  rastreavelKey?: string | null,
 ): ResumoDebito[] {
   const out: ResumoDebito[] = [];
+  const rkFiltro = rastreavelKey?.trim() || null;
   for (const g of gastos) {
     const mk = refKey(g.motorista);
     const rk = refKey(g.rastreavel);
-    if (mk !== motoristaKey || rk !== rastreavelKey) continue;
+    if (mk !== motoristaKey) continue;
+    if (rkFiltro && rk !== rkFiltro) continue;
     const info = String(g.info ?? "").trim();
     if (info.startsWith("[NEGOCIADO")) continue;
     const total = Number(g.total ?? 0);
@@ -102,10 +138,14 @@ export function filtrarDebitosAbertos(
 
 export async function listarDebitosAbertos(
   motoristaKey: string,
-  rastreavelKey: string,
+  rastreavelKey?: string | null,
 ): Promise<ResumoDebito[]> {
   const gastos = await fetchAllGastos();
   return filtrarDebitosAbertos(gastos, motoristaKey, rastreavelKey);
+}
+
+export function rastreavelKeyFromGasto(gasto: GastoRecord): string {
+  return refKey(gasto.rastreavel);
 }
 
 export function somarDebitos(debitos: ResumoDebito[]): number {
@@ -155,6 +195,10 @@ export async function executarRenegociacao(
   opts?: { execute?: boolean },
 ): Promise<RenegociacaoResult> {
   const execute = opts?.execute === true;
+  const codigo = input.negociacaoCodigo?.trim();
+  if (!codigo) {
+    throw new Error("negociacaoCodigo é obrigatório — informe ou gere antes de executar.");
+  }
   const marcados: RenegociacaoResult["marcados"] = [];
   const parcelasCriadas: RenegociacaoResult["parcelasCriadas"] = [];
   const avisos: string[] = [];
@@ -164,7 +208,7 @@ export async function executarRenegociacao(
   for (const id of input.gastosIds) {
     let gasto = await fetchGastoById(id);
     const infoAntes = String(gasto.info ?? "");
-    const body = buildPutNegociado(gasto, input.negociacaoCodigo);
+    const body = buildPutNegociado(gasto, codigo);
 
     const dup = gastosAtual.find(
       (g) =>
