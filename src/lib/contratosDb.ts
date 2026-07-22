@@ -6,6 +6,7 @@ import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./cli
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
+import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 
@@ -106,7 +107,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   versao: "Número sequencial por par cliente + veículo (1, 2, 3 … — renovações)",
   contratoAnteriorId: "uuid do contrato anterior (null se versao = 1)",
   clienteId: "uuid -> clientes.json (null se não vinculado)",
-  veiculoId: "Placa do veículo (ABC-1D23) — chave em veiculos.json",
+  veiculoId: "UUID do veículo (FK lanza.veiculos.id)",
   cliente: "Snapshot do locatário (clientes.json ou dados do contrato)",
   veiculo: "Snapshot do veículo (veiculos.json ou placa do contrato)",
   pastaContrato: "Pasta DD.MM.AAAA - Nome em contratosDir",
@@ -314,14 +315,28 @@ function loadClienteId(cpf: string | null): string | null {
   return loadClienteIdFromList(loadClientesDb().clientes, cpf);
 }
 
+function contratoMesmoVeiculo(
+  c: ContratoRegistro,
+  veiculoId: string | null,
+  placa: string,
+): boolean {
+  if (veiculoId && isEntityUuid(veiculoId) && isEntityUuid(c.veiculoId)) {
+    return c.veiculoId === veiculoId;
+  }
+  if (veiculoId && c.veiculoId === veiculoId) return true;
+  if (placa) return placasIguais(c.placa, placa);
+  return false;
+}
+
 function mesmoParClienteVeiculo(
   c: ContratoRegistro,
   clienteId: string | null,
   cpf: string | null,
   clienteNome: string,
+  veiculoId: string | null,
   placa: string,
 ): boolean {
-  if (!placasIguais(c.placa, placa)) return false;
+  if (!contratoMesmoVeiculo(c, veiculoId, placa)) return false;
   if (clienteId && c.clienteId && c.clienteId === clienteId) return true;
   if (cpf && c.cpf && normCpfDigits(c.cpf) === normCpfDigits(cpf)) return true;
   return normNome(c.clienteNome) === normNome(clienteNome);
@@ -350,10 +365,11 @@ function resolverVersao(
   }
 
   const clienteId = cliente.id ?? loadClienteId(cliente.cpf);
+  const veiculoId = veiculo.id ?? resolveVeiculoIdListagem({ placa: veiculo.placa }) ?? null;
   const irmaos = db.contratos.filter(
     (c) =>
       normPath(c.pastaContrato) !== pastaKey &&
-      mesmoParClienteVeiculo(c, clienteId, cliente.cpf, cliente.nome, veiculo.placa),
+      mesmoParClienteVeiculo(c, clienteId, cliente.cpf, cliente.nome, veiculoId, veiculo.placa),
   );
 
   if (irmaos.length === 0) {
@@ -460,7 +476,7 @@ function buildRegistro(
     versao,
     contratoAnteriorId,
     clienteId: cliente.id ?? loadClienteIdFromList(clientes, ext.cpf),
-    veiculoId: veiculo.placa,
+    veiculoId: veiculo.id ?? resolveVeiculoIdListagem({ placa: veiculo.placa }, veiculos) ?? veiculo.placa,
     cliente,
     veiculo,
     pastaContrato: ext.pastaContrato,
@@ -679,14 +695,16 @@ export function registrarEncerramentoContrato(
 /** Contrato de maior versão para o par locatário + veículo (renovações em pastas distintas). */
 export function contratoMaisRecentePar(
   filtros: {
-    placa: string;
+    placa?: string;
+    veiculoId?: string | null;
     cpf?: string | null;
     clienteId?: string | null;
     clienteNome?: string;
   },
   contratos?: ContratoRegistro[],
+  veiculos?: VeiculoRegistro[],
 ): ContratoRegistro | undefined {
-  const list = listarContratosClienteVeiculo(filtros, contratos);
+  const list = listarContratosClienteVeiculo(filtros, contratos, veiculos);
   return list.length > 0 ? list[list.length - 1] : undefined;
 }
 
@@ -789,23 +807,30 @@ export async function validarModoContratoAsync(
 /** Contratos do mesmo locatário + veículo (qualquer versão), ordenados por versão. */
 export function listarContratosClienteVeiculo(
   filtros: {
-    placa: string;
+    placa?: string;
+    veiculoId?: string | null;
     cpf?: string | null;
     clienteId?: string | null;
     clienteNome?: string;
   },
   contratos?: ContratoRegistro[],
+  veiculos?: VeiculoRegistro[],
 ): ContratoRegistro[] {
-  const lista = contratos ?? loadContratosDb().contratos;
-  const placaFmt = formatPlacaHyphen(filtros.placa);
+  const catalogo = veiculos ?? loadVeiculosDb().veiculos;
+  const veiculoId =
+    filtros.veiculoId?.trim() ||
+    resolveVeiculoIdListagem({ placa: filtros.placa }, catalogo) ||
+    null;
+  const placaFmt = filtros.placa ? formatPlacaHyphen(filtros.placa) : "";
   const nome = filtros.clienteNome ?? "";
-  return lista
+  return (contratos ?? loadContratosDb().contratos)
     .filter((c) =>
       mesmoParClienteVeiculo(
         c,
         filtros.clienteId ?? null,
         filtros.cpf ?? null,
         nome,
+        veiculoId,
         placaFmt,
       ),
     )

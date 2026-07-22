@@ -65,7 +65,7 @@ export function resolverModoCanvasCobranca(
   tipos: TipoCobrancaAction[],
   filtro: FiltroAlvosCobranca,
 ): ModoCanvasCobranca {
-  if (filtro.placa && !filtro.clienteId) return "simples-placa";
+  if (filtro.veiculoId && !filtro.clienteId) return "simples-placa";
   if (filtro.clienteId) return "completo";
   const todosTipos = tipos.length === TIPOS_COBRANCA_ACTION.length;
   if (!todosTipos && tipos.length === 1) return "simples-tipo";
@@ -420,7 +420,7 @@ function filtrarPagamentoSemanal(
   contratos: ContratoRegistro[],
   filtro?: FiltroAlvosCobranca,
 ): AlvoCobranca[] {
-  const alvoPlaca = filtro?.placa ? compactPlaca(filtro.placa) : null;
+  const alvoVeiculoId = filtro?.veiculoId?.trim() || null;
   const porChave = new Map<string, AlvoCobranca>();
   const dataReferencia = hojeBr();
   const situacao = filtro?.situacao ?? "em_aberto";
@@ -445,7 +445,12 @@ function filtrarPagamentoSemanal(
     }
     if (!placaElegivel(d.veiculoId, veiculos)) continue;
     if (!clienteElegivel(d.condutorId, clientes)) continue;
-    if (alvoPlaca && compactPlaca(d.veiculoId) !== alvoPlaca) continue;
+    if (
+      alvoVeiculoId &&
+      !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: alvoVeiculoId }, [...veiculos.values()])
+    ) {
+      continue;
+    }
 
     const placa = formatPlacaHyphen(d.veiculoId);
     const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes, contratos);
@@ -509,11 +514,11 @@ function filtrarPagamentoSemanal(
 export type SituacaoCobrancaFiltro = "em_aberto" | "pago" | "todos";
 
 export type FiltroAlvosCobranca = {
-  /** Limita a um veículo (UUID). */
+  /** Limita a um veículo (UUID). Placa na query é resolvida para este id na camada de listagem. */
   veiculoId?: string;
-  /** @deprecated prefer veiculoId */
+  /** @deprecated resolvido para veiculoId — não usar em joins ou escopos SQL */
   placa?: string;
-  /** Limita a um cliente (nome, CPF ou id — resolvido em clientes.json). */
+  /** Limita a um cliente (UUID). CPF/nome na query é resolvido para este id na camada de listagem. */
   clienteId?: string;
   /** Período inclusivo (DD/MM/AAAA) sobre a data da despesa (`dataAutuacao` / `pagaEm`). */
   dataInicial?: string;
@@ -678,10 +683,14 @@ export function listarEscoposContratosEncerradosComPendencia(
 function filtrarAlvosPorEscopo(
   alvos: AlvoCobranca[],
   filtro?: FiltroAlvosCobranca,
+  veiculos: Array<{ id: string; placa?: string | null }> = [],
 ): AlvoCobranca[] {
-  if (!filtro?.placa && !filtro?.clienteId) return alvos;
+  if (!filtro?.veiculoId && !filtro?.clienteId) return alvos;
   return alvos.filter((a) => {
-    if (filtro.placa && compactPlaca(a.placa) !== compactPlaca(filtro.placa)) {
+    if (
+      filtro.veiculoId &&
+      !alvoCombinaVeiculoFiltro(a.placa, { veiculoId: filtro.veiculoId }, veiculos)
+    ) {
       return false;
     }
     if (filtro.clienteId && a.clienteId !== filtro.clienteId) {
@@ -721,7 +730,8 @@ export function listarAlvosCobranca(
   const veiculos = veiculosAtivos(ctx);
   const clientes = clientesAtivos(ctx);
   const contratos = contratosLista(ctx);
-  const placaFiltro = filtro?.placa;
+  const veiculoIdFiltro = filtro?.veiculoId?.trim();
+  const veiculosLista = [...veiculos.values()];
   const situacao = filtro?.situacao ?? "em_aberto";
   const incluirEncerrados = filtro?.incluirEncerradosComPendencia !== false;
 
@@ -746,7 +756,10 @@ export function listarAlvosCobranca(
         if (!despesaCobravelLocatario(d)) return false;
         if (!despesaNaSituacao(d, situacao)) return false;
         if (!despesaNoPeriodo(d, filtro ?? {})) return false;
-        if (placaFiltro && compactPlaca(d.veiculoId) !== compactPlaca(placaFiltro)) {
+        if (
+          veiculoIdFiltro &&
+          !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: veiculoIdFiltro }, veiculosLista)
+        ) {
           return false;
         }
         return true;
@@ -782,7 +795,10 @@ export function listarAlvosCobranca(
           return false;
         }
         if (tipo === "manutencao" && d.valorMulta <= 0) return false;
-        if (placaFiltro && compactPlaca(d.veiculoId) !== compactPlaca(placaFiltro)) {
+        if (
+          veiculoIdFiltro &&
+          !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: veiculoIdFiltro }, veiculosLista)
+        ) {
           return false;
         }
         return true;
@@ -791,5 +807,5 @@ export function listarAlvosCobranca(
     }
   }
 
-  return filtrarAlvosPorEscopo(alvos, filtro);
+  return filtrarAlvosPorEscopo(alvos, filtro, veiculosLista);
 }

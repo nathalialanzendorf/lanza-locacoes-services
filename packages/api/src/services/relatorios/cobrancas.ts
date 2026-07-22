@@ -18,6 +18,7 @@ import {
   getCobrancasRuntimeCtx,
   loadClientesDbAsync,
   loadCobrancasScopedDbContextAsync,
+  loadVeiculosDbAsync,
   setCobrancasRuntimeCtx,
   salvarCobranca,
   salvarCobrancasDados,
@@ -64,17 +65,16 @@ export async function listarAlvos(
     throw new HttpError(400, `Tipo de cobrança inválido: ${tipo}`);
   }
   const clientesDb = await loadClientesDbAsync();
-  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
+  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes, (await loadVeiculosDbAsync()).veiculos);
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
       clienteId: filtroPre.clienteId,
       veiculoId: filtroPre.veiculoId,
-      placa: filtroPre.placa,
     }),
   );
   try {
     const ctx = getCobrancasRuntimeCtx()!;
-    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes);
+    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes, ctx.veiculos);
     const items = listarResumoAlvos(t, filtro, ctx);
     return { tipo: t, total: items.length, items };
   } finally {
@@ -126,18 +126,21 @@ function itemsDoEscopo(
 export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
   const filtroInput = input.filtro ?? {};
   const clientesDb = await loadClientesDbAsync();
-  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
+  const filtroPre = resolverFiltroRelatorioComClientes(
+    filtroInput,
+    clientesDb.clientes,
+    (await loadVeiculosDbAsync()).veiculos,
+  );
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
       clienteId: filtroPre.clienteId,
       veiculoId: filtroPre.veiculoId,
-      placa: filtroPre.placa,
     }),
   );
   try {
     const ctx = getCobrancasRuntimeCtx()!;
     const tipos = resolverTipos(input.tipos);
-    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes);
+    const filtro = resolverFiltroRelatorioComClientes(filtroInput, ctx.clientes, ctx.veiculos);
     const salvar = input.salvar !== false;
     const outDir = input.outDir ?? COBRANCAS_OUT_DIR;
     const dataRef = input.dataPagamentoBr ?? hojeBr();
@@ -174,8 +177,7 @@ export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
     }
   }
 
-  const escopoUnico =
-    filtro.clienteId != null || filtro.placa != null || filtro.veiculoId != null;
+  const escopoUnico = filtro.clienteId != null || filtro.veiculoId != null;
   const itemsEscopo = escopoUnico ? itemsDoEscopo(lotes, filtro) : [];
   const sidecar = escopoUnico
     ? montarCobrancaSidecar(filtro, itemsEscopo, dataRef, tipos)

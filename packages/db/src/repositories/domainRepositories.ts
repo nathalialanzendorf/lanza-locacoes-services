@@ -57,7 +57,7 @@ function mapContratoRow(
     versao: row.versao,
     contratoAnteriorId: row.contrato_anterior_id,
     clienteId: row.cliente_id,
-    veiculoId: placa ?? row.veiculo_id,
+    veiculoId: row.veiculo_id != null ? String(row.veiculo_id) : null,
     pastaContrato: row.pasta_contrato,
     clienteNome: cs?.nome,
     placa,
@@ -101,7 +101,7 @@ function mapContratoRow(
       : undefined,
     veiculo: vs
       ? {
-          id: vs.veiculo_ref_id,
+          id: row.veiculo_id ?? vs.veiculo_ref_id,
           placa: vs.placa,
           marcaModelo: vs.marca_modelo,
           fipeModelo: vs.fipe_modelo,
@@ -139,8 +139,8 @@ async function loadContratoSnapshotsForIds(ids: string[]): Promise<{
 export type ContratosSqlFilter = {
   status?: string;
   clienteId?: string;
+  /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
-  placa?: string;
 };
 
 /** Listagem filtrada no Postgres (carrega snapshots só dos contratos retornados). */
@@ -156,24 +156,14 @@ export async function queryContratosFromSql(
     where.push(`c.status = $${p++}`);
   }
 
-  if (filter.clienteId?.trim()) {
+  if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
     params.push(filter.clienteId.trim());
     where.push(`c.cliente_id::text = $${p++}`);
   }
 
-  if (filter.placa?.trim()) {
-    params.push(compactPlaca(filter.placa));
-    where.push(`v.placa_norm = $${p++}`);
-  } else if (filter.veiculoId?.trim()) {
-    const ref = filter.veiculoId.trim();
-    if (isUuid(ref)) {
-      params.push(ref);
-      where.push(`(c.veiculo_id::text = $${p} OR v.id::text = $${p})`);
-      p += 1;
-    } else {
-      params.push(compactPlaca(ref));
-      where.push(`v.placa_norm = $${p++}`);
-    }
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    params.push(filter.veiculoId.trim());
+    where.push(`c.veiculo_id::text = $${p++}`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -346,8 +336,8 @@ function mapLocacaoRow(row: Record<string, unknown>): Record<string, unknown> {
 }
 
 export type LocacoesSqlFilter = {
+  /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
-  placa?: string;
   clienteId?: string;
   situacao?: string;
   abertas?: boolean;
@@ -361,7 +351,7 @@ export async function queryLocacoesFromSql(
   const where: string[] = [];
   let p = 1;
 
-  if (filter.clienteId?.trim()) {
+  if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
     params.push(filter.clienteId.trim());
     where.push(`l.cliente_id::text = $${p++}`);
   }
@@ -375,18 +365,9 @@ export async function queryLocacoesFromSql(
     where.push(`(l.fim IS NULL OR trim(l.fim) = '')`);
   }
 
-  if (filter.placa?.trim()) {
-    params.push(compactPlaca(filter.placa));
-    where.push(`upper(replace(coalesce(l.placa, ''), '-', '')) = $${p++}`);
-  } else if (filter.veiculoId?.trim()) {
-    const ref = filter.veiculoId.trim();
-    if (isUuid(ref)) {
-      params.push(ref);
-      where.push(`l.veiculo_id::text = $${p++}`);
-    } else {
-      params.push(compactPlaca(ref));
-      where.push(`upper(replace(coalesce(l.placa, ''), '-', '')) = $${p++}`);
-    }
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    params.push(filter.veiculoId.trim());
+    where.push(`l.veiculo_id::text = $${p++}`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -455,7 +436,7 @@ function mapInfracaoRow(row: Record<string, unknown>): Record<string, unknown> {
     id: String(row.id),
     numeroAuto: row.numero_auto,
     idAutoInfracao: row.id_auto_infracao,
-    veiculoId: row.veiculo_placa_ref ?? row.veiculo_id,
+    veiculoId: row.veiculo_id != null ? String(row.veiculo_id) : null,
     descricao: row.descricao,
     dataAutuacao: row.data_autuacao,
     dataHoraAutuacao: row.data_hora_autuacao,
@@ -492,8 +473,8 @@ function mapInfracaoRow(row: Record<string, unknown>): Record<string, unknown> {
 }
 
 export type InfracoesSqlFilter = {
+  /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
-  placa?: string;
   clienteId?: string;
   parceiroId?: string;
   emAberto?: boolean;
@@ -537,12 +518,12 @@ export async function queryInfracoesFromSql(
     )`);
   }
 
-  if (filter.clienteId?.trim()) {
+  if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
     params.push(filter.clienteId.trim());
     where.push(`i.condutor_id::text = $${p++}`);
   }
 
-  if (filter.parceiroId?.trim()) {
+  if (filter.parceiroId?.trim() && isUuid(filter.parceiroId.trim())) {
     params.push(filter.parceiroId.trim());
     where.push(`EXISTS (
       SELECT 1
@@ -553,19 +534,9 @@ export async function queryInfracoesFromSql(
     p += 1;
   }
 
-  if (filter.placa?.trim()) {
-    params.push(compactPlaca(filter.placa));
-    where.push(`v.placa_norm = $${p++}`);
-  } else if (filter.veiculoId?.trim()) {
-    const ref = filter.veiculoId.trim();
-    if (isUuid(ref)) {
-      params.push(ref);
-      where.push(`(i.veiculo_id::text = $${p} OR v.id::text = $${p})`);
-      p += 1;
-    } else {
-      params.push(compactPlaca(ref));
-      where.push(`v.placa_norm = $${p++}`);
-    }
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    params.push(filter.veiculoId.trim());
+    where.push(`i.veiculo_id::text = $${p++}`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -661,8 +632,8 @@ export type ClienteDespesasDbShape = {
 
 export type ClienteDespesasSqlFilter = {
   clienteId?: string;
+  /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
-  placa?: string;
   emAberto?: boolean;
   ativo?: boolean;
 };
@@ -735,7 +706,7 @@ export async function queryClienteDespesasFromSql(
     where.push("(cd.paga = true)");
   }
 
-  if (filter.clienteId?.trim()) {
+  if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
     const clienteId = filter.clienteId.trim();
     params.push(clienteId);
     where.push(`(
@@ -746,40 +717,16 @@ export async function queryClienteDespesasFromSql(
         FROM lanza.contratos c
         WHERE c.status = 'ativo'
           AND c.cliente_id::text = $${p}
-          AND (
-            (cd.veiculo_id IS NOT NULL AND c.veiculo_id = cd.veiculo_id)
-            OR (
-              v.placa_norm IS NOT NULL
-              AND EXISTS (
-                SELECT 1 FROM lanza.veiculos cv
-                WHERE cv.id = c.veiculo_id AND cv.placa_norm = v.placa_norm
-              )
-            )
-          )
+          AND cd.veiculo_id IS NOT NULL
+          AND c.veiculo_id = cd.veiculo_id
       )
     )`);
     p += 1;
   }
 
-  if (filter.placa?.trim()) {
-    params.push(compactPlaca(filter.placa));
-    where.push(
-      `(upper(replace(coalesce(v.placa, cd.veiculo_placa, ''), '-', '')) = $${p})`,
-    );
-    p += 1;
-  } else if (filter.veiculoId?.trim()) {
-    const ref = filter.veiculoId.trim();
-    if (isUuid(ref)) {
-      params.push(ref);
-      where.push(`(cd.veiculo_id::text = $${p} OR v.id::text = $${p})`);
-      p += 1;
-    } else {
-      params.push(compactPlaca(ref));
-      where.push(
-        `(v.placa_norm = $${p} OR upper(replace(coalesce(cd.veiculo_placa, ''), '-', '')) = $${p})`,
-      );
-      p += 1;
-    }
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    params.push(filter.veiculoId.trim());
+    where.push(`cd.veiculo_id::text = $${p++}`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -950,8 +897,8 @@ function mapParceiroDespesaRow(row: Record<string, unknown>): Record<string, unk
 }
 
 export type ParceiroDespesasSqlFilter = {
+  /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
-  placa?: string;
   parceiroId?: string;
   categoria?: string;
   competencia?: string;
@@ -983,7 +930,7 @@ export async function queryParceiroDespesasFromSql(
     where.push(`pd.competencia = $${p++}`);
   }
 
-  if (filter.parceiroId?.trim()) {
+  if (filter.parceiroId?.trim() && isUuid(filter.parceiroId.trim())) {
     params.push(filter.parceiroId.trim());
     where.push(`EXISTS (
       SELECT 1
@@ -994,20 +941,9 @@ export async function queryParceiroDespesasFromSql(
     p += 1;
   }
 
-  if (filter.placa?.trim()) {
-    params.push(compactPlaca(filter.placa));
-    where.push(`upper(replace(coalesce(pd.placa, v.placa, ''), '-', '')) = $${p++}`);
-  } else if (filter.veiculoId?.trim()) {
-    const ref = filter.veiculoId.trim();
-    if (isUuid(ref)) {
-      params.push(ref);
-      where.push(`(pd.veiculo_id::text = $${p} OR v.id::text = $${p})`);
-      p += 1;
-    } else {
-      params.push(compactPlaca(ref));
-      where.push(`(v.placa_norm = $${p} OR upper(replace(coalesce(pd.placa, ''), '-', '')) = $${p})`);
-      p += 1;
-    }
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    params.push(filter.veiculoId.trim());
+    where.push(`pd.veiculo_id::text = $${p++}`);
   }
 
   if (filter.veiculoAtivo === true) {
@@ -1186,11 +1122,19 @@ export async function saveTriagensToSql(db: TriagemDbShape): Promise<void> {
     const baseLegal = lgpd ? asText(lgpd.baseLegal) : null;
 
     if (t.aprovado === true || t.aprovado === false) {
-      await pgQuery(
-        `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
-         WHERE cpf_norm = $1 OR cpf = $1`,
-        [cpf, t.aprovado],
-      );
+      if (clienteId) {
+        await pgQuery(
+          `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
+           WHERE id = $1::uuid`,
+          [clienteId, t.aprovado],
+        );
+      } else if (cpf) {
+        await pgQuery(
+          `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
+           WHERE cpf_norm = $1 OR cpf = $1`,
+          [cpf, t.aprovado],
+        );
+      }
     }
 
     const fontes = t.fontes as Record<string, unknown>[] | undefined;

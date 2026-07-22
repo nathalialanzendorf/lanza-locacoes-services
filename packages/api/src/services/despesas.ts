@@ -33,6 +33,7 @@ import {
   dataStringNoPeriodo,
   isCategoriaPedagio,
   isCategoriaEstacionamento,
+  resolveVeiculoIdListagem,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -65,26 +66,6 @@ function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
   return d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
 }
 
-function resolvePlacaFiltro(
-  opts: ListarDespesasOpts,
-  veiculos: VeiculoRegistro[],
-): string | null {
-  if (opts.placa?.trim()) {
-    const v =
-      veiculos.find((x) => compactPlaca(x.placa) === compactPlaca(opts.placa!)) ??
-      findVeiculoByPlaca(opts.placa);
-    return compactPlaca(v?.placa ?? opts.placa);
-  }
-  if (opts.veiculoId?.trim()) {
-    const raw = opts.veiculoId.trim();
-    const v =
-      veiculos.find((x) => x.id === raw) ??
-      findVeiculoById(raw) ??
-      findVeiculoByPlaca(raw);
-    return compactPlaca(v?.placa ?? raw);
-  }
-  return null;
-}
 
 function competenciaDeDespesa(d: ClienteDespesaRegistro): string | null {
   for (const raw of [d.dataAutuacao, d.pagaEm]) {
@@ -155,12 +136,16 @@ function enriquecerDespesaCliente(
 }
 
 function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOpts, catalogo: DespesasCatalogo) {
-  const placaKey = resolvePlacaFiltro(opts, catalogo.veiculos);
+  const veiculoIdFiltro = resolveVeiculoIdListagem(
+    { veiculoId: opts.veiculoId, placa: opts.placa },
+    catalogo.veiculos,
+  );
 
-  if (placaKey) {
+  if (veiculoIdFiltro) {
     items = items.filter((d) => {
+      if (d.veiculoId === veiculoIdFiltro) return true;
       const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
-      return compactPlaca(veiculo?.placa ?? d.veiculoId) === placaKey;
+      return veiculo?.id === veiculoIdFiltro;
     });
   }
 
@@ -228,10 +213,13 @@ async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<Desp
   ]);
 
   if (await useRelationalStore()) {
+    const veiculoId = resolveVeiculoIdListagem(
+      { veiculoId: opts.veiculoId, placa: opts.placa },
+      veiculosDb.veiculos,
+    );
     const despesas = (await queryClienteDespesasFromSql({
       clienteId: opts.clienteId,
-      veiculoId: opts.veiculoId,
-      placa: opts.placa,
+      veiculoId,
       emAberto: opts.emAberto,
       ativo: opts.ativo,
     })) as ClienteDespesaRegistro[];

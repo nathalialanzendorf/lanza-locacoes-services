@@ -24,6 +24,17 @@ export {
 export type { ClienteImportado } from "../../../src/lib/rastreame/mapMotoristaCliente.js";
 
 export {
+  resolveClienteIdListagem,
+  resolveVeiculoIdListagem,
+  normalizarFiltroVeiculoListagem,
+  normalizarFiltroClienteListagem,
+  placaDoVeiculoIdListagem,
+  isEntityUuid,
+  type FiltroVeiculoEntrada,
+  type FiltroClienteEntrada,
+} from "../../../src/lib/filtroListagem.js";
+
+export {
   loadVeiculosDb,
   loadVeiculosDbAsync,
   saveVeiculosDb,

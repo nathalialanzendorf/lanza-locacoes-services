@@ -3,6 +3,8 @@ import {
   intervaloBrIntersectaPeriodo,
   loadContratosDb,
   loadContratosDbAsync,
+  loadVeiculosDbAsync,
+  resolveVeiculoIdListagem,
   type ContratoRegistro,
 } from "../lib-imports.js";
 import { queryContratosFromSql, useRelationalStore } from "@lanza/db";
@@ -70,11 +72,15 @@ export async function listarContratosAsync(opts: ListarContratosOpts = {}): Prom
   items: ContratoRegistro[];
 }> {
   if (await useRelationalStore()) {
+    const veiculosDb = await loadVeiculosDbAsync();
+    const veiculoId = resolveVeiculoIdListagem(
+      { veiculoId: opts.veiculoId, placa: opts.placa },
+      veiculosDb.veiculos,
+    );
     let items = (await queryContratosFromSql({
       status: opts.status,
       clienteId: opts.clienteId,
-      veiculoId: opts.veiculoId,
-      placa: opts.placa,
+      veiculoId,
     })) as ContratoRegistro[];
     items = filtrarContratos(items, {
       dataInicial: opts.dataInicial,

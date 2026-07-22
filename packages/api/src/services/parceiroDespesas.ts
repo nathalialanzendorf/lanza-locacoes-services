@@ -9,6 +9,7 @@ import {
   loadParceiroDespesasDbAsync,
   loadVeiculosDbAsync,
   marcarBaixaParceiroDespesaAsync,
+  resolveVeiculoIdListagem,
   saveParceiroDespesasDbAsync,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
@@ -84,9 +85,12 @@ export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = 
   let items: ParceiroDespesaRegistro[];
 
   if (await useRelationalStore()) {
+    const veiculoId = resolveVeiculoIdListagem(
+      { veiculoId: opts.veiculoId, placa: opts.placa },
+      veiculos,
+    );
     items = (await queryParceiroDespesasFromSql({
-      veiculoId: opts.veiculoId,
-      placa: opts.placa,
+      veiculoId,
       parceiroId: opts.parceiroId,
       categoria: opts.categoria,
       competencia: opts.competencia,

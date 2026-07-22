@@ -10,6 +10,7 @@ import {
   loadVeiculosDb,
   loadVeiculosDbAsync,
   placasIguais,
+  resolveVeiculoIdListagem,
   vincularClienteDespesaInfracaoAsync,
   type InfracaoRegistro,
   type VeiculoRegistro,
@@ -159,10 +160,14 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
   items: InfracaoRegistro[];
 }> {
   if (await useRelationalStore()) {
+    const veiculosDb = await loadVeiculosDbAsync();
+    const veiculoId = resolveVeiculoIdListagem(
+      { veiculoId: opts.veiculoId, placa: opts.placa },
+      veiculosDb.veiculos,
+    );
     const semCliente = opts.semCliente === true || opts.semCondutor === true;
     let items = (await queryInfracoesFromSql({
-      veiculoId: opts.veiculoId,
-      placa: opts.placa,
+      veiculoId,
       clienteId: opts.clienteId,
       parceiroId: opts.parceiroId,
       emAberto: opts.emAberto,

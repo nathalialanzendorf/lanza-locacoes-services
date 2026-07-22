@@ -26,7 +26,10 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
         badRequest(ctx, 'Query "ativo" inválida — use true ou false');
         return;
       }
-      json(ctx.res, 200, await clientesService.listarClientesAsync({ ativo }));
+      json(ctx.res, 200, await clientesService.listarClientesAsync({
+        ativo,
+        cpf: ctx.query.get("cpf") ?? undefined,
+      }));
     }),
   });
 

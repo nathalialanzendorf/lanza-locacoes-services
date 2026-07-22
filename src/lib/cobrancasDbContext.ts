@@ -6,6 +6,7 @@ import {
 import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
+import { resolveClienteIdListagem, resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 
 export type CobrancasDbContext = {
@@ -55,20 +56,7 @@ export function cobrancasRuntimeClientes(): ClienteRegistro[] {
 }
 
 function resolveClienteIdFromQuery(query: string, clientes: ClienteRegistro[]): string | null {
-  const q = query.trim();
-  if (!q) return null;
-
-  const qLower = q.toLowerCase();
-  const byId = clientes.find((c) => c.id?.toLowerCase() === qLower);
-  if (byId?.id) return byId.id;
-
-  const key = q.replace(/\D/g, "");
-  if (key.length === 11) {
-    const byCpf = clientes.find((c) => c.cpf?.replace(/\D/g, "") === key);
-    if (byCpf?.id) return byCpf.id;
-  }
-
-  return null;
+  return resolveClienteIdListagem({ clienteQuery: query }, clientes) ?? null;
 }
 
 function mergeDespesaRows(
@@ -125,14 +113,19 @@ export async function loadCobrancasScopedDbContextAsync(
 
   const clienteId =
     input.clienteId?.trim() ||
-    (input.clienteQuery?.trim()
-      ? resolveClienteIdFromQuery(input.clienteQuery, clientesDb.clientes)
-      : null);
-  const veiculoId = input.veiculoId?.trim() || null;
-  const placa = input.placa?.trim() || null;
+    resolveClienteIdListagem(
+      { clienteQuery: input.clienteQuery },
+      clientesDb.clientes,
+    ) ||
+    null;
+  const veiculoId =
+    resolveVeiculoIdListagem(
+      { veiculoId: input.veiculoId, placa: input.placa },
+      veiculosDb.veiculos,
+    ) ?? null;
   const despesaAlvoRef = input.despesaId?.trim() || null;
 
-  if (!clienteId && !veiculoId && !placa) {
+  if (!clienteId && !veiculoId) {
     if (despesaAlvoRef) {
       const rowAlvo = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
       if (rowAlvo) {
@@ -154,7 +147,7 @@ export async function loadCobrancasScopedDbContextAsync(
   const sqlFilter = {
     ativo: true as const,
     ...(clienteId ? { clienteId } : {}),
-    ...(veiculoId ? { veiculoId } : placa ? { placa } : {}),
+    ...(veiculoId ? { veiculoId } : {}),
   };
   const rowsPromise = queryClienteDespesasFromSql(sqlFilter);
 

@@ -20,6 +20,7 @@ import {
   stripAtrasadoSemanal,
 } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { findVeiculoInDb, loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
 import { loadContratosDb, contratoMaisRecentePar, type ContratoRegistro } from "./contratosDb.js";
 import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
@@ -1079,6 +1080,16 @@ export function categoriaAtribuiPorDataEvento(categoria: string | undefined | nu
   return isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
+function contratoAtivoPorVeiculoIdDb(veiculoId: string, contratos?: ContratoRegistro[]) {
+  if (!isEntityUuid(veiculoId)) return undefined;
+  const list = (contratos ?? loadContratosDb().contratos).filter(
+    (c) => c.status === "ativo" && c.veiculoId === veiculoId,
+  );
+  if (list.length === 0) return undefined;
+  return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
+}
+
+/** @deprecated use contratoAtivoPorVeiculoIdDb — placa só para legado JSON. */
 function contratoAtivoPorPlacaDb(placa: string, contratos?: ContratoRegistro[]) {
   const p = compactPlaca(placa);
   const list = (contratos ?? loadContratosDb().contratos).filter(
@@ -1134,17 +1145,29 @@ export function despesaAtribuidaACliente(
   if (cat === "Locação semanal" || cat === "Renegociação" || cat === "Caução") {
     if (d.condutorId === clienteId) return true;
     if (d.condutorId && d.condutorId !== clienteId) return false;
-    const placa = resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos);
+    const veiculoId =
+      (isEntityUuid(d.veiculoId) ? d.veiculoId : null) ??
+      resolveVeiculoIdListagem({ placa: resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos) }, ctx?.veiculos) ??
+      null;
     const contrato = contratoMaisRecentePar(
-      { placa, clienteId },
+      { veiculoId, clienteId, placa: resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos) },
       ctx?.contratos ?? loadContratosDb().contratos,
+      ctx?.veiculos,
     );
     return contrato?.clienteId === clienteId;
   }
 
+  const veiculoId =
+    (isEntityUuid(d.veiculoId) ? d.veiculoId : null) ??
+    resolveVeiculoIdListagem({ placa: resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos) }, ctx?.veiculos) ??
+    null;
+  if (veiculoId) {
+    const vigente = contratoAtivoPorVeiculoIdDb(veiculoId, ctx?.contratos);
+    if (vigente) return vigente.clienteId === clienteId;
+  }
   const placa = resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos);
-  const vigente = contratoAtivoPorPlacaDb(placa, ctx?.contratos);
-  return vigente?.clienteId === clienteId;
+  const vigenteLegado = contratoAtivoPorPlacaDb(placa, ctx?.contratos);
+  return vigenteLegado?.clienteId === clienteId;
 }
 
 export function autoInfracaoRastreame(rastreameId: string | number): string {

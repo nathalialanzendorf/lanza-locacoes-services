@@ -3,8 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup, queryLocacoesFromSql } from "@lanza/db";
+import { resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
-import { findVeiculoById } from "./veiculosDb.js";
+import { findVeiculoById, loadVeiculosDbAsync } from "./veiculosDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
 export const DB_LOCACOES = path.join(REPO_ROOT, "database", "locacoes.json");
@@ -380,9 +381,13 @@ export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegist
 
 export async function listarLocacoesAsync(filtro: ListarLocacoesFiltro = {}): Promise<LocacaoRegistro[]> {
   if (await useRelationalStore()) {
+    const veiculosDb = await loadVeiculosDbAsync();
+    const veiculoId = resolveVeiculoIdListagem(
+      { veiculoId: filtro.veiculoId, placa: filtro.placa },
+      veiculosDb.veiculos,
+    );
     const items = (await queryLocacoesFromSql({
-      veiculoId: filtro.veiculoId,
-      placa: filtro.placa,
+      veiculoId,
       clienteId: filtro.clienteId,
       situacao: filtro.situacao,
       abertas: filtro.abertas,
@@ -400,15 +405,17 @@ function listarLocacoesFromDb(
   locacoes: LocacaoRegistro[],
   filtro: ListarLocacoesFiltro,
 ): LocacaoRegistro[] {
+  const veiculoIdFiltro = resolveVeiculoIdListagem(
+    { veiculoId: filtro.veiculoId, placa: filtro.placa },
+    loadVeiculos().map((v) => ({ id: v.id ?? "", placa: v.placa })),
+  );
   return locacoes
     .filter((l) => {
-      if (filtro.veiculoId?.trim()) {
-        const id = filtro.veiculoId.trim();
-        if (l.veiculoId === id) {
-          // match
+      if (veiculoIdFiltro) {
+        if (l.veiculoId === veiculoIdFiltro) {
+          // match por PK
         } else {
-          const v = findVeiculoById(id);
-          if (!v?.placa || !placasIguais(l.placa ?? "", v.placa)) return false;
+          return false;
         }
       } else if (filtro.placa && !placasIguais(l.placa, filtro.placa)) {
         return false;

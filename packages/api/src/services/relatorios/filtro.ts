@@ -3,10 +3,14 @@ import {
   loadClientesDb,
   loadClientesDbAsync,
   loadCobrancasDbContextAsync,
+  loadVeiculosDb,
+  loadVeiculosDbAsync,
   normNomeKey,
+  resolveVeiculoIdListagem,
   type ClienteRegistro,
   type CobrancasDbContext,
   type FiltroAlvosCobranca,
+  type VeiculoRegistro,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
 
@@ -60,12 +64,13 @@ export function resolverClienteFromList(query: string, clientes: ClienteRegistro
 }
 
 export function resolverFiltroRelatorio(input: FiltroRelatorioInput = {}): FiltroAlvosCobranca {
-  return resolverFiltroRelatorioComClientes(input, loadClientesDb().clientes);
+  return resolverFiltroRelatorioComClientes(input, loadClientesDb().clientes, loadVeiculosDb().veiculos);
 }
 
 export function resolverFiltroRelatorioComClientes(
   input: FiltroRelatorioInput,
   clientes: ClienteRegistro[],
+  veiculos: Pick<VeiculoRegistro, "id" | "placa">[] = loadVeiculosDb().veiculos,
 ): FiltroAlvosCobranca {
   const veiculoId = input.veiculoId?.trim();
   const placa = input.placa?.trim();
@@ -103,8 +108,10 @@ export function resolverFiltroRelatorioComClientes(
   }
 
   if (clienteId) return { clienteId, ...extras };
-  if (veiculoId) return { veiculoId, ...extras };
-  if (placa) return { placa, ...extras };
+
+  const veiculoIdResolvido = resolveVeiculoIdListagem({ veiculoId, placa }, veiculos);
+  if (veiculoIdResolvido) return { veiculoId: veiculoIdResolvido, ...extras };
+
   return extras;
 }
 
@@ -113,7 +120,8 @@ export async function resolverFiltroRelatorioAsync(
   ctx?: CobrancasDbContext,
 ): Promise<FiltroAlvosCobranca> {
   const clientes = ctx?.clientes ?? (await loadClientesDbAsync()).clientes;
-  return resolverFiltroRelatorioComClientes(input, clientes);
+  const veiculos = ctx?.veiculos ?? (await loadVeiculosDbAsync()).veiculos;
+  return resolverFiltroRelatorioComClientes(input, clientes, veiculos);
 }
 
 export function hojeBr(): string {

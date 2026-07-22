@@ -18,19 +18,30 @@ import { HttpError } from "../http.js";
 
 export type ListarClientesOpts = {
   ativo?: boolean;
+  /** CPF para busca em tela (filtro direto na listagem de clientes). */
+  cpf?: string;
 };
 
 function filtrarClientes(
   items: ClienteRegistro[],
   opts: ListarClientesOpts,
 ): ClienteRegistro[] {
+  let out = items;
+
+  if (opts.cpf?.trim()) {
+    const key = opts.cpf.replace(/\D/g, "");
+    if (key.length === 11) {
+      out = out.filter((c) => c.cpf?.replace(/\D/g, "") === key);
+    }
+  }
+
   if (opts.ativo === true) {
-    return items.filter(isClienteAtivo);
+    return out.filter(isClienteAtivo);
   }
   if (opts.ativo === false) {
-    return items.filter((c) => !isClienteAtivo(c));
+    return out.filter((c) => !isClienteAtivo(c));
   }
-  return items;
+  return out;
 }
 
 async function espelharClienteRastreame(c: ClienteRegistro): Promise<void> {
