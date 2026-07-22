@@ -647,7 +647,7 @@ function contratoVigenteNaDataEvento(
   return matches[0] ?? null;
 }
 
-/** Atribuição por contratos SQL (sem filesystem/docx — uso na Vercel). */
+/** Atribuição por contratos SQL — uso explícito (sync/atribuição manual), não em listagens ou baixa. */
 export function inferirCondutorIdDespesaPorContratosDb(
   d: ClienteDespesaRegistro,
   contratos: ContratoRegistro[],
@@ -1229,8 +1229,9 @@ export function inferirCondutorIdDespesaPorData(
 }
 
 /**
- * Débito pertence ao cliente no escopo de cobrança/relatório.
- * Infração/pedágio/estacionamento: condutorId gravado ou contratos do contexto (Postgres) — sem inferirCondutorInfracao (filesystem).
+ * Débito pertence ao cliente no escopo de cobrança/relatório/baixa.
+ * Infração, pedágio e estacionamento: só `condutorId` já gravado (sync DETRAN ou confirmação na tela).
+ * Demais categorias: contrato ativo / par cliente+veículo quando houver contexto.
  */
 export function despesaAtribuidaACliente(
   d: ClienteDespesaRegistro,
@@ -1243,9 +1244,6 @@ export function despesaAtribuidaACliente(
 
   if (isInfracaoTransito(d) || categoriaAtribuiPorDataEvento(d.categoria)) {
     if (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) return false;
-    if (!ctx?.contratos) return false;
-    const inferido = inferirCondutorIdDespesaPorContratosDb(d, ctx.contratos, ctx.veiculos);
-    if (inferido) return inferido === clienteId;
     return false;
   }
 
