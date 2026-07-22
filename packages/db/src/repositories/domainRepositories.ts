@@ -736,21 +736,8 @@ export async function queryClienteDespesasFromSql(
   }
 
   if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
-    const clienteId = filter.clienteId.trim();
-    params.push(clienteId);
-    where.push(`(
-      cd.condutor_id::text = $${p}
-      OR v.cliente_vinculado_id::text = $${p}
-      OR EXISTS (
-        SELECT 1
-        FROM lanza.contratos c
-        WHERE c.status = 'ativo'
-          AND c.cliente_id::text = $${p}
-          AND cd.veiculo_id IS NOT NULL
-          AND c.veiculo_id = cd.veiculo_id
-      )
-    )`);
-    p += 1;
+    params.push(filter.clienteId.trim());
+    where.push(`cd.condutor_id::text = $${p++}`);
   }
 
   if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {

@@ -22,7 +22,7 @@ import {
 } from "./pagamentoSemanal.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
-import { findVeiculoInDb, loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { findVeiculoInDb, loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 import { loadContratosDb, contratoMaisRecentePar, type ContratoRegistro } from "./contratosDb.js";
 import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
@@ -651,7 +651,7 @@ export function inferirCondutorIdDespesaPorContratosDb(
   contratos: ContratoRegistro[],
   veiculos?: VeiculoRegistro[],
 ): string | null {
-  if (d.condutorId) return d.condutorId;
+  if (d.condutorId?.trim() && isEntityUuid(d.condutorId.trim())) return d.condutorId.trim();
   if (d.condutorNaoIdentificado === true && d.condutorConfirmado === true) return null;
   const eventoMs = dataEventoContratoMs(String(d.dataAutuacao ?? ""));
   if (eventoMs == null) return null;
@@ -670,7 +670,9 @@ export async function gravarClienteDespesa(
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
   const db = await loadDespesasMut();
-  const veiculoId = resolvePlacaVeiculoCadastro(veiculoIdRaw);
+  const veiculosDb = await loadVeiculosDbAsync();
+  const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
+  const veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || "Infração";
 
@@ -1215,7 +1217,7 @@ export function inferirCondutorIdDespesaPorData(
   prazoDias = 90,
   veiculos?: VeiculoRegistro[],
 ): string | null {
-  if (d.condutorId) return d.condutorId;
+  if (d.condutorId?.trim() && isEntityUuid(d.condutorId.trim())) return d.condutorId.trim();
   if (d.condutorNaoIdentificado === true && d.condutorConfirmado === true) return null;
   const data = String(d.dataAutuacao ?? "").trim();
   if (!data || !parseDataAutuacao(data)) return null;
