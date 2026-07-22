@@ -602,9 +602,68 @@ function resolvePlacaVeiculoCadastro(
   veiculoIdRaw: string,
   veiculos?: VeiculoRegistro[],
 ): string {
-  const veiculo = findVeiculoInDb({ veiculos: veiculos ?? loadVeiculosDb().veiculos }, veiculoIdRaw);
+  const catalog = veiculos ?? loadVeiculosDb().veiculos;
+  const veiculo = findVeiculoInDb({ veiculos: catalog }, veiculoIdRaw);
   if (veiculo?.placa?.trim()) return formatPlacaHyphen(veiculo.placa);
   return formatPlacaHyphen(veiculoIdRaw);
+}
+
+function dataEventoContratoMs(dataBr: string): number | null {
+  const d = parseDataAutuacao(dataBr);
+  return d ? d.getTime() : null;
+}
+
+function contratoFimEventoMs(c: ContratoRegistro): number | null {
+  const fimBr = c.dataEncerramento ?? c.dataFimPrevista;
+  if (fimBr?.trim()) {
+    const fim = parseDataAutuacao(fimBr.includes(":") ? fimBr : `${fimBr.trim()} 23:59`);
+    if (fim) return fim.getTime();
+  }
+  const inicio = parseDataAutuacao(c.dataInicio);
+  if (!inicio) return null;
+  return inicio.getTime() + (c.prazoDias ?? 90) * 86_400_000;
+}
+
+function contratoVigenteNaDataEvento(
+  contratos: ContratoRegistro[],
+  veiculoId: string,
+  placa: string,
+  eventoMs: number,
+): ContratoRegistro | null {
+  const pNorm = compactPlaca(placa);
+  const matches = contratos.filter((c) => {
+    const sameVeiculo =
+      (isEntityUuid(veiculoId) && c.veiculoId === veiculoId) ||
+      compactPlaca(c.placa ?? "") === pNorm ||
+      compactPlaca(String(c.veiculoId ?? "")) === pNorm;
+    if (!sameVeiculo) return false;
+    const inicioMs = dataEventoContratoMs(c.dataInicio);
+    const fimMs = contratoFimEventoMs(c);
+    if (inicioMs == null || fimMs == null) return false;
+    return eventoMs >= inicioMs && eventoMs <= fimMs;
+  });
+  if (!matches.length) return null;
+  matches.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
+  return matches[0] ?? null;
+}
+
+/** Atribuição por contratos SQL (sem filesystem/docx — uso na Vercel). */
+export function inferirCondutorIdDespesaPorContratosDb(
+  d: ClienteDespesaRegistro,
+  contratos: ContratoRegistro[],
+  veiculos?: VeiculoRegistro[],
+): string | null {
+  if (d.condutorId) return d.condutorId;
+  if (d.condutorNaoIdentificado === true && d.condutorConfirmado === true) return null;
+  const eventoMs = dataEventoContratoMs(String(d.dataAutuacao ?? ""));
+  if (eventoMs == null) return null;
+  const placa = resolvePlacaVeiculoCadastro(String(d.veiculoId ?? ""), veiculos);
+  const veiculoId =
+    (isEntityUuid(d.veiculoId) ? d.veiculoId : null) ??
+    resolveVeiculoIdListagem({ placa }, veiculos) ??
+    "";
+  const contrato = contratoVigenteNaDataEvento(contratos, veiculoId, placa, eventoMs);
+  return contrato?.clienteId ?? null;
 }
 
 export async function gravarClienteDespesa(
@@ -1123,6 +1182,11 @@ export function categoriaAtribuiPorDataEvento(categoria: string | undefined | nu
   return isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
+function contratosAtribuicao(ctx?: DespesaAtribuicaoContext): ContratoRegistro[] {
+  if (ctx && "contratos" in ctx) return ctx.contratos ?? [];
+  return loadContratosDb().contratos;
+}
+
 function contratoAtivoPorVeiculoIdDb(veiculoId: string, contratos?: ContratoRegistro[]) {
   if (!isEntityUuid(veiculoId)) return undefined;
   const list = (contratos ?? loadContratosDb().contratos).filter(
@@ -1179,6 +1243,11 @@ export function despesaAtribuidaACliente(
 
   if (isInfracaoTransito(d) || categoriaAtribuiPorDataEvento(d.categoria)) {
     if (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) return false;
+    if (ctx?.contratos) {
+      const inferido = inferirCondutorIdDespesaPorContratosDb(d, ctx.contratos, ctx.veiculos);
+      if (inferido) return inferido === clienteId;
+      return false;
+    }
     const inferido = inferirCondutorIdDespesaPorData(d, prazoDias, ctx?.veiculos);
     if (inferido) return inferido === clienteId;
     return false;
@@ -1194,7 +1263,7 @@ export function despesaAtribuidaACliente(
       null;
     const contrato = contratoMaisRecentePar(
       { veiculoId, clienteId, placa: resolvePlacaVeiculoCadastro(d.veiculoId, ctx?.veiculos) },
-      ctx?.contratos ?? loadContratosDb().contratos,
+      contratosAtribuicao(ctx),
       ctx?.veiculos,
     );
     return contrato?.clienteId === clienteId;

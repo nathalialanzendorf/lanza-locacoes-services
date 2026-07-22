@@ -504,10 +504,16 @@ export async function loadClientesByIdsFromSql(ids: string[]): Promise<ClienteRo
   if (unique.length === 0) return [];
 
   const [base, endR] = await Promise.all([
-    pgQuery("SELECT * FROM lanza.clientes WHERE id::text = ANY($1::text[]) ORDER BY nome", [unique]),
-    pgQuery("SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])", [
-      unique,
-    ]),
+    pgQuery(
+      "SELECT * FROM lanza.clientes WHERE id::text = ANY($1::text[]) ORDER BY nome",
+      [unique],
+      "loadClientesByIdsFromSql/clientes",
+    ),
+    pgQuery(
+      "SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])",
+      [unique],
+      "loadClientesByIdsFromSql/enderecos",
+    ),
   ]);
   const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
   return base.rows.map((row) =>
@@ -523,9 +529,11 @@ export async function resolveClienteIdFromSql(input: {
 }): Promise<string | null> {
   const id = input.clienteId?.trim();
   if (id && isUuid(id)) {
-    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1", [
-      id,
-    ]);
+    const r = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1",
+      [id],
+      "resolveClienteIdFromSql/byId",
+    );
     return r.rows[0]?.id ?? null;
   }
 
@@ -535,6 +543,7 @@ export async function resolveClienteIdFromSql(input: {
     const r = await pgQuery<{ id: string }>(
       "SELECT id FROM lanza.clientes WHERE cpf_norm = $1 LIMIT 2",
       [cpfNorm],
+      "resolveClienteIdFromSql/byCpf",
     );
     if (r.rows.length === 1) return r.rows[0]!.id;
     return null;
@@ -544,9 +553,11 @@ export async function resolveClienteIdFromSql(input: {
   if (!query) return null;
 
   if (isUuid(query)) {
-    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1", [
-      query,
-    ]);
+    const r = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1",
+      [query],
+      "resolveClienteIdFromSql/queryAsId",
+    );
     return r.rows[0]?.id ?? null;
   }
 
@@ -555,6 +566,7 @@ export async function resolveClienteIdFromSql(input: {
     const r = await pgQuery<{ id: string }>(
       "SELECT id FROM lanza.clientes WHERE cpf_norm = $1 LIMIT 2",
       [cpfFromQuery],
+      "resolveClienteIdFromSql/queryAsCpf",
     );
     if (r.rows.length === 1) return r.rows[0]!.id;
   }
@@ -562,6 +574,7 @@ export async function resolveClienteIdFromSql(input: {
   const r = await pgQuery<{ id: string }>(
     "SELECT id FROM lanza.clientes WHERE lower(nome) LIKE $1 LIMIT 2",
     [`%${query.toLowerCase()}%`],
+    "resolveClienteIdFromSql/byNome",
   );
   if (r.rows.length === 1) return r.rows[0]!.id;
   return null;
@@ -574,9 +587,11 @@ export async function resolveVeiculoIdFromSql(input: {
 }): Promise<string | null> {
   const id = input.veiculoId?.trim();
   if (id && isUuid(id)) {
-    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.veiculos WHERE id::text = $1 LIMIT 1", [
-      id,
-    ]);
+    const r = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.veiculos WHERE id::text = $1 LIMIT 1",
+      [id],
+      "resolveVeiculoIdFromSql/byId",
+    );
     return r.rows[0]?.id ?? null;
   }
 
@@ -586,6 +601,7 @@ export async function resolveVeiculoIdFromSql(input: {
   const r = await pgQuery<{ id: string }>(
     "SELECT id FROM lanza.veiculos WHERE placa_norm = $1 LIMIT 2",
     [compactPlaca(placa)],
+    "resolveVeiculoIdFromSql/byPlaca",
   );
   if (r.rows.length === 1) return r.rows[0]!.id;
   return null;
@@ -602,6 +618,7 @@ export async function queryVeiculosByIdsFromSql(ids: string[]): Promise<VeiculoR
      WHERE v.id::text = ANY($1::text[])
      ORDER BY v.placa`,
     [unique],
+    "queryVeiculosByIdsFromSql",
   );
   return r.rows.map((row) => rowToVeiculo(row as Record<string, unknown>));
 }

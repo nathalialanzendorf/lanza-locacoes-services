@@ -19,6 +19,8 @@ export { REPO_ROOT, DATABASE_DIR, SQL_DIR, INITIAL_SCHEMA_SQL } from "./paths.js
 export { getRdsIamAuthToken, PgAuthError, resolvePgPassword } from "./auth/iam.js";
 export { createVercelPostgresPool } from "./auth/vercel.js";
 
+export { loggedPgQuery, logFlowStep, resetSqlSeq } from "./client/pgSqlLog.js";
+
 // Client
 export {
   PostgresPool,

@@ -10,6 +10,7 @@ export function ensureVercelWritePool(): void {
 export async function pgWriteQuery<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params?: unknown[],
+  label?: string,
 ): Promise<pg.QueryResult<T>> {
-  return pgQuery<T>(text, params);
+  return pgQuery<T>(text, params, label);
 }

@@ -4,6 +4,7 @@ import { createVercelPostgresPool } from "../auth/vercel.js";
 import { getDbBackend } from "../adapters/index.js";
 import { resolvePgPassword } from "../auth/iam.js";
 import { getPgConfig, pgSslOptions, type PgConfig } from "../config.js";
+import { loggedPgQuery } from "./pgSqlLog.js";
 
 const { Pool } = pg;
 
@@ -68,9 +69,10 @@ export class PostgresPool {
   async query<T extends pg.QueryResultRow = pg.QueryResultRow>(
     text: string,
     params?: unknown[],
+    label?: string,
   ): Promise<pg.QueryResult<T>> {
     const p = await this.getPool();
-    return p.query<T>(text, params);
+    return loggedPgQuery<T>((sql, values) => p.query<T>(sql, values), text, params, label);
   }
 
   async close(): Promise<void> {
@@ -125,9 +127,10 @@ export async function getPgPool(): Promise<pg.Pool> {
 export async function pgQuery<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params?: unknown[],
+  label?: string,
 ): Promise<pg.QueryResult<T>> {
   ensureVercelPgPool();
-  return getDefaultPostgresPool().query<T>(text, params);
+  return getDefaultPostgresPool().query<T>(text, params, label);
 }
 
 export async function closePgPool(): Promise<void> {

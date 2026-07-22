@@ -9,7 +9,13 @@ import {
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
 import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
-import { loadCobrancasDbContextAsync, loadBaixaPlanoDbContextAsync, type CobrancasDbContext, type CobrancasScopedContextInput } from "../cobrancasDbContext.js";
+import {
+  loadCobrancasDbContextAsync,
+  loadBaixaPlanoDbContextAsync,
+  type CobrancasDbContext,
+  type CobrancasScopedContextInput,
+} from "../cobrancasDbContext.js";
+import { logFlowStep, resetSqlSeq, getDbBackend } from "@lanza/db";
 import { isEntityUuid } from "../filtroListagem.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
 import { loadContratosDb, contratoMaisRecentePar } from "../contratosDb.js";
@@ -93,16 +99,34 @@ type VeiculoDb = Pick<VeiculoRegistro, "placa" | "id" | "rastreameLabel" | "rast
 
 let _baixaPlanoCtx: CobrancasDbContext | null = null;
 
+function exigeCtxBaixa(campo: string): never {
+  throw new Error(
+    `Contexto de baixa não carregado (${campo}). Use montarPlanoBaixaAsync ou withBaixaPlanoDbContext.`,
+  );
+}
+
 function clientesList(): ClienteRegistro[] {
-  return _baixaPlanoCtx?.clientes ?? loadClientesDb().clientes;
+  if (_baixaPlanoCtx) return _baixaPlanoCtx.clientes;
+  if (getDbBackend() !== "file") exigeCtxBaixa("clientes");
+  return loadClientesDb().clientes;
 }
 
 function veiculosList(): VeiculoDb[] {
-  return _baixaPlanoCtx?.veiculos ?? loadVeiculosDb().veiculos;
+  if (_baixaPlanoCtx) return _baixaPlanoCtx.veiculos;
+  if (getDbBackend() !== "file") exigeCtxBaixa("veiculos");
+  return loadVeiculosDb().veiculos;
 }
 
 function contratosList() {
-  return _baixaPlanoCtx?.contratos ?? loadContratosDb().contratos;
+  if (_baixaPlanoCtx) return _baixaPlanoCtx.contratos;
+  if (getDbBackend() !== "file") exigeCtxBaixa("contratos");
+  return loadContratosDb().contratos;
+}
+
+function clienteDespesasList(): ClienteDespesaRegistro[] {
+  if (_baixaPlanoCtx) return _baixaPlanoCtx.clienteDespesas;
+  if (getDbBackend() !== "file") exigeCtxBaixa("clienteDespesas");
+  return loadClienteDespesasDb().clienteDespesas;
 }
 
 function atribuicaoDespesaCtx() {
@@ -110,10 +134,6 @@ function atribuicaoDespesaCtx() {
     contratos: contratosList(),
     veiculos: veiculosList(),
   };
-}
-
-function clienteDespesasList(): ClienteDespesaRegistro[] {
-  return _baixaPlanoCtx?.clienteDespesas ?? loadClienteDespesasDb().clienteDespesas;
 }
 
 function findVeiculoLocal(placa: string): VeiculoDb | null {
@@ -834,9 +854,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
 export async function withBaixaPlanoDbContext<T>(
   fn: () => T | Promise<T>,
   scope?: CobrancasScopedContextInput,
+  flowRoute = "POST /api/recebimentos/executar",
 ): Promise<T> {
+  resetSqlSeq();
+  logFlowStep(flowRoute, 0, "início withBaixaPlanoDbContext");
   _baixaPlanoCtx = scope
-    ? await loadBaixaPlanoDbContextAsync(scope)
+    ? await loadBaixaPlanoDbContextAsync(scope, flowRoute)
     : await loadCobrancasDbContextAsync();
   try {
     return await fn();
@@ -861,14 +884,21 @@ export { scopeFromLinhasBaixa };
 export async function montarPlanoBaixaAsync(
   input: MontarPlanoBaixaInput,
 ): Promise<PlanoBaixaRecebimento> {
-  _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync({
-    clienteId: input.clienteId,
-    clienteQuery: input.clienteQuery,
-    veiculoId: input.veiculoId,
-    despesaId: input.despesaId,
-    placa: input.placa,
-  });
+  const flowRoute = "POST /api/recebimentos/plano";
+  resetSqlSeq();
+  logFlowStep(flowRoute, 0, "início montarPlanoBaixaAsync");
+  _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(
+    {
+      clienteId: input.clienteId,
+      clienteQuery: input.clienteQuery,
+      veiculoId: input.veiculoId,
+      despesaId: input.despesaId,
+      placa: input.placa,
+    },
+    flowRoute,
+  );
   try {
+    logFlowStep(flowRoute, 9, "montarPlanoBaixa (memória)");
     return montarPlanoBaixa(input);
   } finally {
     _baixaPlanoCtx = null;

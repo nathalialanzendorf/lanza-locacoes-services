@@ -123,12 +123,16 @@ async function loadContratoSnapshotsForIds(ids: string[]): Promise<{
     return { cliByContrato: new Map(), veiByContrato: new Map() };
   }
   const [cliSnaps, veiSnaps] = await Promise.all([
-    pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots WHERE contrato_id = ANY($1::uuid[])", [
-      ids,
-    ]),
-    pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots WHERE contrato_id = ANY($1::uuid[])", [
-      ids,
-    ]),
+    pgQuery(
+      "SELECT * FROM lanza.contrato_cliente_snapshots WHERE contrato_id = ANY($1::uuid[])",
+      [ids],
+      "loadContratoSnapshots/cliente",
+    ),
+    pgQuery(
+      "SELECT * FROM lanza.contrato_veiculo_snapshots WHERE contrato_id = ANY($1::uuid[])",
+      [ids],
+      "loadContratoSnapshots/veiculo",
+    ),
   ]);
   return {
     cliByContrato: new Map(cliSnaps.rows.map((row) => [String(row.contrato_id), row])),
@@ -197,6 +201,7 @@ export async function queryContratosFromSql(
      ${whereSql}
      ORDER BY c.cadastrado_em`,
     params,
+    "queryContratosFromSql",
   );
 
   const ids = base.rows.map((row) => String(row.id));
@@ -760,6 +765,7 @@ export async function queryClienteDespesasFromSql(
      ${whereSql}
      ORDER BY cd.data_autuacao`,
     params,
+    "queryClienteDespesasFromSql",
   );
   return r.rows.map((row) => mapClienteDespesaRow(row as Record<string, unknown>));
 }
@@ -778,6 +784,7 @@ export async function queryClienteDespesaByReferenciaFromSql(
         OR cd.id::text = $1
      LIMIT 1`,
     [key],
+    "queryClienteDespesaByReferenciaFromSql",
   );
   const row = r.rows[0];
   if (!row) return null;

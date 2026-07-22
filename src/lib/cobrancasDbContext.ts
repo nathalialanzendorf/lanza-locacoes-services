@@ -1,5 +1,6 @@
 import {
   loadClientesByIdsFromSql,
+  logFlowStep,
   queryClienteDespesaByReferenciaFromSql,
   queryClienteDespesasFromSql,
   queryContratosFromSql,
@@ -126,8 +127,11 @@ export async function loadCobrancasDbContextAsync(): Promise<CobrancasDbContext>
 /** Contexto enxuto por cliente/veículo (Postgres) — baixa, relatório de cobranças, etc. */
 export async function loadCobrancasScopedDbContextAsync(
   input: CobrancasScopedContextInput = {},
+  flowRoute = "cobrancas/scoped",
 ): Promise<CobrancasDbContext> {
+  logFlowStep(flowRoute, 1, "useRelationalStore");
   if (!(await useRelationalStore())) {
+    logFlowStep(flowRoute, 2, "fallback loadCobrancasDbContextAsync (JSON)");
     return loadCobrancasDbContextAsync();
   }
 
@@ -135,6 +139,7 @@ export async function loadCobrancasScopedDbContextAsync(
 
   let clienteId = input.clienteId?.trim() && isEntityUuid(input.clienteId.trim()) ? input.clienteId.trim() : null;
   if (!clienteId && input.clienteQuery?.trim()) {
+    logFlowStep(flowRoute, 2, "resolveClienteIdFromSql");
     clienteId = await resolveClienteIdFromSql({
       clienteQuery: input.clienteQuery,
     });
@@ -143,11 +148,13 @@ export async function loadCobrancasScopedDbContextAsync(
   let veiculoId =
     input.veiculoId?.trim() && isEntityUuid(input.veiculoId.trim()) ? input.veiculoId.trim() : null;
   if (!veiculoId && input.placa?.trim()) {
+    logFlowStep(flowRoute, 3, "resolveVeiculoIdFromSql");
     veiculoId = await resolveVeiculoIdFromSql({ placa: input.placa });
   }
 
   let rowAlvoPrefetch: Record<string, unknown> | null = null;
   if (!clienteId && !veiculoId && despesaAlvoRef) {
+    logFlowStep(flowRoute, 4, "queryClienteDespesaByReferenciaFromSql (prefetch)");
     rowAlvoPrefetch = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
     if (rowAlvoPrefetch) {
       const condutorId = String(rowAlvoPrefetch.condutor_id ?? "").trim();
@@ -158,7 +165,10 @@ export async function loadCobrancasScopedDbContextAsync(
   }
 
   if (!clienteId && !veiculoId) {
-    return loadCobrancasDbContextAsync();
+    logFlowStep(flowRoute, 5, "sem escopo — erro (sem full scan)");
+    throw new Error(
+      "Não foi possível resolver cliente ou veículo. Informe clienteId (UUID), veiculoId, despesaId ou refine clienteQuery/placa.",
+    );
   }
 
   const sqlFilter = {
@@ -167,6 +177,7 @@ export async function loadCobrancasScopedDbContextAsync(
     ...(veiculoId ? { veiculoId } : {}),
   };
 
+  logFlowStep(flowRoute, 6, "queryClienteDespesasFromSql + despesa alvo");
   const [rows, rowAlvo] = await Promise.all([
     queryClienteDespesasFromSql(sqlFilter),
     rowAlvoPrefetch
@@ -186,6 +197,11 @@ export async function loadCobrancasScopedDbContextAsync(
   const veiculoIds = collectVeiculoIds(clienteDespesas, veiculoId);
   const clienteIds = clienteId ? [clienteId] : [];
 
+  logFlowStep(
+    flowRoute,
+    7,
+    `loadClientes/veiculos/contratos (clientes=${clienteIds.length} veiculos=${veiculoIds.length})`,
+  );
   const [clientes, veiculos, contratos] = await Promise.all([
     clienteIds.length > 0 ? loadClientesByIdsFromSql(clienteIds) : Promise.resolve([]),
     veiculoIds.length > 0 ? queryVeiculosByIdsFromSql(veiculoIds) : Promise.resolve([]),
@@ -194,6 +210,12 @@ export async function loadCobrancasScopedDbContextAsync(
       ...(veiculoIds.length > 0 ? { veiculoIds } : {}),
     }),
   ]);
+
+  logFlowStep(
+    flowRoute,
+    8,
+    `contexto pronto (despesas=${clienteDespesas.length} contratos=${contratos.length})`,
+  );
 
   return {
     clienteDespesas,

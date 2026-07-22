@@ -14,7 +14,7 @@ export async function useRelationalStore(): Promise<boolean> {
     return true;
   }
   try {
-    await pgQuery("SELECT 1");
+    await pgQuery("SELECT 1", undefined, "useRelationalStore");
     relationalStoreCached = true;
     return true;
   } catch {
