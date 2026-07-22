@@ -201,7 +201,9 @@ export async function saveLocacoesDbAsync(db: LocacoesDb): Promise<void> {
 export type LocacaoInput = {
   /** id para atualizar um registro existente (senão cria novo). */
   id?: string;
-  placa: string;
+  /** @deprecated prefer veiculoId */
+  placa?: string;
+  veiculoId?: string;
   situacao: SituacaoLocacao;
   inicio: string;
   fim?: string | null;
@@ -220,8 +222,28 @@ export type LocacaoInput = {
 const SITUACOES: ReadonlySet<string> = new Set(["reserva", "manutencao", "locado"]);
 const TIPOS: ReadonlySet<string> = new Set(["diaria", "semanal", "mensal"]);
 
+function resolveVeiculoLocacao(input: Pick<LocacaoInput, "placa" | "veiculoId">): {
+  id: string | null;
+  placa: string;
+} {
+  const idRef = input.veiculoId?.trim();
+  if (idRef) {
+    const v = findVeiculoById(idRef);
+    if (v) {
+      return { id: v.id, placa: v.placa ?? formatPlacaHyphen(idRef) };
+    }
+  }
+  const placaRef = input.placa?.trim() || idRef || "";
+  if (!placaRef) {
+    throw new Error("Informe veiculoId ou placa");
+  }
+  return resolveVeiculo(placaRef);
+}
+
 function validar(input: LocacaoInput): void {
-  if (!input.placa) throw new Error("placa é obrigatória");
+  if (!input.placa?.trim() && !input.veiculoId?.trim()) {
+    throw new Error("veiculoId ou placa é obrigatório");
+  }
   if (!SITUACOES.has(input.situacao)) {
     throw new Error(`situacao inválida: ${input.situacao} (use reserva|manutencao|locado)`);
   }
@@ -244,7 +266,7 @@ function applyGravarLocacao(db: LocacoesDb, input: LocacaoInput): GravarLocacaoR
   validar(input);
   const ts = nowIso();
 
-  const { id: veiculoId, placa } = resolveVeiculo(input.placa);
+  const { id: veiculoId, placa } = resolveVeiculoLocacao(input);
   const refCliente = input.clienteId ?? input.condutor;
   const condutor = resolveCondutor(refCliente);
   const sub = input.substituiPlaca ? resolveVeiculo(input.substituiPlaca) : null;

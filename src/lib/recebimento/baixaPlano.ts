@@ -39,6 +39,8 @@ export type LinhaPlanoBaixa = {
   num: number;
   operacao: "atualizar" | "criar";
   autoInfracao: string | null;
+  /** UUID da despesa alvo (preferir sobre autoInfracao na execução). */
+  despesaId?: string | null;
   rastreavel: string;
   data: string;
   descricao: string;
@@ -679,6 +681,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       num: 1,
       operacao: "atualizar",
       autoInfracao: alvo.autoInfracao,
+      despesaId: alvo.id,
       rastreavel,
       data: vencimento,
       descricao: descricaoAntes,
@@ -740,6 +743,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       num: 1,
       operacao: "atualizar",
       autoInfracao: alvo.autoInfracao,
+      despesaId: alvo.id,
       rastreavel,
       data: dataBrComHora(dataBr, horaBr),
       descricao: descQuitada,

@@ -60,8 +60,12 @@ export type VeiculoDb = VeiculoRegistro & {
 };
 
 export type MontarContratoDbInput = {
-  placa: string;
+  /** @deprecated prefer veiculoId */
+  placa?: string;
+  veiculoId?: string;
+  /** @deprecated prefer clienteId */
   cpf?: string;
+  clienteId?: string;
   /** Busca parcial por nome (use --cpf se houver ambiguidade). */
   clienteNome?: string;
   semana: number;
@@ -124,11 +128,24 @@ function strField(v: unknown): string {
   return String(v).trim();
 }
 
-function findClienteDbInList(list: ClienteDb[], cpf?: string, nome?: string): ClienteDb {
+function findClienteDbInList(
+  list: ClienteDb[],
+  opts: { cpf?: string; nome?: string; clienteId?: string },
+): ClienteDb {
   if (list.length === 0) {
     throw new Error("database/clientes.json vazio — use cadastro-cliente antes de gerar o contrato.");
   }
 
+  if (opts.clienteId?.trim()) {
+    const id = opts.clienteId.trim();
+    const c = list.find((x) => x.id === id);
+    if (!c) {
+      throw new Error(`Cliente id ${id} não encontrado em clientes.json — use cadastro-cliente.`);
+    }
+    return c;
+  }
+
+  const cpf = opts.cpf;
   if (cpf) {
     const key = normCpfDigits(cpf);
     const c = list.find((x) => normCpfDigits(x.cpf) === key);
@@ -140,20 +157,20 @@ function findClienteDbInList(list: ClienteDb[], cpf?: string, nome?: string): Cl
     return c;
   }
 
-  if (nome) {
-    const n = normNome(nome);
+  if (opts.nome) {
+    const n = normNome(opts.nome);
     const matches = list.filter((x) => {
       const xn = normNome(x.nome);
       return xn.includes(n) || n.includes(xn);
     });
     if (matches.length === 0) {
       throw new Error(
-        `Cliente "${nome}" não encontrado em clientes.json — use cadastro-cliente ou informe --cpf.`,
+        `Cliente "${opts.nome}" não encontrado em clientes.json — use cadastro-cliente ou informe --cpf.`,
       );
     }
     if (matches.length > 1) {
       throw new Error(
-        `Vários clientes para "${nome}": ${matches.map((m) => `${m.nome} (${m.cpf})`).join("; ")} — use --cpf.`,
+        `Vários clientes para "${opts.nome}": ${matches.map((m) => `${m.nome} (${m.cpf})`).join("; ")} — use --cpf.`,
       );
     }
     return matches[0]!;
@@ -162,8 +179,22 @@ function findClienteDbInList(list: ClienteDb[], cpf?: string, nome?: string): Cl
   throw new Error("Informe --cpf ou --cliente (nome do locatário).");
 }
 
-function findVeiculoDbInList(list: VeiculoDb[], placa: string): VeiculoDb {
-  const v = list.find((x) => placasIguais(x.placa, placa));
+function findVeiculoDbInList(
+  list: VeiculoDb[],
+  opts: { placa?: string; veiculoId?: string },
+): VeiculoDb {
+  if (opts.veiculoId?.trim()) {
+    const id = opts.veiculoId.trim();
+    const byId = list.find((x) => x.id === id);
+    if (byId) return byId;
+  }
+
+  const placa = opts.placa?.trim() || opts.veiculoId?.trim();
+  if (!placa) {
+    throw new Error("Informe veiculoId ou placa do veículo.");
+  }
+
+  const v = list.find((x) => placasIguais(x.placa, placa) || x.id === placa);
   if (!v) {
     throw new Error(
       `Placa ${formatPlacaHyphen(placa)} não encontrada em veiculos.json — use cadastro-veiculo.`,
@@ -172,22 +203,26 @@ function findVeiculoDbInList(list: VeiculoDb[], placa: string): VeiculoDb {
   return v;
 }
 
-export function findClienteDb(cpf?: string, nome?: string): ClienteDb {
-  return findClienteDbInList(loadClientesDb().clientes, cpf, nome);
+export function findClienteDb(cpf?: string, nome?: string, clienteId?: string): ClienteDb {
+  return findClienteDbInList(loadClientesDb().clientes, { cpf, nome, clienteId });
 }
 
-export async function findClienteDbAsync(cpf?: string, nome?: string): Promise<ClienteDb> {
+export async function findClienteDbAsync(
+  cpf?: string,
+  nome?: string,
+  clienteId?: string,
+): Promise<ClienteDb> {
   const db = await loadClientesDbAsync();
-  return findClienteDbInList(db.clientes, cpf, nome);
+  return findClienteDbInList(db.clientes, { cpf, nome, clienteId });
 }
 
-export function findVeiculoDb(placa: string): VeiculoDb {
-  return findVeiculoDbInList(loadVeiculosDb().veiculos, placa);
+export function findVeiculoDb(placa?: string, veiculoId?: string): VeiculoDb {
+  return findVeiculoDbInList(loadVeiculosDb().veiculos, { placa, veiculoId });
 }
 
-export async function findVeiculoDbAsync(placa: string): Promise<VeiculoDb> {
+export async function findVeiculoDbAsync(placa?: string, veiculoId?: string): Promise<VeiculoDb> {
   const db = await loadVeiculosDbAsync();
-  return findVeiculoDbInList(db.veiculos, placa);
+  return findVeiculoDbInList(db.veiculos, { placa, veiculoId });
 }
 
 /**
@@ -422,15 +457,15 @@ function montarDadosContratoCore(
 }
 
 export function montarDadosContratoFromDb(input: MontarContratoDbInput): GerarContratoDados {
-  const cliente = findClienteDb(input.cpf, input.clienteNome);
-  const veiculo = findVeiculoDb(input.placa);
+  const cliente = findClienteDb(input.cpf, input.clienteNome, input.clienteId);
+  const veiculo = findVeiculoDb(input.placa, input.veiculoId);
   return montarDadosContratoCore(input, cliente, veiculo);
 }
 
 export async function montarDadosContratoFromDbAsync(
   input: MontarContratoDbInput,
 ): Promise<GerarContratoDados> {
-  const cliente = await findClienteDbAsync(input.cpf, input.clienteNome);
-  const veiculo = await findVeiculoDbAsync(input.placa);
+  const cliente = await findClienteDbAsync(input.cpf, input.clienteNome, input.clienteId);
+  const veiculo = await findVeiculoDbAsync(input.placa, input.veiculoId);
   return montarDadosContratoCore(input, cliente, veiculo);
 }

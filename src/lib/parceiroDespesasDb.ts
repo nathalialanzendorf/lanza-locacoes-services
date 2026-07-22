@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadParceiroDespesasFromSql, saveParceiroDespesasToSql, exportJsonBackup } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { findVeiculoById } from "./veiculosDb.js";
 
 export const DB_PARCEIRO_DESPESAS = path.join(
   REPO_ROOT,
@@ -39,7 +40,9 @@ export type ParceiroDespesaRegistro = {
 };
 
 export type ParceiroDespesaInput = {
-  placa: string;
+  /** @deprecated prefer veiculoId */
+  placa?: string;
+  veiculoId?: string;
   categoria: string;
   descricao: string;
   data: string;
@@ -300,12 +303,30 @@ function findMatchingIndices(
   return [...new Set(indices)];
 }
 
+function resolveVeiculoParceiroInput(input: Pick<ParceiroDespesaInput, "placa" | "veiculoId">): {
+  id: string | null;
+  placa: string;
+} {
+  const idRef = input.veiculoId?.trim();
+  if (idRef) {
+    const v = findVeiculoById(idRef);
+    if (v?.placa) {
+      return { id: v.id, placa: formatPlacaHyphen(v.placa) };
+    }
+  }
+  const placaRef = input.placa?.trim() || idRef || "";
+  if (!placaRef) {
+    throw new Error("Informe veiculoId ou placa");
+  }
+  return resolveVeiculo(placaRef);
+}
+
 function sincronizarParceiroDespesaOnDb(
   db: ParceiroDespesasDb,
   input: ParceiroDespesaInput,
 ): GravarParceiroDespesaResult {
   const valor = parseValor(input.valor);
-  const { id: veiculoId, placa } = resolveVeiculo(input.placa);
+  const { id: veiculoId, placa } = resolveVeiculoParceiroInput(input);
   const competencia = input.competencia?.trim() || competenciaFromData(input.data);
   const origem = input.origem?.trim() || "manual";
   const manual = origem === "manual";

@@ -58,8 +58,28 @@ function findVeiculoEnc(placa: string): VeiculoRegistro | null {
   return veiculosEnc().find((v) => placasIguais(v.placa, placa)) ?? null;
 }
 
+/** Resolve pasta do contrato a partir de `contratoId` ou `pastaContrato`. */
+export function resolverPastaContratoEncerramento(input: EncerramentoInput): string {
+  const pasta = input.pastaContrato?.trim();
+  if (pasta) return pasta;
+
+  const id = input.contratoId?.trim();
+  if (!id) {
+    throw new Error('Informe "contratoId" ou "pastaContrato".');
+  }
+
+  const reg = contratosEnc().find((c) => c.id === id);
+  if (!reg?.pastaContrato?.trim()) {
+    throw new Error(`Contrato não encontrado: ${id}`);
+  }
+  return reg.pastaContrato.trim();
+}
+
 export type EncerramentoInput = {
-  pastaContrato: string;
+  /** Pasta do contrato no disco (legado). Preferir `contratoId`. */
+  pastaContrato?: string;
+  /** UUID do contrato em contratos.json / Postgres. */
+  contratoId?: string;
   dataEncerramento: string;
   semanasPagas?: string[];
   infracoesPagasAuto?: string[];
@@ -483,7 +503,8 @@ function inferirSemanasPagasDoDb(
 }
 
 export function calcularEncerramentoContrato(input: EncerramentoInput): EncerramentoResult {
-  const contrato = extrairContrato(input.pastaContrato, { paraEncerramento: true });
+  const pastaContrato = resolverPastaContratoEncerramento(input);
+  const contrato = extrairContrato(pastaContrato, { paraEncerramento: true });
   const veicReg = findVeiculoEnc(contrato.placa);
   if (veicReg?.particular === true) {
     throw new Error(
@@ -491,7 +512,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     );
   }
   const registroVigente = validarContratoVigenteParaEncerramento(
-    input.pastaContrato,
+    pastaContrato,
     contrato.placa,
     contrato.cpf,
     contrato.clienteNome,

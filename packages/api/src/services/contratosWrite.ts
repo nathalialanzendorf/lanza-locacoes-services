@@ -52,6 +52,8 @@ async function executarContratoModo(
 
   if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
     dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
+  } else if ("veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null) {
+    dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
   } else {
     dados = input as GerarContratoDados;
   }
@@ -87,7 +89,9 @@ async function executarContratoModo(
     const montarInput =
       "placa" in input && input.placa && "semana" in input && input.semana != null
         ? (input as MontarContratoDbInput)
-        : null;
+        : "veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null
+          ? (input as MontarContratoDbInput)
+          : null;
     try {
       despesasIniciais = await gerarDespesasIniciaisContratoAsync(reg, dados, montarInput);
     } catch (err) {

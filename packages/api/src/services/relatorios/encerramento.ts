@@ -17,15 +17,20 @@ export type GerarEncerramentoInput = EncerramentoInput & {
 };
 
 export async function gerarEncerramento(input: GerarEncerramentoInput) {
-  if (!input.pastaContrato?.trim()) {
-    throw new HttpError(400, 'Campo "pastaContrato" é obrigatório');
+  if (!input.pastaContrato?.trim() && !input.contratoId?.trim()) {
+    throw new HttpError(400, 'Informe "contratoId" ou "pastaContrato"');
   }
   if (!input.dataEncerramento?.trim()) {
     throw new HttpError(400, 'Campo "dataEncerramento" é obrigatório');
   }
 
+  const pastaContrato = input.pastaContrato?.trim()
+    ? input.pastaContrato.trim()
+    : undefined;
+
   const encInput: EncerramentoInput = {
-    pastaContrato: input.pastaContrato.trim(),
+    pastaContrato,
+    contratoId: input.contratoId?.trim() || undefined,
     dataEncerramento: input.dataEncerramento.trim(),
     semanasPagas: input.semanasPagas,
     infracoesPagasAuto: input.infracoesPagasAuto ?? input.multasPagasAuto,

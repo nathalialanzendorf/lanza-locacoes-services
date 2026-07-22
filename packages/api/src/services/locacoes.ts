@@ -63,6 +63,7 @@ export async function atualizarLocacao(id: string, patch: Partial<LocacaoInput>)
   if (!atual) throw new HttpError(404, "Locação não encontrada");
   const input: LocacaoInput = {
     id,
+    veiculoId: patch.veiculoId ?? atual.veiculoId ?? undefined,
     placa: patch.placa ?? atual.placa,
     situacao: patch.situacao ?? atual.situacao,
     inicio: patch.inicio ?? atual.inicio,

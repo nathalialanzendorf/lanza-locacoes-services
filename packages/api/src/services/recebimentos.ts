@@ -72,15 +72,18 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
       }
 
       if (linha.operacao === "atualizar") {
-        const alvo = linha.autoInfracao;
+        const alvo = linha.despesaId?.trim() || linha.autoInfracao;
         if (!alvo) {
-          throw new HttpError(400, `Linha ${linha.num}: operação atualizar exige autoInfracao`);
+          throw new HttpError(
+            400,
+            `Linha ${linha.num}: operação atualizar exige despesaId ou autoInfracao`,
+          );
         }
         const r = await despesasService.atualizarDespesa(alvo, linha.patch, syncOpts);
         resultados.push({
           num: linha.num,
           operacao: linha.operacao,
-          autoInfracao: alvo,
+          autoInfracao: r.data.autoInfracao ?? linha.autoInfracao,
           data: r.data,
           proximaParcela: r.proximaParcela,
         });

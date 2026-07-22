@@ -161,7 +161,9 @@ export async function obterParceiroDespesa(id: string): Promise<ParceiroDespesaR
 }
 
 export async function criarParceiroDespesa(input: ParceiroDespesaInput) {
-  if (!input.placa?.trim()) throw new HttpError(400, 'Campo "placa" é obrigatório');
+  if (!input.veiculoId?.trim() && !input.placa?.trim()) {
+    throw new HttpError(400, 'Informe "veiculoId" ou "placa"');
+  }
   if (!input.categoria?.trim()) throw new HttpError(400, 'Campo "categoria" é obrigatório');
   return gravarParceiroDespesaManualAsync(input);
 }
