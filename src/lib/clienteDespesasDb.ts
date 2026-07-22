@@ -1211,7 +1211,7 @@ export type DespesaAtribuicaoContext = {
   veiculos?: VeiculoRegistro[];
 };
 
-/** Condutor/locatário na data da despesa (placa + dataAutuacao). */
+/** Condutor/locatário na data da despesa (placa + dataAutuacao). Só sync DETRAN / cadastro manual — não usar em listagens ou baixa. */
 export function inferirCondutorIdDespesaPorData(
   d: ClienteDespesaRegistro,
   prazoDias = 90,
@@ -1230,7 +1230,7 @@ export function inferirCondutorIdDespesaPorData(
 
 /**
  * Débito pertence ao cliente no escopo de cobrança/relatório.
- * Infração, pedágio e estacionamento usam vigência na data do evento — não o locatário atual da placa.
+ * Infração/pedágio/estacionamento: condutorId gravado ou contratos do contexto (Postgres) — sem inferirCondutorInfracao (filesystem).
  */
 export function despesaAtribuidaACliente(
   d: ClienteDespesaRegistro,
@@ -1243,12 +1243,8 @@ export function despesaAtribuidaACliente(
 
   if (isInfracaoTransito(d) || categoriaAtribuiPorDataEvento(d.categoria)) {
     if (isInfracaoTransito(d) && isInfracaoSemDataAutuacao(d)) return false;
-    if (ctx?.contratos) {
-      const inferido = inferirCondutorIdDespesaPorContratosDb(d, ctx.contratos, ctx.veiculos);
-      if (inferido) return inferido === clienteId;
-      return false;
-    }
-    const inferido = inferirCondutorIdDespesaPorData(d, prazoDias, ctx?.veiculos);
+    if (!ctx?.contratos) return false;
+    const inferido = inferirCondutorIdDespesaPorContratosDb(d, ctx.contratos, ctx.veiculos);
     if (inferido) return inferido === clienteId;
     return false;
   }

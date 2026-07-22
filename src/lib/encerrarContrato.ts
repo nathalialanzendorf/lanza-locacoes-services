@@ -660,7 +660,10 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
     db.clienteDespesas.filter((m) => {
       if (!infracaoIncluirListagemRelatorio(m)) return false;
       if (isInfracaoSemDataAutuacao(m) && !m.condutorId) return false;
-      if (incluirInfracoesCliente && clienteId && despesaAtribuidaACliente(m, clienteId)) {
+      if (incluirInfracoesCliente && clienteId && despesaAtribuidaACliente(m, clienteId, 90, {
+        contratos: contratosEnc(),
+        veiculos: veiculosEnc(),
+      })) {
         return infracaoNoPeriodoEncerramento(
           m,
           contrato.inicio,

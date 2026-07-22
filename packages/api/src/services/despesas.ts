@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import { queryClienteDespesasFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
+import { queryClienteDespesasFromSql, queryContratosFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 import {
   confirmarCondutorClienteDespesa,
   confirmarDebitoParceiroDespesa,
@@ -16,6 +16,7 @@ import {
   loadClienteDespesasDbAsync,
   loadClientesDb,
   loadClientesDbAsync,
+  loadContratosDbAsync,
   loadVeiculosDbAsync,
   findVeiculoById,
   findVeiculoByPlaca,
@@ -27,6 +28,7 @@ import {
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
   type ClienteRegistro,
+  type ContratoRegistro,
   type VeiculoRegistro,
   resolveSyncRastreame,
   reconciliarCondutores,
@@ -61,6 +63,7 @@ type DespesasCatalogo = {
   despesas: ClienteDespesaRegistro[];
   clientes: ClienteRegistro[];
   veiculos: VeiculoRegistro[];
+  contratos: ContratoRegistro[];
 };
 
 function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
@@ -186,7 +189,10 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
       const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
       if (veiculo?.clienteVinculadoId === clienteId) return true;
       if (condutorId && condutorId !== clienteId) return false;
-      return despesaAtribuidaACliente(d, clienteId);
+      return despesaAtribuidaACliente(d, clienteId, 90, {
+        contratos: catalogo.contratos,
+        veiculos: catalogo.veiculos,
+      });
     });
   }
 
@@ -208,32 +214,54 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
 }
 
 async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<DespesasCatalogo> {
+  const clienteId = opts.clienteId?.trim();
   if (await useRelationalStore()) {
     const veiculoId =
       opts.veiculoId?.trim() ||
       (opts.placa?.trim() ? (await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined : undefined);
     const despesas = (await queryClienteDespesasFromSql({
-      clienteId: opts.clienteId,
+      clienteId,
       veiculoId,
       emAberto: opts.emAberto,
       ativo: opts.ativo,
     })) as ClienteDespesaRegistro[];
-    const { clientes, veiculos } = await loadCatalogoEnriquecimentoDespesas(despesas, {
-      clienteIds: opts.clienteId?.trim() ? [opts.clienteId.trim()] : undefined,
-      veiculoIds: veiculoId ? [veiculoId] : undefined,
-    });
-    return { despesas, clientes, veiculos };
+    const veiculoIds = [
+      ...new Set(
+        despesas
+          .map((d) => String(d.veiculoId ?? "").trim())
+          .filter((id) => id.length > 0),
+      ),
+    ];
+    if (veiculoId) veiculoIds.push(veiculoId);
+    const [enriquecimento, contratos] = await Promise.all([
+      loadCatalogoEnriquecimentoDespesas(despesas, {
+        clienteIds: clienteId ? [clienteId] : undefined,
+        veiculoIds: veiculoIds.length ? [...new Set(veiculoIds)] : undefined,
+      }),
+      queryContratosFromSql({
+        ...(clienteId ? { clienteId } : {}),
+        ...(veiculoIds.length ? { veiculoIds: [...new Set(veiculoIds)] } : {}),
+      }),
+    ]);
+    return {
+      despesas,
+      clientes: enriquecimento.clientes,
+      veiculos: enriquecimento.veiculos,
+      contratos: contratos as ContratoRegistro[],
+    };
   }
 
-  const [clientesDb, veiculosDb, despesasDb] = await Promise.all([
+  const [clientesDb, veiculosDb, despesasDb, contratosDb] = await Promise.all([
     loadClientesDbAsync(),
     loadVeiculosDbAsync(),
     loadClienteDespesasDbAsync(),
+    loadContratosDbAsync(clienteId ? { clienteId } : undefined),
   ]);
   return {
     despesas: despesasDb.clienteDespesas,
     clientes: clientesDb.clientes,
     veiculos: veiculosDb.veiculos,
+    contratos: contratosDb.contratos,
   };
 }
 
@@ -245,6 +273,7 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
     despesas: loadClienteDespesasDb().clienteDespesas,
     clientes: loadClientesDb().clientes,
     veiculos: [],
+    contratos: [],
   };
   const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
   return {
