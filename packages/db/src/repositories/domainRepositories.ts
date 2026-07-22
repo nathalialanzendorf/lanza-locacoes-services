@@ -800,24 +800,104 @@ export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbSha
   };
 }
 
-export async function upsertClienteDespesaRowToSql(d: Record<string, unknown>): Promise<void> {
-  const id = asText(d.id) ?? randomUUID();
+export type PersistClienteDespesaSqlOpts = {
+  /** Evita SELECT em `lanza.veiculos` quando o UUID já está no registro ou no contexto. */
+  veiculoId?: string | null;
+  /** Não consulta `lanza.infracoes` (ex.: baixa de locação semanal). */
+  skipInfracaoLookup?: boolean;
+};
+
+type ClienteDespesaPersistMeta = {
+  id: string;
+  veiculoIdResolved: string | null;
+  placa: string;
+  infracaoId: string | null;
+};
+
+async function resolveClienteDespesaPersistMeta(
+  d: Record<string, unknown>,
+  opts?: PersistClienteDespesaSqlOpts,
+): Promise<ClienteDespesaPersistMeta | null> {
+  const id = asText(d.id);
+  if (!id) return null;
+
   const veiculoRef = asText(d.veiculoId) ?? "";
-  let veiculoIdResolved: string | null = isUuid(veiculoRef) ? veiculoRef : null;
-  if (!veiculoIdResolved && veiculoRef.trim()) {
-    veiculoIdResolved = await resolveVeiculoIdFromSql({ placa: veiculoRef });
+  let veiculoIdResolved: string | null = opts?.veiculoId ?? null;
+  if (!veiculoIdResolved) {
+    veiculoIdResolved = isUuid(veiculoRef) ? veiculoRef : null;
+    if (!veiculoIdResolved && veiculoRef.trim()) {
+      veiculoIdResolved = await resolveVeiculoIdFromSql({ placa: veiculoRef });
+    }
   }
   const placa = formatPlacaHyphen(veiculoRef || veiculoIdResolved || "");
   const auto = asText(d.autoInfracao) ?? id;
-  const inf = await pgQuery<{ id: string }>(
-    "SELECT id FROM lanza.infracoes WHERE lower(numero_auto) = lower($1) LIMIT 1",
-    [auto],
-    "upsertClienteDespesaRow/infracao",
-  );
-  const infracaoId = inf.rows[0]?.id ?? null;
 
-  await pgQuery(
-    `INSERT INTO lanza.cliente_despesas (
+  let infracaoId: string | null = null;
+  if (!opts?.skipInfracaoLookup) {
+    const inf = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.infracoes WHERE lower(numero_auto) = lower($1) LIMIT 1",
+      [auto],
+      "upsertClienteDespesaRow/infracao",
+    );
+    infracaoId = inf.rows[0]?.id ?? null;
+  }
+
+  return { id, veiculoIdResolved, placa, infracaoId };
+}
+
+function clienteDespesaRowSqlParams(
+  d: Record<string, unknown>,
+  meta: ClienteDespesaPersistMeta,
+): unknown[] {
+  const { id, veiculoIdResolved, placa, infracaoId } = meta;
+  const auto = asText(d.autoInfracao) ?? id;
+  return [
+    id,
+    asText(d.categoria),
+    veiculoIdResolved,
+    placa,
+    auto,
+    asText(d.titulo),
+    asText(d.descricao) ?? "",
+    asText(d.numeroAuto) ?? auto,
+    asText(d.localInfracao),
+    asText(d.dataAutuacao) ?? "",
+    asNumber(d.valorMulta, 0),
+    asText(d.situacao),
+    asText(d.limiteDefesa),
+    asText(d.dataLimiteDefesa),
+    asText(d.dataVencimentoOriginal),
+    asBool(d.convertidaEmDebito, false),
+    isUuid(asText(d.condutorId)) ? d.condutorId : null,
+    asBool(d.condutorConfirmado, false),
+    asText(d.condutorContrato),
+    asBool(d.condutorNaoIdentificado, false),
+    asBool(d.debitoParceiroConfirmado, false),
+    isUuid(asText(d.debitoParceiroId)) ? d.debitoParceiroId : null,
+    asBool(d.revisarManual, false),
+    asText(d.revisarMotivo),
+    asBool(d.paga, false),
+    parseIso(asText(d.pagaEm)),
+    asBool(d.quitadaDetran, false),
+    asText(d.statusInfracao),
+    asText(d.statusDetran),
+    d.rastreameId != null ? String(d.rastreameId) : null,
+    d.rastreameMotoristaKey != null ? String(d.rastreameMotoristaKey) : null,
+    d.rastreameRastreavelKey != null ? String(d.rastreameRastreavelKey) : null,
+    parseIso(asText(d.rastreameDataIso)),
+    asText(d.rastreameTipo),
+    parseIso(asText(d.rastreameSyncEm)),
+    asText(d.detranAutoInfracao),
+    asText(d.pdfArquivo),
+    infracaoId,
+    asBool(d.ativo, true),
+    asText(d.origem),
+    parseIso(asText(d.cadastradoEm)),
+  ];
+}
+
+const CLIENTE_DESPESA_UPSERT_SQL = `
+    INSERT INTO lanza.cliente_despesas (
       id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
       local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
       data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
@@ -854,53 +934,107 @@ export async function upsertClienteDespesaRowToSql(d: Record<string, unknown>): 
       rastreame_rastreavel_key = EXCLUDED.rastreame_rastreavel_key,
       rastreame_data_iso = EXCLUDED.rastreame_data_iso,
       rastreame_tipo = EXCLUDED.rastreame_tipo,
-      infracao_id = EXCLUDED.infracao_id,
+      infracao_id = COALESCE(EXCLUDED.infracao_id, lanza.cliente_despesas.infracao_id),
       ativo = EXCLUDED.ativo,
       origem = EXCLUDED.origem,
-      atualizado_em = now()`,
-    [
-      id,
-      asText(d.categoria),
-      veiculoIdResolved,
-      placa,
-      auto,
-      asText(d.titulo),
-      asText(d.descricao) ?? "",
-      asText(d.numeroAuto) ?? auto,
-      asText(d.localInfracao),
-      asText(d.dataAutuacao) ?? "",
-      asNumber(d.valorMulta, 0),
-      asText(d.situacao),
-      asText(d.limiteDefesa),
-      asText(d.dataLimiteDefesa),
-      asText(d.dataVencimentoOriginal),
-      asBool(d.convertidaEmDebito, false),
-      isUuid(asText(d.condutorId)) ? d.condutorId : null,
-      asBool(d.condutorConfirmado, false),
-      asText(d.condutorContrato),
-      asBool(d.condutorNaoIdentificado, false),
-      asBool(d.debitoParceiroConfirmado, false),
-      isUuid(asText(d.debitoParceiroId)) ? d.debitoParceiroId : null,
-      asBool(d.revisarManual, false),
-      asText(d.revisarMotivo),
-      asBool(d.paga, false),
-      parseIso(asText(d.pagaEm)),
-      asBool(d.quitadaDetran, false),
-      asText(d.statusInfracao),
-      asText(d.statusDetran),
-      d.rastreameId != null ? String(d.rastreameId) : null,
-      d.rastreameMotoristaKey != null ? String(d.rastreameMotoristaKey) : null,
-      d.rastreameRastreavelKey != null ? String(d.rastreameRastreavelKey) : null,
-      parseIso(asText(d.rastreameDataIso)),
-      asText(d.rastreameTipo),
-      parseIso(asText(d.rastreameSyncEm)),
-      asText(d.detranAutoInfracao),
-      asText(d.pdfArquivo),
-      infracaoId,
-      asBool(d.ativo, true),
-      asText(d.origem),
-      parseIso(asText(d.cadastradoEm)),
-    ],
+      atualizado_em = now()`;
+
+/** UPDATE de uma linha existente (sem INSERT / ON CONFLICT). */
+export async function updateClienteDespesaRowToSql(
+  d: Record<string, unknown>,
+  opts?: PersistClienteDespesaSqlOpts,
+): Promise<void> {
+  const meta = await resolveClienteDespesaPersistMeta(d, opts);
+  if (!meta) return;
+
+  const infracaoSet = opts?.skipInfracaoLookup ? "" : "infracao_id = $38,";
+
+  await pgQuery(
+    `UPDATE lanza.cliente_despesas SET
+      categoria = $2,
+      veiculo_id = $3,
+      veiculo_placa = $4,
+      auto_infracao = $5,
+      titulo = $6,
+      descricao = $7,
+      numero_auto = $8,
+      local_infracao = $9,
+      data_autuacao = $10,
+      valor_multa = $11,
+      situacao = $12,
+      limite_defesa = $13,
+      data_limite_defesa = $14,
+      data_vencimento_original = $15,
+      convertida_em_debito = $16,
+      condutor_id = $17,
+      condutor_confirmado = $18,
+      condutor_contrato = $19,
+      condutor_nao_identificado = $20,
+      debito_parceiro_confirmado = $21,
+      debito_parceiro_id = $22,
+      revisar_manual = $23,
+      revisar_motivo = $24,
+      paga = $25,
+      paga_em = $26,
+      quitada_detran = $27,
+      status_infracao = $28,
+      status_detran = $29,
+      rastreame_id = $30,
+      rastreame_motorista_key = $31,
+      rastreame_rastreavel_key = $32,
+      rastreame_data_iso = $33,
+      rastreame_tipo = $34,
+      rastreame_sync_em = $35,
+      detran_auto_infracao = $36,
+      pdf_arquivo = $37,
+      ${infracaoSet}
+      ativo = $39,
+      origem = $40,
+      atualizado_em = now()
+    WHERE id = $1`,
+    clienteDespesaRowSqlParams(d, meta),
+    "updateClienteDespesaRow",
+  );
+}
+
+/** INSERT de uma nova linha (sem UPDATE / ON CONFLICT). */
+export async function insertClienteDespesaRowToSql(
+  d: Record<string, unknown>,
+  opts?: PersistClienteDespesaSqlOpts,
+): Promise<void> {
+  const meta = await resolveClienteDespesaPersistMeta(d, opts);
+  if (!meta) return;
+
+  await pgQuery(
+    `INSERT INTO lanza.cliente_despesas (
+      id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
+      local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
+      data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
+      condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
+      revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
+      rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
+      rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
+      origem, cadastrado_em, atualizado_em
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())`,
+    clienteDespesaRowSqlParams(d, meta),
+    "insertClienteDespesaRow",
+  );
+}
+
+export async function upsertClienteDespesaRowToSql(
+  d: Record<string, unknown>,
+  opts?: PersistClienteDespesaSqlOpts,
+): Promise<void> {
+  const meta = await resolveClienteDespesaPersistMeta(
+    { ...d, id: asText(d.id) ?? randomUUID() },
+    opts,
+  );
+  if (!meta) return;
+
+  await pgQuery(
+    CLIENTE_DESPESA_UPSERT_SQL,
+    clienteDespesaRowSqlParams(d, meta),
     "upsertClienteDespesaRow",
   );
 }

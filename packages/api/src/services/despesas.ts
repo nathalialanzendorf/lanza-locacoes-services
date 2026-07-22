@@ -30,7 +30,6 @@ import {
   type ClienteRegistro,
   type ContratoRegistro,
   type VeiculoRegistro,
-  resolveSyncRastreame,
   reconciliarCondutores,
   dataStringNoPeriodo,
   isCategoriaPedagio,
@@ -324,9 +323,7 @@ export async function criarDespesa(
     throw new HttpError(400, 'Campo "descricao" é obrigatório');
   }
 
-  const r = await gravarClienteDespesa(veiculoId, input, {
-    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
-  });
+  const r = await gravarClienteDespesa(veiculoId, input, { syncRastreame: false });
   return {
     data: r.registro,
     duplicado: r.duplicado ?? false,
@@ -340,9 +337,7 @@ export async function atualizarDespesa(
   patch: ClienteDespesaPatch,
   opts?: SyncOpts,
 ) {
-  const r = await editarClienteDespesa(idOrAuto, patch, {
-    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
-  });
+  const r = await editarClienteDespesa(idOrAuto, patch, { syncRastreame: false });
   if (!r) {
     throw new HttpError(404, "Despesa não encontrada");
   }
@@ -353,9 +348,7 @@ export async function atualizarDespesa(
 }
 
 export async function removerDespesa(idOrAuto: string, opts?: SyncOpts) {
-  const item = await excluirClienteDespesa(idOrAuto, {
-    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
-  });
+  const item = await excluirClienteDespesa(idOrAuto, { syncRastreame: false });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");
   }
@@ -372,7 +365,7 @@ export async function confirmarClienteDespesa(
   if (porId) autoInfracao = porId.autoInfracao;
 
   const item = await confirmarCondutorClienteDespesa(autoInfracao, clienteId, {
-    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
+    syncRastreame: false,
   });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");

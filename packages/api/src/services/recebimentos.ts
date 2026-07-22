@@ -3,7 +3,6 @@ import {
   withBaixaPlanoDbContext,
   scopeFromLinhasBaixa,
   resolvePlacaLinhaPlanoBaixa,
-  resolveSyncRastreame,
   type LinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
 } from "../lib-imports.js";
@@ -61,9 +60,7 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
     throw new HttpError(400, 'Campo "linhas" é obrigatório e não pode ser vazio');
   }
 
-  const syncOpts = {
-    syncRastreame: resolveSyncRastreame(input.syncRastreame !== false ? undefined : false),
-  };
+  const syncOpts = { syncRastreame: false as const };
   const resultados: ExecutarBaixaResultado["resultados"] = [];
 
   return withBaixaPlanoDbContext(

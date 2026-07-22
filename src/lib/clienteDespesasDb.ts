@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
 import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -585,18 +585,15 @@ export type ClienteDespesaPersistOpts = {
   prazoDias?: number;
   skipInferir?: boolean;
   fonteDetran?: string;
-  /** Default true — replica no Rastreame após gravar localmente. */
+  /** Default false — integração Rastreame descontinuada. */
   syncRastreame?: boolean;
 };
 
 async function pushAposPersistir(
   regs: ClienteDespesaRegistro[],
-  opts?: ClienteDespesaPersistOpts,
+  _opts?: ClienteDespesaPersistOpts,
 ): Promise<ClienteDespesaRegistro[]> {
-  const { pushClienteDespesaRegistrosNoRastreame } = await import(
-    "./clienteDespesaRastreamePush.js"
-  );
-  return pushClienteDespesaRegistrosNoRastreame(regs, opts);
+  return regs;
 }
 
 function resolvePlacaVeiculoCadastro(
@@ -1569,6 +1566,32 @@ function applyClienteDespesaPatch(
   m.atualizadoEm = nowIso();
 }
 
+function findClienteDespesaInRuntimeCtx(key: string): ClienteDespesaRegistro | null {
+  const k = key.trim();
+  const ku = k.toUpperCase();
+  const ctx = getCobrancasRuntimeCtx()?.clienteDespesas;
+  if (!ctx?.length) return null;
+  return (
+    ctx.find((m) => m.id === k) ??
+    ctx.find((m) => m.autoInfracao.trim().toUpperCase() === ku) ??
+    null
+  );
+}
+
+async function resolveClienteDespesaForEdit(key: string): Promise<ClienteDespesaRegistro | null> {
+  const fromCtx = findClienteDespesaInRuntimeCtx(key);
+  if (fromCtx) return { ...fromCtx };
+  const row = await queryClienteDespesaByReferenciaFromSql(key);
+  return row ? (row as ClienteDespesaRegistro) : null;
+}
+
+function persistOptsClienteDespesa(d: ClienteDespesaRegistro): PersistClienteDespesaSqlOpts {
+  return {
+    veiculoId: isEntityUuid(d.veiculoId) ? d.veiculoId : undefined,
+    skipInfracaoLookup: (d.categoria ?? "Infração") !== "Infração",
+  };
+}
+
 function despesaSemanalDescricaoDuplicada(
   veiculoId: string,
   descricaoNorm: string,
@@ -1645,7 +1668,10 @@ async function criarProximaParcelaSemanalRelational(
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
   if (!prox) return null;
   const alvo = normDescSemanal(prox.descricao);
-  if (await despesaSemanalDescricaoDuplicadaAsync(pago.veiculoId, alvo)) return null;
+  if (despesaSemanalDescricaoDuplicada(pago.veiculoId, alvo)) return null;
+  if (!getCobrancasRuntimeCtx()?.clienteDespesas?.length) {
+    if (await despesaSemanalDescricaoDuplicadaAsync(pago.veiculoId, alvo)) return null;
+  }
   return buildProximaParcelaSemanalRegistro(pago, prox, valorParcela);
 }
 
@@ -1655,10 +1681,10 @@ async function editarClienteDespesaRelational(
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<EditarClienteDespesaResult | null> {
   const key = idOrAuto.trim();
-  const row = await queryClienteDespesaByReferenciaFromSql(key);
+  const row = await resolveClienteDespesaForEdit(key);
   if (!row) return null;
 
-  const m = row as ClienteDespesaRegistro;
+  const m = row;
   const veiculos = getCobrancasRuntimeCtx()?.veiculos;
   const eraPaga = m.paga === true;
   const descricaoAntes = m.descricao;
@@ -1685,9 +1711,13 @@ async function editarClienteDespesaRelational(
     );
   }
 
-  await upsertClienteDespesaRowToSql(m as unknown as Record<string, unknown>);
+  const persistOpts = persistOptsClienteDespesa(m);
+  await upsertClienteDespesaRowToSql(m as unknown as Record<string, unknown>, persistOpts);
   if (proximaParcela) {
-    await upsertClienteDespesaRowToSql(proximaParcela as unknown as Record<string, unknown>);
+    await upsertClienteDespesaRowToSql(
+      proximaParcela as unknown as Record<string, unknown>,
+      persistOptsClienteDespesa(proximaParcela),
+    );
   }
 
   const synced = await pushAposPersistir(

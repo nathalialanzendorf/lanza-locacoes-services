@@ -300,6 +300,10 @@ export async function pullRecebimentosFromRastreame(
   opts: SyncRecebimentosOpts = {},
 ): Promise<SyncRecebimentosResult["pull"]> {
   const result = { novos: 0, atualizados: 0, ignorados: 0, erros: [] as string[] };
+  if (!rastreameEspelhoGlobal()) {
+    result.erros.push("Espelho Rastreame desativado (integração descontinuada)");
+    return result;
+  }
   const clientes = loadClientes();
   const motoristas = await listMotoristas();
   const gastos = await fetchAllGastos();

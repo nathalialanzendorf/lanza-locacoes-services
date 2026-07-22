@@ -1,17 +1,15 @@
 /**
  * Push automático de registos locais → Gastos Gerais (Rastreame).
- * Chamado após gravar/editar em cliente-despesas.json (cadastro manual e syncs).
+ * @deprecated Integração descontinuada — não replica mais.
  */
 import {
   findClienteDespesaById,
   findClienteDespesaByIdAsync,
-  isSyncRastreameEligible,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
-import { resolveSyncRastreame } from "./rastreameEspelhoConfig.js";
 
 export type ClienteDespesaPushOpts = {
-  /** Default true — replica no Rastreame após persistir localmente. */
+  /** Ignorado — integração Rastreame descontinuada. */
   syncRastreame?: boolean;
 };
 
@@ -31,29 +29,7 @@ export function recarregarClienteDespesa(
 
 export async function pushClienteDespesaRegistrosNoRastreame(
   regs: ClienteDespesaRegistro[],
-  opts?: ClienteDespesaPushOpts,
+  _opts?: ClienteDespesaPushOpts,
 ): Promise<ClienteDespesaRegistro[]> {
-  if (!resolveSyncRastreame(opts?.syncRastreame)) {
-    return Promise.all(regs.map(recarregarClienteDespesaAsync));
-  }
-
-  const { replicarClienteDespesaNoRastreame } = await import("./rastreame/recebimentosSync.js");
-  const out: ClienteDespesaRegistro[] = [];
-
-  for (const reg of regs) {
-    if (!isSyncRastreameEligible(reg) && reg.ativo !== false) {
-      out.push(await recarregarClienteDespesaAsync(reg));
-      continue;
-    }
-    try {
-      await replicarClienteDespesaNoRastreame(reg);
-    } catch (e) {
-      console.error(
-        `[aviso] falha sync Rastreame (${reg.autoInfracao}): ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-    out.push(await recarregarClienteDespesaAsync(reg));
-  }
-
-  return out;
+  return regs;
 }

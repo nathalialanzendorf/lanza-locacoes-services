@@ -36,18 +36,8 @@ function readConfigFile(): Record<string, unknown> {
   }
 }
 
-/** Leitura global — espelhar no Rastreame? */
+/** Leitura global — espelhar no Rastreame? Integração descontinuada: sempre desligado. */
 export function rastreameEspelhoGlobal(): boolean {
-  const envRaw = process.env.LANZA_RASTREAME_ESPELHO?.trim();
-  if (envRaw) {
-    const parsed = parseBoolEnv(envRaw);
-    if (parsed != null) return parsed;
-  }
-
-  const cfg = readConfigFile();
-  if (typeof cfg.rastreameEspelho === "boolean") return cfg.rastreameEspelho;
-
-  // Espelho desligado por defeito (integração Rastreame descontinuada).
   return false;
 }
 
@@ -92,12 +82,10 @@ export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
 
 /**
  * Resolve se uma operação deve empurrar ao Rastreame.
- * @param perCall false = nunca nesta chamada; true/undefined = segue o global.
+ * Integração descontinuada — sempre false.
  */
-export function resolveSyncRastreame(perCall?: boolean): boolean {
-  if (!rastreameEspelhoGlobal()) return false;
-  if (perCall === false) return false;
-  return true;
+export function resolveSyncRastreame(_perCall?: boolean): boolean {
+  return false;
 }
 
 export function gravarRastreameEspelhoConfig(ativo: boolean): RastreameEspelhoConfig {
