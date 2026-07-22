@@ -40,6 +40,7 @@ export {
   loadClienteDespesasFromSql,
   queryClienteDespesasFromSql,
   queryClienteDespesaByReferenciaFromSql,
+  upsertClienteDespesaRowToSql,
   saveClienteDespesasToSql,
   type ClienteDespesasSqlFilter,
   loadParceiroDespesasFromSql,

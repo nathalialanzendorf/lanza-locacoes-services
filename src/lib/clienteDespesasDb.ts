@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter } from "@lanza/db";
+import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   isCategoriaInfracao,
@@ -602,7 +603,7 @@ function resolvePlacaVeiculoCadastro(
   veiculoIdRaw: string,
   veiculos?: VeiculoRegistro[],
 ): string {
-  const catalog = veiculos ?? loadVeiculosDb().veiculos;
+  const catalog = veiculos ?? getCobrancasRuntimeCtx()?.veiculos ?? loadVeiculosDb().veiculos;
   const veiculo = findVeiculoInDb({ veiculos: catalog }, veiculoIdRaw);
   if (veiculo?.placa?.trim()) return formatPlacaHyphen(veiculo.placa);
   return formatPlacaHyphen(veiculoIdRaw);
@@ -1367,6 +1368,10 @@ export async function editarClienteDespesa(
   patch: ClienteDespesaPatch,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<EditarClienteDespesaResult | null> {
+  if (await useRelationalStore()) {
+    return editarClienteDespesaRelational(idOrAuto, patch, opts);
+  }
+
   const db = await loadDespesasMut();
   const key = idOrAuto.trim();
   const idx = db.clienteDespesas.findIndex(
@@ -1507,12 +1512,193 @@ function vencimentoSemanalParaBaixa(
 
 function valorParcelaSemanalContrato(veiculoId: string): number | null {
   const placa = formatPlacaHyphen(veiculoId);
-  const contrato = loadContratosDb().contratos.find(
+  const contratos = getCobrancasRuntimeCtx()?.contratos ?? loadContratosDb().contratos;
+  const contrato = contratos.find(
     (c) =>
       c.status === "ativo" &&
       formatPlacaHyphen(c.veiculoId ?? c.placa ?? "") === placa,
   );
   return contrato?.valorSemanal ?? null;
+}
+
+function applyClienteDespesaPatch(
+  m: ClienteDespesaRegistro,
+  patch: ClienteDespesaPatch,
+  veiculos?: VeiculoRegistro[],
+): void {
+  if (patch.categoria !== undefined) m.categoria = patch.categoria;
+  if (patch.descricao !== undefined) m.descricao = String(patch.descricao).trim();
+  if (patch.titulo !== undefined) m.titulo = String(patch.titulo).trim();
+  if (patch.localInfracao !== undefined) m.localInfracao = String(patch.localInfracao).trim();
+  if (patch.dataAutuacao !== undefined) m.dataAutuacao = String(patch.dataAutuacao).trim();
+  if (patch.valorMulta !== undefined) m.valorMulta = parseValor(patch.valorMulta);
+  if (patch.situacao !== undefined) m.situacao = String(patch.situacao).trim();
+  if (patch.limiteDefesa !== undefined) m.limiteDefesa = String(patch.limiteDefesa).trim();
+  if (patch.condutorId !== undefined) m.condutorId = patch.condutorId;
+  if (patch.condutorConfirmado !== undefined) m.condutorConfirmado = patch.condutorConfirmado;
+  if (patch.condutorNaoIdentificado !== undefined) {
+    m.condutorNaoIdentificado = patch.condutorNaoIdentificado;
+  }
+  if (patch.paga !== undefined) m.paga = patch.paga;
+  if (patch.pagaEm !== undefined) m.pagaEm = patch.pagaEm;
+  if (patch.rastreameMotoristaKey !== undefined) {
+    m.rastreameMotoristaKey = patch.rastreameMotoristaKey;
+  }
+  if (patch.rastreameRastreavelKey !== undefined) {
+    m.rastreameRastreavelKey = patch.rastreameRastreavelKey;
+  }
+  if (patch.rastreameDataIso !== undefined) m.rastreameDataIso = patch.rastreameDataIso;
+  if (patch.veiculoId !== undefined) {
+    m.veiculoId = resolvePlacaVeiculoCadastro(patch.veiculoId, veiculos);
+  }
+  if (patch.ativo !== undefined) m.ativo = patch.ativo;
+
+  if (m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)) {
+    const normalized = normalizarBaixaSemanal({
+      descricao: m.descricao,
+      dataAutuacao: m.dataAutuacao,
+      paga: m.paga,
+      pagaEm: m.pagaEm,
+      rastreameDataIso: m.rastreameDataIso,
+    });
+    if (normalized.descricao !== undefined) m.descricao = normalized.descricao;
+    if (normalized.dataAutuacao !== undefined) m.dataAutuacao = normalized.dataAutuacao;
+    if (normalized.rastreameDataIso !== undefined) m.rastreameDataIso = normalized.rastreameDataIso;
+  }
+
+  m.atualizadoEm = nowIso();
+}
+
+function despesaSemanalDescricaoDuplicada(
+  veiculoId: string,
+  descricaoNorm: string,
+  extras: ClienteDespesaRegistro[] = [],
+): boolean {
+  const ctxDespesas = getCobrancasRuntimeCtx()?.clienteDespesas ?? [];
+  const pool = [...extras, ...ctxDespesas];
+  return pool.some(
+    (d) =>
+      d.ativo !== false &&
+      d.veiculoId === veiculoId &&
+      d.categoria === "Locação semanal" &&
+      normDescSemanal(d.descricao) === descricaoNorm,
+  );
+}
+
+async function despesaSemanalDescricaoDuplicadaAsync(
+  veiculoId: string,
+  descricaoNorm: string,
+  extras: ClienteDespesaRegistro[] = [],
+): Promise<boolean> {
+  if (despesaSemanalDescricaoDuplicada(veiculoId, descricaoNorm, extras)) return true;
+  const veiculoUuid = isEntityUuid(veiculoId)
+    ? veiculoId
+    : resolveVeiculoIdListagem({ placa: veiculoId }, getCobrancasRuntimeCtx()?.veiculos);
+  if (!veiculoUuid) return false;
+  const rows = (await queryClienteDespesasFromSql({ veiculoId: veiculoUuid, ativo: true })) as ClienteDespesaRegistro[];
+  return rows.some(
+    (d) =>
+      d.categoria === "Locação semanal" && normDescSemanal(String(d.descricao ?? "")) === descricaoNorm,
+  );
+}
+
+function buildProximaParcelaSemanalRegistro(
+  pago: ClienteDespesaRegistro,
+  prox: { descricao: string; dataAutuacao: string; rastreameDataIso?: string | null },
+  valorParcela?: number,
+): ClienteDespesaRegistro {
+  const ts = nowIso();
+  return {
+    id: crypto.randomUUID(),
+    categoria: "Locação semanal",
+    veiculoId: pago.veiculoId,
+    autoInfracao: `LOCAL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+    descricao: prox.descricao,
+    localInfracao: "",
+    dataAutuacao: prox.dataAutuacao,
+    valorMulta:
+      valorParcela ?? valorParcelaSemanalContrato(pago.veiculoId) ?? pago.valorMulta,
+    situacao: "Em aberto",
+    limiteDefesa: "",
+    condutorId: pago.condutorId,
+    condutorConfirmado: pago.condutorConfirmado,
+    condutorContrato: pago.condutorContrato,
+    paga: false,
+    pagaEm: null,
+    rastreameMotoristaKey: pago.rastreameMotoristaKey ?? null,
+    rastreameRastreavelKey: pago.rastreameRastreavelKey ?? null,
+    rastreameDataIso: prox.rastreameDataIso,
+    rastreameTipo: pago.rastreameTipo ?? "OUTROS",
+    ativo: true,
+    cadastradoEm: ts,
+    atualizadoEm: ts,
+    origem: "manual",
+  };
+}
+
+async function criarProximaParcelaSemanalRelational(
+  pago: ClienteDespesaRegistro,
+  descricaoAntes: string,
+  vencimentoAntes: string,
+  valorParcela?: number,
+): Promise<ClienteDespesaRegistro | null> {
+  const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
+  if (!prox) return null;
+  const alvo = normDescSemanal(prox.descricao);
+  if (await despesaSemanalDescricaoDuplicadaAsync(pago.veiculoId, alvo)) return null;
+  return buildProximaParcelaSemanalRegistro(pago, prox, valorParcela);
+}
+
+async function editarClienteDespesaRelational(
+  idOrAuto: string,
+  patch: ClienteDespesaPatch,
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+): Promise<EditarClienteDespesaResult | null> {
+  const key = idOrAuto.trim();
+  const row = await queryClienteDespesaByReferenciaFromSql(key);
+  if (!row) return null;
+
+  const m = row as ClienteDespesaRegistro;
+  const veiculos = getCobrancasRuntimeCtx()?.veiculos;
+  const eraPaga = m.paga === true;
+  const descricaoAntes = m.descricao;
+  const vencimentoAntes =
+    m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)
+      ? dataVencimentoSemanalBr(m.descricao, m.rastreameDataIso) ?? m.dataAutuacao
+      : m.dataAutuacao;
+
+  applyClienteDespesaPatch(m, patch, veiculos);
+
+  let proximaParcela: ClienteDespesaRegistro | null = null;
+  if (
+    !eraPaga &&
+    m.paga === true &&
+    m.ativo !== false &&
+    m.categoria === "Locação semanal" &&
+    isPagamentoSemanalDescricao(descricaoAntes)
+  ) {
+    proximaParcela = await criarProximaParcelaSemanalRelational(
+      m,
+      descricaoAntes,
+      vencimentoAntes,
+      valorParcelaSemanalContrato(m.veiculoId) ?? undefined,
+    );
+  }
+
+  await upsertClienteDespesaRowToSql(m as unknown as Record<string, unknown>);
+  if (proximaParcela) {
+    await upsertClienteDespesaRowToSql(proximaParcela as unknown as Record<string, unknown>);
+  }
+
+  const synced = await pushAposPersistir(
+    proximaParcela ? [m, proximaParcela] : [m],
+    opts,
+  );
+
+  return {
+    registro: synced[0]!,
+    proximaParcela: proximaParcela ? synced[1] ?? null : null,
+  };
 }
 
 function criarProximaParcelaSemanalSeNecessario(

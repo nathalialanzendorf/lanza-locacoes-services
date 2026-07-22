@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { pgQuery } from "../client/PostgresPool.js";
+import { resolveVeiculoIdFromSql } from "./coreRepositories.js";
 import {
   asBool,
   asNumber,
@@ -799,103 +800,114 @@ export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbSha
   };
 }
 
-export async function saveClienteDespesasToSql(db: ClienteDespesasDbShape): Promise<void> {
-  const placaMap = await loadPlacaMap();
-  const infRows = await pgQuery<{ id: string; numero_auto: string }>(
-    "SELECT id, numero_auto FROM lanza.infracoes",
+export async function upsertClienteDespesaRowToSql(d: Record<string, unknown>): Promise<void> {
+  const id = asText(d.id) ?? randomUUID();
+  const veiculoRef = asText(d.veiculoId) ?? "";
+  let veiculoIdResolved: string | null = isUuid(veiculoRef) ? veiculoRef : null;
+  if (!veiculoIdResolved && veiculoRef.trim()) {
+    veiculoIdResolved = await resolveVeiculoIdFromSql({ placa: veiculoRef });
+  }
+  const placa = formatPlacaHyphen(veiculoRef || veiculoIdResolved || "");
+  const auto = asText(d.autoInfracao) ?? id;
+  const inf = await pgQuery<{ id: string }>(
+    "SELECT id FROM lanza.infracoes WHERE lower(numero_auto) = lower($1) LIMIT 1",
+    [auto],
+    "upsertClienteDespesaRow/infracao",
   );
-  const infracaoMap = new Map(infRows.rows.map((r) => [r.numero_auto.toLowerCase(), r.id]));
+  const infracaoId = inf.rows[0]?.id ?? null;
 
+  await pgQuery(
+    `INSERT INTO lanza.cliente_despesas (
+      id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
+      local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
+      data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
+      condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
+      revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
+      rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
+      rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
+      origem, cadastrado_em, atualizado_em
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())
+    ON CONFLICT (id) DO UPDATE SET
+      categoria = EXCLUDED.categoria,
+      veiculo_id = EXCLUDED.veiculo_id,
+      veiculo_placa = EXCLUDED.veiculo_placa,
+      auto_infracao = EXCLUDED.auto_infracao,
+      titulo = EXCLUDED.titulo,
+      descricao = EXCLUDED.descricao,
+      numero_auto = EXCLUDED.numero_auto,
+      local_infracao = EXCLUDED.local_infracao,
+      data_autuacao = EXCLUDED.data_autuacao,
+      valor_multa = EXCLUDED.valor_multa,
+      situacao = EXCLUDED.situacao,
+      limite_defesa = EXCLUDED.limite_defesa,
+      condutor_id = EXCLUDED.condutor_id,
+      condutor_confirmado = EXCLUDED.condutor_confirmado,
+      condutor_contrato = EXCLUDED.condutor_contrato,
+      condutor_nao_identificado = EXCLUDED.condutor_nao_identificado,
+      revisar_manual = EXCLUDED.revisar_manual,
+      paga = EXCLUDED.paga,
+      paga_em = EXCLUDED.paga_em,
+      quitada_detran = EXCLUDED.quitada_detran,
+      rastreame_id = EXCLUDED.rastreame_id,
+      rastreame_motorista_key = EXCLUDED.rastreame_motorista_key,
+      rastreame_rastreavel_key = EXCLUDED.rastreame_rastreavel_key,
+      rastreame_data_iso = EXCLUDED.rastreame_data_iso,
+      rastreame_tipo = EXCLUDED.rastreame_tipo,
+      infracao_id = EXCLUDED.infracao_id,
+      ativo = EXCLUDED.ativo,
+      origem = EXCLUDED.origem,
+      atualizado_em = now()`,
+    [
+      id,
+      asText(d.categoria),
+      veiculoIdResolved,
+      placa,
+      auto,
+      asText(d.titulo),
+      asText(d.descricao) ?? "",
+      asText(d.numeroAuto) ?? auto,
+      asText(d.localInfracao),
+      asText(d.dataAutuacao) ?? "",
+      asNumber(d.valorMulta, 0),
+      asText(d.situacao),
+      asText(d.limiteDefesa),
+      asText(d.dataLimiteDefesa),
+      asText(d.dataVencimentoOriginal),
+      asBool(d.convertidaEmDebito, false),
+      isUuid(asText(d.condutorId)) ? d.condutorId : null,
+      asBool(d.condutorConfirmado, false),
+      asText(d.condutorContrato),
+      asBool(d.condutorNaoIdentificado, false),
+      asBool(d.debitoParceiroConfirmado, false),
+      isUuid(asText(d.debitoParceiroId)) ? d.debitoParceiroId : null,
+      asBool(d.revisarManual, false),
+      asText(d.revisarMotivo),
+      asBool(d.paga, false),
+      parseIso(asText(d.pagaEm)),
+      asBool(d.quitadaDetran, false),
+      asText(d.statusInfracao),
+      asText(d.statusDetran),
+      d.rastreameId != null ? String(d.rastreameId) : null,
+      d.rastreameMotoristaKey != null ? String(d.rastreameMotoristaKey) : null,
+      d.rastreameRastreavelKey != null ? String(d.rastreameRastreavelKey) : null,
+      parseIso(asText(d.rastreameDataIso)),
+      asText(d.rastreameTipo),
+      parseIso(asText(d.rastreameSyncEm)),
+      asText(d.detranAutoInfracao),
+      asText(d.pdfArquivo),
+      infracaoId,
+      asBool(d.ativo, true),
+      asText(d.origem),
+      parseIso(asText(d.cadastradoEm)),
+    ],
+    "upsertClienteDespesaRow",
+  );
+}
+
+export async function saveClienteDespesasToSql(db: ClienteDespesasDbShape): Promise<void> {
   for (const d of db.clienteDespesas) {
-    const id = asText(d.id) ?? randomUUID();
-    const placa = formatPlacaHyphen(asText(d.veiculoId) ?? "");
-    const auto = asText(d.autoInfracao) ?? id;
-    await pgQuery(
-      `INSERT INTO lanza.cliente_despesas (
-        id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
-        local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
-        data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
-        condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
-        revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
-        rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
-        rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
-        origem, cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-        $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())
-      ON CONFLICT (id) DO UPDATE SET
-        categoria = EXCLUDED.categoria,
-        veiculo_id = EXCLUDED.veiculo_id,
-        veiculo_placa = EXCLUDED.veiculo_placa,
-        auto_infracao = EXCLUDED.auto_infracao,
-        titulo = EXCLUDED.titulo,
-        descricao = EXCLUDED.descricao,
-        numero_auto = EXCLUDED.numero_auto,
-        local_infracao = EXCLUDED.local_infracao,
-        data_autuacao = EXCLUDED.data_autuacao,
-        valor_multa = EXCLUDED.valor_multa,
-        situacao = EXCLUDED.situacao,
-        limite_defesa = EXCLUDED.limite_defesa,
-        condutor_id = EXCLUDED.condutor_id,
-        condutor_confirmado = EXCLUDED.condutor_confirmado,
-        condutor_contrato = EXCLUDED.condutor_contrato,
-        condutor_nao_identificado = EXCLUDED.condutor_nao_identificado,
-        revisar_manual = EXCLUDED.revisar_manual,
-        paga = EXCLUDED.paga,
-        paga_em = EXCLUDED.paga_em,
-        quitada_detran = EXCLUDED.quitada_detran,
-        rastreame_id = EXCLUDED.rastreame_id,
-        rastreame_motorista_key = EXCLUDED.rastreame_motorista_key,
-        rastreame_rastreavel_key = EXCLUDED.rastreame_rastreavel_key,
-        rastreame_data_iso = EXCLUDED.rastreame_data_iso,
-        rastreame_tipo = EXCLUDED.rastreame_tipo,
-        infracao_id = EXCLUDED.infracao_id,
-        ativo = EXCLUDED.ativo,
-        origem = EXCLUDED.origem,
-        atualizado_em = now()`,
-      [
-        id,
-        asText(d.categoria),
-        resolveVeiculoId(asText(d.veiculoId), placaMap),
-        placa,
-        auto,
-        asText(d.titulo),
-        asText(d.descricao) ?? "",
-        asText(d.numeroAuto) ?? auto,
-        asText(d.localInfracao),
-        asText(d.dataAutuacao) ?? "",
-        asNumber(d.valorMulta, 0),
-        asText(d.situacao),
-        asText(d.limiteDefesa),
-        asText(d.dataLimiteDefesa),
-        asText(d.dataVencimentoOriginal),
-        asBool(d.convertidaEmDebito, false),
-        isUuid(asText(d.condutorId)) ? d.condutorId : null,
-        asBool(d.condutorConfirmado, false),
-        asText(d.condutorContrato),
-        asBool(d.condutorNaoIdentificado, false),
-        asBool(d.debitoParceiroConfirmado, false),
-        isUuid(asText(d.debitoParceiroId)) ? d.debitoParceiroId : null,
-        asBool(d.revisarManual, false),
-        asText(d.revisarMotivo),
-        asBool(d.paga, false),
-        parseIso(asText(d.pagaEm)),
-        asBool(d.quitadaDetran, false),
-        asText(d.statusInfracao),
-        asText(d.statusDetran),
-        d.rastreameId != null ? String(d.rastreameId) : null,
-        d.rastreameMotoristaKey != null ? String(d.rastreameMotoristaKey) : null,
-        d.rastreameRastreavelKey != null ? String(d.rastreameRastreavelKey) : null,
-        parseIso(asText(d.rastreameDataIso)),
-        asText(d.rastreameTipo),
-        parseIso(asText(d.rastreameSyncEm)),
-        asText(d.detranAutoInfracao),
-        asText(d.pdfArquivo),
-        infracaoMap.get(auto.toLowerCase()) ?? null,
-        asBool(d.ativo, true),
-        asText(d.origem),
-        parseIso(asText(d.cadastradoEm)),
-      ],
-    );
+    await upsertClienteDespesaRowToSql(d);
   }
 }
 

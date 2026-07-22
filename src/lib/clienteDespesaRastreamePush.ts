@@ -4,6 +4,7 @@
  */
 import {
   findClienteDespesaById,
+  findClienteDespesaByIdAsync,
   isSyncRastreameEligible,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
@@ -15,6 +16,13 @@ export type ClienteDespesaPushOpts = {
 };
 
 /** Recarrega o registo após push (rastreameId / rastreameSyncEm atualizados). */
+export async function recarregarClienteDespesaAsync(
+  reg: ClienteDespesaRegistro,
+): Promise<ClienteDespesaRegistro> {
+  return (await findClienteDespesaByIdAsync(reg.id)) ?? reg;
+}
+
+/** @deprecated use recarregarClienteDespesaAsync no Postgres */
 export function recarregarClienteDespesa(
   reg: ClienteDespesaRegistro,
 ): ClienteDespesaRegistro {
@@ -26,7 +34,7 @@ export async function pushClienteDespesaRegistrosNoRastreame(
   opts?: ClienteDespesaPushOpts,
 ): Promise<ClienteDespesaRegistro[]> {
   if (!resolveSyncRastreame(opts?.syncRastreame)) {
-    return regs.map(recarregarClienteDespesa);
+    return Promise.all(regs.map(recarregarClienteDespesaAsync));
   }
 
   const { replicarClienteDespesaNoRastreame } = await import("./rastreame/recebimentosSync.js");
@@ -34,7 +42,7 @@ export async function pushClienteDespesaRegistrosNoRastreame(
 
   for (const reg of regs) {
     if (!isSyncRastreameEligible(reg) && reg.ativo !== false) {
-      out.push(recarregarClienteDespesa(reg));
+      out.push(await recarregarClienteDespesaAsync(reg));
       continue;
     }
     try {
@@ -44,7 +52,7 @@ export async function pushClienteDespesaRegistrosNoRastreame(
         `[aviso] falha sync Rastreame (${reg.autoInfracao}): ${e instanceof Error ? e.message : String(e)}`,
       );
     }
-    out.push(recarregarClienteDespesa(reg));
+    out.push(await recarregarClienteDespesaAsync(reg));
   }
 
   return out;

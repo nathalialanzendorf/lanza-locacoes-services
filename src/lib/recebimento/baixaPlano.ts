@@ -12,6 +12,7 @@ import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb
 import {
   loadCobrancasDbContextAsync,
   loadBaixaPlanoDbContextAsync,
+  setCobrancasRuntimeCtx,
   type CobrancasDbContext,
   type CobrancasScopedContextInput,
 } from "../cobrancasDbContext.js";
@@ -861,10 +862,12 @@ export async function withBaixaPlanoDbContext<T>(
   _baixaPlanoCtx = scope
     ? await loadBaixaPlanoDbContextAsync(scope, flowRoute)
     : await loadCobrancasDbContextAsync();
+  setCobrancasRuntimeCtx(_baixaPlanoCtx);
   try {
     return await fn();
   } finally {
     _baixaPlanoCtx = null;
+    setCobrancasRuntimeCtx(null);
   }
 }
 
@@ -873,7 +876,11 @@ function scopeFromLinhasBaixa(linhas: LinhaPlanoBaixa[]): CobrancasScopedContext
   const veiculoId = linhas
     .map((l) => String(l.patch?.veiculoId ?? "").trim())
     .find((id) => isEntityUuid(id));
+  const clienteId = linhas
+    .map((l) => String(l.patch?.condutorId ?? "").trim())
+    .find((id) => isEntityUuid(id));
   return {
+    ...(clienteId ? { clienteId } : {}),
     ...(despesaId ? { despesaId } : {}),
     ...(veiculoId ? { veiculoId } : {}),
   };
@@ -897,11 +904,13 @@ export async function montarPlanoBaixaAsync(
     },
     flowRoute,
   );
+  setCobrancasRuntimeCtx(_baixaPlanoCtx);
   try {
     logFlowStep(flowRoute, 9, "montarPlanoBaixa (memória)");
     return montarPlanoBaixa(input);
   } finally {
     _baixaPlanoCtx = null;
+    setCobrancasRuntimeCtx(null);
   }
 }
 
