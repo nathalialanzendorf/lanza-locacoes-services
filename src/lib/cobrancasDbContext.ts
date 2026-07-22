@@ -1,12 +1,17 @@
 import {
+  loadClientesByIdsFromSql,
   queryClienteDespesaByReferenciaFromSql,
   queryClienteDespesasFromSql,
+  queryContratosFromSql,
+  queryVeiculosByIdsFromSql,
+  resolveClienteIdFromSql,
+  resolveVeiculoIdFromSql,
   useRelationalStore,
 } from "@lanza/db";
 import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
-import { resolveClienteIdListagem, resolveVeiculoIdListagem } from "./filtroListagem.js";
+import { isEntityUuid } from "./filtroListagem.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 
 export type CobrancasDbContext = {
@@ -55,10 +60,6 @@ export function cobrancasRuntimeClientes(): ClienteRegistro[] {
   return _runtimeCtx?.clientes ?? loadClientesDb().clientes;
 }
 
-function resolveClienteIdFromQuery(query: string, clientes: ClienteRegistro[]): string | null {
-  return resolveClienteIdListagem({ clienteQuery: query }, clientes) ?? null;
-}
-
 function mergeDespesaRows(
   base: Record<string, unknown>[],
   extra: Record<string, unknown> | null,
@@ -71,6 +72,31 @@ function mergeDespesaRows(
     }
   }
   return rows as ClienteDespesaRegistro[];
+}
+
+function veiculoIdFromDespesaRow(row: ClienteDespesaRegistro | Record<string, unknown>): string | null {
+  const raw = String(
+    ("veiculoId" in row ? row.veiculoId : null) ??
+      ("veiculo_id" in row ? row.veiculo_id : null) ??
+      "",
+  ).trim();
+  return isEntityUuid(raw) ? raw : null;
+}
+
+function collectVeiculoIds(
+  despesas: ClienteDespesaRegistro[],
+  ...extras: Array<string | null | undefined>
+): string[] {
+  const ids = new Set<string>();
+  for (const extra of extras) {
+    const id = extra?.trim();
+    if (id && isEntityUuid(id)) ids.add(id);
+  }
+  for (const d of despesas) {
+    const id = veiculoIdFromDespesaRow(d);
+    if (id) ids.add(id);
+  }
+  return [...ids];
 }
 
 export function loadCobrancasDbContextSync(): CobrancasDbContext {
@@ -97,7 +123,7 @@ export async function loadCobrancasDbContextAsync(): Promise<CobrancasDbContext>
   };
 }
 
-/** Contexto enxuto por cliente/placa (Postgres) — baixa, relatório de cobranças, etc. */
+/** Contexto enxuto por cliente/veículo (Postgres) — baixa, relatório de cobranças, etc. */
 export async function loadCobrancasScopedDbContextAsync(
   input: CobrancasScopedContextInput = {},
 ): Promise<CobrancasDbContext> {
@@ -105,42 +131,33 @@ export async function loadCobrancasScopedDbContextAsync(
     return loadCobrancasDbContextAsync();
   }
 
-  const [clientesDb, veiculosDb, contratosDb] = await Promise.all([
-    loadClientesDbAsync(),
-    loadVeiculosDbAsync(),
-    loadContratosDbAsync(),
-  ]);
-
-  const clienteId =
-    input.clienteId?.trim() ||
-    resolveClienteIdListagem(
-      { clienteQuery: input.clienteQuery },
-      clientesDb.clientes,
-    ) ||
-    null;
-  const veiculoId =
-    resolveVeiculoIdListagem(
-      { veiculoId: input.veiculoId, placa: input.placa },
-      veiculosDb.veiculos,
-    ) ?? null;
   const despesaAlvoRef = input.despesaId?.trim() || null;
 
-  if (!clienteId && !veiculoId) {
-    if (despesaAlvoRef) {
-      const rowAlvo = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
-      if (rowAlvo) {
-        const condutorId = String(rowAlvo.condutor_id ?? "").trim() || null;
-        const rows = condutorId
-          ? await queryClienteDespesasFromSql({ clienteId: condutorId, ativo: true })
-          : [];
-        return {
-          clienteDespesas: mergeDespesaRows(rows, rowAlvo),
-          clientes: clientesDb.clientes,
-          veiculos: veiculosDb.veiculos,
-          contratos: contratosDb.contratos,
-        };
-      }
+  let clienteId = input.clienteId?.trim() && isEntityUuid(input.clienteId.trim()) ? input.clienteId.trim() : null;
+  if (!clienteId && input.clienteQuery?.trim()) {
+    clienteId = await resolveClienteIdFromSql({
+      clienteQuery: input.clienteQuery,
+    });
+  }
+
+  let veiculoId =
+    input.veiculoId?.trim() && isEntityUuid(input.veiculoId.trim()) ? input.veiculoId.trim() : null;
+  if (!veiculoId && input.placa?.trim()) {
+    veiculoId = await resolveVeiculoIdFromSql({ placa: input.placa });
+  }
+
+  let rowAlvoPrefetch: Record<string, unknown> | null = null;
+  if (!clienteId && !veiculoId && despesaAlvoRef) {
+    rowAlvoPrefetch = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
+    if (rowAlvoPrefetch) {
+      const condutorId = String(rowAlvoPrefetch.condutor_id ?? "").trim();
+      if (isEntityUuid(condutorId)) clienteId = condutorId;
+      const vid = String(rowAlvoPrefetch.veiculo_id ?? "").trim();
+      if (isEntityUuid(vid)) veiculoId = vid;
     }
+  }
+
+  if (!clienteId && !veiculoId) {
     return loadCobrancasDbContextAsync();
   }
 
@@ -149,20 +166,40 @@ export async function loadCobrancasScopedDbContextAsync(
     ...(clienteId ? { clienteId } : {}),
     ...(veiculoId ? { veiculoId } : {}),
   };
-  const rowsPromise = queryClienteDespesasFromSql(sqlFilter);
 
   const [rows, rowAlvo] = await Promise.all([
-    rowsPromise,
-    despesaAlvoRef
-      ? queryClienteDespesaByReferenciaFromSql(despesaAlvoRef)
-      : Promise.resolve(null),
+    queryClienteDespesasFromSql(sqlFilter),
+    rowAlvoPrefetch
+      ? Promise.resolve(rowAlvoPrefetch)
+      : despesaAlvoRef
+        ? queryClienteDespesaByReferenciaFromSql(despesaAlvoRef)
+        : Promise.resolve(null),
+  ]);
+
+  const clienteDespesas = mergeDespesaRows(rows, rowAlvo);
+
+  if (!clienteId && rowAlvo) {
+    const condutorId = String(rowAlvo.condutor_id ?? "").trim();
+    if (isEntityUuid(condutorId)) clienteId = condutorId;
+  }
+
+  const veiculoIds = collectVeiculoIds(clienteDespesas, veiculoId);
+  const clienteIds = clienteId ? [clienteId] : [];
+
+  const [clientes, veiculos, contratos] = await Promise.all([
+    clienteIds.length > 0 ? loadClientesByIdsFromSql(clienteIds) : Promise.resolve([]),
+    veiculoIds.length > 0 ? queryVeiculosByIdsFromSql(veiculoIds) : Promise.resolve([]),
+    queryContratosFromSql({
+      ...(clienteId ? { clienteId } : {}),
+      ...(veiculoIds.length > 0 ? { veiculoIds } : {}),
+    }),
   ]);
 
   return {
-    clienteDespesas: mergeDespesaRows(rows, rowAlvo),
-    clientes: clientesDb.clientes,
-    veiculos: veiculosDb.veiculos,
-    contratos: contratosDb.contratos,
+    clienteDespesas,
+    clientes: clientes as ClienteRegistro[],
+    veiculos: veiculos as VeiculoRegistro[],
+    contratos: contratos as ContratoRegistro[],
   };
 }
 

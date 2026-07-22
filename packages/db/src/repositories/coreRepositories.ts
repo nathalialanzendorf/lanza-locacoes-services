@@ -13,7 +13,7 @@ import {
   upsertClienteCnh,
   upsertVeiculoCrlv,
 } from "../migration/documentFields.js";
-import { compactPlaca, formatPlacaHyphen, normCpf } from "../migration/relationalUtils.js";
+import { compactPlaca, formatPlacaHyphen, isUuid, normCpf } from "../migration/relationalUtils.js";
 
 export type ParceiroRow = { id: string; nome: string; ativo?: boolean };
 export type VinculoRow = { id: string; veiculoId: string; parceiroId: string };
@@ -295,19 +295,12 @@ export type ClientesDbShape = {
 const DEFAULT_CLIENTES_DESC =
   "Clientes (motoristas/locatários) da frota. id = uuid. Chave natural: cpf.";
 
-export async function loadClientesFromSql(): Promise<ClientesDbShape> {
-  const [base, endR] = await Promise.all([
-    pgQuery("SELECT * FROM lanza.clientes ORDER BY nome"),
-    pgQuery("SELECT * FROM lanza.cliente_enderecos"),
-  ]);
-  const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
-  const clientes: ClienteRow[] = [];
-
-  for (const row of base.rows) {
-    const id = String(row.id);
-    const endRow = endByCliente.get(id);
-
-    const cliente: ClienteRow = {
+function buildClienteRowFromSql(
+  row: Record<string, unknown>,
+  endRow?: Record<string, unknown>,
+): ClienteRow {
+  const id = String(row.id);
+  const cliente: ClienteRow = {
       id,
       nome: String(row.nome),
       cpf: row.cpf ?? undefined,
@@ -365,14 +358,132 @@ export async function loadClientesFromSql(): Promise<ClientesDbShape> {
       };
     }
 
-    clientes.push(cliente);
-  }
+  return cliente;
+}
+
+export async function loadClientesFromSql(): Promise<ClientesDbShape> {
+  const [base, endR] = await Promise.all([
+    pgQuery("SELECT * FROM lanza.clientes ORDER BY nome"),
+    pgQuery("SELECT * FROM lanza.cliente_enderecos"),
+  ]);
+  const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
+  const clientes = base.rows.map((row) =>
+    buildClienteRowFromSql(row as Record<string, unknown>, endByCliente.get(String(row.id))),
+  );
 
   return {
     descricao: DEFAULT_CLIENTES_DESC,
     atualizadoEm: new Date().toISOString().slice(0, 10),
     clientes,
   };
+}
+
+/** Clientes por UUID (sem carregar catálogo inteiro). */
+export async function loadClientesByIdsFromSql(ids: string[]): Promise<ClienteRow[]> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => isUuid(id)))];
+  if (unique.length === 0) return [];
+
+  const [base, endR] = await Promise.all([
+    pgQuery("SELECT * FROM lanza.clientes WHERE id::text = ANY($1::text[]) ORDER BY nome", [unique]),
+    pgQuery("SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])", [
+      unique,
+    ]),
+  ]);
+  const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
+  return base.rows.map((row) =>
+    buildClienteRowFromSql(row as Record<string, unknown>, endByCliente.get(String(row.id))),
+  );
+}
+
+/** Resolve CPF, nome ou id → UUID do cliente (SQL direto, sem catálogo em memória). */
+export async function resolveClienteIdFromSql(input: {
+  clienteId?: string | null;
+  clienteQuery?: string | null;
+  cpf?: string | null;
+}): Promise<string | null> {
+  const id = input.clienteId?.trim();
+  if (id && isUuid(id)) {
+    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1", [
+      id,
+    ]);
+    return r.rows[0]?.id ?? null;
+  }
+
+  const cpfRaw = input.cpf?.trim() ?? "";
+  const cpfNorm = cpfRaw ? normCpf(cpfRaw) : null;
+  if (cpfNorm?.length === 11) {
+    const r = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.clientes WHERE cpf_norm = $1 LIMIT 2",
+      [cpfNorm],
+    );
+    if (r.rows.length === 1) return r.rows[0]!.id;
+    return null;
+  }
+
+  const query = input.clienteQuery?.trim();
+  if (!query) return null;
+
+  if (isUuid(query)) {
+    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.clientes WHERE id::text = $1 LIMIT 1", [
+      query,
+    ]);
+    return r.rows[0]?.id ?? null;
+  }
+
+  const cpfFromQuery = normCpf(query);
+  if (cpfFromQuery?.length === 11) {
+    const r = await pgQuery<{ id: string }>(
+      "SELECT id FROM lanza.clientes WHERE cpf_norm = $1 LIMIT 2",
+      [cpfFromQuery],
+    );
+    if (r.rows.length === 1) return r.rows[0]!.id;
+  }
+
+  const r = await pgQuery<{ id: string }>(
+    "SELECT id FROM lanza.clientes WHERE lower(nome) LIKE $1 LIMIT 2",
+    [`%${query.toLowerCase()}%`],
+  );
+  if (r.rows.length === 1) return r.rows[0]!.id;
+  return null;
+}
+
+/** Resolve placa ou UUID → veiculoId (SQL direto). */
+export async function resolveVeiculoIdFromSql(input: {
+  veiculoId?: string | null;
+  placa?: string | null;
+}): Promise<string | null> {
+  const id = input.veiculoId?.trim();
+  if (id && isUuid(id)) {
+    const r = await pgQuery<{ id: string }>("SELECT id FROM lanza.veiculos WHERE id::text = $1 LIMIT 1", [
+      id,
+    ]);
+    return r.rows[0]?.id ?? null;
+  }
+
+  const placa = input.placa?.trim();
+  if (!placa) return null;
+
+  const r = await pgQuery<{ id: string }>(
+    "SELECT id FROM lanza.veiculos WHERE placa_norm = $1 LIMIT 2",
+    [compactPlaca(placa)],
+  );
+  if (r.rows.length === 1) return r.rows[0]!.id;
+  return null;
+}
+
+/** Veículos por UUID — sem join FIPE (suficiente para cobrança/baixa). */
+export async function queryVeiculosByIdsFromSql(ids: string[]): Promise<VeiculoRow[]> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => isUuid(id)))];
+  if (unique.length === 0) return [];
+
+  const r = await pgQuery(
+    `SELECT v.*
+     FROM lanza.veiculos v
+     WHERE v.id::text = ANY($1::text[])
+     ORDER BY v.placa`,
+    [unique],
+  );
+  return r.rows.map((row) => rowToVeiculo(row as Record<string, unknown>));
 }
 
 export async function saveClientesToSql(db: ClientesDbShape): Promise<void> {

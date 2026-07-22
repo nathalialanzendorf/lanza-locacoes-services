@@ -20,20 +20,44 @@ export type ListarClientesOpts = {
   ativo?: boolean;
   /** CPF para busca em tela (filtro direto na listagem de clientes). */
   cpf?: string;
+  /** Nome parcial para busca em tela (listagem — não usar em joins). */
+  nome?: string;
+  /** CPF, nome ou id — resolvido na camada de listagem. */
+  clienteQuery?: string;
 };
+
+function filtrarClientesPorBusca(items: ClienteRegistro[], opts: ListarClientesOpts): ClienteRegistro[] {
+  const query = opts.clienteQuery?.trim() || opts.nome?.trim();
+  if (query) {
+    const qLower = query.toLowerCase();
+    const byId = items.find((c) => c.id?.toLowerCase() === qLower);
+    if (byId) return [byId];
+
+    const key = query.replace(/\D/g, "");
+    if (key.length === 11) {
+      const byCpf = items.filter((c) => c.cpf?.replace(/\D/g, "") === key);
+      if (byCpf.length) return byCpf;
+    }
+
+    const nk = query.toLowerCase();
+    return items.filter((c) => (c.nome ?? "").toLowerCase().includes(nk));
+  }
+
+  if (opts.cpf?.trim()) {
+    const key = opts.cpf.replace(/\D/g, "");
+    if (key.length === 11) {
+      return items.filter((c) => c.cpf?.replace(/\D/g, "") === key);
+    }
+  }
+
+  return items;
+}
 
 function filtrarClientes(
   items: ClienteRegistro[],
   opts: ListarClientesOpts,
 ): ClienteRegistro[] {
-  let out = items;
-
-  if (opts.cpf?.trim()) {
-    const key = opts.cpf.replace(/\D/g, "");
-    if (key.length === 11) {
-      out = out.filter((c) => c.cpf?.replace(/\D/g, "") === key);
-    }
-  }
+  let out = filtrarClientesPorBusca(items, opts);
 
   if (opts.ativo === true) {
     return out.filter(isClienteAtivo);

@@ -141,6 +141,8 @@ export type ContratosSqlFilter = {
   clienteId?: string;
   /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
+  /** Contratos de qualquer um destes veículos (atribuição por data do evento). */
+  veiculoIds?: string[];
 };
 
 /** Listagem filtrada no Postgres (carrega snapshots só dos contratos retornados). */
@@ -156,14 +158,29 @@ export async function queryContratosFromSql(
     where.push(`c.status = $${p++}`);
   }
 
+  const scopeParts: string[] = [];
   if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
     params.push(filter.clienteId.trim());
-    where.push(`c.cliente_id::text = $${p++}`);
+    scopeParts.push(`c.cliente_id::text = $${p++}`);
   }
 
-  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
-    params.push(filter.veiculoId.trim());
-    where.push(`c.veiculo_id::text = $${p++}`);
+  const veiculoIds = [
+    ...(filter.veiculoIds ?? []).map((id) => id.trim()).filter((id) => isUuid(id)),
+    ...(filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim()) ? [filter.veiculoId.trim()] : []),
+  ];
+  const uniqueVeiculoIds = [...new Set(veiculoIds)];
+  if (uniqueVeiculoIds.length === 1) {
+    params.push(uniqueVeiculoIds[0]);
+    scopeParts.push(`c.veiculo_id::text = $${p++}`);
+  } else if (uniqueVeiculoIds.length > 1) {
+    params.push(uniqueVeiculoIds);
+    scopeParts.push(`c.veiculo_id::text = ANY($${p++}::text[])`);
+  }
+
+  if (scopeParts.length === 1) {
+    where.push(scopeParts[0]!);
+  } else if (scopeParts.length > 1) {
+    where.push(`(${scopeParts.join(" OR ")})`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";

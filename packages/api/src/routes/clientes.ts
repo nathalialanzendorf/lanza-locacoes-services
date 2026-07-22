@@ -29,6 +29,8 @@ export function registerClientesRoutes(routes: RouteDef[]): void {
       json(ctx.res, 200, await clientesService.listarClientesAsync({
         ativo,
         cpf: ctx.query.get("cpf") ?? undefined,
+        nome: ctx.query.get("nome") ?? undefined,
+        clienteQuery: ctx.query.get("q") ?? ctx.query.get("clienteQuery") ?? undefined,
       }));
     }),
   });

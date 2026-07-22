@@ -46,12 +46,29 @@ export function isParceiroAtivo(p: Parceiro): boolean {
 
 export type ListarParceirosOpts = {
   ativo?: boolean;
+  /** Nome parcial para busca em tela (listagem — não usar em joins). */
+  nome?: string;
+  /** Nome ou id — resolvido na camada de listagem. */
+  parceiroQuery?: string;
 };
 
+function filtrarParceirosPorBusca(items: Parceiro[], opts: ListarParceirosOpts): Parceiro[] {
+  const query = opts.parceiroQuery?.trim() || opts.nome?.trim();
+  if (!query) return items;
+
+  const qLower = query.toLowerCase();
+  const byId = items.find((p) => p.id.toLowerCase() === qLower);
+  if (byId) return [byId];
+
+  const nk = query.toLowerCase().replace(/\s+/g, " ").trim();
+  return items.filter((p) => p.nome.toLowerCase().includes(nk));
+}
+
 function filtrarParceiros(items: Parceiro[], opts: ListarParceirosOpts): Parceiro[] {
-  if (opts.ativo === true) return items.filter(isParceiroAtivo);
-  if (opts.ativo === false) return items.filter((p) => !isParceiroAtivo(p));
-  return items;
+  let out = filtrarParceirosPorBusca(items, opts);
+  if (opts.ativo === true) return out.filter(isParceiroAtivo);
+  if (opts.ativo === false) return out.filter((p) => !isParceiroAtivo(p));
+  return out;
 }
 
 function loadParceirosDb(): ParceirosDb {

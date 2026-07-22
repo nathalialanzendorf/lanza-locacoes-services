@@ -26,12 +26,15 @@ export type { ClienteImportado } from "../../../src/lib/rastreame/mapMotoristaCl
 export {
   resolveClienteIdListagem,
   resolveVeiculoIdListagem,
+  resolveParceiroIdListagem,
   normalizarFiltroVeiculoListagem,
   normalizarFiltroClienteListagem,
+  normalizarFiltroParceiroListagem,
   placaDoVeiculoIdListagem,
   isEntityUuid,
   type FiltroVeiculoEntrada,
   type FiltroClienteEntrada,
+  type FiltroParceiroEntrada,
 } from "../../../src/lib/filtroListagem.js";
 
 export {

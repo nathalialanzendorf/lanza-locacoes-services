@@ -60,7 +60,11 @@ export function registerParceirosRoutes(routes: RouteDef[]): void {
       if (ctx.query.has("ativo") && ativo === undefined) {
         return badRequest(ctx, 'Query "ativo" inválida — use true ou false');
       }
-      json(ctx.res, 200, await parceirosService.listarParceirosAsync({ ativo }));
+      json(ctx.res, 200, await parceirosService.listarParceirosAsync({
+        ativo,
+        nome: ctx.query.get("nome") ?? undefined,
+        parceiroQuery: ctx.query.get("q") ?? ctx.query.get("parceiroQuery") ?? undefined,
+      }));
     }),
   });
 

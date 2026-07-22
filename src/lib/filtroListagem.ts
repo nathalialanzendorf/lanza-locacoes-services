@@ -29,7 +29,16 @@ export type FiltroClienteEntrada = {
   cpf?: string | null;
 };
 
+export type FiltroParceiroEntrada = {
+  parceiroId?: string | null;
+  /** Nome ou id — resolvido para parceiroId antes de consultas relacionadas. */
+  parceiroQuery?: string | null;
+  /** Nome para busca em tela (listagem de parceiros). */
+  nome?: string | null;
+};
+
 type VeiculoRef = Pick<VeiculoRegistro, "id" | "placa">;
+type ParceiroRef = { id: string; nome: string };
 
 function veiculoPorRef(ref: string, veiculos: VeiculoRef[]): VeiculoRef | null {
   const key = ref.trim();
@@ -126,6 +135,48 @@ export function normalizarFiltroClienteListagem<T extends FiltroClienteEntrada>(
     ...rest,
     ...(clienteId ? { clienteId } : {}),
   } as Omit<T, "clienteQuery" | "cpf"> & { clienteId?: string };
+}
+
+/** Resolve nome ou id para UUID do parceiro (somente catálogo de parceiros). */
+export function resolveParceiroIdListagem(
+  input: FiltroParceiroEntrada,
+  parceiros: ParceiroRef[] = [],
+): string | undefined {
+  const id = input.parceiroId?.trim();
+  if (id) {
+    if (isEntityUuid(id)) return id;
+    const byId = parceiros.find((p) => p.id === id);
+    if (byId?.id) return byId.id;
+  }
+
+  const query = input.parceiroQuery?.trim() || input.nome?.trim();
+  if (!query) return undefined;
+
+  const qLower = query.toLowerCase();
+  const byId = parceiros.find((p) => p.id?.toLowerCase() === qLower);
+  if (byId?.id) return byId.id;
+
+  const nk = normNomeKey(query);
+  const matches = parceiros.filter((p) => {
+    const pn = normNomeKey(p.nome);
+    return pn.includes(nk) || nk.includes(pn);
+  });
+  if (matches.length === 1 && matches[0]?.id) return matches[0].id;
+
+  return undefined;
+}
+
+/** Normaliza filtro de parceiro para uso interno (somente parceiroId). */
+export function normalizarFiltroParceiroListagem<T extends FiltroParceiroEntrada>(
+  input: T,
+  parceiros: ParceiroRef[] = [],
+): Omit<T, "parceiroQuery" | "nome"> & { parceiroId?: string } {
+  const parceiroId = resolveParceiroIdListagem(input, parceiros);
+  const { parceiroQuery: _q, nome: _nome, parceiroId: _id, ...rest } = input;
+  return {
+    ...rest,
+    ...(parceiroId ? { parceiroId } : {}),
+  } as Omit<T, "parceiroQuery" | "nome"> & { parceiroId?: string };
 }
 
 /** Placa formatada a partir do veiculoId (exibição — não usar em joins). */
