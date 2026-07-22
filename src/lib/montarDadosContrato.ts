@@ -212,7 +212,11 @@ export async function findClienteDbAsync(
   nome?: string,
   clienteId?: string,
 ): Promise<ClienteDb> {
-  const db = await loadClientesDbAsync();
+  const db = await loadClientesDbAsync({
+    ids: clienteId?.trim() ? [clienteId.trim()] : undefined,
+    cpf,
+    nome,
+  });
   return findClienteDbInList(db.clientes, { cpf, nome, clienteId });
 }
 
@@ -221,7 +225,10 @@ export function findVeiculoDb(placa?: string, veiculoId?: string): VeiculoDb {
 }
 
 export async function findVeiculoDbAsync(placa?: string, veiculoId?: string): Promise<VeiculoDb> {
-  const db = await loadVeiculosDbAsync();
+  const db = await loadVeiculosDbAsync({
+    veiculoId,
+    placa,
+  });
   return findVeiculoDbInList(db.veiculos, { placa, veiculoId });
 }
 

@@ -16,7 +16,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { dataStringNoPeriodo } from "../lib-imports.js";
-import { queryInfracoesFromSql, useRelationalStore } from "@lanza/db";
+import { queryInfracoesFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 import { listarVinculos, listarVinculosAsync } from "./parceiros.js";
 import { obterVeiculoAsync } from "./veiculos.js";
 import { HttpError } from "../http.js";
@@ -160,11 +160,11 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
   items: InfracaoRegistro[];
 }> {
   if (await useRelationalStore()) {
-    const veiculosDb = await loadVeiculosDbAsync();
-    const veiculoId = resolveVeiculoIdListagem(
-      { veiculoId: opts.veiculoId, placa: opts.placa },
-      veiculosDb.veiculos,
-    );
+    const veiculoId =
+      opts.veiculoId?.trim() ||
+      (opts.placa?.trim()
+        ? ((await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined)
+        : undefined);
     const semCliente = opts.semCliente === true || opts.semCondutor === true;
     let items = (await queryInfracoesFromSql({
       veiculoId,

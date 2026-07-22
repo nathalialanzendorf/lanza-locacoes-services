@@ -13,10 +13,11 @@ import {
   saveParceiroDespesasDbAsync,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
+  isEntityUuid,
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
-import { queryParceiroDespesasFromSql, useRelationalStore } from "@lanza/db";
+import { queryParceiroDespesasFromSql, queryVeiculosByIdsFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 import { listarVinculosAsync } from "./parceiros.js";
 import { dataStringNoPeriodo } from "../lib-imports.js";
 
@@ -80,15 +81,15 @@ function enriquecerParceiroDespesa(
 }
 
 export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
-  const veiculosDb = await loadVeiculosDbAsync();
-  const veiculos = veiculosDb.veiculos;
   let items: ParceiroDespesaRegistro[];
+  let veiculos: VeiculoRegistro[];
 
   if (await useRelationalStore()) {
-    const veiculoId = resolveVeiculoIdListagem(
-      { veiculoId: opts.veiculoId, placa: opts.placa },
-      veiculos,
-    );
+    const veiculoId =
+      opts.veiculoId?.trim() ||
+      (opts.placa?.trim()
+        ? ((await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined)
+        : undefined);
     items = (await queryParceiroDespesasFromSql({
       veiculoId,
       parceiroId: opts.parceiroId,
@@ -97,7 +98,18 @@ export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = 
       emAberto: opts.emAberto,
       veiculoAtivo: opts.veiculoAtivo,
     })) as ParceiroDespesaRegistro[];
+    const veiculoIds = new Set<string>();
+    if (veiculoId) veiculoIds.add(veiculoId);
+    for (const d of items) {
+      const id = String(d.veiculoId ?? "").trim();
+      if (isEntityUuid(id)) veiculoIds.add(id);
+    }
+    veiculos =
+      veiculoIds.size > 0
+        ? ((await queryVeiculosByIdsFromSql([...veiculoIds])) as VeiculoRegistro[])
+        : [];
   } else {
+    veiculos = (await loadVeiculosDbAsync()).veiculos;
     const despesasDb = await loadParceiroDespesasDbAsync();
     items = despesasDb.parceiroDespesas;
 

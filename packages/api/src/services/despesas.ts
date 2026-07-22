@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import { queryClienteDespesasFromSql, useRelationalStore } from "@lanza/db";
+import { queryClienteDespesasFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 import {
   confirmarCondutorClienteDespesa,
   confirmarDebitoParceiroDespesa,
@@ -34,6 +34,7 @@ import {
   isCategoriaPedagio,
   isCategoriaEstacionamento,
   resolveVeiculoIdListagem,
+  loadCatalogoEnriquecimentoDespesas,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -207,30 +208,28 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
 }
 
 async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<DespesasCatalogo> {
-  const [clientesDb, veiculosDb] = await Promise.all([
-    loadClientesDbAsync(),
-    loadVeiculosDbAsync(),
-  ]);
-
   if (await useRelationalStore()) {
-    const veiculoId = resolveVeiculoIdListagem(
-      { veiculoId: opts.veiculoId, placa: opts.placa },
-      veiculosDb.veiculos,
-    );
+    const veiculoId =
+      opts.veiculoId?.trim() ||
+      (opts.placa?.trim() ? (await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined : undefined);
     const despesas = (await queryClienteDespesasFromSql({
       clienteId: opts.clienteId,
       veiculoId,
       emAberto: opts.emAberto,
       ativo: opts.ativo,
     })) as ClienteDespesaRegistro[];
-    return {
-      despesas,
-      clientes: clientesDb.clientes,
-      veiculos: veiculosDb.veiculos,
-    };
+    const { clientes, veiculos } = await loadCatalogoEnriquecimentoDespesas(despesas, {
+      clienteIds: opts.clienteId?.trim() ? [opts.clienteId.trim()] : undefined,
+      veiculoIds: veiculoId ? [veiculoId] : undefined,
+    });
+    return { despesas, clientes, veiculos };
   }
 
-  const despesasDb = await loadClienteDespesasDbAsync();
+  const [clientesDb, veiculosDb, despesasDb] = await Promise.all([
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+    loadClienteDespesasDbAsync(),
+  ]);
   return {
     despesas: despesasDb.clienteDespesas,
     clientes: clientesDb.clientes,

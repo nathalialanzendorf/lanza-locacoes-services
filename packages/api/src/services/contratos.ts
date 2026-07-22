@@ -7,7 +7,7 @@ import {
   resolveVeiculoIdListagem,
   type ContratoRegistro,
 } from "../lib-imports.js";
-import { queryContratosFromSql, useRelationalStore } from "@lanza/db";
+import { queryContratosFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 
 export type ListarContratosOpts = {
   status?: "ativo" | "encerrado";
@@ -72,11 +72,11 @@ export async function listarContratosAsync(opts: ListarContratosOpts = {}): Prom
   items: ContratoRegistro[];
 }> {
   if (await useRelationalStore()) {
-    const veiculosDb = await loadVeiculosDbAsync();
-    const veiculoId = resolveVeiculoIdListagem(
-      { veiculoId: opts.veiculoId, placa: opts.placa },
-      veiculosDb.veiculos,
-    );
+    const veiculoId =
+      opts.veiculoId?.trim() ||
+      (opts.placa?.trim()
+        ? ((await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined)
+        : undefined);
     let items = (await queryContratosFromSql({
       status: opts.status,
       clienteId: opts.clienteId,
@@ -99,6 +99,10 @@ export function obterContrato(id: string): ContratoRegistro | null {
 }
 
 export async function obterContratoAsync(id: string): Promise<ContratoRegistro | null> {
+  if (await useRelationalStore()) {
+    const items = (await queryContratosFromSql({ id: id.trim() })) as ContratoRegistro[];
+    return items[0] ?? null;
+  }
   const db = await loadContratosDbAsync();
   return findContratoInDb(db, id);
 }

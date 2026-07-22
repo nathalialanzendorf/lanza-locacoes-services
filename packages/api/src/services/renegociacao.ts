@@ -21,6 +21,8 @@ import {
   type ClienteDespesaRegistro,
   type RenegociacaoInput,
   type ResumoDebito,
+  isEntityUuid,
+  type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 import { listarDespesasAsync, type DespesaClienteListagem } from "./despesas.js";
@@ -59,8 +61,12 @@ export async function resolverChavesRenegociacao(input: ResolverChavesInput): Pr
   }
 
   const [clientesDb, veiculosDb] = await Promise.all([
-    loadClientesDbAsync(),
-    loadVeiculosDbAsync(),
+    loadClientesDbAsync({ ids: [clienteId] }),
+    veiculoRef
+      ? loadVeiculosDbAsync(
+          isEntityUuid(veiculoRef) ? { veiculoId: veiculoRef } : { placa: veiculoRef },
+        )
+      : Promise.resolve({ veiculos: [] as VeiculoRegistro[] }),
   ]);
   const cliente = findClienteInDb(clientesDb, clienteId);
   if (!cliente) throw new HttpError(404, "Cliente não encontrado");
@@ -207,15 +213,8 @@ async function resolverDespesaPorGastoId(
   gastoId: string | number,
 ): Promise<ClienteDespesaRegistro | null> {
   const key = String(gastoId).trim();
-  const db = await loadClienteDespesasDbAsync();
-  return (
-    db.clienteDespesas.find(
-      (m) =>
-        m.id === key ||
-        String(m.autoInfracao).trim().toUpperCase() === key.toUpperCase() ||
-        (m.rastreameId != null && String(m.rastreameId) === key),
-    ) ?? null
-  );
+  const db = await loadClienteDespesasDbAsync({ referencia: key });
+  return db.clienteDespesas[0] ?? null;
 }
 
 export async function resumoRenegociacao(

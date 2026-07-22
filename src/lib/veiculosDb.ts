@@ -10,9 +10,11 @@ import {
   saveJsonDocumentAsync,
   useRelationalStore,
   loadVeiculosFromSql,
+  queryVeiculosFromSql,
   saveVeiculosToSql,
   exportJsonBackup,
 } from "@lanza/db";
+import { veiculosScopeFromFilter } from "./scopedCatalogo.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -81,8 +83,29 @@ export function loadVeiculosDb(): VeiculosDb {
   return loadJsonDocument<VeiculosDb>(DB_VEICULOS);
 }
 
-export async function loadVeiculosDbAsync(): Promise<VeiculosDb> {
+export type VeiculosLoadScope = {
+  ids?: string[];
+  veiculoId?: string;
+  placa?: string;
+  ativo?: boolean;
+  /** true = join FIPE (sync FIPE, relatórios); default false quando scoped. */
+  comFipe?: boolean;
+};
+
+export async function loadVeiculosDbAsync(scope?: VeiculosLoadScope): Promise<VeiculosDb> {
   if (await useRelationalStore()) {
+    if (scope?.comFipe) {
+      return (await loadVeiculosFromSql()) as VeiculosDb;
+    }
+    const sqlFilter = veiculosScopeFromFilter(scope ?? {});
+    if (sqlFilter) {
+      const veiculos = (await queryVeiculosFromSql(sqlFilter)) as VeiculoRegistro[];
+      return {
+        descricao: DEFAULT_DESCRICAO,
+        atualizadoEm: new Date().toISOString().slice(0, 10),
+        veiculos,
+      };
+    }
     return (await loadVeiculosFromSql()) as VeiculosDb;
   }
   return loadJsonDocumentForApi<VeiculosDb>(DB_VEICULOS, {

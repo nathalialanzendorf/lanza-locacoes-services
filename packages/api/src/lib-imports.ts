@@ -98,6 +98,7 @@ export {
   montarPlanoBaixa,
   montarPlanoBaixaAsync,
   withBaixaPlanoDbContext,
+  scopeFromLinhasBaixa,
   resolverCliente,
   resolvePlacaLinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
@@ -194,6 +195,8 @@ export {
   cobrancasRuntimeClientes,
   type CobrancasDbContext,
 } from "../../../src/lib/cobrancasDbContext.js";
+
+export { loadCatalogoEnriquecimentoDespesas } from "../../../src/lib/scopedCatalogo.js";
 
 export { hojeBr, hojeDowBr, nomeDiaSemanaBr, dataStringNoPeriodo, intervaloBrIntersectaPeriodo, type PeriodoBr } from "../../../src/lib/dataBr.js";
 

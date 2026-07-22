@@ -21,7 +21,9 @@ import {
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
-import { loadCobrancasDbContextAsync, type CobrancasDbContext } from "./cobrancasDbContext.js";
+import { loadCobrancasDbContextAsync, loadCobrancasScopedDbContextAsync, type CobrancasDbContext, type CobrancasScopedContextInput } from "./cobrancasDbContext.js";
+import { queryContratosFromSql } from "@lanza/db";
+import { isEntityUuid } from "./filtroListagem.js";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import {
   loadContratosDb,
@@ -952,10 +954,32 @@ export function formatarEncerramentoWhatsApp(r: EncerramentoResult): string {
   return formatarEncerramentoTexto(r, { incluirAvisos: false, limparNomeCliente: true });
 }
 
+async function encerramentoScope(input: EncerramentoInput): Promise<CobrancasScopedContextInput> {
+  if (input.contratoId?.trim()) {
+    const rows = await queryContratosFromSql({ id: input.contratoId.trim() });
+    const c = rows[0];
+    if (c) {
+      const clienteId = String(c.clienteId ?? input.condutorId ?? "").trim();
+      const veiculoId = String(c.veiculoId ?? "").trim();
+      return {
+        ...(isEntityUuid(clienteId) ? { clienteId } : {}),
+        ...(isEntityUuid(veiculoId) ? { veiculoId } : {}),
+      };
+    }
+  }
+  const condutorId = input.condutorId?.trim();
+  if (isEntityUuid(condutorId)) return { clienteId: condutorId };
+  return {};
+}
+
 export async function calcularEncerramentoContratoAsync(
   input: EncerramentoInput,
 ): Promise<EncerramentoResult> {
-  _encCtx = await loadCobrancasDbContextAsync();
+  const scope = await encerramentoScope(input);
+  _encCtx =
+    scope.clienteId || scope.veiculoId
+      ? await loadCobrancasScopedDbContextAsync(scope)
+      : await loadCobrancasDbContextAsync();
   try {
     return calcularEncerramentoContrato(input);
   } finally {

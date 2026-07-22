@@ -1,3 +1,4 @@
+import { resolveClienteIdFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
 import {
   listarEscoposContratosAtivosCobranca,
   loadClientesDb,
@@ -119,9 +120,61 @@ export async function resolverFiltroRelatorioAsync(
   input: FiltroRelatorioInput = {},
   ctx?: CobrancasDbContext,
 ): Promise<FiltroAlvosCobranca> {
-  const clientes = ctx?.clientes ?? (await loadClientesDbAsync()).clientes;
-  const veiculos = ctx?.veiculos ?? (await loadVeiculosDbAsync()).veiculos;
-  return resolverFiltroRelatorioComClientes(input, clientes, veiculos);
+  if (ctx) {
+    return resolverFiltroRelatorioComClientes(input, ctx.clientes, ctx.veiculos);
+  }
+
+  if (await useRelationalStore()) {
+    const veiculoId = input.veiculoId?.trim();
+    const placa = input.placa?.trim();
+    const clienteId = input.clienteId?.trim();
+    const clienteQuery = input.clienteQuery?.trim();
+    const dataInicial = input.dataInicial?.trim();
+    const dataFinal = input.dataFinal?.trim();
+    const situacao = normalizarSituacao(input.situacao);
+
+    if (input.situacao?.trim() && !situacao) {
+      throw new HttpError(400, 'Situação inválida — use em_aberto, pago ou todos');
+    }
+
+    if ((veiculoId || placa) && (clienteId || clienteQuery)) {
+      throw new HttpError(400, "Use apenas veículo OU cliente — não ambos");
+    }
+
+    const extras = {
+      ...(dataInicial ? { dataInicial } : {}),
+      ...(dataFinal ? { dataFinal } : {}),
+      ...(situacao ? { situacao } : {}),
+      ...(input.incluirEncerradosComPendencia === false
+        ? { incluirEncerradosComPendencia: false as const }
+        : input.incluirEncerradosComPendencia === true
+          ? { incluirEncerradosComPendencia: true as const }
+          : {}),
+    };
+
+    if (clienteQuery) {
+      const id = await resolveClienteIdFromSql({ clienteQuery });
+      if (!id) {
+        throw new HttpError(400, `Cliente "${clienteQuery}" não encontrado.`);
+      }
+      return { clienteId: id, ...extras };
+    }
+
+    if (clienteId) return { clienteId, ...extras };
+
+    const veiculoIdResolvido =
+      veiculoId ||
+      (placa ? ((await resolveVeiculoIdFromSql({ placa })) ?? undefined) : undefined);
+    if (veiculoIdResolvido) return { veiculoId: veiculoIdResolvido, ...extras };
+
+    return extras;
+  }
+
+  return resolverFiltroRelatorioComClientes(
+    input,
+    (await loadClientesDbAsync()).clientes,
+    (await loadVeiculosDbAsync()).veiculos,
+  );
 }
 
 export function hojeBr(): string {

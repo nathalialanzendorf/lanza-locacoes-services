@@ -137,6 +137,7 @@ async function loadContratoSnapshotsForIds(ids: string[]): Promise<{
 }
 
 export type ContratosSqlFilter = {
+  id?: string;
   status?: string;
   clienteId?: string;
   /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
@@ -152,6 +153,11 @@ export async function queryContratosFromSql(
   const params: unknown[] = [];
   const where: string[] = [];
   let p = 1;
+
+  if (filter.id?.trim() && isUuid(filter.id.trim())) {
+    params.push(filter.id.trim());
+    where.push(`c.id::text = $${p++}`);
+  }
 
   if (filter.status?.trim()) {
     params.push(filter.status.trim());

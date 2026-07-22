@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, saveContratosToSql, exportJsonBackup } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
@@ -397,7 +397,20 @@ export function loadContratosDb(): ContratosDb {
   return db;
 }
 
-export async function loadContratosDbAsync(): Promise<ContratosDb> {
+export type ContratosLoadScope = ContratosSqlFilter;
+
+function hasContratosScope(scope?: ContratosLoadScope): boolean {
+  if (!scope) return false;
+  return Boolean(
+    scope.id?.trim() ||
+      scope.status?.trim() ||
+      scope.clienteId?.trim() ||
+      scope.veiculoId?.trim() ||
+      (scope.veiculoIds?.length ?? 0) > 0,
+  );
+}
+
+export async function loadContratosDbAsync(scope?: ContratosLoadScope): Promise<ContratosDb> {
   const empty: ContratosDb = {
     descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -405,6 +418,10 @@ export async function loadContratosDbAsync(): Promise<ContratosDb> {
     contratos: [],
   };
   if (await useRelationalStore()) {
+    if (hasContratosScope(scope)) {
+      const contratos = (await queryContratosFromSql(scope!)) as ContratoRegistro[];
+      return { ...empty, contratos, schemaContrato: DEFAULT_SCHEMA };
+    }
     const db = await loadContratosFromSql();
     return { ...empty, ...db, schemaContrato: DEFAULT_SCHEMA } as ContratosDb;
   }

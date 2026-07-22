@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup, queryLocacoesFromSql } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup, queryLocacoesFromSql, resolveVeiculoIdFromSql } from "@lanza/db";
 import { resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { findVeiculoById, loadVeiculosDbAsync } from "./veiculosDb.js";
@@ -381,11 +381,11 @@ export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegist
 
 export async function listarLocacoesAsync(filtro: ListarLocacoesFiltro = {}): Promise<LocacaoRegistro[]> {
   if (await useRelationalStore()) {
-    const veiculosDb = await loadVeiculosDbAsync();
-    const veiculoId = resolveVeiculoIdListagem(
-      { veiculoId: filtro.veiculoId, placa: filtro.placa },
-      veiculosDb.veiculos,
-    );
+    const veiculoId =
+      filtro.veiculoId?.trim() ||
+      (filtro.placa?.trim()
+        ? ((await resolveVeiculoIdFromSql({ placa: filtro.placa })) ?? undefined)
+        : undefined);
     const items = (await queryLocacoesFromSql({
       veiculoId,
       clienteId: filtro.clienteId,

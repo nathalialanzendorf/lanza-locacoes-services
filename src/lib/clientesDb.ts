@@ -10,9 +10,11 @@ import {
   saveJsonDocumentAsync,
   useRelationalStore,
   loadClientesFromSql,
+  queryClientesFromSql,
   saveClientesToSql,
   exportJsonBackup,
 } from "@lanza/db";
+import { clientesScopeFromFilter } from "./scopedCatalogo.js";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -118,8 +120,27 @@ export function loadClientesDb(): ClientesDb {
   return loadJsonDocument<ClientesDb>(DB_CLIENTES);
 }
 
-export async function loadClientesDbAsync(): Promise<ClientesDb> {
+export type ClientesLoadScope = {
+  ids?: string[];
+  idOuCpf?: string;
+  cpf?: string;
+  nome?: string;
+  clienteQuery?: string;
+  q?: string;
+  ativo?: boolean;
+};
+
+export async function loadClientesDbAsync(scope?: ClientesLoadScope): Promise<ClientesDb> {
   if (await useRelationalStore()) {
+    const sqlFilter = clientesScopeFromFilter(scope ?? {});
+    if (sqlFilter) {
+      const clientes = (await queryClientesFromSql(sqlFilter)) as ClienteRegistro[];
+      return {
+        descricao: DEFAULT_DESCRICAO,
+        atualizadoEm: new Date().toISOString().slice(0, 10),
+        clientes,
+      };
+    }
     return (await loadClientesFromSql()) as ClientesDb;
   }
   return loadJsonDocumentForApi<ClientesDb>(DB_CLIENTES, {

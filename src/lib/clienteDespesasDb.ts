@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, saveClienteDespesasToSql, exportJsonBackup } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter } from "@lanza/db";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   isCategoriaInfracao,
@@ -381,8 +381,47 @@ export function loadClienteDespesasDb(): ClienteDespesasDb {
   return normalizeRawDb(raw);
 }
 
-export async function loadClienteDespesasDbAsync(): Promise<ClienteDespesasDb> {
+export type ClienteDespesasLoadScope = ClienteDespesasSqlFilter & {
+  id?: string;
+  referencia?: string;
+};
+
+function hasDespesasScope(scope?: ClienteDespesasLoadScope): boolean {
+  if (!scope) return false;
+  return Boolean(
+    scope.id?.trim() ||
+      scope.referencia?.trim() ||
+      scope.clienteId?.trim() ||
+      scope.veiculoId?.trim() ||
+      scope.emAberto !== undefined ||
+      scope.ativo !== undefined,
+  );
+}
+
+export async function loadClienteDespesasDbAsync(
+  scope?: ClienteDespesasLoadScope,
+): Promise<ClienteDespesasDb> {
   if (await useRelationalStore()) {
+    if (hasDespesasScope(scope)) {
+      const ref = scope!.id?.trim() || scope!.referencia?.trim();
+      const rows = ref
+        ? await (async () => {
+            const row = await queryClienteDespesaByReferenciaFromSql(ref);
+            return row ? [row] : [];
+          })()
+        : await queryClienteDespesasFromSql({
+            clienteId: scope!.clienteId,
+            veiculoId: scope!.veiculoId,
+            emAberto: scope!.emAberto,
+            ativo: scope!.ativo,
+          });
+      return normalizeRawDb({
+        descricao: DEFAULT_DESCRICAO,
+        atualizadoEm: new Date().toISOString().slice(0, 10),
+        schemaClienteDespesa: DEFAULT_SCHEMA,
+        clienteDespesas: rows,
+      } as Record<string, unknown>);
+    }
     return normalizeRawDb((await loadClienteDespesasFromSql()) as unknown as Record<string, unknown>);
   }
   const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_CLIENTE_DESPESAS, {
@@ -409,6 +448,10 @@ async function saveDespesasMut(db: ClienteDespesasDb): Promise<void> {
 }
 
 export async function findClienteDespesaByIdAsync(id: string): Promise<ClienteDespesaRegistro | null> {
+  if (await useRelationalStore()) {
+    const row = await queryClienteDespesaByReferenciaFromSql(id.trim());
+    return row ? (row as ClienteDespesaRegistro) : null;
+  }
   const db = await loadClienteDespesasDbAsync();
   return db.clienteDespesas.find((m) => m.id === id) ?? null;
 }

@@ -1,6 +1,7 @@
 import {
   montarPlanoBaixaAsync,
   withBaixaPlanoDbContext,
+  scopeFromLinhasBaixa,
   resolvePlacaLinhaPlanoBaixa,
   resolveSyncRastreame,
   type LinhaPlanoBaixa,
@@ -65,7 +66,8 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
   };
   const resultados: ExecutarBaixaResultado["resultados"] = [];
 
-  return withBaixaPlanoDbContext(async () => {
+  return withBaixaPlanoDbContext(
+    async () => {
     for (const linha of input.linhas) {
       if (!linha.patch) {
         throw new HttpError(400, `Linha ${linha.num} sem campo "patch"`);
@@ -110,5 +112,7 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
     }
 
     return { aplicadas: resultados.length, resultados };
-  });
+  },
+    scopeFromLinhasBaixa(input.linhas),
+  );
 }

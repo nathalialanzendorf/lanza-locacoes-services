@@ -16,9 +16,7 @@ import {
   gerarMultas,
   gerarSemanal,
   getCobrancasRuntimeCtx,
-  loadClientesDbAsync,
   loadCobrancasScopedDbContextAsync,
-  loadVeiculosDbAsync,
   setCobrancasRuntimeCtx,
   salvarCobranca,
   salvarCobrancasDados,
@@ -64,8 +62,7 @@ export async function listarAlvos(
   if (!t) {
     throw new HttpError(400, `Tipo de cobrança inválido: ${tipo}`);
   }
-  const clientesDb = await loadClientesDbAsync();
-  const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes, (await loadVeiculosDbAsync()).veiculos);
+  const filtroPre = await resolverFiltroRelatorioAsync(filtroInput);
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
       clienteId: filtroPre.clienteId,
@@ -125,12 +122,7 @@ function itemsDoEscopo(
 
 export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
   const filtroInput = input.filtro ?? {};
-  const clientesDb = await loadClientesDbAsync();
-  const filtroPre = resolverFiltroRelatorioComClientes(
-    filtroInput,
-    clientesDb.clientes,
-    (await loadVeiculosDbAsync()).veiculos,
-  );
+  const filtroPre = await resolverFiltroRelatorioAsync(filtroInput);
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
       clienteId: filtroPre.clienteId,
@@ -350,7 +342,6 @@ function vencimentosAbertosCliente(
 }
 
 export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
-  const clientesDb = await loadClientesDbAsync();
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
       clienteId: input.clienteId,

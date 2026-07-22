@@ -9,7 +9,8 @@ import {
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
 import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb.js";
-import { loadCobrancasDbContextAsync, loadBaixaPlanoDbContextAsync, type CobrancasDbContext } from "../cobrancasDbContext.js";
+import { loadCobrancasDbContextAsync, loadBaixaPlanoDbContextAsync, type CobrancasDbContext, type CobrancasScopedContextInput } from "../cobrancasDbContext.js";
+import { isEntityUuid } from "../filtroListagem.js";
 import { compararDataBrAsc } from "../contratoExtrair.js";
 import { loadContratosDb, contratoMaisRecentePar } from "../contratosDb.js";
 import {
@@ -830,14 +831,32 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   };
 }
 
-export async function withBaixaPlanoDbContext<T>(fn: () => T | Promise<T>): Promise<T> {
-  _baixaPlanoCtx = await loadCobrancasDbContextAsync();
+export async function withBaixaPlanoDbContext<T>(
+  fn: () => T | Promise<T>,
+  scope?: CobrancasScopedContextInput,
+): Promise<T> {
+  _baixaPlanoCtx = scope
+    ? await loadBaixaPlanoDbContextAsync(scope)
+    : await loadCobrancasDbContextAsync();
   try {
     return await fn();
   } finally {
     _baixaPlanoCtx = null;
   }
 }
+
+function scopeFromLinhasBaixa(linhas: LinhaPlanoBaixa[]): CobrancasScopedContextInput {
+  const despesaId = linhas.map((l) => l.despesaId?.trim()).find(Boolean);
+  const veiculoId = linhas
+    .map((l) => String(l.patch?.veiculoId ?? "").trim())
+    .find((id) => isEntityUuid(id));
+  return {
+    ...(despesaId ? { despesaId } : {}),
+    ...(veiculoId ? { veiculoId } : {}),
+  };
+}
+
+export { scopeFromLinhasBaixa };
 
 export async function montarPlanoBaixaAsync(
   input: MontarPlanoBaixaInput,

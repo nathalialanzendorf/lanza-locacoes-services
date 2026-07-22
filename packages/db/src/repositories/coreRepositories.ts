@@ -378,6 +378,126 @@ export async function loadClientesFromSql(): Promise<ClientesDbShape> {
   };
 }
 
+export type ClientesSqlFilter = {
+  ids?: string[];
+  cpf?: string;
+  /** CPF, nome parcial ou id. */
+  q?: string;
+  ativo?: boolean;
+};
+
+/** Listagem filtrada de clientes (sem carregar catálogo inteiro). */
+export async function queryClientesFromSql(filter: ClientesSqlFilter = {}): Promise<ClienteRow[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
+
+  const ids = [...new Set((filter.ids ?? []).map((id) => id.trim()).filter((id) => isUuid(id)))];
+  if (ids.length === 1) {
+    params.push(ids[0]);
+    where.push(`c.id::text = $${p++}`);
+  } else if (ids.length > 1) {
+    params.push(ids);
+    where.push(`c.id::text = ANY($${p++}::text[])`);
+  }
+
+  if (!ids.length && filter.cpf?.trim()) {
+    const cpf = normCpf(filter.cpf.trim());
+    if (cpf) {
+      params.push(cpf);
+      where.push(`c.cpf_norm = $${p++}`);
+    }
+  }
+
+  const q = filter.q?.trim();
+  if (!ids.length && q) {
+    if (isUuid(q)) {
+      params.push(q);
+      where.push(`c.id::text = $${p++}`);
+    } else {
+      const cpfQ = normCpf(q);
+      if (cpfQ?.length === 11) {
+        params.push(cpfQ);
+        where.push(`c.cpf_norm = $${p++}`);
+      } else {
+        params.push(`%${q.toLowerCase()}%`);
+        where.push(`lower(c.nome) LIKE $${p++}`);
+      }
+    }
+  }
+
+  if (filter.ativo === true) {
+    where.push(`(c.ativo IS DISTINCT FROM false)`);
+  } else if (filter.ativo === false) {
+    where.push(`(c.ativo = false)`);
+  }
+
+  if (where.length === 0) {
+    return (await loadClientesFromSql()).clientes;
+  }
+
+  const whereSql = `WHERE ${where.join(" AND ")}`;
+  const [base, endR] = await Promise.all([
+    pgQuery(`SELECT c.* FROM lanza.clientes c ${whereSql} ORDER BY c.nome`, params),
+    ids.length > 0
+      ? pgQuery("SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])", [
+          ids.length === 1 ? [ids[0]] : ids,
+        ])
+      : pgQuery(
+          `SELECT e.* FROM lanza.cliente_enderecos e
+           INNER JOIN lanza.clientes c ON c.id = e.cliente_id
+           ${whereSql}`,
+          params,
+        ),
+  ]);
+  const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
+  return base.rows.map((row) =>
+    buildClienteRowFromSql(row as Record<string, unknown>, endByCliente.get(String(row.id))),
+  );
+}
+
+export type VeiculosSqlFilter = {
+  ids?: string[];
+  veiculoId?: string;
+  placa?: string;
+  ativo?: boolean;
+};
+
+/** Veículos filtrados — sem join FIPE (listagens/enriquecimento). */
+export async function queryVeiculosFromSql(filter: VeiculosSqlFilter = {}): Promise<VeiculoRow[]> {
+  const ids = new Set(
+    (filter.ids ?? []).map((id) => id.trim()).filter((id) => isUuid(id)),
+  );
+  if (filter.veiculoId?.trim() && isUuid(filter.veiculoId.trim())) {
+    ids.add(filter.veiculoId.trim());
+  }
+  if (filter.placa?.trim()) {
+    const id = await resolveVeiculoIdFromSql({ placa: filter.placa });
+    if (id) ids.add(id);
+  }
+  if (ids.size > 0) {
+    return queryVeiculosByIdsFromSql([...ids]);
+  }
+
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (filter.ativo === true) {
+    where.push(`(v.ativo IS DISTINCT FROM false)`);
+  } else if (filter.ativo === false) {
+    where.push(`(v.ativo = false)`);
+  }
+
+  if (where.length === 0) {
+    return (await loadVeiculosFromSql()).veiculos;
+  }
+
+  const r = await pgQuery(
+    `SELECT v.* FROM lanza.veiculos v WHERE ${where.join(" AND ")} ORDER BY v.placa`,
+    params,
+  );
+  return r.rows.map((row) => rowToVeiculo(row as Record<string, unknown>));
+}
+
 /** Clientes por UUID (sem carregar catálogo inteiro). */
 export async function loadClientesByIdsFromSql(ids: string[]): Promise<ClienteRow[]> {
   const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => isUuid(id)))];

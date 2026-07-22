@@ -92,7 +92,12 @@ export async function listarClientesAsync(opts: ListarClientesOpts = {}): Promis
   total: number;
   items: ClienteRegistro[];
 }> {
-  const db = await loadClientesDbAsync();
+  const db = await loadClientesDbAsync({
+    cpf: opts.cpf,
+    nome: opts.nome,
+    clienteQuery: opts.clienteQuery,
+    ativo: opts.ativo,
+  });
   const items = filtrarClientes(db.clientes, opts);
   return { total: items.length, items };
 }
@@ -104,7 +109,7 @@ export function obterCliente(idOuCpf: string): ClienteRegistro | null {
 }
 
 export async function obterClienteAsync(idOuCpf: string): Promise<ClienteRegistro | null> {
-  const db = await loadClientesDbAsync();
+  const db = await loadClientesDbAsync({ idOuCpf });
   return findClienteInDb(db, idOuCpf);
 }
 

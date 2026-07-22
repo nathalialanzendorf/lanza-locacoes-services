@@ -62,7 +62,7 @@ export async function consultarValorFipe(marcaCode: string, modeloCode: string, 
 }
 
 async function resolverVeiculo(idOuPlaca: string) {
-  const db = await loadVeiculosDbAsync();
+  const db = await loadVeiculosDbAsync({ comFipe: true });
   const byId = db.veiculos.find((v) => v.id === idOuPlaca);
   if (byId) return byId;
   const byPlaca = db.veiculos.find((v) => placasIguais(v.placa, idOuPlaca));
@@ -86,7 +86,7 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
   if (!placa) throw new HttpError(400, "Informe a placa.");
 
   const brands = await listarMarcas();
-  const db = await loadVeiculosDbAsync();
+  const db = await loadVeiculosDbAsync({ comFipe: true });
   const cadastrado =
     db.veiculos.find((v) => placasIguais(v.placa, placa)) ??
     db.veiculos.find((v) => v.id === placa) ??
@@ -137,7 +137,7 @@ export async function atualizarFipeVeiculo(idOuPlaca: string) {
 
 export async function atualizarFipeFrota() {
   const brands = await listarMarcas();
-  const veiculos = (await loadVeiculosDbAsync()).veiculos.filter(isVeiculoAtivo);
+  const veiculos = (await loadVeiculosDbAsync({ comFipe: true })).veiculos.filter(isVeiculoAtivo);
   const resultados: Array<{ placa: string; ok: boolean; fipe?: unknown; erro?: string }> = [];
 
   for (const v of veiculos) {

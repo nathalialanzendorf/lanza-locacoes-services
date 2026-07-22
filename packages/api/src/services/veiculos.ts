@@ -31,7 +31,10 @@ export async function listarVeiculosAsync(opts: ListarVeiculosOpts = {}): Promis
   total: number;
   items: VeiculoRegistro[];
 }> {
-  const db = await loadVeiculosDbAsync();
+  const db = await loadVeiculosDbAsync({
+    placa: opts.placa,
+    ativo: opts.ativo,
+  });
   return filtrarVeiculos(db.veiculos, opts);
 }
 
