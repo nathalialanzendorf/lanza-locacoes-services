@@ -509,7 +509,9 @@ function filtrarPagamentoSemanal(
 export type SituacaoCobrancaFiltro = "em_aberto" | "pago" | "todos";
 
 export type FiltroAlvosCobranca = {
-  /** Limita a uma placa. */
+  /** Limita a um veículo (UUID). */
+  veiculoId?: string;
+  /** @deprecated prefer veiculoId */
   placa?: string;
   /** Limita a um cliente (nome, CPF ou id — resolvido em clientes.json). */
   clienteId?: string;
@@ -521,6 +523,41 @@ export type FiltroAlvosCobranca = {
   /** Inclui ex-locatários com contrato encerrado e débitos em aberto (padrão: true). */
   incluirEncerradosComPendencia?: boolean;
 };
+
+export function despesaCombinaVeiculoFiltro(
+  despesaVeiculoRef: string,
+  filtro: Pick<FiltroAlvosCobranca, "placa" | "veiculoId">,
+  veiculos: Array<{ id: string; placa?: string | null }> = [],
+): boolean {
+  if (filtro.veiculoId?.trim()) {
+    const id = filtro.veiculoId.trim();
+    if (despesaVeiculoRef === id) return true;
+    const v = veiculos.find((x) => x.id === id);
+    if (v?.placa && compactPlaca(despesaVeiculoRef) === compactPlaca(v.placa)) return true;
+    return false;
+  }
+  if (filtro.placa?.trim()) {
+    return compactPlaca(despesaVeiculoRef) === compactPlaca(filtro.placa);
+  }
+  return true;
+}
+
+export function alvoCombinaVeiculoFiltro(
+  placaAlvo: string,
+  filtro: Pick<FiltroAlvosCobranca, "placa" | "veiculoId">,
+  veiculos: Array<{ id: string; placa?: string | null }> = [],
+): boolean {
+  if (filtro.veiculoId?.trim()) {
+    const id = filtro.veiculoId.trim();
+    const v = veiculos.find((x) => x.id === id);
+    if (v?.placa && compactPlaca(placaAlvo) === compactPlaca(v.placa)) return true;
+    return false;
+  }
+  if (filtro.placa?.trim()) {
+    return compactPlaca(placaAlvo) === compactPlaca(filtro.placa);
+  }
+  return true;
+}
 
 function parseDataBrDia(s: string): Date | null {
   const m = String(s ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);

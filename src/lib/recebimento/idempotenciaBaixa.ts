@@ -105,7 +105,7 @@ export function verificarIdempotenciaBaixa(
     dataBr: string;
     horaBr?: string | null;
     origemExterna?: string | null;
-    autoInfracaoAlvo?: string | null;
+    despesaId?: string | null;
     descricaoQuitada?: string | null;
   },
   despesas?: ClienteDespesaRegistro[],
@@ -136,12 +136,10 @@ export function verificarIdempotenciaBaixa(
     };
   }
 
-  if (input.autoInfracaoAlvo) {
-    const alvoKey = input.autoInfracaoAlvo.trim().toLowerCase();
+  if (input.despesaId) {
+    const alvoKey = input.despesaId.trim();
     const alvo = listarDespesasIdempotencia(despesas).find(
-      (d) =>
-        d.ativo !== false &&
-        (d.autoInfracao.trim().toLowerCase() === alvoKey || d.id === input.autoInfracaoAlvo?.trim()),
+      (d) => d.ativo !== false && d.id === alvoKey,
     );
     if (alvo?.paga === true) {
       const descQuitada = input.descricaoQuitada
@@ -156,7 +154,7 @@ export function verificarIdempotenciaBaixa(
       if (baixaIntegral) {
         return {
           status: "alvo_ja_quitado",
-          motivo: `Despesa alvo ${input.autoInfracaoAlvo} já está quitada (${alvo.descricao}, R$ ${alvo.valorMulta.toFixed(2)}).`,
+          motivo: `Despesa alvo ${input.despesaId} já está quitada (${alvo.descricao}, R$ ${alvo.valorMulta.toFixed(2)}).`,
           registroExistente: resumoRegistro(alvo),
         };
       }

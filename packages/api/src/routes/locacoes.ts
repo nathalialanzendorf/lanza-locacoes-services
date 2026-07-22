@@ -19,6 +19,7 @@ export function registerLocacoesRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       json(ctx.res, 200, await locacoesService.listarLocacoes({
         placa: ctx.query.get("placa") ?? undefined,
+        veiculoId: ctx.query.get("veiculoId") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         situacao: ctx.query.get("situacao") ?? undefined,
         dataInicial: ctx.query.get("dataInicial") ?? undefined,

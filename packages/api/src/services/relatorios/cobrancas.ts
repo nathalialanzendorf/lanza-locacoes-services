@@ -26,6 +26,7 @@ import {
   montarCobrancaSidecar,
   montarPacoteCobrancaSemanalAtraso,
   normalizarTipoCobrancaAction,
+  alvoCombinaVeiculoFiltro,
   resolverModoCanvasCobranca,
   salvarCobrancaSimplesSidecar,
   salvarCobrancasSidecar,
@@ -66,8 +67,9 @@ export async function listarAlvos(
   const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
-      clienteQuery: filtroPre.clienteId ?? filtroInput.clienteQuery,
-      placa: filtroPre.placa ?? filtroInput.placa,
+      clienteId: filtroPre.clienteId,
+      veiculoId: filtroPre.veiculoId,
+      placa: filtroPre.placa,
     }),
   );
   try {
@@ -109,10 +111,11 @@ function itemsDoEscopo(
   results: LoteCobrancaResult[],
   filtro: FiltroAlvosCobranca,
 ): LoteCobrancaItem[] {
+  const veiculos = getCobrancasRuntimeCtx()?.veiculos ?? [];
   const items: LoteCobrancaItem[] = [];
   for (const result of results) {
     for (const item of result.items) {
-      if (filtro.placa && item.alvo.placa !== filtro.placa) continue;
+      if (!alvoCombinaVeiculoFiltro(item.alvo.placa, filtro, veiculos)) continue;
       if (filtro.clienteId && item.alvo.clienteId !== filtro.clienteId) continue;
       items.push(item);
     }
@@ -126,8 +129,9 @@ export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
   const filtroPre = resolverFiltroRelatorioComClientes(filtroInput, clientesDb.clientes);
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
-      clienteQuery: filtroPre.clienteId ?? filtroInput.clienteQuery,
-      placa: filtroPre.placa ?? filtroInput.placa,
+      clienteId: filtroPre.clienteId,
+      veiculoId: filtroPre.veiculoId,
+      placa: filtroPre.placa,
     }),
   );
   try {
@@ -170,7 +174,8 @@ export async function gerarCobrancas(input: GerarCobrancasInput = {}) {
     }
   }
 
-  const escopoUnico = filtro.clienteId != null || filtro.placa != null;
+  const escopoUnico =
+    filtro.clienteId != null || filtro.placa != null || filtro.veiculoId != null;
   const itemsEscopo = escopoUnico ? itemsDoEscopo(lotes, filtro) : [];
   const sidecar = escopoUnico
     ? montarCobrancaSidecar(filtro, itemsEscopo, dataRef, tipos)
@@ -286,7 +291,11 @@ export function gerarCobrancaPlaca(input: GerarCobrancaPlacaInput) {
 }
 
 export type SemanalAtrasoInput = {
+  clienteId?: string;
+  /** @deprecated prefer clienteId */
   clienteQuery?: string;
+  veiculoId?: string;
+  /** @deprecated prefer veiculoId */
   placa?: string;
   dataPagamentoBr?: string;
   vencimentos?: string[];
@@ -342,7 +351,9 @@ export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
   const clientesDb = await loadClientesDbAsync();
   setCobrancasRuntimeCtx(
     await loadCobrancasScopedDbContextAsync({
+      clienteId: input.clienteId,
       clienteQuery: input.clienteQuery,
+      veiculoId: input.veiculoId,
       placa: input.placa,
     }),
   );
@@ -350,7 +361,9 @@ export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
     const ctx = getCobrancasRuntimeCtx()!;
     const dataPagamentoBr = input.dataPagamentoBr ?? hojeBr();
     let cliente: ClienteRegistro | null = null;
-    if (input.clienteQuery?.trim()) {
+    if (input.clienteId?.trim()) {
+      cliente = ctx.clientes.find((x) => x.id === input.clienteId!.trim()) ?? null;
+    } else if (input.clienteQuery?.trim()) {
       try {
         cliente = resolverClienteFromList(input.clienteQuery, ctx.clientes);
       } catch (err) {
@@ -358,7 +371,10 @@ export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
         throw new HttpError(400, msg);
       }
     }
-    const placa = input.placa?.trim();
+    let placa = input.placa?.trim();
+    if (!placa && input.veiculoId?.trim()) {
+      placa = ctx.veiculos.find((v) => v.id === input.veiculoId!.trim())?.placa?.trim();
+    }
 
     if (!cliente && placa) {
       const c =
@@ -370,7 +386,7 @@ export async function gerarSemanalAtraso(input: SemanalAtrasoInput) {
     }
 
     if (!cliente?.id) {
-      throw new HttpError(400, "Informe clienteQuery ou placa com contrato (ativo ou encerrado com débito)");
+      throw new HttpError(400, "Informe clienteId ou veículo com contrato (ativo ou encerrado com débito)");
     }
 
     let valorSemanal = input.valorSemanal;

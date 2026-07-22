@@ -19,7 +19,7 @@ export function registerRenegociacaoRoutes(routes: RouteDef[]): void {
       const motoristaKey = ctx.query.get("motoristaKey") ?? undefined;
       const rastreavelKey = ctx.query.get("rastreavelKey") ?? undefined;
       const clienteId = ctx.query.get("clienteId") ?? undefined;
-      const placa = ctx.query.get("placa") ?? undefined;
+      const veiculoId = ctx.query.get("veiculoId") ?? undefined;
       const apenasVencidosRaw = ctx.query.get("apenasVencidos");
       const apenasVencidos =
         apenasVencidosRaw != null &&
@@ -27,14 +27,14 @@ export function registerRenegociacaoRoutes(routes: RouteDef[]): void {
         ["true", "1", "sim"].includes(apenasVencidosRaw.trim().toLowerCase());
 
       if (!clienteId) {
-        return badRequest(ctx, 'Informe "clienteId" (placa opcional)');
+        return badRequest(ctx, 'Informe "clienteId" (veículo opcional)');
       }
 
       const data = await renegService.resumoRenegociacao({
         motoristaKey,
         rastreavelKey,
         clienteId,
-        placa,
+        veiculoId,
         apenasVencidos,
       });
       json(ctx.res, 200, data);

@@ -139,6 +139,17 @@ function despesaPlacaIgual(d: ClienteDespesaRegistro, placa: string): boolean {
   return placasIguais(resolvePlacaDespesa(d), placa);
 }
 
+function despesaVeiculoRefIgual(d: ClienteDespesaRegistro, veiculoRef: string): boolean {
+  if (!veiculoRef.trim()) return true;
+  const ref = veiculoRef.trim();
+  if (d.veiculoId === ref) return true;
+  const vRef = findVeiculoPorReferencia(ref);
+  const vDesp = findVeiculoPorReferencia(String(d.veiculoId ?? ""));
+  if (vRef?.id && vDesp?.id && vRef.id === vDesp.id) return true;
+  if (vRef?.id && d.veiculoId === vRef.id) return true;
+  return despesaPlacaIgual(d, ref);
+}
+
 function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
   return d.ativo !== false && d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
 }
@@ -463,13 +474,15 @@ function escolherDespesaAlvo(
 function resolverDespesaAlvo(
   abertas: ClienteDespesaRegistro[],
   opts: {
-    autoInfracaoAlvo?: string | null;
+    despesaId?: string | null;
+    veiculoId?: string | null;
     placa?: string | null;
     valor: number;
     dataRecebimentoBr: string;
   },
 ): ClienteDespesaRegistro | null {
-  const alvoId = opts.autoInfracaoAlvo?.trim();
+  const veiculoRef = opts.veiculoId?.trim() || opts.placa?.trim() || "";
+  const alvoId = opts.despesaId?.trim();
   if (alvoId) {
     const alvo =
       abertas.find((d) => correspondeAlvoExplicito(d, alvoId)) ??
@@ -480,14 +493,14 @@ function resolverDespesaAlvo(
     if (!alvo) {
       throw new Error(`Despesa em aberto não encontrada: ${alvoId}.`);
     }
-    if (opts.placa?.trim() && !despesaPlacaIgual(alvo, opts.placa)) {
-      throw new Error(`Despesa ${alvoId} não pertence à placa informada.`);
+    if (veiculoRef && !despesaVeiculoRefIgual(alvo, veiculoRef)) {
+      throw new Error(`Despesa ${alvoId} não pertence ao veículo informado.`);
     }
     return alvo;
   }
 
-  const pool = opts.placa?.trim()
-    ? abertas.filter((d) => despesaPlacaIgual(d, opts.placa!))
+  const pool = veiculoRef
+    ? abertas.filter((d) => despesaVeiculoRefIgual(d, veiculoRef))
     : abertas;
   return escolherDespesaAlvo(pool, opts.valor, opts.dataRecebimentoBr);
 }
@@ -541,7 +554,9 @@ function previewProximaParcela(
 }
 
 export type MontarPlanoBaixaInput = {
-  clienteQuery: string;
+  clienteId?: string | null;
+  /** @deprecated prefer clienteId */
+  clienteQuery?: string | null;
   valor: number;
   dataBr: string;
   horaBr?: string | null;
@@ -552,14 +567,27 @@ export type MontarPlanoBaixaInput = {
   /** Ex.: omitir Infração no match automático PagBank (Juliano). */
   excluirCategoriasAuto?: string[];
   revisaoManual?: boolean;
-  /** Despesa em aberto alvo (autoInfracao) — ex.: pendência escolhida na UI. */
-  autoInfracaoAlvo?: string | null;
-  /** Restringe match automático à placa do veículo. */
+  /** Despesa em aberto alvo (id) — pendência escolhida na UI. */
+  despesaId?: string | null;
+  /** Restringe match automático ao veículo (UUID ou placa). */
+  veiculoId?: string | null;
+  /** @deprecated prefer veiculoId */
   placa?: string | null;
 };
 
+function resolverClientePlano(input: MontarPlanoBaixaInput): ClienteRegistro {
+  const id = input.clienteId?.trim();
+  if (id) {
+    const byId = clientesList().find((c) => c.id?.toLowerCase() === id.toLowerCase());
+    if (byId) return byId;
+    throw new Error(`Cliente id "${id}" não encontrado.`);
+  }
+  if (input.clienteQuery?.trim()) return resolverCliente(input.clienteQuery);
+  throw new Error('Informe "clienteId" ou "clienteQuery".');
+}
+
 export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebimento {
-  const cliente = resolverCliente(input.clienteQuery);
+  const cliente = resolverClientePlano(input);
   const dataBr = parseDataBr(input.dataBr);
   const horaBr = parseHoraBr(input.horaBr);
   const pagaEmIso = dataHoraToPagaEmIso(dataBr, horaBr);
@@ -570,7 +598,8 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     excluirCategorias: input.excluirCategoriasAuto,
   });
   const alvo = resolverDespesaAlvo(abertas, {
-    autoInfracaoAlvo: input.autoInfracaoAlvo,
+    despesaId: input.despesaId,
+    veiculoId: input.veiculoId,
     placa: input.placa,
     valor,
     dataRecebimentoBr: dataBr,
@@ -613,7 +642,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   const diff = Math.round((valorDevido - valor) * 100) / 100;
   let tipoBaixa: PlanoBaixaRecebimento["tipoBaixa"];
 
-  if (input.autoInfracaoAlvo?.trim() && valor > valorDevido + 0.009) {
+  if (input.despesaId?.trim() && valor > valorDevido + 0.009) {
     throw new Error(
       `Valor recebido (R$ ${valor.toFixed(2)}) não pode ser maior que o devido (R$ ${valorDevido.toFixed(2)}) na despesa ${alvo.autoInfracao}.`,
     );
@@ -737,7 +766,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       dataBr,
       horaBr,
       origemExterna: input.origemExterna,
-      autoInfracaoAlvo: alvo.autoInfracao,
+      despesaId: alvo.id,
       descricaoQuitada: stripAtrasadoSemanal(descricaoAntes),
     },
     clienteDespesasList(),
@@ -810,8 +839,10 @@ export async function montarPlanoBaixaAsync(
   input: MontarPlanoBaixaInput,
 ): Promise<PlanoBaixaRecebimento> {
   _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync({
+    clienteId: input.clienteId,
     clienteQuery: input.clienteQuery,
-    autoInfracaoAlvo: input.autoInfracaoAlvo,
+    veiculoId: input.veiculoId,
+    despesaId: input.despesaId,
     placa: input.placa,
   });
   try {

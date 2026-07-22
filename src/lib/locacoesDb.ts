@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup, queryLocacoesFromSql } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
+import { findVeiculoById } from "./veiculosDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
 export const DB_LOCACOES = path.join(REPO_ROOT, "database", "locacoes.json");
@@ -326,6 +327,7 @@ export async function excluirLocacaoAsync(id: string): Promise<LocacaoRegistro |
 
 export type ListarLocacoesFiltro = {
   placa?: string;
+  veiculoId?: string;
   situacao?: SituacaoLocacao;
   clienteId?: string;
   /** Período inclusivo — locações que intersectam o intervalo (início/fim da movimentação). */
@@ -355,6 +357,19 @@ export function listarLocacoes(filtro: ListarLocacoesFiltro = {}): LocacaoRegist
 }
 
 export async function listarLocacoesAsync(filtro: ListarLocacoesFiltro = {}): Promise<LocacaoRegistro[]> {
+  if (await useRelationalStore()) {
+    const items = (await queryLocacoesFromSql({
+      veiculoId: filtro.veiculoId,
+      placa: filtro.placa,
+      clienteId: filtro.clienteId,
+      situacao: filtro.situacao,
+      abertas: filtro.abertas,
+    })) as LocacaoRegistro[];
+    return items
+      .filter((l) => locacaoIntersectaPeriodo(l, filtro))
+      .sort((a, b) => dataNum(a.inicio) - dataNum(b.inicio));
+  }
+
   const db = await loadLocacoesDbAsync();
   return listarLocacoesFromDb(db.locacoes, filtro);
 }
@@ -365,7 +380,17 @@ function listarLocacoesFromDb(
 ): LocacaoRegistro[] {
   return locacoes
     .filter((l) => {
-      if (filtro.placa && !placasIguais(l.placa, filtro.placa)) return false;
+      if (filtro.veiculoId?.trim()) {
+        const id = filtro.veiculoId.trim();
+        if (l.veiculoId === id) {
+          // match
+        } else {
+          const v = findVeiculoById(id);
+          if (!v?.placa || !placasIguais(l.placa ?? "", v.placa)) return false;
+        }
+      } else if (filtro.placa && !placasIguais(l.placa, filtro.placa)) {
+        return false;
+      }
       if (filtro.clienteId?.trim() && l.clienteId !== filtro.clienteId.trim()) return false;
       if (filtro.situacao && l.situacao !== filtro.situacao) return false;
       if (filtro.abertas && !locacaoEmAberto(l)) return false;

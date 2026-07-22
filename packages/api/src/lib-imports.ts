@@ -117,6 +117,8 @@ export {
   listarEscoposContratosAtivosCobranca,
   listarEscoposContratosEncerradosComPendencia,
   resolverModoCanvasCobranca,
+  alvoCombinaVeiculoFiltro,
+  despesaCombinaVeiculoFiltro,
   type FiltroAlvosCobranca,
   type TipoCobrancaAction,
 } from "../../../src/lib/cobrancasAlvos.js";

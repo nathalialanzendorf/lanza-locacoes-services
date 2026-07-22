@@ -410,6 +410,7 @@ export function patchParaInput(
 
 export async function atribuirClientesDespesas(opts: {
   dryRun?: boolean;
+  veiculoId?: string;
   placa?: string;
   prazoDias?: number;
   escopo?: "pedagio" | "estacionamento";

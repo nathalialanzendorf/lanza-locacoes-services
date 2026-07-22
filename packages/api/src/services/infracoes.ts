@@ -15,6 +15,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { dataStringNoPeriodo } from "../lib-imports.js";
+import { queryInfracoesFromSql, useRelationalStore } from "@lanza/db";
 import { listarVinculos, listarVinculosAsync } from "./parceiros.js";
 import { obterVeiculoAsync } from "./veiculos.js";
 import { HttpError } from "../http.js";
@@ -157,6 +158,30 @@ export async function listarInfracoesAsync(opts: ListarInfracoesOpts = {}): Prom
   total: number;
   items: InfracaoRegistro[];
 }> {
+  if (await useRelationalStore()) {
+    const semCliente = opts.semCliente === true || opts.semCondutor === true;
+    let items = (await queryInfracoesFromSql({
+      veiculoId: opts.veiculoId,
+      placa: opts.placa,
+      clienteId: opts.clienteId,
+      parceiroId: opts.parceiroId,
+      emAberto: opts.emAberto,
+      semCliente,
+      ativo: opts.ativo,
+    })) as InfracaoRegistro[];
+
+    if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
+      items = items.filter((i) =>
+        dataStringNoPeriodo(i.dataAutuacao, {
+          dataInicial: opts.dataInicial,
+          dataFinal: opts.dataFinal,
+        }),
+      );
+    }
+
+    return { total: items.length, items };
+  }
+
   const parceiroId = opts.parceiroId?.trim();
   const veiculoRef = opts.veiculoId?.trim() || opts.placa?.trim();
   const needsVeiculos = Boolean(veiculoRef || parceiroId);
@@ -205,6 +230,7 @@ export async function vincularDespesaInfracao(numeroAuto: string, clienteDespesa
 
 export async function atribuirClientesInfracoes(opts: {
   dryRun?: boolean;
+  veiculoId?: string;
   placa?: string;
   prazoDias?: number;
   incluirPedagios?: boolean;

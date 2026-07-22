@@ -608,6 +608,10 @@ export type AtualizarContratoDbPatch = Partial<
     | "motivoEncerramento"
     | "quebraContrato"
     | "status"
+    | "tipoContrato"
+    | "diaPagamentoSemana"
+    | "diaPagamentoMes"
+    | "diaPagamentoTexto"
   >
 >;
 

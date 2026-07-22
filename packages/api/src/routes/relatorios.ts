@@ -46,6 +46,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         return badRequest(ctx, 'Query "tipo" é obrigatória');
       }
       const data = await cobrancasRel.listarAlvos(tipo, {
+        veiculoId: ctx.query.get("veiculoId") ?? undefined,
         placa: ctx.query.get("placa") ?? undefined,
         clienteId: ctx.query.get("clienteId") ?? undefined,
         clienteQuery: ctx.query.get("cliente") ?? undefined,

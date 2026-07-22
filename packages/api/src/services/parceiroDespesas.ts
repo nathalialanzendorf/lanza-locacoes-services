@@ -15,6 +15,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import { queryParceiroDespesasFromSql, useRelationalStore } from "@lanza/db";
 import { listarVinculosAsync } from "./parceiros.js";
 import { dataStringNoPeriodo } from "../lib-imports.js";
 
@@ -78,54 +79,66 @@ function enriquecerParceiroDespesa(
 }
 
 export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
-  const [despesasDb, veiculosDb] = await Promise.all([
-    loadParceiroDespesasDbAsync(),
-    loadVeiculosDbAsync(),
-  ]);
-  let items = despesasDb.parceiroDespesas;
+  const veiculosDb = await loadVeiculosDbAsync();
   const veiculos = veiculosDb.veiculos;
+  let items: ParceiroDespesaRegistro[];
 
-  if (opts.parceiroId?.trim()) {
-    const veiculoIds = await veiculoIdsDoParceiro(opts.parceiroId.trim());
-    items = items.filter((d) => despesaDoParceiro(d, veiculoIds, veiculos));
+  if (await useRelationalStore()) {
+    items = (await queryParceiroDespesasFromSql({
+      veiculoId: opts.veiculoId,
+      placa: opts.placa,
+      parceiroId: opts.parceiroId,
+      categoria: opts.categoria,
+      competencia: opts.competencia,
+      emAberto: opts.emAberto,
+      veiculoAtivo: opts.veiculoAtivo,
+    })) as ParceiroDespesaRegistro[];
+  } else {
+    const despesasDb = await loadParceiroDespesasDbAsync();
+    items = despesasDb.parceiroDespesas;
+
+    if (opts.parceiroId?.trim()) {
+      const veiculoIds = await veiculoIdsDoParceiro(opts.parceiroId.trim());
+      items = items.filter((d) => despesaDoParceiro(d, veiculoIds, veiculos));
+    }
+
+    if (opts.veiculoId?.trim()) {
+      const id = opts.veiculoId.trim();
+      items = items.filter((d) => d.veiculoId === id || veiculoDaDespesa(d, veiculos)?.id === id);
+    } else if (opts.placa?.trim()) {
+      const v = veiculoDaDespesa({ placa: opts.placa } as ParceiroDespesaRegistro, veiculos);
+      const placaNorm = opts.placa.trim().toUpperCase();
+      items = items.filter(
+        (d) =>
+          d.placa.toUpperCase().replace(/[^A-Z0-9]/g, "") === placaNorm.replace(/[^A-Z0-9]/g, "") ||
+          (v && d.veiculoId === v.id),
+      );
+    }
+
+    if (opts.categoria?.trim()) {
+      const cat = opts.categoria.trim().toLowerCase();
+      items = items.filter((d) => d.categoria.trim().toLowerCase() === cat);
+    }
+
+    if (opts.competencia?.trim()) {
+      items = items.filter((d) => d.competencia === opts.competencia!.trim());
+    }
+
+    if (opts.veiculoAtivo === true) {
+      items = items.filter((d) => {
+        const veiculo = veiculoDaDespesa(d, veiculos);
+        return veiculo ? isVeiculoAtivo(veiculo) : false;
+      });
+    } else if (opts.veiculoAtivo === false) {
+      items = items.filter((d) => {
+        const veiculo = veiculoDaDespesa(d, veiculos);
+        return veiculo ? !isVeiculoAtivo(veiculo) : true;
+      });
+    }
+
+    if (opts.emAberto === true) items = items.filter(emAberto);
+    else if (opts.emAberto === false) items = items.filter((d) => !emAberto(d));
   }
-
-  if (opts.veiculoId?.trim()) {
-    const id = opts.veiculoId.trim();
-    items = items.filter((d) => d.veiculoId === id || veiculoDaDespesa(d, veiculos)?.id === id);
-  } else if (opts.placa?.trim()) {
-    const v = veiculoDaDespesa({ placa: opts.placa } as ParceiroDespesaRegistro, veiculos);
-    const placaNorm = opts.placa.trim().toUpperCase();
-    items = items.filter(
-      (d) =>
-        d.placa.toUpperCase().replace(/[^A-Z0-9]/g, "") === placaNorm.replace(/[^A-Z0-9]/g, "") ||
-        (v && d.veiculoId === v.id),
-    );
-  }
-
-  if (opts.categoria?.trim()) {
-    const cat = opts.categoria.trim().toLowerCase();
-    items = items.filter((d) => d.categoria.trim().toLowerCase() === cat);
-  }
-
-  if (opts.competencia?.trim()) {
-    items = items.filter((d) => d.competencia === opts.competencia!.trim());
-  }
-
-  if (opts.veiculoAtivo === true) {
-    items = items.filter((d) => {
-      const veiculo = veiculoDaDespesa(d, veiculos);
-      return veiculo ? isVeiculoAtivo(veiculo) : false;
-    });
-  } else if (opts.veiculoAtivo === false) {
-    items = items.filter((d) => {
-      const veiculo = veiculoDaDespesa(d, veiculos);
-      return veiculo ? !isVeiculoAtivo(veiculo) : true;
-    });
-  }
-
-  if (opts.emAberto === true) items = items.filter(emAberto);
-  else if (opts.emAberto === false) items = items.filter((d) => !emAberto(d));
 
   if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
     items = items.filter((d) =>

@@ -43,6 +43,7 @@ import {
 } from "./infracoesDb.js";
 
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { findVeiculoById } from "./veiculosDb.js";
 
 import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
 
@@ -314,6 +315,8 @@ export async function reconciliarCondutores(opts?: {
 
   dryRun?: boolean;
 
+  veiculoId?: string;
+
   placa?: string;
 
   prazoDias?: number;
@@ -328,9 +331,21 @@ export async function reconciliarCondutores(opts?: {
 
 }): Promise<ReconResult> {
 
-  const filtro = opts?.placa ? compactPlaca(opts.placa) : null;
-
   const prazoDias = opts?.prazoDias ?? 90;
+
+  function veiculoRefCombinaFiltro(veiculoRef: string): boolean {
+    if (opts?.veiculoId?.trim()) {
+      const id = opts.veiculoId.trim();
+      if (veiculoRef === id) return true;
+      const v = findVeiculoById(id);
+      if (v?.placa && compactPlaca(veiculoRef) === compactPlaca(v.placa)) return true;
+      return false;
+    }
+    if (opts?.placa?.trim()) {
+      return compactPlaca(veiculoRef) === compactPlaca(opts.placa);
+    }
+    return true;
+  }
 
 
 
@@ -352,7 +367,7 @@ export async function reconciliarCondutores(opts?: {
 
       if (!elegivelReconciliarInfracao(r)) continue;
 
-      if (filtro && compactPlaca(r.veiculoId) !== filtro) continue;
+      if (!veiculoRefCombinaFiltro(r.veiculoId)) continue;
 
 
 
@@ -442,7 +457,7 @@ export async function reconciliarCondutores(opts?: {
 
     if (isInfracaoTransito(r)) continue;
 
-    if (filtro && compactPlaca(r.veiculoId) !== filtro) continue;
+    if (!veiculoRefCombinaFiltro(r.veiculoId)) continue;
 
 
 

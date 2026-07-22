@@ -40,6 +40,8 @@ import {
   listarEscoposContratosEncerradosComPendencia,
   despesaNaSituacao,
   despesaNoPeriodo,
+  despesaCombinaVeiculoFiltro,
+  alvoCombinaVeiculoFiltro,
   ROTULO_TIPO_COBRANCA,
   type FiltroAlvosCobranca,
   type ModoCanvasCobranca,
@@ -190,7 +192,7 @@ export function coletarInfracoesRelatorio(
     if (isInfracaoSemDataAutuacao(d) && !d.condutorId) continue;
     if (d.id && vistos.has(d.id)) continue;
 
-    if (filtro.placa && compactPlaca(d.veiculoId) !== compactPlaca(filtro.placa)) {
+    if (!despesaCombinaVeiculoFiltro(String(d.veiculoId ?? ""), filtro, cobrancasRuntimeVeiculos())) {
       continue;
     }
     if (filtro.clienteId && !despesaDoCliente(d, filtro.clienteId)) {
@@ -390,7 +392,7 @@ export function coletarTodasDespesasAbertas(filtro: FiltroAlvosCobranca): Client
     if (isCreditoDevolucaoLocatario(d)) continue;
     if (d.id && vistos.has(d.id)) continue;
 
-    if (filtro.placa && compactPlaca(d.veiculoId) !== compactPlaca(filtro.placa)) {
+    if (!despesaCombinaVeiculoFiltro(String(d.veiculoId ?? ""), filtro, cobrancasRuntimeVeiculos())) {
       continue;
     }
     if (filtro.clienteId && !despesaDoCliente(d, filtro.clienteId)) {
@@ -718,6 +720,10 @@ function resolverPlacaPrincipal(
   despesas: ClienteDespesaRegistro[],
   itemsLote: LoteCobrancaItem[],
 ): string {
+  if (filtro.veiculoId?.trim()) {
+    const v = cobrancasRuntimeVeiculos().find((x) => x.id === filtro.veiculoId!.trim());
+    if (v?.placa) return formatPlacaHyphen(v.placa);
+  }
   if (filtro.placa) return formatPlacaHyphen(filtro.placa);
 
   // Escopo por cliente: placa do contrato ativo (ou mais recente), não a do único alvo do lote.
@@ -873,7 +879,7 @@ export function montarCobrancaSidecar(
     despesaSemanalElegivelRelatorio(d, dataReferencia),
   );
   const infracoesDb = coletarInfracoesRelatorio(filtro);
-  const escopoUnico = filtro.clienteId != null || filtro.placa != null;
+  const escopoUnico = filtro.clienteId != null || filtro.placa != null || filtro.veiculoId != null;
   if (
     despesas.length === 0 &&
     infracoesDb.length === 0 &&
@@ -1011,7 +1017,7 @@ function itemsLoteDoEscopo(
   const items: LoteCobrancaItem[] = [];
   for (const result of results) {
     for (const item of result.items) {
-      if (filtro.placa && compactPlaca(item.alvo.placa) !== compactPlaca(filtro.placa)) {
+      if (!alvoCombinaVeiculoFiltro(item.alvo.placa, filtro, cobrancasRuntimeVeiculos())) {
         continue;
       }
       if (filtro.clienteId && item.alvo.clienteId !== filtro.clienteId) {
@@ -1131,7 +1137,7 @@ export function salvarCobrancasSidecar(
 ): string[] {
   const filtro = opts?.filtro ?? {};
   const escopos =
-    filtro.clienteId != null || filtro.placa != null
+    filtro.clienteId != null || filtro.placa != null || filtro.veiculoId != null
       ? [filtro]
       : listarEscoposSidecar(results, filtro);
   if (escopos.length === 0) return [];
@@ -1253,7 +1259,11 @@ export function montarCobrancaSimplesSidecar(
     };
   }
 
-  const placaFmt = opts.filtro.placa ? formatPlacaHyphen(opts.filtro.placa) : "";
+  let placaFmt = opts.filtro.placa ? formatPlacaHyphen(opts.filtro.placa) : "";
+  if (!placaFmt && opts.filtro.veiculoId?.trim()) {
+    const v = cobrancasRuntimeVeiculos().find((x) => x.id === opts.filtro.veiculoId!.trim());
+    if (v?.placa) placaFmt = formatPlacaHyphen(v.placa);
+  }
   if (!placaFmt) return null;
   const { modelo, ano } = veiculoInfo(placaFmt);
   const porTipo = new Map<string, GrupoCobrancaSimples>();
@@ -1682,7 +1692,8 @@ export function ehRelatorioInfracoesGlobal(
     tipos.length === 1 &&
     tipos[0] === "infracoes" &&
     filtro.clienteId == null &&
-    filtro.placa == null
+    filtro.placa == null &&
+    filtro.veiculoId == null
   );
 }
 

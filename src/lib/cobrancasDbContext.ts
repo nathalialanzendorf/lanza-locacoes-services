@@ -16,8 +16,11 @@ export type CobrancasDbContext = {
 };
 
 export type CobrancasScopedContextInput = {
+  clienteId?: string | null;
   clienteQuery?: string | null;
-  autoInfracaoAlvo?: string | null;
+  veiculoId?: string | null;
+  despesaId?: string | null;
+  /** @deprecated prefer veiculoId */
   placa?: string | null;
 };
 
@@ -120,15 +123,18 @@ export async function loadCobrancasScopedDbContextAsync(
     loadContratosDbAsync(),
   ]);
 
-  const clienteId = input.clienteQuery?.trim()
-    ? resolveClienteIdFromQuery(input.clienteQuery, clientesDb.clientes)
-    : null;
+  const clienteId =
+    input.clienteId?.trim() ||
+    (input.clienteQuery?.trim()
+      ? resolveClienteIdFromQuery(input.clienteQuery, clientesDb.clientes)
+      : null);
+  const veiculoId = input.veiculoId?.trim() || null;
   const placa = input.placa?.trim() || null;
-  const autoInfracaoAlvo = input.autoInfracaoAlvo?.trim() || null;
+  const despesaAlvoRef = input.despesaId?.trim() || null;
 
-  if (!clienteId && !placa) {
-    if (autoInfracaoAlvo) {
-      const rowAlvo = await queryClienteDespesaByReferenciaFromSql(autoInfracaoAlvo);
+  if (!clienteId && !veiculoId && !placa) {
+    if (despesaAlvoRef) {
+      const rowAlvo = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
       if (rowAlvo) {
         const condutorId = String(rowAlvo.condutor_id ?? "").trim() || null;
         const rows = condutorId
@@ -145,14 +151,17 @@ export async function loadCobrancasScopedDbContextAsync(
     return loadCobrancasDbContextAsync();
   }
 
-  const rowsPromise = clienteId
-    ? queryClienteDespesasFromSql({ clienteId, ativo: true })
-    : queryClienteDespesasFromSql({ placa: placa!, ativo: true });
+  const sqlFilter = {
+    ativo: true as const,
+    ...(clienteId ? { clienteId } : {}),
+    ...(veiculoId ? { veiculoId } : placa ? { placa } : {}),
+  };
+  const rowsPromise = queryClienteDespesasFromSql(sqlFilter);
 
   const [rows, rowAlvo] = await Promise.all([
     rowsPromise,
-    autoInfracaoAlvo
-      ? queryClienteDespesaByReferenciaFromSql(autoInfracaoAlvo)
+    despesaAlvoRef
+      ? queryClienteDespesaByReferenciaFromSql(despesaAlvoRef)
       : Promise.resolve(null),
   ]);
 

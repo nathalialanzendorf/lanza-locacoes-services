@@ -12,6 +12,7 @@ import { HttpError } from "../http.js";
 
 export async function listarLocacoes(opts: {
   placa?: string;
+  veiculoId?: string;
   clienteId?: string;
   situacao?: string;
   abertas?: boolean;
@@ -20,6 +21,7 @@ export async function listarLocacoes(opts: {
 } = {}): Promise<{ total: number; items: LocacaoRegistro[] }> {
   const items = await listarLocacoesAsync({
     placa: opts.placa,
+    veiculoId: opts.veiculoId,
     clienteId: opts.clienteId,
     situacao: opts.situacao as LocacaoInput["situacao"] | undefined,
     abertas: opts.abertas,

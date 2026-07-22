@@ -29,6 +29,8 @@ export type ResolverChavesInput = {
   motoristaKey?: string;
   rastreavelKey?: string;
   clienteId?: string;
+  veiculoId?: string;
+  /** @deprecated use veiculoId */
   placa?: string;
 };
 
@@ -38,6 +40,7 @@ export async function resolverChavesRenegociacao(input: ResolverChavesInput): Pr
   motoristaKey: string;
   rastreavelKey: string;
   clienteId?: string;
+  veiculoId?: string;
   placa?: string;
 }> {
   const mkDirect = input.motoristaKey?.trim();
@@ -47,11 +50,11 @@ export async function resolverChavesRenegociacao(input: ResolverChavesInput): Pr
   }
 
   const clienteId = input.clienteId?.trim();
-  const placa = input.placa?.trim();
+  const veiculoRef = input.veiculoId?.trim() || input.placa?.trim();
   if (!clienteId) {
     throw new HttpError(
       400,
-      'Informe "motoristaKey" + "rastreavelKey" ou "clienteId" (placa opcional)',
+      'Informe "motoristaKey" + "rastreavelKey" ou "clienteId" (veículo opcional)',
     );
   }
 
@@ -66,18 +69,24 @@ export async function resolverChavesRenegociacao(input: ResolverChavesInput): Pr
       ? String(cliente.rastreameMotoristaKey).trim()
       : "";
 
-  if (!placa) {
+  if (!veiculoRef) {
     return { motoristaKey, rastreavelKey: "", clienteId };
   }
 
-  const veiculo = findVeiculoInDb(veiculosDb, placa);
+  const veiculo = findVeiculoInDb(veiculosDb, veiculoRef);
   if (!veiculo) throw new HttpError(404, "Veículo não encontrado");
   const rastreavelKey =
     veiculo.rastreameRastreavelKey != null && String(veiculo.rastreameRastreavelKey).trim()
       ? String(veiculo.rastreameRastreavelKey).trim()
       : "";
 
-  return { motoristaKey, rastreavelKey, clienteId, placa };
+  return {
+    motoristaKey,
+    rastreavelKey,
+    clienteId,
+    veiculoId: veiculo.id,
+    placa: veiculo.placa ?? undefined,
+  };
 }
 
 async function coletarCodigosNegociacaoCliente(clienteId?: string): Promise<number[]> {
@@ -157,12 +166,12 @@ function debitoJaRenegociado(info: string): boolean {
 
 async function listarDebitosLocais(
   clienteId: string,
-  placa?: string,
+  veiculoId?: string,
   apenasVencidos = false,
 ): Promise<ResumoDebito[]> {
   const r = await listarDespesasAsync({
     clienteId,
-    placa: placa?.trim() || undefined,
+    veiculoId: veiculoId?.trim() || undefined,
     emAberto: true,
     ativo: true,
   });
@@ -178,6 +187,7 @@ async function resolverChavesOpcional(input: ResolverChavesInput): Promise<{
   motoristaKey: string;
   rastreavelKey: string;
   clienteId?: string;
+  veiculoId?: string;
   placa?: string;
 }> {
   try {
@@ -187,6 +197,7 @@ async function resolverChavesOpcional(input: ResolverChavesInput): Promise<{
       motoristaKey: input.motoristaKey?.trim() ?? "",
       rastreavelKey: input.rastreavelKey?.trim() ?? "",
       clienteId: input.clienteId?.trim(),
+      veiculoId: input.veiculoId?.trim(),
       placa: input.placa?.trim(),
     };
   }
@@ -212,19 +223,19 @@ export async function resumoRenegociacao(
 ) {
   const clienteId = input.clienteId?.trim();
   if (!clienteId) {
-    throw new HttpError(400, 'Informe "clienteId" (placa opcional)');
+    throw new HttpError(400, 'Informe "clienteId" (veículo opcional)');
   }
 
-  const placa = input.placa?.trim();
+  const veiculoId = input.veiculoId?.trim() || undefined;
   const apenasVencidos = input.apenasVencidos === true;
   const chaves = await resolverChavesOpcional(input);
-  const debitos = await listarDebitosLocais(clienteId, placa, apenasVencidos);
+  const debitos = await listarDebitosLocais(clienteId, veiculoId, apenasVencidos);
   const negociacaoCodigo = await calcularProximoNegociacaoCodigo({ clienteId });
 
   return {
     ...chaves,
     clienteId,
-    placa,
+    veiculoId: chaves.veiculoId ?? veiculoId,
     negociacaoCodigo,
     fonte: "local" as const,
     total: debitos.length,
@@ -278,7 +289,7 @@ export async function salvarRenegociacaoApi(input: RenegociacaoInput) {
   const parcelasCriadas: Array<{ id: string; info: string; valor: number; data: string }> = [];
   const avisos: string[] = [];
 
-  let veiculoPlaca = resolved.placa?.trim();
+  let veiculoRef = resolved.veiculoId?.trim() || resolved.placa?.trim();
   let condutorId = resolved.clienteId?.trim();
 
   for (const id of resolved.gastosIds) {
@@ -293,18 +304,19 @@ export async function salvarRenegociacaoApi(input: RenegociacaoInput) {
     const r = await editarClienteDespesa(d.id, patch, PERSIST_OPTS);
     if (!r) throw new HttpError(500, `Falha ao atualizar despesa ${id}`);
     marcados.push({ id: d.id, infoAntes, infoDepois: descricaoDepois });
-    if (!veiculoPlaca && d.veiculoId?.trim()) veiculoPlaca = d.veiculoId.trim();
+    if (!veiculoRef && d.veiculoId?.trim()) veiculoRef = d.veiculoId.trim();
     if (!condutorId && d.condutorId?.trim()) condutorId = d.condutorId.trim();
   }
 
   if (!condutorId) {
     throw new HttpError(400, "Informe o cliente ou selecione débitos com condutor vinculado");
   }
-  if (!veiculoPlaca) {
-    throw new HttpError(400, "Informe um veículo ou selecione débitos com placa vinculada");
+  if (!veiculoRef) {
+    throw new HttpError(400, "Informe um veículo ou selecione débitos com veículo vinculado");
   }
 
-  const chaves = await resolverChavesOpcional({ clienteId: condutorId, placa: veiculoPlaca });
+  const chaves = await resolverChavesOpcional({ clienteId: condutorId, veiculoId: veiculoRef });
+  const veiculoGravar = chaves.veiculoId?.trim() || veiculoRef;
   const db = await loadClienteDespesasDbAsync();
 
   for (const p of resolved.parcelas) {
@@ -313,7 +325,7 @@ export async function salvarRenegociacaoApi(input: RenegociacaoInput) {
       (m) =>
         isClienteDespesaAtiva(m) &&
         String(m.condutorId ?? "").trim() === condutorId &&
-        compactPlaca(m.veiculoId) === compactPlaca(veiculoPlaca!) &&
+        compactPlaca(m.veiculoId) === compactPlaca(veiculoGravar) &&
         String(m.descricao ?? "").trim() === descricao,
     );
     if (dup) {
@@ -323,7 +335,7 @@ export async function salvarRenegociacaoApi(input: RenegociacaoInput) {
 
     const dataIso = dataPagamentoParaIso(p.data);
     const gravado = await gravarClienteDespesa(
-      veiculoPlaca,
+      veiculoGravar,
       {
         autoInfracao: `LOCAL-RENEG-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
         descricao,

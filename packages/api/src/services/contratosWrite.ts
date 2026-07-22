@@ -151,6 +151,10 @@ export type ContratoAtualizarInput = {
   motivoEncerramento?: MotivoEncerramento | null;
   quebraContrato?: boolean;
   status?: "ativo" | "encerrado";
+  tipoContrato?: "semanal" | "diaria" | "mensal";
+  diaPagamentoSemana?: string | null;
+  diaPagamentoMes?: number | null;
+  diaPagamentoTexto?: string | null;
 };
 
 export async function atualizarContrato(id: string, input: ContratoAtualizarInput) {

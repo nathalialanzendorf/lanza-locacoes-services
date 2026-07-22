@@ -10,8 +10,8 @@ import { HttpError } from "../http.js";
 import * as despesasService from "./despesas.js";
 
 export async function montarPlano(input: MontarPlanoBaixaInput) {
-  if (!input.clienteQuery?.trim()) {
-    throw new HttpError(400, 'Campo "clienteQuery" é obrigatório');
+  if (!input.clienteId?.trim() && !input.clienteQuery?.trim()) {
+    throw new HttpError(400, 'Informe "clienteId" ou "clienteQuery"');
   }
   if (!Number.isFinite(input.valor) || input.valor <= 0) {
     throw new HttpError(400, 'Campo "valor" inválido');

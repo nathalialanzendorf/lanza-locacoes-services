@@ -520,16 +520,16 @@
       "motivoEncerramento": null,
       "status": "ativo",
       "prazoDias": 365,
-      "tipoContrato": "semanal",
+      "tipoContrato": "mensal",
       "diaPagamentoSemana": null,
-      "diaPagamentoMes": null,
-      "diaPagamentoTexto": null,
+      "diaPagamentoMes": 15,
+      "diaPagamentoTexto": "dia 15",
       "valorSemanal": 2800,
       "valorMensal": 2800,
       "valorDiaria": 120,
       "valorCaucao": 2000,
       "cadastradoEm": "2026-06-28T16:58:47.012Z",
-      "atualizadoEm": "2026-07-18T13:55:00.000Z"
+      "atualizadoEm": "2026-07-21T22:45:00.000Z"
     },
     {
       "id": "e0551c95-25e7-4768-a838-c78296fd4a81",

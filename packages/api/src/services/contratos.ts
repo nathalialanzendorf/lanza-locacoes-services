@@ -5,6 +5,7 @@ import {
   loadContratosDbAsync,
   type ContratoRegistro,
 } from "../lib-imports.js";
+import { queryContratosFromSql, useRelationalStore } from "@lanza/db";
 
 export type ListarContratosOpts = {
   status?: "ativo" | "encerrado";
@@ -68,6 +69,20 @@ export async function listarContratosAsync(opts: ListarContratosOpts = {}): Prom
   total: number;
   items: ContratoRegistro[];
 }> {
+  if (await useRelationalStore()) {
+    let items = (await queryContratosFromSql({
+      status: opts.status,
+      clienteId: opts.clienteId,
+      veiculoId: opts.veiculoId,
+      placa: opts.placa,
+    })) as ContratoRegistro[];
+    items = filtrarContratos(items, {
+      dataInicial: opts.dataInicial,
+      dataFinal: opts.dataFinal,
+    });
+    return { total: items.length, items };
+  }
+
   const db = await loadContratosDbAsync();
   const items = filtrarContratos(db.contratos, opts);
   return { total: items.length, items };

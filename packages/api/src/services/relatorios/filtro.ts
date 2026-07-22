@@ -11,6 +11,7 @@ import {
 import { HttpError } from "../../http.js";
 
 export type FiltroRelatorioInput = {
+  veiculoId?: string;
   placa?: string;
   clienteId?: string;
   clienteQuery?: string;
@@ -66,6 +67,7 @@ export function resolverFiltroRelatorioComClientes(
   input: FiltroRelatorioInput,
   clientes: ClienteRegistro[],
 ): FiltroAlvosCobranca {
+  const veiculoId = input.veiculoId?.trim();
   const placa = input.placa?.trim();
   const clienteId = input.clienteId?.trim();
   const clienteQuery = input.clienteQuery?.trim();
@@ -77,8 +79,8 @@ export function resolverFiltroRelatorioComClientes(
     throw new HttpError(400, 'Situação inválida — use em_aberto, pago ou todos');
   }
 
-  if (placa && (clienteId || clienteQuery)) {
-    throw new HttpError(400, "Use apenas placa OU cliente — não ambos");
+  if ((veiculoId || placa) && (clienteId || clienteQuery)) {
+    throw new HttpError(400, "Use apenas veículo OU cliente — não ambos");
   }
 
   const extras = {
@@ -101,6 +103,7 @@ export function resolverFiltroRelatorioComClientes(
   }
 
   if (clienteId) return { clienteId, ...extras };
+  if (veiculoId) return { veiculoId, ...extras };
   if (placa) return { placa, ...extras };
   return extras;
 }

@@ -44,91 +44,163 @@ export type ContratosDbShape = {
   contratos: Record<string, unknown>[];
 };
 
-export async function loadContratosFromSql(): Promise<ContratosDbShape> {
-  const [base, cliSnaps, veiSnaps] = await Promise.all([
-    pgQuery(
-      `SELECT c.*, v.placa AS veiculo_placa_ref
-       FROM lanza.contratos c
-       LEFT JOIN lanza.veiculos v ON v.id = c.veiculo_id
-       ORDER BY c.cadastrado_em`,
-    ),
-    pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots"),
-    pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots"),
+function mapContratoRow(
+  row: Record<string, unknown>,
+  cs: Record<string, unknown> | undefined,
+  vs: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const id = String(row.id);
+  const placa = asText(vs?.placa) ?? asText(row.veiculo_placa_ref) ?? undefined;
+
+  return {
+    id,
+    versao: row.versao,
+    contratoAnteriorId: row.contrato_anterior_id,
+    clienteId: row.cliente_id,
+    veiculoId: placa ?? row.veiculo_id,
+    pastaContrato: row.pasta_contrato,
+    clienteNome: cs?.nome,
+    placa,
+    cpf: cs?.cpf,
+    dataInicio: row.data_inicio,
+    dataFimPrevista: row.data_fim_prevista,
+    dataEncerramento: row.data_encerramento,
+    quebraContrato: row.quebra_contrato === true,
+    motivoEncerramento: row.motivo_encerramento,
+    status: row.status,
+    prazoDias: row.prazo_dias,
+    tipoContrato: row.tipo_contrato,
+    diaPagamentoSemana: row.dia_pagamento_semana,
+    diaPagamentoMes: row.dia_pagamento_mes,
+    diaPagamentoTexto: row.dia_pagamento_texto,
+    valorSemanal: row.valor_semanal != null ? Number(row.valor_semanal) : null,
+    valorMensal: row.valor_mensal != null ? Number(row.valor_mensal) : null,
+    valorDiaria: row.valor_diaria != null ? Number(row.valor_diaria) : null,
+    valorCaucao: Number(row.valor_caucao ?? 0),
+    cadastradoEm: rowIso(row.cadastrado_em),
+    atualizadoEm: rowIso(row.atualizado_em),
+    cliente: cs
+      ? {
+          id: cs.cliente_ref_id,
+          nome: cs.nome,
+          cpf: cs.cpf,
+          rg: cs.rg,
+          telefone: cs.telefone,
+          email: cs.email,
+          cnh: { categoria: cs.cnh_categoria, validade: cs.cnh_validade },
+          endereco: {
+            cep: cs.endereco_cep,
+            logradouro: cs.endereco_logradouro,
+            numero: cs.endereco_numero,
+            complemento: cs.endereco_complemento,
+            bairro: cs.endereco_bairro,
+            cidade: cs.endereco_cidade,
+            uf: cs.endereco_uf,
+          },
+        }
+      : undefined,
+    veiculo: vs
+      ? {
+          id: vs.veiculo_ref_id,
+          placa: vs.placa,
+          marcaModelo: vs.marca_modelo,
+          fipeModelo: vs.fipe_modelo,
+          anoModelo: vs.ano_modelo,
+          chassi: vs.chassi,
+          renavam: vs.renavam,
+          cor: vs.cor,
+          fipeValor: vs.fipe_valor,
+        }
+      : undefined,
+  };
+}
+
+async function loadContratoSnapshotsForIds(ids: string[]): Promise<{
+  cliByContrato: Map<string, Record<string, unknown>>;
+  veiByContrato: Map<string, Record<string, unknown>>;
+}> {
+  if (ids.length === 0) {
+    return { cliByContrato: new Map(), veiByContrato: new Map() };
+  }
+  const [cliSnaps, veiSnaps] = await Promise.all([
+    pgQuery("SELECT * FROM lanza.contrato_cliente_snapshots WHERE contrato_id = ANY($1::uuid[])", [
+      ids,
+    ]),
+    pgQuery("SELECT * FROM lanza.contrato_veiculo_snapshots WHERE contrato_id = ANY($1::uuid[])", [
+      ids,
+    ]),
   ]);
-  const cliByContrato = new Map(cliSnaps.rows.map((row) => [String(row.contrato_id), row]));
-  const veiByContrato = new Map(veiSnaps.rows.map((row) => [String(row.contrato_id), row]));
-  const contratos: Record<string, unknown>[] = [];
+  return {
+    cliByContrato: new Map(cliSnaps.rows.map((row) => [String(row.contrato_id), row])),
+    veiByContrato: new Map(veiSnaps.rows.map((row) => [String(row.contrato_id), row])),
+  };
+}
 
-  for (const row of base.rows) {
-    const id = String(row.id);
-    const cs = cliByContrato.get(id);
-    const vs = veiByContrato.get(id);
+export type ContratosSqlFilter = {
+  status?: string;
+  clienteId?: string;
+  veiculoId?: string;
+  placa?: string;
+};
 
-    const placa = asText(vs?.placa) ?? asText(row.veiculo_placa_ref) ?? undefined;
+/** Listagem filtrada no Postgres (carrega snapshots só dos contratos retornados). */
+export async function queryContratosFromSql(
+  filter: ContratosSqlFilter = {},
+): Promise<Record<string, unknown>[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
 
-    contratos.push({
-      id,
-      versao: row.versao,
-      contratoAnteriorId: row.contrato_anterior_id,
-      clienteId: row.cliente_id,
-      veiculoId: placa ?? row.veiculo_id,
-      pastaContrato: row.pasta_contrato,
-      clienteNome: cs?.nome,
-      placa,
-      cpf: cs?.cpf,
-      dataInicio: row.data_inicio,
-      dataFimPrevista: row.data_fim_prevista,
-      dataEncerramento: row.data_encerramento,
-      quebraContrato: row.quebra_contrato === true,
-      motivoEncerramento: row.motivo_encerramento,
-      status: row.status,
-      prazoDias: row.prazo_dias,
-      tipoContrato: row.tipo_contrato,
-      diaPagamentoSemana: row.dia_pagamento_semana,
-      diaPagamentoMes: row.dia_pagamento_mes,
-      diaPagamentoTexto: row.dia_pagamento_texto,
-      valorSemanal: row.valor_semanal != null ? Number(row.valor_semanal) : null,
-      valorMensal: row.valor_mensal != null ? Number(row.valor_mensal) : null,
-      valorDiaria: row.valor_diaria != null ? Number(row.valor_diaria) : null,
-      valorCaucao: Number(row.valor_caucao ?? 0),
-      cadastradoEm: rowIso(row.cadastrado_em),
-      atualizadoEm: rowIso(row.atualizado_em),
-      cliente: cs
-        ? {
-            id: cs.cliente_ref_id,
-            nome: cs.nome,
-            cpf: cs.cpf,
-            rg: cs.rg,
-            telefone: cs.telefone,
-            email: cs.email,
-            cnh: { categoria: cs.cnh_categoria, validade: cs.cnh_validade },
-            endereco: {
-              cep: cs.endereco_cep,
-              logradouro: cs.endereco_logradouro,
-              numero: cs.endereco_numero,
-              complemento: cs.endereco_complemento,
-              bairro: cs.endereco_bairro,
-              cidade: cs.endereco_cidade,
-              uf: cs.endereco_uf,
-            },
-          }
-        : undefined,
-      veiculo: vs
-        ? {
-            id: vs.veiculo_ref_id,
-            placa: vs.placa,
-            marcaModelo: vs.marca_modelo,
-            fipeModelo: vs.fipe_modelo,
-            anoModelo: vs.ano_modelo,
-            chassi: vs.chassi,
-            renavam: vs.renavam,
-            cor: vs.cor,
-            fipeValor: vs.fipe_valor,
-          }
-        : undefined,
-    });
+  if (filter.status?.trim()) {
+    params.push(filter.status.trim());
+    where.push(`c.status = $${p++}`);
   }
 
+  if (filter.clienteId?.trim()) {
+    params.push(filter.clienteId.trim());
+    where.push(`c.cliente_id::text = $${p++}`);
+  }
+
+  if (filter.placa?.trim()) {
+    params.push(compactPlaca(filter.placa));
+    where.push(`v.placa_norm = $${p++}`);
+  } else if (filter.veiculoId?.trim()) {
+    const ref = filter.veiculoId.trim();
+    if (isUuid(ref)) {
+      params.push(ref);
+      where.push(`(c.veiculo_id::text = $${p} OR v.id::text = $${p})`);
+      p += 1;
+    } else {
+      params.push(compactPlaca(ref));
+      where.push(`v.placa_norm = $${p++}`);
+    }
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const base = await pgQuery(
+    `SELECT c.*, v.placa AS veiculo_placa_ref
+     FROM lanza.contratos c
+     LEFT JOIN lanza.veiculos v ON v.id = c.veiculo_id
+     ${whereSql}
+     ORDER BY c.cadastrado_em`,
+    params,
+  );
+
+  const ids = base.rows.map((row) => String(row.id));
+  const { cliByContrato, veiByContrato } = await loadContratoSnapshotsForIds(ids);
+
+  return base.rows.map((row) => {
+    const id = String(row.id);
+    return mapContratoRow(
+      row as Record<string, unknown>,
+      cliByContrato.get(id),
+      veiByContrato.get(id),
+    );
+  });
+}
+
+export async function loadContratosFromSql(): Promise<ContratosDbShape> {
+  const contratos = await queryContratosFromSql();
   return {
     descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
@@ -157,6 +229,10 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
         data_encerramento = EXCLUDED.data_encerramento,
         quebra_contrato = EXCLUDED.quebra_contrato,
         motivo_encerramento = EXCLUDED.motivo_encerramento,
+        tipo_contrato = EXCLUDED.tipo_contrato,
+        dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
+        dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
+        dia_pagamento_texto = EXCLUDED.dia_pagamento_texto,
         atualizado_em = now()`,
       [
         id,
@@ -247,30 +323,88 @@ export type LocacoesDbShape = {
   locacoes: Record<string, unknown>[];
 };
 
+function mapLocacaoRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(row.id),
+    veiculoId: row.veiculo_id ?? null,
+    placa: row.placa,
+    clienteId: row.cliente_id ?? null,
+    condutorNome: row.condutor_nome ?? null,
+    contratoId: row.contrato_id ?? null,
+    situacao: row.situacao,
+    inicio: row.inicio,
+    fim: row.fim ?? null,
+    tipoLocacao: row.tipo_locacao ?? null,
+    valorCobrado: row.valor_cobrado != null ? Number(row.valor_cobrado) : null,
+    valorPago: row.valor_pago != null ? Number(row.valor_pago) : null,
+    substituiVeiculoId: row.substitui_veiculo_id ?? null,
+    substituiPlaca: row.substitui_placa ?? null,
+    observacao: row.observacao ?? null,
+    cadastradoEm: rowIso(row.cadastrado_em),
+    atualizadoEm: rowIso(row.atualizado_em),
+  };
+}
+
+export type LocacoesSqlFilter = {
+  veiculoId?: string;
+  placa?: string;
+  clienteId?: string;
+  situacao?: string;
+  abertas?: boolean;
+};
+
+/** Listagem filtrada no Postgres (período BR continua no app). */
+export async function queryLocacoesFromSql(
+  filter: LocacoesSqlFilter = {},
+): Promise<Record<string, unknown>[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
+
+  if (filter.clienteId?.trim()) {
+    params.push(filter.clienteId.trim());
+    where.push(`l.cliente_id::text = $${p++}`);
+  }
+
+  if (filter.situacao?.trim()) {
+    params.push(filter.situacao.trim());
+    where.push(`l.situacao = $${p++}`);
+  }
+
+  if (filter.abertas === true) {
+    where.push(`(l.fim IS NULL OR trim(l.fim) = '')`);
+  }
+
+  if (filter.placa?.trim()) {
+    params.push(compactPlaca(filter.placa));
+    where.push(`upper(replace(coalesce(l.placa, ''), '-', '')) = $${p++}`);
+  } else if (filter.veiculoId?.trim()) {
+    const ref = filter.veiculoId.trim();
+    if (isUuid(ref)) {
+      params.push(ref);
+      where.push(`l.veiculo_id::text = $${p++}`);
+    } else {
+      params.push(compactPlaca(ref));
+      where.push(`upper(replace(coalesce(l.placa, ''), '-', '')) = $${p++}`);
+    }
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const r = await pgQuery(
+    `SELECT l.*
+     FROM lanza.locacoes l
+     ${whereSql}
+     ORDER BY l.inicio, l.cadastrado_em`,
+    params,
+  );
+  return r.rows.map((row) => mapLocacaoRow(row as Record<string, unknown>));
+}
+
 export async function loadLocacoesFromSql(): Promise<LocacoesDbShape> {
-  const r = await pgQuery("SELECT * FROM lanza.locacoes ORDER BY inicio, cadastrado_em");
   return {
     descricao: "Linha do tempo de locação/reserva/manutenção.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
-    locacoes: r.rows.map((row) => ({
-      id: String(row.id),
-      veiculoId: row.veiculo_id ?? null,
-      placa: row.placa,
-      clienteId: row.cliente_id ?? null,
-      condutorNome: row.condutor_nome ?? null,
-      contratoId: row.contrato_id ?? null,
-      situacao: row.situacao,
-      inicio: row.inicio,
-      fim: row.fim ?? null,
-      tipoLocacao: row.tipo_locacao ?? null,
-      valorCobrado: row.valor_cobrado != null ? Number(row.valor_cobrado) : null,
-      valorPago: row.valor_pago != null ? Number(row.valor_pago) : null,
-      substituiVeiculoId: row.substitui_veiculo_id ?? null,
-      substituiPlaca: row.substitui_placa ?? null,
-      observacao: row.observacao ?? null,
-      cadastradoEm: rowIso(row.cadastrado_em),
-      atualizadoEm: rowIso(row.atualizado_em),
-    })),
+    locacoes: await queryLocacoesFromSql(),
   };
 }
 
@@ -316,54 +450,141 @@ export type InfracoesDbShape = {
   infracoes: Record<string, unknown>[];
 };
 
-export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
+function mapInfracaoRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(row.id),
+    numeroAuto: row.numero_auto,
+    idAutoInfracao: row.id_auto_infracao,
+    veiculoId: row.veiculo_placa_ref ?? row.veiculo_id,
+    descricao: row.descricao,
+    dataAutuacao: row.data_autuacao,
+    dataHoraAutuacao: row.data_hora_autuacao,
+    localInfracao: row.local_infracao,
+    valor: Number(row.valor),
+    valorMulta: Number(row.valor),
+    situacao: row.situacao,
+    status: row.status,
+    protocolo: row.protocolo,
+    dataLimiteDefesa: row.data_limite_defesa,
+    limiteDefesa: row.limite_defesa,
+    prazoDefesaExpirado: row.prazo_defesa_expirado === true,
+    dataVencimentoOriginal: row.data_vencimento_original,
+    convertidaEmDebito: row.convertida_em_debito === true,
+    quitadaDetran: row.quitada_detran === true,
+    statusInfracao: row.status_infracao,
+    statusDetran: row.status_detran,
+    fonte: row.fonte,
+    condutorId: row.condutor_id,
+    condutorConfirmado: row.condutor_confirmado === true,
+    condutorContrato: row.condutor_contrato,
+    condutorNaoIdentificado: row.condutor_nao_identificado === true,
+    pdfArquivo: row.pdf_arquivo,
+    complemento: row.complemento,
+    senhaDetran: row.senha_detran,
+    notificacaoPdfArquivo: row.notificacao_pdf_arquivo,
+    detranRaw: row.detran_raw,
+    origem: row.origem,
+    syncEm: rowIso(row.sync_em),
+    ativo: row.ativo !== false,
+    cadastradoEm: rowIso(row.cadastrado_em),
+    atualizadoEm: rowIso(row.atualizado_em),
+  };
+}
+
+export type InfracoesSqlFilter = {
+  veiculoId?: string;
+  placa?: string;
+  clienteId?: string;
+  parceiroId?: string;
+  emAberto?: boolean;
+  semCliente?: boolean;
+  ativo?: boolean;
+};
+
+/** Listagem filtrada no Postgres (período BR continua no app). */
+export async function queryInfracoesFromSql(
+  filter: InfracoesSqlFilter = {},
+): Promise<Record<string, unknown>[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
+
+  if (filter.ativo === true) {
+    where.push("(i.ativo IS DISTINCT FROM false)");
+  } else if (filter.ativo === false) {
+    where.push("(i.ativo = false)");
+  }
+
+  if (filter.emAberto === true) {
+    where.push(`(
+      COALESCE(i.quitada_detran, false) IS NOT TRUE
+      AND COALESCE(i.situacao, '') !~* 'quitad|pago|paga'
+      AND COALESCE(i.status, '') !~* 'quitad|pago|paga'
+    )`);
+  } else if (filter.emAberto === false) {
+    where.push(`(
+      i.quitada_detran = true
+      OR COALESCE(i.situacao, '') ~* 'quitad|pago|paga'
+      OR COALESCE(i.status, '') ~* 'quitad|pago|paga'
+    )`);
+  }
+
+  if (filter.semCliente === true) {
+    where.push(`NOT (
+      COALESCE(i.quitada_detran, false) = true
+      OR (i.condutor_confirmado = true AND i.condutor_id IS NOT NULL)
+      OR (i.condutor_confirmado = true AND COALESCE(i.condutor_nao_identificado, false) = true)
+    )`);
+  }
+
+  if (filter.clienteId?.trim()) {
+    params.push(filter.clienteId.trim());
+    where.push(`i.condutor_id::text = $${p++}`);
+  }
+
+  if (filter.parceiroId?.trim()) {
+    params.push(filter.parceiroId.trim());
+    where.push(`EXISTS (
+      SELECT 1
+      FROM lanza.parceiro_veiculo_vinculos pv
+      WHERE pv.parceiro_id::text = $${p}
+        AND pv.veiculo_id = i.veiculo_id
+    )`);
+    p += 1;
+  }
+
+  if (filter.placa?.trim()) {
+    params.push(compactPlaca(filter.placa));
+    where.push(`v.placa_norm = $${p++}`);
+  } else if (filter.veiculoId?.trim()) {
+    const ref = filter.veiculoId.trim();
+    if (isUuid(ref)) {
+      params.push(ref);
+      where.push(`(i.veiculo_id::text = $${p} OR v.id::text = $${p})`);
+      p += 1;
+    } else {
+      params.push(compactPlaca(ref));
+      where.push(`v.placa_norm = $${p++}`);
+    }
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const r = await pgQuery(
     `SELECT i.*, v.placa AS veiculo_placa_ref
      FROM lanza.infracoes i
      LEFT JOIN lanza.veiculos v ON v.id = i.veiculo_id
+     ${whereSql}
      ORDER BY i.data_autuacao`,
+    params,
   );
+  return r.rows.map((row) => mapInfracaoRow(row as Record<string, unknown>));
+}
+
+export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
   return {
     descricao: "Infrações DETRAN SC.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
-    infracoes: r.rows.map((row) => ({
-      id: String(row.id),
-      numeroAuto: row.numero_auto,
-      idAutoInfracao: row.id_auto_infracao,
-      veiculoId: row.veiculo_placa_ref ?? row.veiculo_id,
-      descricao: row.descricao,
-      dataAutuacao: row.data_autuacao,
-      dataHoraAutuacao: row.data_hora_autuacao,
-      localInfracao: row.local_infracao,
-      valor: Number(row.valor),
-      valorMulta: Number(row.valor),
-      situacao: row.situacao,
-      status: row.status,
-      protocolo: row.protocolo,
-      dataLimiteDefesa: row.data_limite_defesa,
-      limiteDefesa: row.limite_defesa,
-      prazoDefesaExpirado: row.prazo_defesa_expirado === true,
-      dataVencimentoOriginal: row.data_vencimento_original,
-      convertidaEmDebito: row.convertida_em_debito === true,
-      quitadaDetran: row.quitada_detran === true,
-      statusInfracao: row.status_infracao,
-      statusDetran: row.status_detran,
-      fonte: row.fonte,
-      condutorId: row.condutor_id,
-      condutorConfirmado: row.condutor_confirmado === true,
-      condutorContrato: row.condutor_contrato,
-      condutorNaoIdentificado: row.condutor_nao_identificado === true,
-      pdfArquivo: row.pdf_arquivo,
-      complemento: row.complemento,
-      senhaDetran: row.senha_detran,
-      notificacaoPdfArquivo: row.notificacao_pdf_arquivo,
-      detranRaw: row.detran_raw,
-      origem: row.origem,
-      syncEm: rowIso(row.sync_em),
-      ativo: row.ativo !== false,
-      cadastradoEm: rowIso(row.cadastrado_em),
-      atualizadoEm: rowIso(row.atualizado_em),
-    })),
+    infracoes: await queryInfracoesFromSql(),
   };
 }
 
@@ -451,9 +672,9 @@ function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unkn
     id: String(row.id),
     categoria: row.categoria,
     veiculoId:
-      asText(row.veiculo_placa_ref) ??
-      asText(row.veiculo_placa) ??
-      (row.veiculo_id != null ? String(row.veiculo_id) : undefined),
+      row.veiculo_id != null
+        ? String(row.veiculo_id)
+        : (asText(row.veiculo_placa_ref) ?? asText(row.veiculo_placa)),
     autoInfracao: row.auto_infracao,
     titulo: row.titulo,
     descricao: row.descricao,
@@ -710,26 +931,108 @@ export type ParceiroDespesasDbShape = {
   parceiroDespesas: Record<string, unknown>[];
 };
 
+function mapParceiroDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(row.id),
+    veiculoId: row.veiculo_id,
+    placa: row.placa,
+    categoria: row.categoria,
+    descricao: row.descricao,
+    data: row.data,
+    valor: Number(row.valor),
+    competencia: row.competencia,
+    origem: row.origem,
+    rastreameManutencaoId: row.rastreame_manutencao_id,
+    rastreameSyncEm: rowIso(row.rastreame_sync_em),
+    rastreameHash: row.rastreame_hash,
+    baixa: row.baixa,
+  };
+}
+
+export type ParceiroDespesasSqlFilter = {
+  veiculoId?: string;
+  placa?: string;
+  parceiroId?: string;
+  categoria?: string;
+  competencia?: string;
+  emAberto?: boolean;
+  veiculoAtivo?: boolean;
+};
+
+/** Listagem filtrada no Postgres (período BR continua no app). */
+export async function queryParceiroDespesasFromSql(
+  filter: ParceiroDespesasSqlFilter = {},
+): Promise<Record<string, unknown>[]> {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  let p = 1;
+
+  if (filter.emAberto === true) {
+    where.push(`(pd.baixa IS NULL OR trim(pd.baixa) = '')`);
+  } else if (filter.emAberto === false) {
+    where.push(`(pd.baixa IS NOT NULL AND trim(pd.baixa) <> '')`);
+  }
+
+  if (filter.categoria?.trim()) {
+    params.push(filter.categoria.trim());
+    where.push(`lower(trim(pd.categoria)) = lower(trim($${p++}))`);
+  }
+
+  if (filter.competencia?.trim()) {
+    params.push(filter.competencia.trim());
+    where.push(`pd.competencia = $${p++}`);
+  }
+
+  if (filter.parceiroId?.trim()) {
+    params.push(filter.parceiroId.trim());
+    where.push(`EXISTS (
+      SELECT 1
+      FROM lanza.parceiro_veiculo_vinculos pv
+      WHERE pv.parceiro_id::text = $${p}
+        AND pv.veiculo_id = pd.veiculo_id
+    )`);
+    p += 1;
+  }
+
+  if (filter.placa?.trim()) {
+    params.push(compactPlaca(filter.placa));
+    where.push(`upper(replace(coalesce(pd.placa, v.placa, ''), '-', '')) = $${p++}`);
+  } else if (filter.veiculoId?.trim()) {
+    const ref = filter.veiculoId.trim();
+    if (isUuid(ref)) {
+      params.push(ref);
+      where.push(`(pd.veiculo_id::text = $${p} OR v.id::text = $${p})`);
+      p += 1;
+    } else {
+      params.push(compactPlaca(ref));
+      where.push(`(v.placa_norm = $${p} OR upper(replace(coalesce(pd.placa, ''), '-', '')) = $${p})`);
+      p += 1;
+    }
+  }
+
+  if (filter.veiculoAtivo === true) {
+    where.push(`(v.id IS NOT NULL AND v.ativo IS DISTINCT FROM false)`);
+  } else if (filter.veiculoAtivo === false) {
+    where.push(`(v.id IS NOT NULL AND v.ativo = false)`);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const r = await pgQuery(
+    `SELECT pd.*, v.placa AS veiculo_placa_ref, v.ativo AS veiculo_ativo
+     FROM lanza.parceiro_despesas pd
+     LEFT JOIN lanza.veiculos v ON v.id = pd.veiculo_id
+     ${whereSql}
+     ORDER BY pd.data`,
+    params,
+  );
+  return r.rows.map((row) => mapParceiroDespesaRow(row as Record<string, unknown>));
+}
+
 export async function loadParceiroDespesasFromSql(): Promise<ParceiroDespesasDbShape> {
-  const r = await pgQuery("SELECT * FROM lanza.parceiro_despesas ORDER BY data");
   return {
     descricao: "Despesas do parceiro/proprietário.",
     atualizadoEm: new Date().toISOString().slice(0, 10),
-    parceiroDespesas: r.rows.map((row) => ({
-      id: String(row.id),
-      veiculoId: row.veiculo_id,
-      placa: row.placa,
-      categoria: row.categoria,
-      descricao: row.descricao,
-      data: row.data,
-      valor: Number(row.valor),
-      competencia: row.competencia,
-      origem: row.origem,
-      rastreameManutencaoId: row.rastreame_manutencao_id,
-      rastreameSyncEm: rowIso(row.rastreame_sync_em),
-      rastreameHash: row.rastreame_hash,
-      baixa: row.baixa,
-    })),
+    parceiroDespesas: await queryParceiroDespesasFromSql(),
   };
 }
 

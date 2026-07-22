@@ -24,7 +24,9 @@ export type RenegociacaoInput = {
   negociacaoCodigo?: string;
   /** Cliente Lanza — usado para calcular o próximo código quando negociacaoCodigo estiver vazio. */
   clienteId?: string;
-  /** Placa opcional — filtra débitos; omitir para listar todos do cliente. */
+  /** Veículo (UUID) — filtra débitos; omitir para listar todos do cliente. */
+  veiculoId?: string;
+  /** @deprecated use veiculoId */
   placa?: string;
   /** IDs dos gastos existentes a marcar como negociados */
   gastosIds: (number | string)[];
