@@ -30,7 +30,13 @@ import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { loadVeiculosDb } from "./veiculosDb.js";
+import {
+  compactPlacaVeiculoRef,
+  loadVeiculosDb,
+  placaHyphenVeiculoRef,
+  mesmoVeiculoRef,
+  type VeiculoRegistro,
+} from "./veiculosDb.js";
 
 export type TipoCobrancaAction =
   | "pagamento-semanal"
@@ -84,12 +90,13 @@ export type AlvoCobranca = {
 };
 
 function veiculosAtivos(ctx?: CobrancasDbContext) {
-  const map = new Map<string, ReturnType<typeof loadVeiculosDb>["veiculos"][0]>();
+  const map = new Map<string, VeiculoRegistro>();
   const lista = ctx?.veiculos ?? loadVeiculosDb().veiculos;
   for (const v of lista) {
     if (v.ativo === false) continue;
     if (v.particular === true) continue;
     map.set(compactPlaca(v.placa), v);
+    if (v.id?.trim()) map.set(v.id.trim(), v);
   }
   return map;
 }
@@ -124,8 +131,27 @@ export function despesaNaSituacao(
   return despesaAberta(d);
 }
 
-function placaElegivel(placa: string, veiculos: ReturnType<typeof veiculosAtivos>): boolean {
-  return veiculos.has(compactPlaca(placa));
+function veiculosListaAtivos(veiculos: ReturnType<typeof veiculosAtivos>): VeiculoRegistro[] {
+  const porId = new Map<string, VeiculoRegistro>();
+  for (const v of veiculos.values()) {
+    if (v.id?.trim()) porId.set(v.id.trim(), v);
+  }
+  return [...porId.values()];
+}
+
+function placaElegivel(veiculoRef: string, veiculos: ReturnType<typeof veiculosAtivos>): boolean {
+  const ref = String(veiculoRef ?? "").trim();
+  if (!ref) return false;
+  return veiculos.has(ref) || veiculos.has(compactPlaca(ref));
+}
+
+function placaFromVeiculoRef(
+  veiculoRef: string,
+  veiculos: ReturnType<typeof veiculosAtivos>,
+): string {
+  const ref = String(veiculoRef ?? "").trim();
+  const veiculo = veiculos.get(ref) ?? veiculos.get(compactPlaca(ref));
+  return formatPlacaHyphen(veiculo?.placa ?? veiculoRef);
 }
 
 function clienteElegivel(
@@ -168,7 +194,7 @@ function despesaRenegociacaoEncerrada(
 ): boolean {
   if (d.categoria !== "Locação semanal") return false;
   if (!/ATRASADO/i.test(d.descricao ?? "")) return false;
-  const placa = formatPlacaHyphen(d.veiculoId);
+  const placa = placaHyphenVeiculoRef(d.veiculoId);
   const clienteId = d.condutorId ?? inferirCondutorIdDespesaPorData(d);
   if (!clienteId) return false;
   if (temContratoAtivoLocacao(clienteId, placa, contratos)) return false;
@@ -187,7 +213,7 @@ function clienteTemPendenciaEncerrada(
     for (const d of despesas) {
       if (!despesaNaSituacao(d, situacao)) continue;
       if (!despesaCobravelLocatario(d)) continue;
-      if (compactPlaca(d.veiculoId) !== compactPlaca(c.placa)) continue;
+      if (!mesmoVeiculoRef(d.veiculoId, c.placa)) continue;
       if (d.condutorId === clienteId) return true;
       if (despesaRenegociacaoEncerrada(d, contratos)) return true;
       const inferido = inferirCondutorIdDespesaPorData(d);
@@ -283,7 +309,7 @@ function semanalAtrasoObsoleto(
 
   for (const other of todas) {
     if (other.categoria !== "Locação semanal") continue;
-    if (compactPlaca(other.veiculoId) !== placaKey) continue;
+    if (compactPlacaVeiculoRef(other.veiculoId) !== placaKey) continue;
     if (other.condutorId !== clienteId) continue;
     if (other.paga !== true) continue;
 
@@ -317,7 +343,7 @@ function condutorEfetivoInfracao(
     return { clienteId: null, clienteNome: null };
   }
   const sug = inferirCondutorInfracao(
-    formatPlacaHyphen(d.veiculoId),
+    placaHyphenVeiculoRef(d.veiculoId),
     d.dataAutuacao,
     90,
   );
@@ -341,7 +367,7 @@ function agruparInfracoesPorCondutor(
   for (const d of despesas) {
     if (!placaElegivel(d.veiculoId, veiculos)) continue;
     if (!despesaCobravelLocatario(d)) continue;
-    const placa = formatPlacaHyphen(d.veiculoId);
+    const placa = placaFromVeiculoRef(d.veiculoId, veiculos);
     const efetivo = condutorEfetivoInfracao(d, clientes);
     if (efetivo.clienteId && !clienteElegivel(efetivo.clienteId, clientes)) continue;
 
@@ -386,7 +412,7 @@ function agruparPorPlaca(
   for (const d of despesas) {
     if (!placaElegivel(d.veiculoId, veiculos)) continue;
     if (!despesaCobravelLocatario(d)) continue;
-    const placa = formatPlacaHyphen(d.veiculoId);
+    const placa = placaFromVeiculoRef(d.veiculoId, veiculos);
     const efetivo = condutorEfetivoDespesa(d, clientes);
     if (efetivo.clienteId && !clienteElegivel(efetivo.clienteId, clientes)) continue;
 
@@ -447,12 +473,12 @@ function filtrarPagamentoSemanal(
     if (!clienteElegivel(d.condutorId, clientes)) continue;
     if (
       alvoVeiculoId &&
-      !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: alvoVeiculoId }, [...veiculos.values()])
+      !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: alvoVeiculoId }, veiculosListaAtivos(veiculos))
     ) {
       continue;
     }
 
-    const placa = formatPlacaHyphen(d.veiculoId);
+    const placa = placaFromVeiculoRef(d.veiculoId, veiculos);
     const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes, contratos);
     if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa, contratos)) {
       continue;
@@ -534,15 +560,17 @@ export function despesaCombinaVeiculoFiltro(
   filtro: Pick<FiltroAlvosCobranca, "placa" | "veiculoId">,
   veiculos: Array<{ id: string; placa?: string | null }> = [],
 ): boolean {
+  const catalog = veiculos as VeiculoRegistro[];
+  const despesaPlaca = compactPlacaVeiculoRef(despesaVeiculoRef, catalog);
   if (filtro.veiculoId?.trim()) {
     const id = filtro.veiculoId.trim();
     if (despesaVeiculoRef === id) return true;
     const v = veiculos.find((x) => x.id === id);
-    if (v?.placa && compactPlaca(despesaVeiculoRef) === compactPlaca(v.placa)) return true;
+    if (v?.placa && despesaPlaca === compactPlaca(v.placa)) return true;
     return false;
   }
   if (filtro.placa?.trim()) {
-    return compactPlaca(despesaVeiculoRef) === compactPlaca(filtro.placa);
+    return despesaPlaca === compactPlaca(filtro.placa);
   }
   return true;
 }
@@ -731,7 +759,7 @@ export function listarAlvosCobranca(
   const clientes = clientesAtivos(ctx);
   const contratos = contratosLista(ctx);
   const veiculoIdFiltro = filtro?.veiculoId?.trim();
-  const veiculosLista = [...veiculos.values()];
+  const veiculosLista = veiculosListaAtivos(veiculos);
   const situacao = filtro?.situacao ?? "em_aberto";
   const incluirEncerrados = filtro?.incluirEncerradosComPendencia !== false;
 

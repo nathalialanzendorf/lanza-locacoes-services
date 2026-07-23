@@ -161,6 +161,41 @@ export function findVeiculoInDb(db: VeiculosDb, idOrPlaca: string): VeiculoRegis
   return idx >= 0 ? db.veiculos[idx]! : null;
 }
 
+/** Resolve placa formatada a partir de UUID ou placa legada. */
+export function placaHyphenVeiculoRef(
+  ref: string,
+  veiculos?: VeiculoRegistro[],
+): string {
+  const catalog = veiculos ?? loadVeiculosDb().veiculos;
+  const veiculo = findVeiculoInDb({ veiculos: catalog }, ref);
+  return formatPlacaHyphen(veiculo?.placa ?? ref);
+}
+
+/** Chave normalizada de placa a partir de UUID ou placa legada. */
+export function compactPlacaVeiculoRef(
+  ref: string,
+  veiculos?: VeiculoRegistro[],
+): string {
+  return compactPlaca(placaHyphenVeiculoRef(ref, veiculos));
+}
+
+export function mesmoVeiculoRef(
+  a: string,
+  b: string,
+  veiculos?: VeiculoRegistro[],
+): boolean {
+  return compactPlacaVeiculoRef(a, veiculos) === compactPlacaVeiculoRef(b, veiculos);
+}
+
+export function veiculoRefAtivo(
+  ref: string,
+  veiculos: VeiculoRegistro[],
+): boolean {
+  const veiculo = findVeiculoInDb({ veiculos }, ref);
+  if (!veiculo) return false;
+  return veiculo.ativo !== false && veiculo.particular !== true;
+}
+
 export type VeiculoPatch = Partial<
   Pick<
     VeiculoRegistro,

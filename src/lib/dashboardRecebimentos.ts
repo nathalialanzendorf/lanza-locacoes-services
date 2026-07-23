@@ -26,7 +26,7 @@ import {
 import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { formatVeiculoLabel } from "./veiculoLabel.js";
-import { findVeiculoInDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { placaHyphenVeiculoRef, veiculoRefAtivo, type VeiculoRegistro } from "./veiculosDb.js";
 
 export type DashboardRecebimentoLinha = {
   clienteId: string | null;
@@ -72,22 +72,12 @@ function despesaAberta(d: ClienteDespesaRegistro): boolean {
   );
 }
 
-function veiculoDoRef(veiculoRef: string, veiculos: VeiculoRegistro[]): VeiculoRegistro | null {
-  const ref = String(veiculoRef ?? "").trim();
-  if (!ref) return null;
-  return findVeiculoInDb({ veiculos }, ref);
-}
-
 function placaDoVeiculoRef(veiculoRef: string, veiculos: VeiculoRegistro[]): string {
-  const veiculo = veiculoDoRef(veiculoRef, veiculos);
-  return formatPlacaHyphen(veiculo?.placa ?? veiculoRef);
+  return placaHyphenVeiculoRef(veiculoRef, veiculos);
 }
 
 function veiculoAtivo(veiculoRef: string, veiculos: VeiculoRegistro[]): boolean {
-  const veiculo = veiculoDoRef(veiculoRef, veiculos);
-  if (!veiculo) return false;
-  if (veiculo.ativo === false || veiculo.particular === true) return false;
-  return true;
+  return veiculoRefAtivo(veiculoRef, veiculos);
 }
 
 function clienteAtivo(clienteId: string | null | undefined, clientes: ClienteRegistro[]): boolean {

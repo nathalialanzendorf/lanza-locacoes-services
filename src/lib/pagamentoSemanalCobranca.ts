@@ -18,6 +18,7 @@ import {
 } from "./pagamentoSemanal.js";
 import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { compactPlaca } from "./placa.js";
+import { compactPlacaVeiculoRef } from "./veiculosDb.js";
 
 export type SituacaoDiaSemanal = "Atrasado" | "Em dia";
 
@@ -351,7 +352,7 @@ export function dataPagamentoEfetivoSemanal(
     if (d.paga !== true) continue;
     if (isJurosMultaSemanalDescricao(d.descricao ?? "")) continue;
     if (/\[NEGOCIADO/i.test(d.descricao ?? "")) continue;
-    if (compactPlaca(d.veiculoId) !== placaKey) continue;
+    if (compactPlacaVeiculoRef(d.veiculoId) !== placaKey) continue;
     if (clienteId && d.condutorId !== clienteId) continue;
     const venc = vencimentoDespesaSemanalBr(
       d.descricao ?? "",
