@@ -99,6 +99,7 @@ export {
   montarPlanoBaixaAsync,
   withBaixaPlanoDbContext,
   scopeFromLinhasBaixa,
+  mergeBaixaExecScope,
   resolverCliente,
   resolvePlacaLinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
@@ -182,6 +183,13 @@ export {
   type DashboardRecebimentoLinha,
   type DashboardRecebimentosTotais,
 } from "../../../src/lib/dashboardRecebimentos.js";
+
+export { clienteExibicaoPorId } from "../../../src/lib/clienteExibicao.js";
+
+export {
+  PROXIMO_VENCER_DIAS,
+  listarContratosVencimentoDashboard,
+} from "../../../src/lib/contratoVencimento.js";
 
 export {
   loadCobrancasDbContextAsync,

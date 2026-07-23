@@ -26,6 +26,9 @@ import {
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
+  type DashboardRecebimentos,
+  clienteExibicaoPorId,
+  listarContratosVencimentoDashboard,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -74,12 +77,42 @@ type ResumoStores = {
   cobrancasCtx: CobrancasDbContext;
 };
 
+function enriquecerRecebimentos(
+  recebimentos: DashboardRecebimentos | undefined,
+  clientes: ClienteRegistro[],
+): DashboardRecebimentos | undefined {
+  if (!recebimentos) return undefined;
+  const mapLinha = (l: DashboardRecebimentos["venceHoje"][number]) => ({
+    ...l,
+    clienteNome: clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome),
+  });
+  return {
+    ...recebimentos,
+    venceHoje: recebimentos.venceHoje.map(mapLinha),
+    atrasados: recebimentos.atrasados.map(mapLinha),
+  };
+}
+
+function enriquecerContratosVencimento(
+  listas: ReturnType<typeof listarContratosVencimentoDashboard>,
+  clientes: ClienteRegistro[],
+): ReturnType<typeof listarContratosVencimentoDashboard> {
+  const mapContrato = (c: ContratoRegistro): ContratoRegistro => ({
+    ...c,
+    clienteNome: clienteExibicaoPorId(clientes, c.clienteId, c.clienteNome),
+  });
+  return {
+    vencidos: listas.vencidos.map(mapContrato),
+    aVencer: listas.aVencer.map(mapContrato),
+  };
+}
+
 function montarResumo(
   clientes: ClienteRegistro[],
   veiculos: VeiculoRegistro[],
   contratos: ContratoRegistro[],
   stores: ResumoStores,
-  recebimentos?: ReturnType<typeof obterDashboardRecebimentos>,
+  recebimentos?: DashboardRecebimentos,
 ) {
   const { despesasCliente, despesasParceiro, infracoes, cobrancasCtx } = stores;
 
@@ -110,6 +143,12 @@ function montarResumo(
     0,
   );
 
+  const recebimentosEnriquecidos = enriquecerRecebimentos(recebimentos, clientes);
+  const contratosVencimento = enriquecerContratosVencimento(
+    listarContratosVencimentoDashboard(contratos),
+    clientes,
+  );
+
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
     veiculos: {
@@ -136,7 +175,8 @@ function montarResumo(
       semCliente: infracoesSemResponsavel.length,
       semCondutor: infracoesSemResponsavel.length,
     },
-    ...(recebimentos ? { recebimentos } : {}),
+    contratosVencimento,
+    ...(recebimentosEnriquecidos ? { recebimentos: recebimentosEnriquecidos } : {}),
   };
 }
 
