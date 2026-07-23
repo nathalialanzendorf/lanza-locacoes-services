@@ -29,6 +29,7 @@ import {
   type DashboardRecebimentos,
   clienteExibicaoPorId,
   listarContratosVencimentoDashboard,
+  type ContratoVencimentoResumo,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -77,6 +78,22 @@ type ResumoStores = {
   cobrancasCtx: CobrancasDbContext;
 };
 
+const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
+  dataReferenciaBr: "—",
+  tituloPagamentoSemanal: "Pagamento semanal",
+  venceHoje: [],
+  atrasados: [],
+  totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
+};
+
+function recebimentosResumo(
+  recebimentos: DashboardRecebimentos | undefined,
+  clientes: ClienteRegistro[],
+): DashboardRecebimentos {
+  const base = recebimentos ?? RECEBIMENTOS_VAZIO;
+  return enriquecerRecebimentos(base, clientes) ?? base;
+}
+
 function enriquecerRecebimentos(
   recebimentos: DashboardRecebimentos | undefined,
   clientes: ClienteRegistro[],
@@ -96,8 +113,8 @@ function enriquecerRecebimentos(
 function enriquecerContratosVencimento(
   listas: ReturnType<typeof listarContratosVencimentoDashboard>,
   clientes: ClienteRegistro[],
-): ReturnType<typeof listarContratosVencimentoDashboard> {
-  const mapContrato = (c: ContratoRegistro): ContratoRegistro => ({
+): { vencidos: ContratoVencimentoResumo[]; aVencer: ContratoVencimentoResumo[] } {
+  const mapContrato = (c: ContratoVencimentoResumo): ContratoVencimentoResumo => ({
     ...c,
     clienteNome: clienteExibicaoPorId(clientes, c.clienteId, c.clienteNome),
   });
@@ -143,11 +160,17 @@ function montarResumo(
     0,
   );
 
-  const recebimentosEnriquecidos = enriquecerRecebimentos(recebimentos, clientes);
-  const contratosVencimento = enriquecerContratosVencimento(
-    listarContratosVencimentoDashboard(contratos),
-    clientes,
-  );
+  const contratosVencimento = (() => {
+    try {
+      return enriquecerContratosVencimento(
+        listarContratosVencimentoDashboard(contratos),
+        clientes,
+      );
+    } catch (err) {
+      console.error("[resumo] falha ao calcular contratosVencimento:", err);
+      return { vencidos: [], aVencer: [] };
+    }
+  })();
 
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
@@ -176,7 +199,7 @@ function montarResumo(
       semCondutor: infracoesSemResponsavel.length,
     },
     contratosVencimento,
-    ...(recebimentosEnriquecidos ? { recebimentos: recebimentosEnriquecidos } : {}),
+    recebimentos: recebimentosResumo(recebimentos, clientes),
   };
 }
 
@@ -231,13 +254,18 @@ export async function obterResumoAsync() {
     console.error("[resumo] falha ao calcular recebimentos:", err);
   }
 
-  const data = montarResumo(
-    cobrancasCtx.clientes,
-    cobrancasCtx.veiculos,
-    cobrancasCtx.contratos,
-    stores,
-    recebimentos,
-  );
-  if (process.env.VERCEL) resumoCache = { at: Date.now(), data };
-  return data;
+  try {
+    const data = montarResumo(
+      cobrancasCtx.clientes,
+      cobrancasCtx.veiculos,
+      cobrancasCtx.contratos,
+      stores,
+      recebimentos,
+    );
+    if (process.env.VERCEL) resumoCache = { at: Date.now(), data };
+    return data;
+  } catch (err) {
+    console.error("[resumo] falha ao montar resumo:", err);
+    throw err;
+  }
 }

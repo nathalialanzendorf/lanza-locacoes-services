@@ -189,6 +189,7 @@ export { clienteExibicaoPorId } from "../../../src/lib/clienteExibicao.js";
 export {
   PROXIMO_VENCER_DIAS,
   listarContratosVencimentoDashboard,
+  type ContratoVencimentoResumo,
 } from "../../../src/lib/contratoVencimento.js";
 
 export {

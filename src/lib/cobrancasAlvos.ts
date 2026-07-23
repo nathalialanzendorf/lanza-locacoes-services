@@ -35,6 +35,7 @@ import {
   loadVeiculosDb,
   placaHyphenVeiculoRef,
   mesmoVeiculoRef,
+  veiculoRefAtivo,
   type VeiculoRegistro,
 } from "./veiculosDb.js";
 
@@ -142,7 +143,7 @@ function veiculosListaAtivos(veiculos: ReturnType<typeof veiculosAtivos>): Veicu
 function placaElegivel(veiculoRef: string, veiculos: ReturnType<typeof veiculosAtivos>): boolean {
   const ref = String(veiculoRef ?? "").trim();
   if (!ref) return false;
-  return veiculos.has(ref) || veiculos.has(compactPlaca(ref));
+  return veiculoRefAtivo(ref, veiculosListaAtivos(veiculos));
 }
 
 function placaFromVeiculoRef(
@@ -267,7 +268,14 @@ function condutorEfetivoPagamentoSemanal(
     if (contratoCondutor?.status === "encerrado") {
       return { clienteId: null, clienteNome: null };
     }
-    // Condutor na linha não é locatário deste veículo — não reatribuir ao atual.
+    // condutorId legado/desalinhado — usa locatário ativo da placa (ex.: pós-backfill Postgres).
+    const vigenteComCondutor = contratoAtivoPorPlaca(placaFmt, contratos);
+    if (vigenteComCondutor?.clienteId) {
+      return {
+        clienteId: vigenteComCondutor.clienteId,
+        clienteNome: vigenteComCondutor.clienteNome,
+      };
+    }
     return { clienteId: null, clienteNome: null };
   }
 

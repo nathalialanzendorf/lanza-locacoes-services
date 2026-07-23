@@ -5,6 +5,28 @@ export const PROXIMO_VENCER_DIAS = 14;
 
 export type AlertaVencimentoContrato = "vencido" | "proximo";
 
+/** Campos mínimos para tabelas do dashboard — evita serializar snapshots completos do contrato. */
+export type ContratoVencimentoResumo = {
+  id: string;
+  clienteId?: string | null;
+  clienteNome?: string | null;
+  placa?: string | null;
+  dataFimPrevista?: string | null;
+  veiculo?: { placa?: string | null };
+};
+
+export function contratoVencimentoResumoDto(c: ContratoRegistro): ContratoVencimentoResumo {
+  const placa = c.placa?.trim() || c.veiculo?.placa?.trim() || null;
+  return {
+    id: c.id,
+    clienteId: c.clienteId ?? null,
+    clienteNome: c.clienteNome ?? null,
+    placa,
+    dataFimPrevista: dataFimPrevistaContrato(c),
+    ...(placa ? { veiculo: { placa } } : {}),
+  };
+}
+
 export function hojeIsoBr(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -67,7 +89,7 @@ export function ordenarContratosRenovacao(
 export function listarContratosVencimentoDashboard(
   contratos: ContratoRegistro[],
   hojeIso = hojeIsoBr(),
-): { vencidos: ContratoRegistro[]; aVencer: ContratoRegistro[] } {
+): { vencidos: ContratoVencimentoResumo[]; aVencer: ContratoVencimentoResumo[] } {
   const vencidos: ContratoRegistro[] = [];
   const aVencer: ContratoRegistro[] = [];
 
@@ -80,5 +102,8 @@ export function listarContratosVencimentoDashboard(
 
   vencidos.sort((a, b) => ordenarContratosRenovacao(a, b, hojeIso));
   aVencer.sort((a, b) => ordenarContratosRenovacao(a, b, hojeIso));
-  return { vencidos, aVencer };
+  return {
+    vencidos: vencidos.map(contratoVencimentoResumoDto),
+    aVencer: aVencer.map(contratoVencimentoResumoDto),
+  };
 }
