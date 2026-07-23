@@ -26,7 +26,7 @@ import {
 import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { formatVeiculoLabel } from "./veiculoLabel.js";
-import type { VeiculoRegistro } from "./veiculosDb.js";
+import { findVeiculoInDb, type VeiculoRegistro } from "./veiculosDb.js";
 
 export type DashboardRecebimentoLinha = {
   clienteId: string | null;
@@ -72,14 +72,22 @@ function despesaAberta(d: ClienteDespesaRegistro): boolean {
   );
 }
 
-function veiculoAtivo(placa: string, veiculos: VeiculoRegistro[]): boolean {
-  const p = compactPlaca(placa);
-  for (const v of veiculos) {
-    if (compactPlaca(v.placa) !== p) continue;
-    if (v.ativo === false || v.particular === true) return false;
-    return true;
-  }
-  return false;
+function veiculoDoRef(veiculoRef: string, veiculos: VeiculoRegistro[]): VeiculoRegistro | null {
+  const ref = String(veiculoRef ?? "").trim();
+  if (!ref) return null;
+  return findVeiculoInDb({ veiculos }, ref);
+}
+
+function placaDoVeiculoRef(veiculoRef: string, veiculos: VeiculoRegistro[]): string {
+  const veiculo = veiculoDoRef(veiculoRef, veiculos);
+  return formatPlacaHyphen(veiculo?.placa ?? veiculoRef);
+}
+
+function veiculoAtivo(veiculoRef: string, veiculos: VeiculoRegistro[]): boolean {
+  const veiculo = veiculoDoRef(veiculoRef, veiculos);
+  if (!veiculo) return false;
+  if (veiculo.ativo === false || veiculo.particular === true) return false;
+  return true;
 }
 
 function clienteAtivo(clienteId: string | null | undefined, clientes: ClienteRegistro[]): boolean {
@@ -213,7 +221,7 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
     if (!venc || venc !== hoje) continue;
     if (vencimentoSemanalElegivelCobranca(venc, hoje)) continue;
 
-    const placa = formatPlacaHyphen(d.veiculoId);
+    const placa = placaDoVeiculoRef(d.veiculoId, ctx.veiculos);
     const contrato = contratoAtivoPlaca(placa, ctx.contratos, d.condutorId);
     const clienteId = contrato?.clienteId ?? d.condutorId ?? null;
     if (!clienteAtivo(clienteId, ctx.clientes)) continue;
