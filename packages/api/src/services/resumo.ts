@@ -28,8 +28,6 @@ import {
   type CobrancasDbContext,
   type DashboardRecebimentos,
   clienteExibicaoPorId,
-  listarContratosVencimentoDashboard,
-  type ContratoVencimentoResumo,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -110,20 +108,6 @@ function enriquecerRecebimentos(
   };
 }
 
-function enriquecerContratosVencimento(
-  listas: ReturnType<typeof listarContratosVencimentoDashboard>,
-  clientes: ClienteRegistro[],
-): { vencidos: ContratoVencimentoResumo[]; aVencer: ContratoVencimentoResumo[] } {
-  const mapContrato = (c: ContratoVencimentoResumo): ContratoVencimentoResumo => ({
-    ...c,
-    clienteNome: clienteExibicaoPorId(clientes, c.clienteId, c.clienteNome),
-  });
-  return {
-    vencidos: listas.vencidos.map(mapContrato),
-    aVencer: listas.aVencer.map(mapContrato),
-  };
-}
-
 function montarResumo(
   clientes: ClienteRegistro[],
   veiculos: VeiculoRegistro[],
@@ -160,18 +144,6 @@ function montarResumo(
     0,
   );
 
-  const contratosVencimento = (() => {
-    try {
-      return enriquecerContratosVencimento(
-        listarContratosVencimentoDashboard(contratos),
-        clientes,
-      );
-    } catch (err) {
-      console.error("[resumo] falha ao calcular contratosVencimento:", err);
-      return { vencidos: [], aVencer: [] };
-    }
-  })();
-
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
     veiculos: {
@@ -198,7 +170,6 @@ function montarResumo(
       semCliente: infracoesSemResponsavel.length,
       semCondutor: infracoesSemResponsavel.length,
     },
-    contratosVencimento,
     recebimentos: recebimentosResumo(recebimentos, clientes),
   };
 }
