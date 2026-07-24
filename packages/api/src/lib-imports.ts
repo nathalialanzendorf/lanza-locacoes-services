@@ -372,6 +372,7 @@ export type { DadosLocatario, ResultadoFonte } from "../../../src/lib/analiseCad
 export {
   analiseClienteDeRegistro,
   registrarAnaliseCadastroNoCliente,
+  registrarAnaliseCadastroNoClienteAsync,
 } from "../../../src/lib/clientesDb.js";
 
 export {

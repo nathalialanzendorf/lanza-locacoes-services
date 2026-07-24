@@ -123,8 +123,7 @@ export async function criarCliente(body: ClienteImportado): Promise<{
   }
   const r = await gravarClienteAsync({ ...body, nome });
   await espelharClienteRastreame(r.registro);
-  const db = await loadClientesDbAsync();
-  const atualizado = findClienteInDb(db, r.registro.id) ?? r.registro;
+  const atualizado = (await obterClienteAsync(r.registro.id)) ?? r.registro;
   return { data: atualizado, acao: r.acao };
 }
 

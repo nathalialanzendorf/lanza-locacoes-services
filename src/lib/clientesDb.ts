@@ -1,3 +1,9 @@
+ 
+ 
+ 
+ 
+ 
+ 
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -12,8 +18,10 @@ import {
   loadClientesFromSql,
   queryClientesFromSql,
   saveClientesToSql,
+  upsertClienteToSql,
   exportJsonBackup,
 } from "@lanza/db";
+import { isEntityUuid } from "./filtroListagem.js";
 import { clientesScopeFromFilter } from "./scopedCatalogo.js";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
@@ -314,10 +322,18 @@ export async function editarClienteAsync(
   idOrCpf: string,
   patch: ClientePatch,
 ): Promise<ClienteRegistro | null> {
-  const db = await loadClientesDbAsync();
-  const c = applyEditarCliente(db, idOrCpf, patch);
+  const key = idOrCpf.trim();
+  if (await useRelationalStore()) {
+    const db = await loadClientesDbAsync({ idOuCpf: key });
+    const c = applyEditarCliente(db, key, patch);
+    if (!c) return null;
+    await upsertClienteToSql(c as unknown as Record<string, unknown>);
+    return c;
+  }
+  const db = loadClientesDb();
+  const c = applyEditarCliente(db, key, patch);
   if (!c) return null;
-  await saveClientesDbAsync(db);
+  saveClientesDb(db);
   return c;
 }
 
@@ -347,17 +363,15 @@ export function analiseClienteDeRegistro(t: TriagemRegistro): AnaliseCadastroCli
  * Idempotente — sempre reflete a última análise. Retorna null se não houver
  * cliente cadastrado para a chave (ex.: análise feita antes do cadastro).
  */
-export function registrarAnaliseCadastroNoCliente(
+function applyRegistrarAnaliseCadastroNoCliente(
+  db: ClientesDb,
   idOrCpf: string,
   dados: AnaliseCadastroCliente,
 ): ClienteRegistro | null {
-  const db = loadClientesDb();
   const key = idOrCpf.trim();
-  let idx = db.clientes.findIndex((c) => c.id === key);
-  if (idx < 0) {
-    const byCpf = findClienteByCpf(key);
-    if (byCpf) idx = db.clientes.findIndex((c) => c.id === byCpf.id);
-  }
+  const found = findClienteInDb(db, key);
+  if (!found) return null;
+  const idx = db.clientes.findIndex((c) => c.id === found.id);
   if (idx < 0) return null;
   const c = db.clientes[idx]!;
   c.analiseCadastro = dados;
@@ -365,8 +379,33 @@ export function registrarAnaliseCadastroNoCliente(
   if (dados.aprovado === false) c.ativo = false;
   c.atualizadoEm = nowIso();
   db.clientes[idx] = c;
+  return c;
+}
+
+export function registrarAnaliseCadastroNoCliente(
+  idOrCpf: string,
+  dados: AnaliseCadastroCliente,
+): ClienteRegistro | null {
+  const db = loadClientesDb();
+  const c = applyRegistrarAnaliseCadastroNoCliente(db, idOrCpf, dados);
+  if (!c) return null;
   saveClientesDb(db);
   return c;
+}
+
+export async function registrarAnaliseCadastroNoClienteAsync(
+  idOrCpf: string,
+  dados: AnaliseCadastroCliente,
+): Promise<ClienteRegistro | null> {
+  const key = idOrCpf.trim();
+  if (await useRelationalStore()) {
+    const db = await loadClientesDbAsync({ idOuCpf: key });
+    const c = applyRegistrarAnaliseCadastroNoCliente(db, key, dados);
+    if (!c) return null;
+    await upsertClienteToSql(c as unknown as Record<string, unknown>);
+    return c;
+  }
+  return registrarAnaliseCadastroNoCliente(key, dados);
 }
 
 /**
@@ -477,6 +516,36 @@ export function upsertClienteFromRastreame(rawInput: UpsertMotoristaInput): Upse
   return { registro: merged, acao: changed ? "atualizado" : "sem_alteracao", aviso: null };
 }
 
+function gravarClienteScope(cliente: ClienteImportado): ClientesLoadScope {
+  const scope: ClientesLoadScope = {};
+  const id = cliente.id?.trim();
+  if (id) {
+    if (isEntityUuid(id)) scope.ids = [id];
+    else scope.idOuCpf = id;
+  }
+  const cpf = cliente.cpf?.trim();
+  if (cpf) scope.cpf = cpf;
+  return scope;
+}
+
+async function loadClientesDbParaGravar(cliente: ClienteImportado): Promise<ClientesDb> {
+  const empty: ClientesDb = {
+    descricao: DEFAULT_DESCRICAO,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    clientes: [],
+  };
+
+  if (!(await useRelationalStore())) {
+    return loadClientesDb();
+  }
+
+  const sqlFilter = clientesScopeFromFilter(gravarClienteScope(cliente));
+  if (!sqlFilter) return empty;
+
+  const clientes = (await queryClientesFromSql(sqlFilter)) as ClienteRegistro[];
+  return { ...empty, clientes };
+}
+
 function applyGravarCliente(
   db: ClientesDb,
   cliente: ClienteImportado,
@@ -530,10 +599,18 @@ export async function gravarClienteAsync(
   cliente: ClienteImportado,
   opts?: { syncRastreame?: boolean },
 ): Promise<UpsertClienteResult> {
-  const db = await loadClientesDbAsync();
-  const r = applyGravarCliente(db, cliente);
-  await saveClientesDbAsync(db);
   void opts?.syncRastreame;
+
+  if (await useRelationalStore()) {
+    const db = await loadClientesDbParaGravar(cliente);
+    const r = applyGravarCliente(db, cliente);
+    await upsertClienteToSql(r.registro as unknown as Record<string, unknown>);
+    return r;
+  }
+
+  const db = loadClientesDb();
+  const r = applyGravarCliente(db, cliente);
+  saveClientesDb(db);
   return r;
 }
 
@@ -557,6 +634,31 @@ export function marcarClienteRastreameSyncOk(
   db.clientes[idx] = c;
   saveClientesDb(db);
   return c;
+}
+
+export async function marcarClienteRastreameSyncOkAsync(
+  idOrCpf: string,
+  rastreameKey?: string | number,
+  rastreameId?: string | number,
+): Promise<ClienteRegistro | null> {
+  const key = idOrCpf.trim();
+  if (await useRelationalStore()) {
+    const db = await loadClientesDbAsync({ idOuCpf: key });
+    let idx = db.clientes.findIndex((c) => c.id === key);
+    if (idx < 0) {
+      const found = findClienteInDb(db, key);
+      if (found) idx = db.clientes.findIndex((c) => c.id === found.id);
+    }
+    if (idx < 0) return null;
+    const c = db.clientes[idx]!;
+    if (rastreameKey != null) c.rastreameMotoristaKey = String(rastreameKey);
+    if (rastreameId != null) c.rastreameMotoristaId = rastreameId;
+    c.rastreameSyncEm = nowIso();
+    db.clientes[idx] = c;
+    await upsertClienteToSql(c as unknown as Record<string, unknown>);
+    return c;
+  }
+  return marcarClienteRastreameSyncOk(key, rastreameKey, rastreameId);
 }
 
 /** Cliente elegível para espelhar no Rastreame (nome + CPF ou CNH). */

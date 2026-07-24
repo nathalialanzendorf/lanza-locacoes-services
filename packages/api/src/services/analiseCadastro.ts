@@ -12,7 +12,7 @@ import {
   loadTriagemDbAsync,
   montarRelatorio,
   registrarAchadosCliente,
-  registrarAnaliseCadastroNoCliente,
+  registrarAnaliseCadastroNoClienteAsync,
   registrarTriagemAsync,
   saveTriagemDbAsync,
   type DadosLgpd,
@@ -275,7 +275,7 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
 
   let registro: TriagemRegistro | null = null;
   let acao: "novo" | "atualizado" | null = null;
-  let cliente: ReturnType<typeof registrarAnaliseCadastroNoCliente> = null;
+  let cliente: Awaited<ReturnType<typeof registrarAnaliseCadastroNoClienteAsync>> = null;
   let achados = 0;
 
   if (!input.semBrowser) {
@@ -291,14 +291,14 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
 
     if (!input.semVinculo) {
       const alvo = (input.clienteId ?? locatario.cpf).trim();
-      cliente = registrarAnaliseCadastroNoCliente(alvo, analiseClienteDeRegistro(registro));
+      cliente = await registrarAnaliseCadastroNoClienteAsync(alvo, analiseClienteDeRegistro(registro));
     }
 
     const clienteIdAchados =
       cliente?.id ??
-      (await loadClientesDbAsync()).clientes.find(
-        (c) => c.cpf?.replace(/\D/g, "") === locatario.cpf,
-      )?.id ??
+      (
+        await loadClientesDbAsync({ cpf: locatario.cpf })
+      ).clientes.find((c) => c.cpf?.replace(/\D/g, "") === locatario.cpf)?.id ??
       null;
     const linhas = registrarAchadosCliente({
       cpf: locatario.cpf,
@@ -334,7 +334,7 @@ export async function registrarDecisaoAnalise(id: string, aprovado: boolean) {
   db.triagens[idx] = t;
   await saveTriagemDbAsync(db);
 
-  const cliente = registrarAnaliseCadastroNoCliente(t.cpf, analiseClienteDeRegistro(t));
+  const cliente = await registrarAnaliseCadastroNoClienteAsync(t.cpf, analiseClienteDeRegistro(t));
   return { registro: t, cliente };
 }
 

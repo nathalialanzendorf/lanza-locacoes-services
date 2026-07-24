@@ -94,16 +94,6 @@ async function executarContratoModo(
     } catch (err) {
       throw new HttpError(400, err instanceof Error ? err.message : String(err));
     }
-    if (contratoEncerrado) {
-      await desativarClienteDoContrato({
-        clienteId: contratoEncerrado.clienteId,
-        cpf: contratoEncerrado.cpf,
-        nome: contratoEncerrado.clienteNome,
-        placa: contratoEncerrado.placa,
-        veiculoId: contratoEncerrado.veiculoId,
-        contratoId: contratoEncerrado.id,
-      });
-    }
   }
 
   let proximaVersao: number;
@@ -128,7 +118,7 @@ async function executarContratoModo(
   }
 
   let clienteStatus = null;
-  if (reg) {
+  if (modo === "criar" && reg) {
     clienteStatus = await ativarClienteDoContrato({
       clienteId: reg.clienteId,
       cpf: reg.cpf,

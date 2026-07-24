@@ -216,9 +216,15 @@ export async function loadVeiculosFromSql(): Promise<VeiculosDbShape> {
 
 export async function saveVeiculosToSql(db: VeiculosDbShape): Promise<void> {
   for (const v of db.veiculos) {
-    const placa = formatPlacaHyphen(String(v.placa));
-    await pgWriteQuery(
-      `INSERT INTO lanza.veiculos (
+    await upsertVeiculoToSql(v as Record<string, unknown>);
+  }
+}
+
+/** Grava ou atualiza um único veículo no Postgres (sem reescrever toda a tabela). */
+export async function upsertVeiculoToSql(v: Record<string, unknown>): Promise<void> {
+  const placa = formatPlacaHyphen(String(v.placa));
+  await pgWriteQuery(
+    `INSERT INTO lanza.veiculos (
         id, placa, placa_norm, marca_modelo, marca, modelo, ano_modelo, ano, chassi, renavam, cor,
         combustivel, categoria, tipo, licenca_ima, vencimento_documento, uf_registro,
         rastreame_rastreavel_key, rastreame_label, rastreame_sync_em,
@@ -227,60 +233,59 @@ export async function saveVeiculosToSql(db: VeiculosDbShape): Promise<void> {
       ON CONFLICT (id) DO UPDATE SET
         placa = EXCLUDED.placa, placa_norm = EXCLUDED.placa_norm, ativo = EXCLUDED.ativo,
         cliente_vinculado_id = EXCLUDED.cliente_vinculado_id, rastreame_label = EXCLUDED.rastreame_label, atualizado_em = now()`,
-      [
-        v.id,
-        placa,
-        compactPlaca(placa),
-        v.marcaModelo ?? null,
-        v.marca ?? null,
-        v.modelo ?? null,
-        v.anoModelo ?? null,
-        typeof v.ano === "number" ? v.ano : null,
-        v.chassi ?? null,
-        v.renavam ?? null,
-        v.cor ?? null,
-        v.combustivel ?? null,
-        v.categoria ?? null,
-        v.tipo ?? null,
-        v.licencaIma ?? null,
-        v.vencimentoDocumento ?? null,
-        v.ufRegistro ?? null,
-        v.rastreameRastreavelKey != null ? String(v.rastreameRastreavelKey) : null,
-        v.rastreameLabel ?? null,
-        v.rastreameSyncEm ?? null,
-        v.clienteVinculadoId ?? null,
-        v.inicioLocacoes ?? null,
-        v.ativo !== false,
-        v.particular === true,
-        v.origem ?? null,
-      ],
-    );
+    [
+      v.id,
+      placa,
+      compactPlaca(placa),
+      v.marcaModelo ?? null,
+      v.marca ?? null,
+      v.modelo ?? null,
+      v.anoModelo ?? null,
+      typeof v.ano === "number" ? v.ano : null,
+      v.chassi ?? null,
+      v.renavam ?? null,
+      v.cor ?? null,
+      v.combustivel ?? null,
+      v.categoria ?? null,
+      v.tipo ?? null,
+      v.licencaIma ?? null,
+      v.vencimentoDocumento ?? null,
+      v.ufRegistro ?? null,
+      v.rastreameRastreavelKey != null ? String(v.rastreameRastreavelKey) : null,
+      v.rastreameLabel ?? null,
+      v.rastreameSyncEm ?? null,
+      v.clienteVinculadoId ?? null,
+      v.inicioLocacoes ?? null,
+      v.ativo !== false,
+      v.particular === true,
+      v.origem ?? null,
+    ],
+  );
 
-    const refMes = (v.fipeReferencia as string | undefined) ?? "importado";
-    if (v.fipeCodigo || v.fipe || v.fipeModelo) {
-      await pgWriteQuery(
-        `INSERT INTO lanza.veiculo_fipe (
+  const refMes = (v.fipeReferencia as string | undefined) ?? "importado";
+  if (v.fipeCodigo || v.fipe || v.fipeModelo) {
+    await pgWriteQuery(
+      `INSERT INTO lanza.veiculo_fipe (
           id, veiculo_id, code_fipe, modelo, valor_texto, referencia_mes, fipe_url, origem, ativo, cadastrado_em, atualizado_em
         ) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, true, now(), now())
         ON CONFLICT (veiculo_id, referencia_mes) DO UPDATE SET
           code_fipe = EXCLUDED.code_fipe, modelo = EXCLUDED.modelo, valor_texto = EXCLUDED.valor_texto,
           fipe_url = EXCLUDED.fipe_url, atualizado_em = now()`,
-        [
-          v.id,
-          v.fipeCodigo ?? v.id,
-          v.fipeModelo ?? null,
-          v.fipeValor ?? null,
-          refMes,
-          v.fipe ?? null,
-          v.origem ?? "sql-save",
-        ],
-      );
-    }
+      [
+        v.id,
+        v.fipeCodigo ?? v.id,
+        v.fipeModelo ?? null,
+        v.fipeValor ?? null,
+        refMes,
+        v.fipe ?? null,
+        v.origem ?? "sql-save",
+      ],
+    );
+  }
 
-    const crlv = pickCrlvFromVeiculo(v);
-    if (crlv) {
-      await upsertVeiculoCrlv((sql, params) => pgQuery(sql, params), String(v.id), crlv);
-    }
+  const crlv = pickCrlvFromVeiculo(v);
+  if (crlv) {
+    await upsertVeiculoCrlv((sql, params) => pgQuery(sql, params), String(v.id), crlv);
   }
 }
 
@@ -625,61 +630,79 @@ export async function queryVeiculosByIdsFromSql(ids: string[]): Promise<VeiculoR
 
 export async function saveClientesToSql(db: ClientesDbShape): Promise<void> {
   for (const c of db.clientes) {
-    const id = String(c.id);
-    const cpf = c.cpf != null ? String(c.cpf) : null;
-    await pgWriteQuery(
-      `INSERT INTO lanza.clientes (
+    await upsertClienteToSql(c as Record<string, unknown>);
+  }
+}
+
+/** Grava ou atualiza um único cliente no Postgres (sem reescrever toda a tabela). */
+export async function upsertClienteToSql(c: Record<string, unknown>): Promise<void> {
+  const id = String(c.id);
+  const cpf = c.cpf != null ? String(c.cpf) : null;
+  const analise = c.analiseCadastro as Record<string, unknown> | undefined;
+  const analiseAprovado =
+    analise?.aprovado === true ? true : analise?.aprovado === false ? false : null;
+  const analiseAvaliadoEm = analise?.avaliadoEm ?? null;
+  await pgWriteQuery(
+    `INSERT INTO lanza.clientes (
         id, nome, cpf, cpf_norm, rg, rg_orgao_expedidor, data_nascimento, local_nascimento,
         filiacao, telefone, email, cnh_arquivo, pasta_contrato_origem, origem_importacao,
-        rastreame_motorista_key, rastreame_motorista_id, rastreame_sync_em, ativo, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,now())
+        rastreame_motorista_key, rastreame_motorista_id, rastreame_sync_em, ativo,
+        analise_aprovado, analise_avaliado_em, atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,now())
       ON CONFLICT (id) DO UPDATE SET
-        nome = EXCLUDED.nome, cpf = EXCLUDED.cpf, telefone = EXCLUDED.telefone, ativo = EXCLUDED.ativo, atualizado_em = now()`,
-      [
-        id,
-        c.nome,
-        cpf,
-        normCpf(cpf),
-        c.rg ?? null,
-        c.rgOrgaoExpedidor ?? null,
-        c.dataNascimento ?? null,
-        c.localNascimento ?? null,
-        c.filiacao ?? null,
-        c.telefone ?? null,
-        c.email ?? null,
-        c.cnhArquivo ?? null,
-        c.pastaContratoOrigem ?? null,
-        c.origemImportacao ?? null,
-        c.rastreameMotoristaKey != null ? String(c.rastreameMotoristaKey) : null,
-        c.rastreameMotoristaId != null ? String(c.rastreameMotoristaId) : null,
-        c.rastreameSyncEm ?? null,
-        c.ativo !== false,
-      ],
-    );
+        nome = EXCLUDED.nome, cpf = EXCLUDED.cpf, telefone = EXCLUDED.telefone, ativo = EXCLUDED.ativo,
+        rastreame_motorista_key = EXCLUDED.rastreame_motorista_key,
+        rastreame_motorista_id = EXCLUDED.rastreame_motorista_id,
+        rastreame_sync_em = EXCLUDED.rastreame_sync_em,
+        analise_aprovado = EXCLUDED.analise_aprovado,
+        analise_avaliado_em = EXCLUDED.analise_avaliado_em,
+        atualizado_em = now()`,
+    [
+      id,
+      c.nome,
+      cpf,
+      normCpf(cpf),
+      c.rg ?? null,
+      c.rgOrgaoExpedidor ?? null,
+      c.dataNascimento ?? null,
+      c.localNascimento ?? null,
+      c.filiacao ?? null,
+      c.telefone ?? null,
+      c.email ?? null,
+      c.cnhArquivo ?? null,
+      c.pastaContratoOrigem ?? null,
+      c.origemImportacao ?? null,
+      c.rastreameMotoristaKey != null ? String(c.rastreameMotoristaKey) : null,
+      c.rastreameMotoristaId != null ? String(c.rastreameMotoristaId) : null,
+      c.rastreameSyncEm ?? null,
+      c.ativo !== false,
+      analiseAprovado,
+      analiseAvaliadoEm,
+    ],
+  );
 
-    const cnh = c.cnh as Record<string, unknown> | undefined;
-    const cnhFields = pickCnhFields(cnh, c.cnhArquivo != null ? String(c.cnhArquivo) : null);
-    if (cnhFields) {
-      await upsertClienteCnh((sql, params) => pgQuery(sql, params), id, cnhFields);
-    }
+  const cnh = c.cnh as Record<string, unknown> | undefined;
+  const cnhFields = pickCnhFields(cnh, c.cnhArquivo != null ? String(c.cnhArquivo) : null);
+  if (cnhFields) {
+    await upsertClienteCnh((sql, params) => pgQuery(sql, params), id, cnhFields);
+  }
 
-    const end = c.endereco as Record<string, unknown> | undefined;
-    if (end) {
-      await pgWriteQuery(
-        `INSERT INTO lanza.cliente_enderecos (cliente_id, cep, logradouro, numero, complemento, bairro, cidade, uf, atualizado_em)
+  const end = c.endereco as Record<string, unknown> | undefined;
+  if (end) {
+    await pgWriteQuery(
+      `INSERT INTO lanza.cliente_enderecos (cliente_id, cep, logradouro, numero, complemento, bairro, cidade, uf, atualizado_em)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
          ON CONFLICT (cliente_id) DO UPDATE SET cep = EXCLUDED.cep, logradouro = EXCLUDED.logradouro, atualizado_em = now()`,
-        [
-          id,
-          end.cep ?? null,
-          end.logradouro ?? null,
-          end.numero ?? null,
-          end.complemento ?? null,
-          end.bairro ?? null,
-          end.cidade ?? null,
-          end.uf ?? null,
-        ],
-      );
-    }
+      [
+        id,
+        end.cep ?? null,
+        end.logradouro ?? null,
+        end.numero ?? null,
+        end.complemento ?? null,
+        end.bairro ?? null,
+        end.cidade ?? null,
+        end.uf ?? null,
+      ],
+    );
   }
 }

@@ -12,9 +12,11 @@ import {
   loadVeiculosFromSql,
   queryVeiculosFromSql,
   saveVeiculosToSql,
+  upsertVeiculoToSql,
   exportJsonBackup,
 } from "@lanza/db";
 import { veiculosScopeFromFilter } from "./scopedCatalogo.js";
+import { isEntityUuid } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -265,10 +267,19 @@ export async function editarVeiculoAsync(
   idOrPlaca: string,
   patch: VeiculoPatch,
 ): Promise<VeiculoRegistro | null> {
-  const db = await loadVeiculosDbAsync();
-  const v = applyEditarVeiculo(db, idOrPlaca, patch);
+  const key = idOrPlaca.trim();
+  if (await useRelationalStore()) {
+    const scope: VeiculosLoadScope = isEntityUuid(key) ? { veiculoId: key } : { placa: key };
+    const db = await loadVeiculosDbAsync(scope);
+    const v = applyEditarVeiculo(db, key, patch);
+    if (!v) return null;
+    await upsertVeiculoToSql(v as unknown as Record<string, unknown>);
+    return v;
+  }
+  const db = loadVeiculosDb();
+  const v = applyEditarVeiculo(db, key, patch);
   if (!v) return null;
-  await saveVeiculosDbAsync(db);
+  saveVeiculosDb(db);
   return v;
 }
 

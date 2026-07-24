@@ -10,7 +10,6 @@
  * O database local é fonte da verdade; o Rastreame é best-effort (falha → `[aviso]`).
  */
 import {
-  editarCliente,
   editarClienteAsync,
   findClienteById,
   findClienteByCpf,
@@ -18,11 +17,12 @@ import {
   type ClienteRegistro,
 } from "./clientesDb.js";
 import {
-  desvincularClienteVeiculoLocal,
-  persistirMotoristaKeyLocal,
-  vincularClienteVeiculoLocal,
+  desvincularClienteVeiculoLocalAsync,
+  persistirMotoristaKeyLocalAsync,
+  vincularClienteVeiculoLocalAsync,
 } from "./contratoVinculoDb.js";
 import { loadContratosDb, loadContratosDbAsync } from "./contratosDb.js";
+import { useRelationalStore, queryContratosFromSql } from "@lanza/db";
 import { normCpfKey } from "./rastreame/mapMotoristaCliente.js";
 import {
   ativarMotorista,
@@ -118,6 +118,13 @@ export async function temOutroContratoAtivoAsync(
   cliente: ClienteRegistro,
   excetoContratoId?: string | null,
 ): Promise<boolean> {
+  if (await useRelationalStore()) {
+    const clienteId = cliente.id?.trim();
+    if (!clienteId) return false;
+    const rows = await queryContratosFromSql({ clienteId, status: "ativo" });
+    const exc = excetoContratoId?.trim() || null;
+    return rows.some((c) => String(c.id) !== exc);
+  }
   const db = await loadContratosDbAsync();
   return temOutroContratoAtivo(cliente, excetoContratoId, db.contratos);
 }
@@ -157,7 +164,7 @@ async function garantirMotoristaNoRastreame(
 
   if (key) {
     if (!opts.dryRun) {
-      persistirMotoristaKeyLocal(cliente.id, key);
+      await persistirMotoristaKeyLocalAsync(cliente.id, key);
     }
     return { key };
   }
@@ -176,7 +183,7 @@ async function garantirMotoristaNoRastreame(
     key = await resolverMotoristaKey(atualizado);
     motoristaId = atualizado.rastreameMotoristaId ?? undefined;
     if (key) {
-      persistirMotoristaKeyLocal(atualizado.id, key, motoristaId);
+      await persistirMotoristaKeyLocalAsync(atualizado.id, key, motoristaId);
       return { key, motoristaId };
     }
     return { key: null, aviso: "motorista não encontrado após replicação" };
@@ -209,7 +216,7 @@ export async function ativarClienteDoContrato(
     if (opts.dryRun) {
       local = "ativado";
     } else {
-      atualizado = editarCliente(cliente.id, { ativo: true }) ?? cliente;
+      atualizado = (await editarClienteAsync(cliente.id, { ativo: true })) ?? cliente;
       local = "ativado";
     }
   }
@@ -229,7 +236,7 @@ export async function ativarClienteDoContrato(
   let vinculo: StatusClienteResult["vinculo"] = "ignorado";
 
   if (veiculo && rastreavelKey) {
-    const loc = vincularClienteVeiculoLocal(atualizado.id, veiculo, rastreavelKey);
+    const loc = await vincularClienteVeiculoLocalAsync(atualizado.id, veiculo, rastreavelKey);
     atualizado = loc.cliente ?? atualizado;
     vinculo = "vinculado";
   } else {
@@ -260,7 +267,7 @@ export async function ativarClienteDoContrato(
         await ativarMotorista(motoristaKey);
         rastreame = "ativado";
       }
-      persistirMotoristaKeyLocal(
+      await persistirMotoristaKeyLocalAsync(
         atualizado.id,
         motoristaKey,
         remoto.id ?? remoto.key ?? undefined,
@@ -325,7 +332,7 @@ export async function desativarClienteDoContrato(
   let atualizado = cliente;
 
   if (veiculo) {
-    const loc = desvincularClienteVeiculoLocal(cliente.id, veiculo.id);
+    const loc = await desvincularClienteVeiculoLocalAsync(cliente.id, veiculo.id);
     atualizado = loc.cliente ?? cliente;
     vinculo = "desvinculado";
   } else {
