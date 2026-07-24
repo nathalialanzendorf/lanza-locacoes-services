@@ -6,6 +6,7 @@ import {
   atualizarContratoDbAsync,
   desativarClienteDoContrato,
   encerrarContratoDbAsync,
+  encerrarContratoAtivoParaRenovarAsync,
   excluirContratoAsync,
   gerar,
   gerarDespesasIniciaisContratoAsync,
@@ -50,12 +51,16 @@ async function executarContratoModo(
 ) {
   let dados: GerarContratoDados;
 
-  if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
-    dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
-  } else if ("veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null) {
-    dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
-  } else {
-    dados = input as GerarContratoDados;
+  try {
+    if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
+      dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
+    } else if ("veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null) {
+      dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
+    } else {
+      dados = input as GerarContratoDados;
+    }
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
   normalizePaths(dados);
 
@@ -64,11 +69,60 @@ async function executarContratoModo(
   const cpf = dados.cliente?.cpf ?? null;
   if (!placa) throw new HttpError(400, "Placa do veículo não informada");
 
-  const { proximaVersao } = await validarModoContratoAsync(modo, { placa, cpf, clienteNome });
+  const clienteIdFiltro =
+    "clienteId" in input && input.clienteId ? String(input.clienteId).trim() : undefined;
+  const contratoRenovarId =
+    "contratoRenovarId" in input && input.contratoRenovarId
+      ? String(input.contratoRenovarId).trim()
+      : undefined;
+
+  const filtrosContrato = {
+    placa,
+    cpf,
+    clienteNome,
+    clienteId: clienteIdFiltro,
+    contratoRenovarId,
+  };
+
+  let contratoEncerrado = null;
+  if (modo === "renovar") {
+    try {
+      contratoEncerrado = await encerrarContratoAtivoParaRenovarAsync(
+        filtrosContrato,
+        dados.prazo.inicio,
+      );
+    } catch (err) {
+      throw new HttpError(400, err instanceof Error ? err.message : String(err));
+    }
+    if (contratoEncerrado) {
+      await desativarClienteDoContrato({
+        clienteId: contratoEncerrado.clienteId,
+        cpf: contratoEncerrado.cpf,
+        nome: contratoEncerrado.clienteNome,
+        placa: contratoEncerrado.placa,
+        veiculoId: contratoEncerrado.veiculoId,
+        contratoId: contratoEncerrado.id,
+      });
+    }
+  }
+
+  let proximaVersao: number;
+  let contratoAnteriorId: string | null | undefined;
+  try {
+    ({ proximaVersao, contratoAnteriorId } = await validarModoContratoAsync(modo, filtrosContrato));
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
+  }
   const gerado = gerar(dados);
   let reg = null;
   try {
-    reg = await registrarContratoAsync(gerado.pasta);
+    reg = await registrarContratoAsync(gerado.pasta, {
+      ...(contratoAnteriorId
+        ? { contratoAnteriorId, versao: proximaVersao }
+        : proximaVersao > 1
+          ? { versao: proximaVersao }
+          : {}),
+    });
   } catch (err) {
     throw new HttpError(500, err instanceof Error ? err.message : String(err));
   }
@@ -109,6 +163,7 @@ async function executarContratoModo(
     docx: gerado.docx,
     pdf: gerado.pdf,
     contrato: reg,
+    contratoEncerrado,
     clienteStatus,
     despesasIniciais,
   };

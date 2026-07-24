@@ -431,6 +431,7 @@ export {
   excluirContratoAsync,
   validarModoContrato,
   validarModoContratoAsync,
+  encerrarContratoAtivoParaRenovarAsync,
   type MotivoEncerramento,
   type AtualizarContratoDbPatch,
 } from "../../../src/lib/contratosDb.js";

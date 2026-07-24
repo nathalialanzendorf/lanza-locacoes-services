@@ -1347,6 +1347,7 @@ export type ClienteDespesaPatch = Partial<
     | "valorMulta"
     | "situacao"
     | "limiteDefesa"
+    | "dataVencimentoOriginal"
     | "condutorId"
     | "condutorContrato"
     | "condutorConfirmado"
@@ -1396,6 +1397,9 @@ export async function editarClienteDespesa(
   if (patch.valorMulta !== undefined) m.valorMulta = parseValor(patch.valorMulta);
   if (patch.situacao !== undefined) m.situacao = String(patch.situacao).trim();
   if (patch.limiteDefesa !== undefined) m.limiteDefesa = String(patch.limiteDefesa).trim();
+  if (patch.dataVencimentoOriginal !== undefined) {
+    m.dataVencimentoOriginal = String(patch.dataVencimentoOriginal).trim();
+  }
   if (patch.condutorId !== undefined) m.condutorId = patch.condutorId;
   if (patch.condutorConfirmado !== undefined) m.condutorConfirmado = patch.condutorConfirmado;
   if (patch.condutorNaoIdentificado !== undefined) {
@@ -1533,6 +1537,9 @@ function applyClienteDespesaPatch(
   if (patch.valorMulta !== undefined) m.valorMulta = parseValor(patch.valorMulta);
   if (patch.situacao !== undefined) m.situacao = String(patch.situacao).trim();
   if (patch.limiteDefesa !== undefined) m.limiteDefesa = String(patch.limiteDefesa).trim();
+  if (patch.dataVencimentoOriginal !== undefined) {
+    m.dataVencimentoOriginal = String(patch.dataVencimentoOriginal).trim();
+  }
   if (patch.condutorId !== undefined) m.condutorId = patch.condutorId;
   if (patch.condutorConfirmado !== undefined) m.condutorConfirmado = patch.condutorConfirmado;
   if (patch.condutorNaoIdentificado !== undefined) {

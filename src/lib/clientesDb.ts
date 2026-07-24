@@ -289,7 +289,14 @@ function applyEditarCliente(
   if (idx < 0) return null;
 
   const c = db.clientes[idx]!;
-  Object.assign(c, patch);
+  const { endereco, cnh, ...rest } = patch;
+  if (endereco && typeof endereco === "object") {
+    c.endereco = { ...(c.endereco as object), ...(endereco as object) };
+  }
+  if (cnh && typeof cnh === "object") {
+    c.cnh = { ...(c.cnh as object), ...(cnh as object) };
+  }
+  Object.assign(c, rest);
   c.atualizadoEm = nowIso();
   db.clientes[idx] = c;
   return c;

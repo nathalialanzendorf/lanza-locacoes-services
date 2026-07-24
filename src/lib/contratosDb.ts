@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
@@ -328,6 +328,18 @@ function contratoMesmoVeiculo(
   return false;
 }
 
+function mesmoClienteContrato(
+  c: ContratoRegistro,
+  clienteId: string | null,
+  cpf: string | null,
+  clienteNome: string,
+): boolean {
+  if (clienteId && c.clienteId && c.clienteId === clienteId) return true;
+  if (cpf && c.cpf && normCpfDigits(c.cpf) === normCpfDigits(cpf)) return true;
+  if (clienteNome.trim()) return normNome(c.clienteNome) === normNome(clienteNome);
+  return false;
+}
+
 function mesmoParClienteVeiculo(
   c: ContratoRegistro,
   clienteId: string | null,
@@ -337,10 +349,23 @@ function mesmoParClienteVeiculo(
   placa: string,
 ): boolean {
   if (!contratoMesmoVeiculo(c, veiculoId, placa)) return false;
-  if (clienteId && c.clienteId && c.clienteId === clienteId) return true;
-  if (cpf && c.cpf && normCpfDigits(c.cpf) === normCpfDigits(cpf)) return true;
-  return normNome(c.clienteNome) === normNome(clienteNome);
+  return mesmoClienteContrato(c, clienteId, cpf, clienteNome);
 }
+
+export type FiltrosContratoCliente = {
+  placa: string;
+  cpf?: string | null;
+  clienteId?: string | null;
+  clienteNome?: string;
+  /** Contrato ativo selecionado na UI de renovação (permite trocar veículo). */
+  contratoRenovarId?: string | null;
+};
+
+export type ValidarModoContratoResult = {
+  irmaos: ContratoRegistro[];
+  proximaVersao: number;
+  contratoAnteriorId?: string | null;
+};
 
 function resolverVersao(
   db: ContratosDb,
@@ -563,6 +588,10 @@ export async function registrarContratoAsync(
   if (idx >= 0) db.contratos[idx] = registro;
   else db.contratos.push(registro);
 
+  if (await useRelationalStore()) {
+    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
+    return registro;
+  }
   await saveContratosDbAsync(db);
   return registro;
 }
@@ -628,6 +657,10 @@ export async function encerrarContratoDbAsync(
   }
   const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
   db.contratos[idx] = registro;
+  if (await useRelationalStore()) {
+    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
+    return registro;
+  }
   await saveContratosDbAsync(db);
   return registro;
 }
@@ -756,18 +789,34 @@ export type ModoContratoCli = "criar" | "renovar";
 /** Valida `criar` vs `renovar` antes de gerar Word/registro. */
 function validarModoContratoComLista(
   modo: ModoContratoCli,
-  filtros: {
-    placa: string;
-    cpf?: string | null;
-    clienteId?: string | null;
-    clienteNome?: string;
-  },
+  filtros: FiltrosContratoCliente,
   contratos: ContratoRegistro[],
-): { irmaos: ContratoRegistro[]; proximaVersao: number } {
+): ValidarModoContratoResult {
   const irmaos = listarContratosClienteVeiculo(filtros, contratos);
   const ativo = irmaos.find((c) => c.status === "ativo");
 
   if (modo === "criar") {
+    const placaFmt = formatPlacaHyphen(filtros.placa);
+    const veiculoIdResolved =
+      resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ?? null;
+    const ativoOutro = contratos.find(
+      (c) =>
+        c.status === "ativo" &&
+        contratoMesmoVeiculo(c, veiculoIdResolved, placaFmt) &&
+        !mesmoParClienteVeiculo(
+          c,
+          filtros.clienteId ?? null,
+          filtros.cpf ?? null,
+          filtros.clienteNome ?? "",
+          veiculoIdResolved,
+          placaFmt,
+        ),
+    );
+    if (ativoOutro) {
+      throw new Error(
+        `Veículo ${placaFmt} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de cadastrar outro locatário.`,
+      );
+    }
     if (ativo) {
       throw new Error(
         `Contrato v${ativo.versao} ainda ativo para este cliente+veículo. Encerre antes ou use renovar após encerramento.`,
@@ -780,6 +829,64 @@ function validarModoContratoComLista(
       );
     }
     return { irmaos, proximaVersao: 1 };
+  }
+
+  const origemRenovacao = filtros.contratoRenovarId?.trim()
+    ? contratos.find((c) => c.id === filtros.contratoRenovarId!.trim())
+    : undefined;
+  if (origemRenovacao) {
+    if (
+      !mesmoClienteContrato(
+        origemRenovacao,
+        filtros.clienteId ?? null,
+        filtros.cpf ?? null,
+        filtros.clienteNome ?? "",
+      )
+    ) {
+      throw new Error("Contrato a renovar não pertence a este cliente.");
+    }
+    const placaFmt = formatPlacaHyphen(filtros.placa);
+    const veiculoIdResolved =
+      resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ?? null;
+    const trocaVeiculo = !contratoMesmoVeiculo(
+      origemRenovacao,
+      veiculoIdResolved,
+      placaFmt,
+    );
+    if (trocaVeiculo) {
+      const ativoOutro = contratos.find(
+        (c) =>
+          c.status === "ativo" &&
+          contratoMesmoVeiculo(c, veiculoIdResolved, placaFmt) &&
+          !mesmoParClienteVeiculo(
+            c,
+            filtros.clienteId ?? null,
+            filtros.cpf ?? null,
+            filtros.clienteNome ?? "",
+            veiculoIdResolved,
+            placaFmt,
+          ),
+      );
+      if (ativoOutro) {
+        throw new Error(
+          `Veículo ${placaFmt} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de renovar com este veículo.`,
+        );
+      }
+      if (origemRenovacao.status === "ativo") {
+        throw new Error(
+          `Contrato v${origemRenovacao.versao} ainda ativo. A renovação deve encerrá-lo antes de gerar o novo contrato.`,
+        );
+      }
+      if (irmaos.length > 0) {
+        const maxVersao = Math.max(...irmaos.map((c) => c.versao ?? 1));
+        return {
+          irmaos,
+          proximaVersao: maxVersao + 1,
+          contratoAnteriorId: origemRenovacao.id,
+        };
+      }
+      return { irmaos, proximaVersao: 1, contratoAnteriorId: origemRenovacao.id };
+    }
   }
 
   if (irmaos.length === 0) {
@@ -798,27 +905,62 @@ function validarModoContratoComLista(
 
 export function validarModoContrato(
   modo: ModoContratoCli,
-  filtros: {
-    placa: string;
-    cpf?: string | null;
-    clienteId?: string | null;
-    clienteNome?: string;
-  },
-): { irmaos: ContratoRegistro[]; proximaVersao: number } {
+  filtros: FiltrosContratoCliente,
+): ValidarModoContratoResult {
   return validarModoContratoComLista(modo, filtros, loadContratosDb().contratos);
 }
 
 export async function validarModoContratoAsync(
   modo: ModoContratoCli,
-  filtros: {
-    placa: string;
-    cpf?: string | null;
-    clienteId?: string | null;
-    clienteNome?: string;
-  },
-): Promise<{ irmaos: ContratoRegistro[]; proximaVersao: number }> {
+  filtros: FiltrosContratoCliente,
+): Promise<ValidarModoContratoResult> {
   const db = await loadContratosDbAsync();
   return validarModoContratoComLista(modo, filtros, db.contratos);
+}
+
+/** Encerra o contrato ativo antes de gerar a renovação (vN+1 ou troca de veículo). */
+export async function encerrarContratoAtivoParaRenovarAsync(
+  filtros: FiltrosContratoCliente,
+  dataEncerramento: string,
+): Promise<ContratoRegistro | null> {
+  const db = await loadContratosDbAsync();
+  let ativo: ContratoRegistro | undefined;
+
+  const renovarId = filtros.contratoRenovarId?.trim();
+  if (renovarId) {
+    const alvo = db.contratos.find((c) => c.id === renovarId);
+    if (!alvo) throw new Error(`Contrato a renovar não encontrado: ${renovarId}`);
+    if (alvo.status !== "ativo") return null;
+    if (
+      !mesmoClienteContrato(
+        alvo,
+        filtros.clienteId ?? null,
+        filtros.cpf ?? null,
+        filtros.clienteNome ?? "",
+      )
+    ) {
+      throw new Error("Contrato a renovar não pertence a este cliente.");
+    }
+    ativo = alvo;
+  } else {
+    const irmaos = listarContratosClienteVeiculo(filtros, db.contratos);
+    ativo = irmaos.find((c) => c.status === "ativo");
+  }
+
+  if (!ativo) return null;
+  const ref = ativo.id?.trim() || ativo.pastaContrato?.trim();
+  if (!ref) throw new Error("Contrato ativo sem identificador para encerramento.");
+
+  const placaNova = formatPlacaHyphen(filtros.placa);
+  const veiculoIdResolved =
+    resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ?? null;
+  const trocaVeiculo = !contratoMesmoVeiculo(ativo, veiculoIdResolved, placaNova);
+
+  return encerrarContratoDbAsync(ref, {
+    dataEncerramento,
+    motivoEncerramento: trocaVeiculo ? "troca" : "devolvido",
+    quebraContrato: false,
+  });
 }
 
 /** Contratos do mesmo locatário + veículo (qualquer versão), ordenados por versão. */

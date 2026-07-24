@@ -115,6 +115,22 @@ function clienteNomeDespesa(d: ClienteDespesaRegistro, clientes: ClienteRegistro
   return nome || null;
 }
 
+function vencimentoSortMs(vencimentoBr: string | null | undefined): number {
+  const m = String(vencimentoBr ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return 0;
+  const [, dd, mm, yyyy] = m;
+  return Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
+}
+
+function ordenarDespesasPorVencimentoDesc(items: DespesaClienteListagem[]): DespesaClienteListagem[] {
+  return [...items].sort((a, b) => {
+    const ta = vencimentoSortMs(a.vencimentoBr);
+    const tb = vencimentoSortMs(b.vencimentoBr);
+    if (ta !== tb) return tb - ta;
+    return (b.id ?? "").localeCompare(a.id ?? "");
+  });
+}
+
 function enriquecerDespesaCliente(
   d: ClienteDespesaRegistro,
   catalogo: DespesasCatalogo,
@@ -275,9 +291,10 @@ export function listarDespesas(opts: ListarDespesasOpts = {}): {
     contratos: [],
   };
   const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
+  const enriquecidas = items.map((d) => enriquecerDespesaCliente(d, catalogo));
   return {
-    total: items.length,
-    items: items.map((d) => enriquecerDespesaCliente(d, catalogo)),
+    total: enriquecidas.length,
+    items: ordenarDespesasPorVencimentoDesc(enriquecidas),
   };
 }
 
@@ -287,9 +304,10 @@ export async function listarDespesasAsync(opts: ListarDespesasOpts = {}): Promis
 }> {
   const catalogo = await loadDespesasCatalogo(opts);
   const items = filtrarDespesas([...catalogo.despesas], opts, catalogo);
+  const enriquecidas = items.map((d) => enriquecerDespesaCliente(d, catalogo));
   return {
-    total: items.length,
-    items: items.map((d) => enriquecerDespesaCliente(d, catalogo)),
+    total: enriquecidas.length,
+    items: ordenarDespesasPorVencimentoDesc(enriquecidas),
   };
 }
 

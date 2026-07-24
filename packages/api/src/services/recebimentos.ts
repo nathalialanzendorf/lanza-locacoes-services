@@ -1,7 +1,7 @@
 import {
   montarPlanoBaixaAsync,
   withBaixaPlanoDbContext,
-  scopeFromLinhasBaixa,
+  mergeBaixaExecScope,
   resolvePlacaLinhaPlanoBaixa,
   type LinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
@@ -31,6 +31,11 @@ export async function montarPlano(input: MontarPlanoBaixaInput) {
 export type ExecutarBaixaInput = {
   linhas: LinhaPlanoBaixa[];
   syncRastreame?: boolean;
+  /** Escopo Postgres — preferir UUIDs explícitos além das linhas do plano. */
+  clienteId?: string | null;
+  veiculoId?: string | null;
+  despesaId?: string | null;
+  placa?: string | null;
 };
 
 export type ExecutarBaixaResultado = {
@@ -110,6 +115,11 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
 
     return { aplicadas: resultados.length, resultados };
   },
-    scopeFromLinhasBaixa(input.linhas),
+    mergeBaixaExecScope(input.linhas, {
+      clienteId: input.clienteId,
+      veiculoId: input.veiculoId,
+      despesaId: input.despesaId,
+      placa: input.placa,
+    }),
   );
 }

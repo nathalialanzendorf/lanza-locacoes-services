@@ -86,7 +86,7 @@ export async function main(argv: string[]): Promise<void> {
     if (asJson) {
       console.log(JSON.stringify(plano, null, 2));
     } else {
-      console.log(`Cliente: ${plano.cliente.nome}`);
+      console.log(`Cliente: ${plano.cliente.id}`);
       console.log(`Tipo baixa: ${plano.tipoBaixa}`);
       if (plano.despesaAlvo) {
         console.log(

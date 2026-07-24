@@ -227,9 +227,10 @@ export async function loadContratosFromSql(): Promise<ContratosDbShape> {
   };
 }
 
-export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
-  const placaMap = await loadPlacaMap();
-  for (const c of db.contratos) {
+async function upsertContratoRowToSql(
+  c: Record<string, unknown>,
+  placaMap: Map<string, string>,
+): Promise<void> {
     const id = asText(c.id) ?? randomUUID();
     const veiculoRef = asText(c.veiculoId) ?? asText(c.placa) ?? "";
     const placa = formatPlacaHyphen(asText(c.placa) ?? veiculoRef);
@@ -330,6 +331,18 @@ export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
         vei ? asText(vei.fipeValor) : null,
       ],
     );
+}
+
+/** Grava ou atualiza um único contrato no Postgres (sem reescrever toda a tabela). */
+export async function upsertContratoToSql(c: Record<string, unknown>): Promise<void> {
+  const placaMap = await loadPlacaMap();
+  await upsertContratoRowToSql(c, placaMap);
+}
+
+export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {
+  const placaMap = await loadPlacaMap();
+  for (const c of db.contratos) {
+    await upsertContratoRowToSql(c as Record<string, unknown>, placaMap);
   }
 }
 

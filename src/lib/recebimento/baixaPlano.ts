@@ -49,10 +49,12 @@ export type LinhaPlanoBaixa = {
   autoInfracao: string | null;
   /** UUID da despesa alvo (preferir sobre autoInfracao na execução). */
   despesaId?: string | null;
-  rastreavel: string;
+  /** UUID do cliente — escopo Postgres. */
+  clienteId?: string | null;
+  /** UUID do veículo — escopo Postgres. */
+  veiculoId?: string | null;
   data: string;
   descricao: string;
-  motorista: string;
   tipo: string;
   total: number;
   patch?: ClienteDespesaPatch;
@@ -62,7 +64,7 @@ export type LinhaPlanoBaixa = {
 };
 
 export type PlanoBaixaRecebimento = {
-  cliente: { id: string; nome: string; cpf: string | null };
+  cliente: { id: string; cpf: string | null };
   pagamento: {
     valor: number;
     dataBr: string;
@@ -74,6 +76,7 @@ export type PlanoBaixaRecebimento = {
     descricaoAtual: string;
     valorDevido: number;
     dataVencimento: string;
+    veiculoId: string;
     /** Dias entre recebimento e vencimento previsto (+ = após vencimento). */
     diasDoVencimento: number | null;
   } | null;
@@ -283,12 +286,18 @@ export function rastreavelLabel(veiculoId: string): string {
   return v?.rastreameLabel ?? veiculoId;
 }
 
-/** Placa para gravar despesa a partir de linha do plano (rastreavel pode ser label Rastreame). */
+/** Placa para gravar despesa a partir de linha do plano (veiculoId UUID ou placa). */
 export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
   const fromPatch = linha.patch?.veiculoId?.trim();
   if (fromPatch) {
     const v = findVeiculoLocal(fromPatch);
     return v?.placa ?? formatPlacaHyphen(fromPatch);
+  }
+
+  const fromLinha = linha.veiculoId?.trim();
+  if (fromLinha) {
+    const v = findVeiculoLocal(fromLinha);
+    return v?.placa ?? formatPlacaHyphen(fromLinha);
   }
 
   const rKey = linha.patch?.rastreameRastreavelKey;
@@ -297,17 +306,8 @@ export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
     if (v?.placa) return v.placa;
   }
 
-  const direct = findVeiculoLocal(linha.rastreavel);
-  if (direct?.placa) return direct.placa;
-
-  const head = linha.rastreavel.split(" - ")[0]?.trim();
-  if (head) {
-    const v = findVeiculoLocal(head);
-    if (v?.placa) return v.placa;
-  }
-
   throw new Error(
-    `Veículo não encontrado para a linha ${linha.num}: ${linha.rastreavel}`,
+    `Veículo não encontrado para a linha ${linha.num}: informe veiculoId (UUID) na linha do plano.`,
   );
 }
 
@@ -533,6 +533,7 @@ function previewProximaParcela(
   pago: ClienteDespesaRegistro,
   descricaoAntes: string,
   valorParcela: number,
+  clienteId: string,
 ): LinhaPlanoBaixa | null {
   const vencimentoAntes =
     pago.categoria === "Locação semanal" && isPagamentoSemanalDescricao(descricaoAntes)
@@ -555,16 +556,17 @@ function previewProximaParcela(
     num: 0,
     operacao: "criar",
     autoInfracao: null,
-    rastreavel: rastreavelLabel(pago.veiculoId),
+    clienteId,
+    veiculoId: pago.veiculoId,
     data: prox.dataAutuacao,
     descricao: prox.descricao,
-    motorista: "",
     tipo: tipoRastreame(pago.categoria),
     total: valorParcela,
     patch: {
       descricao: prox.descricao,
       valorMulta: valorParcela,
       dataAutuacao: prox.dataAutuacao,
+      condutorId: clienteId,
       veiculoId: pago.veiculoId,
       paga: false,
       situacao: "Em aberto",
@@ -574,6 +576,27 @@ function previewProximaParcela(
       rastreameDataIso: prox.rastreameDataIso,
       rastreameTipo: pago.rastreameTipo ?? "OUTROS",
     },
+  };
+}
+
+/** Normaliza entrada de escopo: nome/placa legados → clienteQuery/placa. */
+export function normalizeBaixaScopeInput(
+  input: CobrancasScopedContextInput,
+): CobrancasScopedContextInput {
+  const rawCliente = input.clienteId?.trim() || "";
+  const rawVeiculo = input.veiculoId?.trim() || "";
+  const clienteId = isEntityUuid(rawCliente) ? rawCliente : null;
+  const veiculoId = isEntityUuid(rawVeiculo) ? rawVeiculo : null;
+  const clienteQuery =
+    input.clienteQuery?.trim() || (!clienteId && rawCliente ? rawCliente : undefined);
+  const placa =
+    input.placa?.trim() || (!veiculoId && rawVeiculo ? rawVeiculo : undefined);
+  return {
+    ...(clienteId ? { clienteId } : {}),
+    ...(clienteQuery ? { clienteQuery } : {}),
+    ...(veiculoId ? { veiculoId } : {}),
+    ...(placa ? { placa } : {}),
+    ...(input.despesaId?.trim() ? { despesaId: input.despesaId.trim() } : {}),
   };
 }
 
@@ -631,7 +654,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
 
   if (!alvo) {
     return {
-      cliente: { id: cliente.id!, nome: cliente.nome, cpf: cliente.cpf ?? null },
+      cliente: { id: cliente.id!, cpf: cliente.cpf ?? null },
       pagamento: { valor, dataBr, horaBr, pagaEmIso },
       despesaAlvo: null,
       tipoBaixa: "integral",
@@ -644,8 +667,8 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     };
   }
 
-  const motorista = cliente.nome;
-  const rastreavel = rastreavelLabel(alvo.veiculoId);
+  const escopoClienteId = cliente.id!;
+  const escopoVeiculoId = alvo.veiculoId;
   const tipo = tipoRastreame(alvo.categoria);
   const valorDevido = alvo.valorMulta;
   const vencimento =
@@ -704,13 +727,15 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       operacao: "atualizar",
       autoInfracao: alvo.autoInfracao,
       despesaId: alvo.id,
-      rastreavel,
+      clienteId: escopoClienteId,
+      veiculoId: escopoVeiculoId,
       data: vencimento,
       descricao: descricaoAntes,
-      motorista,
       tipo,
       total: saldo,
       patch: {
+        condutorId: escopoClienteId,
+        veiculoId: escopoVeiculoId,
         valorMulta: saldo,
         paga: false,
         situacao: "Em aberto",
@@ -722,16 +747,17 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       num: 2,
       operacao: "criar",
       autoInfracao: null,
-      rastreavel,
+      clienteId: escopoClienteId,
+      veiculoId: escopoVeiculoId,
       data: dataPagamento,
       descricao: descQuitada,
-      motorista,
       tipo,
       total: valor,
       patch: {
         descricao: descQuitada,
         valorMulta: valor,
         dataAutuacao: dataPagamento,
+        condutorId: escopoClienteId,
         veiculoId: alvo.veiculoId,
         paga: true,
         pagaEm: pagaEmIso,
@@ -745,15 +771,16 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       comprovanteRastreame: input.comprovante ?? null,
       origemExterna: input.origemExterna,
     });
-    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido);
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido, escopoClienteId);
     if (prox) {
       prox.num = 3;
-      prox.motorista = motorista;
       linhas.push(prox);
     }
   } else {
     const descQuitada = stripAtrasadoSemanal(descricaoAntes);
     const patch: ClienteDespesaPatch = {
+      condutorId: escopoClienteId,
+      veiculoId: escopoVeiculoId,
       paga: true,
       pagaEm: pagaEmIso,
       situacao: "Registrado",
@@ -766,10 +793,10 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       operacao: "atualizar",
       autoInfracao: alvo.autoInfracao,
       despesaId: alvo.id,
-      rastreavel,
+      clienteId: escopoClienteId,
+      veiculoId: escopoVeiculoId,
       data: dataBrComHora(dataBr, horaBr),
       descricao: descQuitada,
-      motorista,
       tipo,
       total: valor,
       patch,
@@ -777,10 +804,9 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       origemExterna: input.origemExterna,
     });
 
-    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido);
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido, escopoClienteId);
     if (prox) {
       prox.num = 2;
-      prox.motorista = motorista;
       linhas.push(prox);
     }
   }
@@ -834,13 +860,14 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   }
 
   return {
-    cliente: { id: cliente.id!, nome: cliente.nome, cpf: cliente.cpf ?? null },
+    cliente: { id: cliente.id!, cpf: cliente.cpf ?? null },
     pagamento: { valor, dataBr, horaBr, pagaEmIso },
     despesaAlvo: {
       autoInfracao: alvo.autoInfracao,
       descricaoAtual: alvo.descricao,
       valorDevido,
       dataVencimento: vencimento,
+      veiculoId: alvo.veiculoId,
       diasDoVencimento: deltaVenc,
     },
     tipoBaixa,
@@ -873,16 +900,39 @@ export async function withBaixaPlanoDbContext<T>(
 
 function scopeFromLinhasBaixa(linhas: LinhaPlanoBaixa[]): CobrancasScopedContextInput {
   const despesaId = linhas.map((l) => l.despesaId?.trim()).find(Boolean);
-  const veiculoId = linhas
-    .map((l) => String(l.patch?.veiculoId ?? "").trim())
-    .find((id) => isEntityUuid(id));
-  const clienteId = linhas
-    .map((l) => String(l.patch?.condutorId ?? "").trim())
-    .find((id) => isEntityUuid(id));
+  const veiculoId =
+    linhas.map((l) => l.veiculoId?.trim()).find((id) => id && isEntityUuid(id)) ??
+    linhas
+      .map((l) => String(l.patch?.veiculoId ?? "").trim())
+      .find((id) => isEntityUuid(id));
+  const clienteId =
+    linhas.map((l) => l.clienteId?.trim()).find((id) => id && isEntityUuid(id)) ??
+    linhas
+      .map((l) => String(l.patch?.condutorId ?? "").trim())
+      .find((id) => isEntityUuid(id));
   return {
     ...(clienteId ? { clienteId } : {}),
     ...(despesaId ? { despesaId } : {}),
     ...(veiculoId ? { veiculoId } : {}),
+  };
+}
+
+export function mergeBaixaExecScope(
+  linhas: LinhaPlanoBaixa[],
+  extra?: CobrancasScopedContextInput,
+): CobrancasScopedContextInput {
+  const base = scopeFromLinhasBaixa(linhas);
+  if (!extra) return base;
+  const norm = normalizeBaixaScopeInput(extra);
+  const clienteId = norm.clienteId ?? base.clienteId;
+  const veiculoId = norm.veiculoId ?? base.veiculoId;
+  const despesaId = norm.despesaId ?? base.despesaId;
+  return {
+    ...(clienteId ? { clienteId } : {}),
+    ...(veiculoId ? { veiculoId } : {}),
+    ...(despesaId ? { despesaId } : {}),
+    ...(norm.clienteQuery ? { clienteQuery: norm.clienteQuery } : {}),
+    ...(norm.placa ? { placa: norm.placa } : {}),
   };
 }
 
@@ -895,13 +945,13 @@ export async function montarPlanoBaixaAsync(
   resetSqlSeq();
   logFlowStep(flowRoute, 0, "início montarPlanoBaixaAsync");
   _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(
-    {
+    normalizeBaixaScopeInput({
       clienteId: input.clienteId,
       clienteQuery: input.clienteQuery,
       veiculoId: input.veiculoId,
       despesaId: input.despesaId,
       placa: input.placa,
-    },
+    }),
     flowRoute,
   );
   setCobrancasRuntimeCtx(_baixaPlanoCtx);
@@ -917,11 +967,11 @@ export async function montarPlanoBaixaAsync(
 export function formatPlanoTabela(plano: PlanoBaixaRecebimento): string {
   const rows = plano.linhas.map(
     (l) =>
-      `| ${l.rastreavel} | ${l.data} | ${l.descricao} | ${l.motorista} | ${l.tipo} | R$ ${l.total.toFixed(2)} |`,
+      `| ${l.veiculoId ?? "—"} | ${l.data} | ${l.descricao} | ${l.clienteId ?? plano.cliente.id} | ${l.tipo} | R$ ${l.total.toFixed(2)} |`,
   );
   const total = plano.linhas.reduce((s, l) => s + l.total, 0);
   return [
-    "| Rastreável | Data | Descrição | Motorista | Tipo | Total |",
+    "| veiculoId | Data | Descrição | clienteId | Tipo | Total |",
     "|---|---|---|---|---|---|",
     ...rows,
     `| **Total** | | | | | **R$ ${total.toFixed(2)}** |`,

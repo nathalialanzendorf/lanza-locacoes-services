@@ -68,6 +68,8 @@ export type MontarContratoDbInput = {
   clienteId?: string;
   /** Busca parcial por nome (use --cpf se houver ambiguidade). */
   clienteNome?: string;
+  /** Contrato ativo selecionado na renovação (permite trocar veículo). */
+  contratoRenovarId?: string;
   semana: number;
   caucao: number;
   periodo?: string;
@@ -268,7 +270,7 @@ function validarEnderecoCliente(c: ClienteDb): void {
   if (!strField(e.uf)) faltando.push("uf");
   if (faltando.length > 0) {
     throw new Error(
-      `Endereço incompleto para ${c.nome} em clientes.json (${faltando.join(", ")}) — atualize via cadastro-cliente.`,
+      `Endereço incompleto para ${c.nome} (${faltando.join(", ")}) — complete no cadastro do cliente antes de gerar o contrato.`,
     );
   }
 }

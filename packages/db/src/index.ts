@@ -78,6 +78,7 @@ export {
   saveClientesToSql,
   loadContratosFromSql,
   saveContratosToSql,
+  upsertContratoToSql,
   queryContratosFromSql,
   type ContratosSqlFilter,
   loadLocacoesFromSql,
