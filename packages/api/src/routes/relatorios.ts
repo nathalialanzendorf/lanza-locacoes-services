@@ -1,6 +1,7 @@
 import {
   badRequest,
   compileRoute,
+  handleServiceError,
   json,
   parseAtivoQuery,
   readJsonBody,
@@ -13,6 +14,7 @@ import * as prestacaoRel from "../services/relatorios/prestacaoContas.js";
 import type { PrestacaoContasInput } from "../lib-imports.js";
 import { listarEscoposContratosAtivosAsync } from "../services/relatorios/filtro.js";
 import * as infracoesRel from "../services/relatorios/infracoes.js";
+import * as veiculoConsulta from "../services/relatorios/veiculoConsulta.js";
 import * as documentos from "../services/documentos.js";
 
 export function registerRelatoriosRoutes(routes: RouteDef[]): void {
@@ -182,6 +184,28 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         );
       }
       json(ctx.res, 200, { data, blob });
+    }),
+  });
+
+  const veiculoConsultaRoute = compileRoute("/api/relatorios/veiculo/consulta");
+  routes.push({
+    method: "GET",
+    pattern: veiculoConsultaRoute.regex,
+    paramNames: veiculoConsultaRoute.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const placa = ctx.query.get("placa")?.trim();
+        const renavam = ctx.query.get("renavam")?.trim();
+        const statusRaw = ctx.query.get("status")?.trim().toLowerCase();
+        if (!placa && !renavam) {
+          return badRequest(ctx, 'Informe "placa" ou "renavam"');
+        }
+        const status = statusRaw === "todos" ? "todos" : "aberto";
+        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, status });
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     }),
   });
 }
