@@ -262,6 +262,24 @@ export {
 } from "../../../src/lib/sigapay/syncEstacionamento.js";
 
 export {
+  clearDetranScRuntimeSession,
+  resolveDetranScSession,
+} from "../../../src/lib/detranSc/auth.js";
+
+export {
+  clearStoredDetranScSession,
+  obterStatusDetranScSession,
+  saveDetranScSession,
+} from "../../../src/lib/detranSc/sessionStore.js";
+
+export {
+  getDetranScCaptureState,
+  isDetranScCaptureAvailable,
+  startDetranScCapture,
+  stopDetranScCapture,
+} from "../../../src/lib/detranSc/captureCdp.js";
+
+export {
   loadVeiculosParaSync,
   processarRespostaDetranSc,
   sincronizarMultasFrotaDetranSc,

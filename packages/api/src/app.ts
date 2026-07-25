@@ -25,6 +25,7 @@ import { registerPagbankRoutes } from "./routes/pagbank.js";
 import { registerParceiroDespesasRoutes } from "./routes/parceiro-despesas.js";
 import { registerParceirosRoutes } from "./routes/parceiros.js";
 import { registerPedagioRoutes } from "./routes/pedagio.js";
+import { registerPortaisRoutes } from "./routes/portais.js";
 import { registerEstacionamentoRoutes } from "./routes/estacionamento.js";
 import { registerRenegociacaoRoutes } from "./routes/renegociacao.js";
 import { registerRastreameRoutes } from "./routes/rastreame.js";
@@ -98,6 +99,7 @@ function collectRoutes(): RouteDef[] {
   registerRastreameRoutes(routes);
   registerPagbankRoutes(routes);
   registerPedagioRoutes(routes);
+  registerPortaisRoutes(routes);
   registerEstacionamentoRoutes(routes);
   return routes;
 }

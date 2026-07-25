@@ -24,6 +24,7 @@
     "api:dev": "npm run dev -w @lanza/api",
     "api:start": "npm run start -w @lanza/api",
     "create-admin": "tsx scripts/create-postgres-admin-user.ts",
+    "detran-capture-bridge": "tsx scripts/detranCaptureBridge.ts",
     "start": "tsx packages/api/src/index.ts",
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"

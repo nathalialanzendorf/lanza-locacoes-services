@@ -240,16 +240,11 @@ function extractPdfFromJson(j: Record<string, unknown>): Buffer | null {
 
 
 
-function detranScPdfHeaders(): Record<string, string> {
-
+async function detranScPdfHeaders(): Promise<Record<string, string>> {
   return {
-
-    ...detranScJsonHeaders(),
-
+    ...(await detranScJsonHeaders()),
     Accept: "application/pdf, application/octet-stream, */*",
-
   };
-
 }
 
 
@@ -285,7 +280,7 @@ function urlAitPdf(placa: string, ticket: string, idAutoInfracao: number): strin
 
 
 async function fetchPdfUrl(url: string): Promise<Buffer | null> {
-  const r = await fetch(url, { headers: detranScPdfHeaders() });
+  const r = await fetch(url, { headers: await detranScPdfHeaders() });
   if (!r.ok) {
     if (process.env.DETRAN_SC_DEBUG === "1") {
       console.error(`[detran-pdf] HTTP ${r.status} ${url}`);
@@ -331,7 +326,7 @@ async function fetchNotificacaoAutuacao(
 
   const url = urlNotificacaoAutuacao(protocolo, senha);
 
-  const r = await fetch(url, { headers: detranScJsonHeaders() });
+  const r = await fetch(url, { headers: await detranScJsonHeaders() });
 
   if (!r.ok) {
 

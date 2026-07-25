@@ -1,4 +1,4 @@
-import { DETRAN_SC_API_BASE, detranScJsonHeaders } from "../src/lib/detranSc/auth.js";
+import { DETRAN_SC_API_BASE, detranScJsonHeadersSync } from "../src/lib/detranSc/auth.js";
 import { compactPlaca } from "../src/lib/placa.js";
 
 const TICKET = process.argv[2];
@@ -7,7 +7,7 @@ const TEST_RENAVAM = process.argv[4]; // ex: 00480715769
 
 async function fetchResposta(ticket: string): Promise<void> {
   const url = `${DETRAN_SC_API_BASE}/veiculo/resposta-consulta?t=${encodeURIComponent(ticket)}`;
-  const r = await fetch(url, { headers: detranScJsonHeaders() });
+  const r = await fetch(url, { headers: detranScJsonHeadersSync() });
   const text = await r.text();
   console.log(`[resposta-consulta] HTTP ${r.status}`);
   try {

@@ -13,6 +13,8 @@ import type { DetranScMultaNormalizada } from "../../../../../src/lib/detranSc/t
 import { consultarVeiculoDetranRs } from "../../../../../src/lib/detranRs/consulta.js";
 import { extrairInfracoesResumoDetranRs } from "../../../../../src/lib/detranRs/mapDebitos.js";
 
+export type VeiculoConsultaFonte = "detran-sc" | "detran-rs" | "pedagio" | "sigapay";
+
 export type VeiculoConsultaPortalItem = {
   id: string;
   ref?: string;
@@ -38,7 +40,9 @@ export type VeiculoConsultaResultado = {
   renavam?: string | null;
   ufRegistro?: string | null;
   veiculoCadastrado: boolean;
-  detran: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
+  fonte: VeiculoConsultaFonte;
+  detranSc: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
+  detranRs: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   pedagio: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   estacionamento: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
 };
@@ -83,7 +87,10 @@ function resolverIdentificadores(placaInput?: string, renavamInput?: string) {
     placa,
     renavam,
     veiculo,
-    ufRegistro: veiculo?.ufRegistro?.trim() || ufRegistroDaPlaca(placa) || null,
+    ufRegistro:
+      (typeof veiculo?.ufRegistro === "string" ? veiculo.ufRegistro.trim() : "") ||
+      ufRegistroDaPlaca(placa) ||
+      null,
   };
 }
 
@@ -111,178 +118,165 @@ function somaValor(items: VeiculoConsultaPortalItem[]): number {
   return Math.round(items.reduce((s, i) => s + (Number(i.valor) || 0), 0) * 100) / 100;
 }
 
-async function consultarDetran(
+const FONTES_VALIDAS: VeiculoConsultaFonte[] = ["detran-sc", "detran-rs", "pedagio", "sigapay"];
+
+export function parseVeiculoConsultaFonte(raw?: string): VeiculoConsultaFonte {
+  const v = raw?.trim().toLowerCase();
+  if (v && FONTES_VALIDAS.includes(v as VeiculoConsultaFonte)) {
+    return v as VeiculoConsultaFonte;
+  }
+  return "detran-sc";
+}
+
+const emptySecao = (): VeiculoConsultaSecao<VeiculoConsultaPortalItem> => ({
+  total: 0,
+  valorTotal: 0,
+  items: [],
+});
+
+async function consultarDetranSc(
   placa: string,
   renavam: string,
-  ufRegistro: string | null,
-  status: "aberto" | "todos",
 ): Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>> {
-  const uf = (ufRegistro ?? "").toUpperCase();
-  if (uf === "RS") {
-    if (!renavam) {
-      return {
-        total: 0,
-        valorTotal: 0,
-        items: [],
-        error: "DETRAN RS exige renavam — informe o renavam ou cadastre o veículo na frota.",
-      };
-    }
-    const raw = await consultarVeiculoDetranRs(placa, renavam);
-    const resumo = extrairInfracoesResumoDetranRs(raw);
-    const items: VeiculoConsultaPortalItem[] = [];
-    if (status === "todos" || resumo.qtVencidas > 0 || resumo.qtAVencer > 0) {
-      if (resumo.qtVencidas > 0) {
-        items.push({
-          id: "rs-vencidas",
-          ref: "RS",
-          descricao: "Infrações vencidas (resumo DETRAN RS)",
-          local: null,
-          data: null,
-          valor: 0,
-          situacao: `${resumo.qtVencidas} vencida(s) · ${resumo.vlVencidas}`,
-          emAberto: true,
-          fonte: "detran-rs",
-        });
-      }
-      if (resumo.qtAVencer > 0) {
-        items.push({
-          id: "rs-a-vencer",
-          ref: "RS",
-          descricao: "Infrações a vencer (resumo DETRAN RS)",
-          local: null,
-          data: null,
-          valor: 0,
-          situacao: `${resumo.qtAVencer} a vencer · ${resumo.vlAVencer}`,
-          emAberto: true,
-          fonte: "detran-rs",
-        });
-      }
-      if (status === "todos" && resumo.qtSuspensas > 0) {
-        items.push({
-          id: "rs-suspensas",
-          ref: "RS",
-          descricao: "Infrações suspensas (resumo DETRAN RS)",
-          local: null,
-          data: null,
-          valor: 0,
-          situacao: `${resumo.qtSuspensas} suspensa(s)`,
-          emAberto: false,
-          fonte: "detran-rs",
-        });
-      }
-    }
-    return {
-      total: items.length,
-      valorTotal: 0,
-      items,
-      avisos:
-        resumo.total > 0
-          ? ["DETRAN RS devolve totais agregados — detalhe por auto não disponível neste portal."]
-          : undefined,
-    };
-  }
-
   if (!renavam) {
     return {
-      total: 0,
-      valorTotal: 0,
-      items: [],
+      ...emptySecao(),
       error:
         "DETRAN SC exige renavam — informe o renavam ou cadastre o veículo na frota.",
     };
   }
 
   const raw = await consultarVeiculoDetranSc(placa, renavam);
-  const { cobraveis, historico } = extrairMultasDetranSc(raw);
-  const fonte = status === "todos" ? [...cobraveis, ...historico] : cobraveis;
-  const items = fonte
-    .filter((m) => (status === "todos" ? true : multaEmAberto(m)))
-    .map(mapDetranScItem);
+  const { cobraveis } = extrairMultasDetranSc(raw);
+  const items = cobraveis.filter(multaEmAberto).map(mapDetranScItem);
   return { total: items.length, valorTotal: somaValor(items), items };
+}
+
+async function consultarDetranRs(
+  placa: string,
+  renavam: string,
+): Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>> {
+  if (!renavam) {
+    return {
+      ...emptySecao(),
+      error: "DETRAN RS exige renavam — informe o renavam ou cadastre o veículo na frota.",
+    };
+  }
+
+  const raw = await consultarVeiculoDetranRs(placa, renavam);
+  const resumo = extrairInfracoesResumoDetranRs(raw);
+  const items: VeiculoConsultaPortalItem[] = [];
+  if (resumo.qtVencidas > 0) {
+    items.push({
+      id: "rs-vencidas",
+      ref: "RS",
+      descricao: "Infrações vencidas (resumo DETRAN RS)",
+      local: null,
+      data: null,
+      valor: 0,
+      situacao: `${resumo.qtVencidas} vencida(s) · ${resumo.vlVencidas}`,
+      emAberto: true,
+      fonte: "detran-rs",
+    });
+  }
+  if (resumo.qtAVencer > 0) {
+    items.push({
+      id: "rs-a-vencer",
+      ref: "RS",
+      descricao: "Infrações a vencer (resumo DETRAN RS)",
+      local: null,
+      data: null,
+      valor: 0,
+      situacao: `${resumo.qtAVencer} a vencer · ${resumo.vlAVencer}`,
+      emAberto: true,
+      fonte: "detran-rs",
+    });
+  }
+  return {
+    total: items.length,
+    valorTotal: 0,
+    items,
+    avisos:
+      resumo.total > 0
+        ? ["DETRAN RS devolve totais agregados — detalhe por auto não disponível neste portal."]
+        : undefined,
+  };
+}
+
+async function consultarPedagio(
+  placa: string,
+): Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>> {
+  const r = await pedagioService.listarPassagensPlaca(placa, "aberto");
+  const items = (r.items ?? []).map((p) => ({
+    id: p.id,
+    ref: p.id,
+    descricao: "Passagem pedágio",
+    local: [p.praca, p.rodovia].filter(Boolean).join(" · ") || null,
+    data: p.dataHoraIso?.slice(0, 16) ?? p.dataHoraRaw?.slice(0, 16) ?? null,
+    valor: Number(p.valor) || 0,
+    situacao: p.emAberto ? "Em aberto" : "Pago",
+    emAberto: p.emAberto,
+    fonte: "pedagio-digital",
+  }));
+  return { total: items.length, valorTotal: somaValor(items), items };
+}
+
+async function consultarSigapay(
+  placa: string,
+): Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>> {
+  const r = await estacionamentoService.listarAvisosPlaca(placa, "aberto");
+  const items = (r.items ?? []).map((a) => ({
+    id: a.id,
+    ref: a.id,
+    descricao: a.local?.trim() || "Estacionamento rotativo",
+    local: a.local ?? null,
+    data: a.dataHoraIso?.slice(0, 16) ?? a.dataHoraRaw?.slice(0, 16) ?? null,
+    valor: Number(a.valor) || 0,
+    situacao: a.emAberto ? "Em aberto" : "Pago",
+    emAberto: a.emAberto,
+    fonte: "sigapay",
+  }));
+  return { total: items.length, valorTotal: somaValor(items), items };
+}
+
+function settledSecaoError(err: unknown): VeiculoConsultaSecao<VeiculoConsultaPortalItem> {
+  return {
+    ...emptySecao(),
+    error: err instanceof Error ? err.message : String(err),
+  };
+}
+
+async function runSecao(
+  fn: () => Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>>,
+): Promise<VeiculoConsultaSecao<VeiculoConsultaPortalItem>> {
+  try {
+    return await fn();
+  } catch (err) {
+    return settledSecaoError(err);
+  }
 }
 
 export async function consultarVeiculoPortais(opts: {
   placa?: string;
   renavam?: string;
-  status?: "aberto" | "todos";
+  fonte?: string;
 }): Promise<VeiculoConsultaResultado> {
-  const status = opts.status === "todos" ? "todos" : "aberto";
+  const fonte = parseVeiculoConsultaFonte(opts.fonte);
   const ids = resolverIdentificadores(opts.placa, opts.renavam);
-  const portalStatus = status === "aberto" ? "aberto" : "todos";
 
-  const [detranSettled, pedagioSettled, estacionamentoSettled] = await Promise.allSettled([
-    consultarDetran(ids.placa, ids.renavam, ids.ufRegistro, status),
-    pedagioService.listarPassagensPlaca(ids.placa, portalStatus),
-    estacionamentoService.listarAvisosPlaca(ids.placa, portalStatus),
-  ]);
+  let detranSc = emptySecao();
+  let detranRs = emptySecao();
+  let pedagio = emptySecao();
+  let estacionamento = emptySecao();
 
-  const empty: VeiculoConsultaSecao<VeiculoConsultaPortalItem> = {
-    total: 0,
-    valorTotal: 0,
-    items: [],
-  };
-
-  let detran = empty;
-  if (detranSettled.status === "fulfilled") {
-    detran = detranSettled.value;
-  } else {
-    detran = {
-      ...empty,
-      error:
-        detranSettled.reason instanceof Error
-          ? detranSettled.reason.message
-          : String(detranSettled.reason),
-    };
-  }
-
-  let pedagio = empty;
-  if (pedagioSettled.status === "fulfilled") {
-    const r = pedagioSettled.value;
-    const items = (r.items ?? []).map((p) => ({
-      id: p.id,
-      ref: p.id,
-      descricao: "Passagem pedágio",
-      local: [p.praca, p.rodovia].filter(Boolean).join(" · ") || null,
-      data: p.dataHoraIso?.slice(0, 16) ?? p.dataHoraRaw?.slice(0, 16) ?? null,
-      valor: Number(p.valor) || 0,
-      situacao: p.emAberto ? "Em aberto" : "Pago",
-      emAberto: p.emAberto,
-      fonte: "pedagio-digital",
-    }));
-    pedagio = { total: items.length, valorTotal: somaValor(items), items };
-  } else {
-    pedagio = {
-      ...empty,
-      error:
-        pedagioSettled.reason instanceof Error
-          ? pedagioSettled.reason.message
-          : String(pedagioSettled.reason),
-    };
-  }
-
-  let estacionamento = empty;
-  if (estacionamentoSettled.status === "fulfilled") {
-    const r = estacionamentoSettled.value;
-    const items = (r.items ?? []).map((a) => ({
-      id: a.id,
-      ref: a.id,
-      descricao: a.local?.trim() || "Estacionamento rotativo",
-      local: a.local ?? null,
-      data: a.dataHoraIso?.slice(0, 16) ?? a.dataHoraRaw?.slice(0, 16) ?? null,
-      valor: Number(a.valor) || 0,
-      situacao: a.emAberto ? "Em aberto" : "Pago",
-      emAberto: a.emAberto,
-      fonte: "sigapay",
-    }));
-    estacionamento = { total: items.length, valorTotal: somaValor(items), items };
-  } else {
-    estacionamento = {
-      ...empty,
-      error:
-        estacionamentoSettled.reason instanceof Error
-          ? estacionamentoSettled.reason.message
-          : String(estacionamentoSettled.reason),
-    };
+  if (fonte === "detran-sc") {
+    detranSc = await runSecao(() => consultarDetranSc(ids.placa, ids.renavam));
+  } else if (fonte === "detran-rs") {
+    detranRs = await runSecao(() => consultarDetranRs(ids.placa, ids.renavam));
+  } else if (fonte === "pedagio") {
+    pedagio = await runSecao(() => consultarPedagio(ids.placa));
+  } else if (fonte === "sigapay") {
+    estacionamento = await runSecao(() => consultarSigapay(ids.placa));
   }
 
   return {
@@ -290,7 +284,9 @@ export async function consultarVeiculoPortais(opts: {
     renavam: ids.renavam || null,
     ufRegistro: ids.ufRegistro,
     veiculoCadastrado: Boolean(ids.veiculo),
-    detran,
+    fonte,
+    detranSc,
+    detranRs,
     pedagio,
     estacionamento,
   };

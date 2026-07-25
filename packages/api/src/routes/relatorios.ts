@@ -196,12 +196,11 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
       try {
         const placa = ctx.query.get("placa")?.trim();
         const renavam = ctx.query.get("renavam")?.trim();
-        const statusRaw = ctx.query.get("status")?.trim().toLowerCase();
+        const fonte = ctx.query.get("fonte")?.trim();
         if (!placa && !renavam) {
           return badRequest(ctx, 'Informe "placa" ou "renavam"');
         }
-        const status = statusRaw === "todos" ? "todos" : "aberto";
-        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, status });
+        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);
