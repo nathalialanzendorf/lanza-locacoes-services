@@ -83,6 +83,24 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const contratoAssinado = compileRoute("/api/contratos/:id/contrato-assinado");
+  routes.push({
+    method: "GET",
+    pattern: contratoAssinado.regex,
+    paramNames: contratoAssinado.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const file = await contratosWrite.downloadContratoAssinado(ctx.params.id);
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader("Content-Type", file.contentType);
+        ctx.res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+        ctx.res.end(file.buffer);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
   const gerarDocumento = compileRoute("/api/contratos/:id/gerar-documento");
   routes.push({
     method: "POST",

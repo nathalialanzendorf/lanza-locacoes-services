@@ -21,6 +21,8 @@ import {
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 import * as contratosService from "./contratos.js";
+import * as documentos from "./documentos.js";
+import { mimeFromFilename } from "@lanza/storage";
 
 function absRepo(p: string | undefined): string | undefined {
   if (!p) return p;
@@ -268,6 +270,7 @@ export async function removerContrato(idOuPasta: string) {
 }
 
 export type ContratoAtualizarInput = {
+  dataInicio?: string;
   dataFimPrevista?: string;
   prazoDias?: number;
   dataEncerramento?: string | null;
@@ -278,13 +281,82 @@ export type ContratoAtualizarInput = {
   diaPagamentoSemana?: string | null;
   diaPagamentoMes?: number | null;
   diaPagamentoTexto?: string | null;
+  valorSemanal?: number;
+  valorCaucao?: number;
+  contratoAssinado?: {
+    nomeArquivo: string;
+    conteudoBase64: string;
+    contentType?: string;
+  };
 };
 
 export async function atualizarContrato(id: string, input: ContratoAtualizarInput) {
   try {
-    const contrato = await atualizarContratoDbAsync(id, input);
+    const patch: Parameters<typeof atualizarContratoDbAsync>[1] = {
+      dataInicio: input.dataInicio,
+      dataFimPrevista: input.dataFimPrevista,
+      prazoDias: input.prazoDias,
+      dataEncerramento: input.dataEncerramento,
+      motivoEncerramento: input.motivoEncerramento,
+      quebraContrato: input.quebraContrato,
+      status: input.status,
+      tipoContrato: input.tipoContrato,
+      diaPagamentoSemana: input.diaPagamentoSemana,
+      diaPagamentoMes: input.diaPagamentoMes,
+      diaPagamentoTexto: input.diaPagamentoTexto,
+      valorSemanal: input.valorSemanal,
+      valorCaucao: input.valorCaucao,
+    };
+
+    if (input.contratoAssinado?.conteudoBase64?.trim()) {
+      const nome = input.contratoAssinado.nomeArquivo?.trim() || "contrato-assinado.pdf";
+      const buf = Buffer.from(input.contratoAssinado.conteudoBase64, "base64");
+      if (!buf.length) {
+        throw new HttpError(400, "Arquivo do contrato assinado vazio ou base64 inválido");
+      }
+      const ext = path.extname(nome) || ".pdf";
+      const stored = await documentos.enviarDocumentoBinario({
+        pathname: `contratos/${id.trim()}/assinado${ext}`,
+        conteudo: buf,
+        contentType:
+          input.contratoAssinado.contentType?.trim() ||
+          mimeFromFilename(nome),
+        tipo: "contrato-assinado",
+      });
+      patch.contratoAssinadoStorageKey = stored.pathname;
+      patch.contratoAssinadoNome = nome;
+    }
+
+    const contrato = await atualizarContratoDbAsync(id, patch);
     return { contrato };
   } catch (err) {
+    if (err instanceof HttpError) throw err;
     throw new HttpError(404, err instanceof Error ? err.message : String(err));
   }
+}
+
+export async function downloadContratoAssinado(id: string): Promise<{
+  buffer: Buffer;
+  contentType: string;
+  filename: string;
+}> {
+  const contrato = await contratosService.obterContratoAsync(id.trim());
+  if (!contrato) {
+    throw new HttpError(404, "Contrato não encontrado");
+  }
+  const key = contrato.contratoAssinadoStorageKey?.trim();
+  if (!key) {
+    throw new HttpError(404, "Este contrato não tem arquivo assinado");
+  }
+  const buf = await documentos.lerDocumentoBytes(key);
+  if (!buf?.length) {
+    throw new HttpError(404, "Arquivo do contrato assinado não encontrado");
+  }
+  const blob = await documentos.obterDocumento(key);
+  const nome = contrato.contratoAssinadoNome?.trim() || path.basename(key) || "contrato-assinado.pdf";
+  return {
+    buffer: buf,
+    contentType: blob?.contentType ?? mimeFromFilename(nome),
+    filename: nome,
+  };
 }

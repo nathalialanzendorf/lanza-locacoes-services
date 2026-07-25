@@ -79,6 +79,8 @@ function mapContratoRow(
     valorMensal: row.valor_mensal != null ? Number(row.valor_mensal) : null,
     valorDiaria: row.valor_diaria != null ? Number(row.valor_diaria) : null,
     valorCaucao: Number(row.valor_caucao ?? 0),
+    contratoAssinadoStorageKey: asText(row.contrato_assinado_storage_key),
+    contratoAssinadoNome: asText(row.contrato_assinado_nome),
     cadastradoEm: rowIso(row.cadastrado_em),
     atualizadoEm: rowIso(row.atualizado_em),
     cliente: cs
@@ -249,11 +251,13 @@ async function upsertContratoRowToSql(
         data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
         tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
         valor_semanal, valor_mensal, valor_diaria, valor_caucao,
+        contrato_assinado_storage_key, contrato_assinado_nome,
         cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
-        COALESCE($22::timestamptz, now()), now())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,
+        COALESCE($24::timestamptz, now()), now())
       ON CONFLICT (id) DO UPDATE SET
         status = EXCLUDED.status,
+        data_inicio = EXCLUDED.data_inicio,
         data_fim_prevista = EXCLUDED.data_fim_prevista,
         data_encerramento = EXCLUDED.data_encerramento,
         quebra_contrato = EXCLUDED.quebra_contrato,
@@ -263,6 +267,18 @@ async function upsertContratoRowToSql(
         dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
         dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
         dia_pagamento_texto = EXCLUDED.dia_pagamento_texto,
+        valor_semanal = EXCLUDED.valor_semanal,
+        valor_mensal = EXCLUDED.valor_mensal,
+        valor_diaria = EXCLUDED.valor_diaria,
+        valor_caucao = EXCLUDED.valor_caucao,
+        contrato_assinado_storage_key = COALESCE(
+          EXCLUDED.contrato_assinado_storage_key,
+          lanza.contratos.contrato_assinado_storage_key
+        ),
+        contrato_assinado_nome = COALESCE(
+          EXCLUDED.contrato_assinado_nome,
+          lanza.contratos.contrato_assinado_nome
+        ),
         atualizado_em = now()`,
       [
         id,
@@ -286,6 +302,8 @@ async function upsertContratoRowToSql(
         c.valorMensal != null ? asNumber(c.valorMensal) : null,
         c.valorDiaria != null ? asNumber(c.valorDiaria) : null,
         asNumber(c.valorCaucao, 0),
+        asText(c.contratoAssinadoStorageKey),
+        asText(c.contratoAssinadoNome),
         parseIso(asText(c.cadastradoEm)),
       ],
     );

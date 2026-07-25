@@ -88,6 +88,10 @@ export type ContratoRegistro = {
   valorMensal: number | null;
   valorDiaria: number | null;
   valorCaucao: number;
+  /** Vercel Blob pathname — contrato assinado (PDF/DOCX). */
+  contratoAssinadoStorageKey?: string | null;
+  /** Nome original do ficheiro do contrato assinado. */
+  contratoAssinadoNome?: string | null;
   /**
    * Acordo operacional: vencimentos com data ≤ este valor não entram em juros/multa
    * nem na base de bloqueio do veículo (DD/MM/AAAA). Só vencimentos **após** esta data.
@@ -132,6 +136,8 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   valorMensal: "Valor mensal (R$) — null se não for mensal",
   valorDiaria: "Valor diário (R$) — null se não for diária",
   valorCaucao: "Caução (R$)",
+  contratoAssinadoStorageKey: "Vercel Blob — contrato assinado (PDF/DOCX)",
+  contratoAssinadoNome: "Nome do ficheiro do contrato assinado",
   dataInicioJurosMultaBr:
     "DD/MM/AAAA — vencimentos até esta data ficam sem juros/multa e fora da base de bloqueio (acordo)",
   cadastradoEm: "ISO 8601",
@@ -781,6 +787,7 @@ export async function encerrarContratoDbAsync(
 export type AtualizarContratoDbPatch = Partial<
   Pick<
     ContratoRegistro,
+    | "dataInicio"
     | "dataFimPrevista"
     | "prazoDias"
     | "dataEncerramento"
@@ -791,6 +798,10 @@ export type AtualizarContratoDbPatch = Partial<
     | "diaPagamentoSemana"
     | "diaPagamentoMes"
     | "diaPagamentoTexto"
+    | "valorSemanal"
+    | "valorCaucao"
+    | "contratoAssinadoStorageKey"
+    | "contratoAssinadoNome"
   >
 >;
 
