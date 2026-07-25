@@ -345,8 +345,10 @@ async function upsertContratoRowToSql(
 
 /** Grava ou atualiza um único contrato no Postgres (sem reescrever toda a tabela). */
 export async function upsertContratoToSql(c: Record<string, unknown>): Promise<void> {
-  const placaMap = await loadPlacaMap();
-  await upsertContratoRowToSql(c, placaMap);
+  const veiculoRef = asText(c.veiculoId) ?? asText(c.placa) ?? "";
+  const placaMap =
+    veiculoRef && isUuid(veiculoRef) ? null : await loadPlacaMap();
+  await upsertContratoRowToSql(c, placaMap ?? new Map());
 }
 
 /** Remove um contrato do Postgres (snapshots em CASCADE). */

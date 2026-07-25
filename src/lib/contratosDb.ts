@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import { findClienteDbAsync, findVeiculoDbAsync } from "./montarDadosContrato.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
@@ -470,8 +470,7 @@ export async function loadContratosDbAsync(scope?: ContratosLoadScope): Promise<
       const contratos = (await queryContratosFromSql(scope!)) as ContratoRegistro[];
       return { ...empty, contratos, schemaContrato: DEFAULT_SCHEMA };
     }
-    const db = await loadContratosFromSql();
-    return { ...empty, ...db, schemaContrato: DEFAULT_SCHEMA } as ContratosDb;
+    return { ...empty, contratos: [], schemaContrato: DEFAULT_SCHEMA };
   }
   const db = await loadJsonDocumentForApi<ContratosDb>(DB_CONTRATOS, empty);
   if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
@@ -597,26 +596,55 @@ export async function registrarContratoAsync(
   ]);
   const veiculoIdResolved =
     veiculo.id ?? resolveVeiculoIdListagem({ placa: veiculo.placa }, [veiculo]) ?? null;
+  const pastaKey = normPath(ext.pastaContrato);
+  const catalogo = { clientes: [cliente], veiculos: [veiculo] };
+
+  if (await useRelationalStore()) {
+    let irmaos: ContratoRegistro[] = [];
+    if (opts.versao == null && cliente.id && veiculoIdResolved) {
+      irmaos = (await queryContratosFromSql({
+        clienteId: cliente.id,
+        veiculoId: veiculoIdResolved,
+      })) as ContratoRegistro[];
+    }
+    const byPasta = (await queryContratosFromSql({
+      pastaContrato: pastaKey,
+    })) as ContratoRegistro[];
+    const existing = byPasta[0];
+    const db: ContratosDb = {
+      descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
+      atualizadoEm: new Date().toISOString().slice(0, 10),
+      schemaContrato: DEFAULT_SCHEMA,
+      contratos: existing
+        ? [...irmaos.filter((c) => c.id !== existing.id), existing]
+        : irmaos,
+    };
+    const idx = existing ? db.contratos.findIndex((c) => c.id === existing.id) : -1;
+    const registro = buildRegistro(
+      ext,
+      existing,
+      opts,
+      db,
+      pastaKey,
+      catalogo,
+    );
+    if (idx >= 0) db.contratos[idx] = registro;
+    else db.contratos.push(registro);
+    await assertRelationalStore();
+    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
+    return registro;
+  }
+
   const scope: ContratosLoadScope | undefined =
     cliente.id && veiculoIdResolved
       ? { clienteId: cliente.id, veiculoId: veiculoIdResolved }
       : undefined;
   const db = await loadContratosDbAsync(scope);
-  const pastaKey = normPath(ext.pastaContrato);
   const idx = db.contratos.findIndex((c) => normPath(c.pastaContrato) === pastaKey);
   const existing = idx >= 0 ? db.contratos[idx] : undefined;
-  const registro = buildRegistro(ext, existing, opts, db, pastaKey, {
-    clientes: [cliente],
-    veiculos: [veiculo],
-  });
-
+  const registro = buildRegistro(ext, existing, opts, db, pastaKey, catalogo);
   if (idx >= 0) db.contratos[idx] = registro;
   else db.contratos.push(registro);
-
-  if (await useRelationalStore()) {
-    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
-    return registro;
-  }
   await saveContratosDbAsync(db);
   return registro;
 }
@@ -683,6 +711,7 @@ export async function encerrarContratoDbAsync(
   const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
   db.contratos[idx] = registro;
   if (await useRelationalStore()) {
+    await assertRelationalStore();
     await upsertContratoToSql(registro as unknown as Record<string, unknown>);
     return registro;
   }
@@ -729,6 +758,7 @@ export async function atualizarContratoDbAsync(
   }
   db.contratos[idx] = registro;
   if (await useRelationalStore()) {
+    await assertRelationalStore();
     await upsertContratoToSql(registro as unknown as Record<string, unknown>);
     return registro;
   }
@@ -756,6 +786,7 @@ export async function excluirContratoAsync(pastaOrId: string): Promise<ContratoR
   const { db, idx } = loaded;
   const [removido] = db.contratos.splice(idx, 1);
   if (await useRelationalStore()) {
+    await assertRelationalStore();
     await deleteContratoFromSql(removido!.id);
     return removido!;
   }
@@ -822,26 +853,29 @@ export type ModoContratoCli = "criar" | "renovar";
 /** Carrega só os contratos necessários à validação (Postgres), evitando full scan. */
 async function loadContratosParaValidacaoAsync(
   filtros: FiltrosContratoCliente,
+  veiculoIdResolved?: string | null,
 ): Promise<ContratoRegistro[]> {
   if (!(await useRelationalStore())) {
     return (await loadContratosDbAsync()).contratos;
   }
 
-  const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
-  const veiculoIdResolved =
-    resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  let vid = veiculoIdResolved;
+  if (vid === undefined) {
+    const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
+    vid = resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  }
   const clienteId = filtros.clienteId?.trim() || null;
   const batches: ContratoRegistro[][] = [];
 
-  if (clienteId && veiculoIdResolved) {
+  if (clienteId && vid) {
     batches.push(
-      (await queryContratosFromSql({ clienteId, veiculoId: veiculoIdResolved })) as ContratoRegistro[],
+      (await queryContratosFromSql({ clienteId, veiculoId: vid })) as ContratoRegistro[],
     );
   }
 
-  if (veiculoIdResolved) {
+  if (vid) {
     batches.push(
-      (await queryContratosFromSql({ status: "ativo", veiculoId: veiculoIdResolved })) as ContratoRegistro[],
+      (await queryContratosFromSql({ status: "ativo", veiculoId: vid })) as ContratoRegistro[],
     );
   }
 
@@ -862,24 +896,27 @@ function validarModoContratoComLista(
   modo: ModoContratoCli,
   filtros: FiltrosContratoCliente,
   contratos: ContratoRegistro[],
+  veiculoIdResolved?: string | null,
 ): ValidarModoContratoResult {
   const irmaos = listarContratosClienteVeiculo(filtros, contratos);
   const ativo = irmaos.find((c) => c.status === "ativo");
+  const placaFmt = formatPlacaHyphen(filtros.placa);
+  const vid =
+    veiculoIdResolved ??
+    resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ??
+    null;
 
   if (modo === "criar") {
-    const placaFmt = formatPlacaHyphen(filtros.placa);
-    const veiculoIdResolved =
-      resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ?? null;
     const ativoOutro = contratos.find(
       (c) =>
         c.status === "ativo" &&
-        contratoMesmoVeiculo(c, veiculoIdResolved, placaFmt) &&
+        contratoMesmoVeiculo(c, vid, placaFmt) &&
         !mesmoParClienteVeiculo(
           c,
           filtros.clienteId ?? null,
           filtros.cpf ?? null,
           filtros.clienteNome ?? "",
-          veiculoIdResolved,
+          vid,
           placaFmt,
         ),
     );
@@ -916,25 +953,18 @@ function validarModoContratoComLista(
     ) {
       throw new Error("Contrato a renovar não pertence a este cliente.");
     }
-    const placaFmt = formatPlacaHyphen(filtros.placa);
-    const veiculoIdResolved =
-      resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ?? null;
-    const trocaVeiculo = !contratoMesmoVeiculo(
-      origemRenovacao,
-      veiculoIdResolved,
-      placaFmt,
-    );
+    const trocaVeiculo = !contratoMesmoVeiculo(origemRenovacao, vid, placaFmt);
     if (trocaVeiculo) {
       const ativoOutro = contratos.find(
         (c) =>
           c.status === "ativo" &&
-          contratoMesmoVeiculo(c, veiculoIdResolved, placaFmt) &&
+          contratoMesmoVeiculo(c, vid, placaFmt) &&
           !mesmoParClienteVeiculo(
             c,
             filtros.clienteId ?? null,
             filtros.cpf ?? null,
             filtros.clienteNome ?? "",
-            veiculoIdResolved,
+            vid,
             placaFmt,
           ),
       );
@@ -980,8 +1010,11 @@ export async function validarModoContratoAsync(
   modo: ModoContratoCli,
   filtros: FiltrosContratoCliente,
 ): Promise<ValidarModoContratoResult> {
-  const contratos = await loadContratosParaValidacaoAsync(filtros);
-  return validarModoContratoComLista(modo, filtros, contratos);
+  const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
+  const veiculoIdResolved =
+    resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  const contratos = await loadContratosParaValidacaoAsync(filtros, veiculoIdResolved);
+  return validarModoContratoComLista(modo, filtros, contratos, veiculoIdResolved);
 }
 
 /** Encerra o contrato ativo antes de gerar a renovação (vN+1 ou troca de veículo). */
@@ -1017,6 +1050,22 @@ export async function encerrarContratoAtivoParaRenovarAsync(
       throw new Error("Contrato a renovar não pertence a este cliente.");
     }
     ativo = alvo;
+  } else if (await useRelationalStore()) {
+    const batches: ContratoRegistro[][] = [];
+    const clienteId = filtros.clienteId?.trim() || null;
+    if (clienteId && veiculoIdNova) {
+      batches.push(
+        (await queryContratosFromSql({ clienteId, veiculoId: veiculoIdNova })) as ContratoRegistro[],
+      );
+    }
+    const byId = new Map<string, ContratoRegistro>();
+    for (const c of batches.flat()) byId.set(c.id, c);
+    const irmaos = listarContratosClienteVeiculo(
+      filtros,
+      [...byId.values()],
+      veiculosDb.veiculos,
+    );
+    ativo = irmaos.find((c) => c.status === "ativo");
   } else {
     const scope: ContratosLoadScope | undefined =
       filtros.clienteId?.trim() && veiculoIdNova

@@ -9,8 +9,8 @@ export async function useRelationalStore(): Promise<boolean> {
   if (process.env.LANZA_DB_READ_LEGACY === "1") return false;
   if (process.env.LANZA_DB_RELATIONAL === "0") return false;
   if (getDbBackend() === "file") return false;
-  if (relationalStoreCached !== null) return relationalStoreCached;
-  if (skipJsonStoresWrite() && getDbBackend() === "postgres") {
+  if (relationalStoreCached === true) return true;
+  if (skipJsonStoresWrite() && getDbBackend() !== "file") {
     relationalStoreCached = true;
     return true;
   }
@@ -19,7 +19,6 @@ export async function useRelationalStore(): Promise<boolean> {
     relationalStoreCached = true;
     return true;
   } catch {
-    relationalStoreCached = false;
     return false;
   }
 }
