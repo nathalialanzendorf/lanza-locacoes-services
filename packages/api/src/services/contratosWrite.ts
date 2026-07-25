@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 
 import {
   REPO_ROOT,
@@ -11,13 +12,15 @@ import {
   gerar,
   gerarDespesasIniciaisContratoAsync,
   montarDadosContratoFromDbAsync,
-  registrarContratoAsync,
+  registrarContratoFromDadosAsync,
   validarModoContratoAsync,
+  type ContratoRegistro,
   type GerarContratoDados,
   type MontarContratoDbInput,
   type MotivoEncerramento,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import * as contratosService from "./contratos.js";
 
 function absRepo(p: string | undefined): string | undefined {
   if (!p) return p;
@@ -36,6 +39,27 @@ function normalizePaths(dados: GerarContratoDados): void {
 }
 
 export type ContratoCriarRenovarInput = GerarContratoDados | MontarContratoDbInput;
+
+function montarInputFromRegistro(reg: ContratoRegistro): MontarContratoDbInput {
+  return {
+    veiculoId: reg.veiculoId,
+    placa: reg.placa,
+    clienteId: reg.clienteId ?? undefined,
+    cpf: reg.cpf ?? undefined,
+    clienteNome: reg.clienteNome,
+    semana: reg.valorSemanal ?? 0,
+    caucao: reg.valorCaucao ?? 0,
+    inicio: reg.dataInicio,
+    dias: reg.prazoDias ?? undefined,
+    diaPagamento: reg.diaPagamentoTexto ?? reg.diaPagamentoSemana ?? undefined,
+  };
+}
+
+async function montarDadosContratoFromRegistroAsync(
+  reg: ContratoRegistro,
+): Promise<GerarContratoDados> {
+  return montarDadosContratoFromDbAsync(montarInputFromRegistro(reg));
+}
 
 export async function criarContrato(input: ContratoCriarRenovarInput) {
   return executarContratoModo("criar", input);
@@ -103,10 +127,10 @@ async function executarContratoModo(
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
-  const gerado = gerar(dados);
+
   let reg = null;
   try {
-    reg = await registrarContratoAsync(gerado.pasta, {
+    reg = await registrarContratoFromDadosAsync(dados, {
       ...(contratoAnteriorId
         ? { contratoAnteriorId, versao: proximaVersao }
         : proximaVersao > 1
@@ -149,14 +173,64 @@ async function executarContratoModo(
   return {
     modo,
     proximaVersao,
-    pasta: gerado.pasta,
-    docx: gerado.docx,
-    pdf: gerado.pdf,
     contrato: reg,
     contratoEncerrado,
     clienteStatus,
     despesasIniciais,
+    documento: null,
   };
+}
+
+export type GerarDocumentoContratoResult = {
+  contratoId: string;
+  pasta: string;
+  docx: string;
+  pdf: string | null;
+  cnh: string | null;
+};
+
+/** Gera Word/PDF a partir do registro já gravado no banco. */
+export async function gerarDocumentoContrato(contratoId: string): Promise<GerarDocumentoContratoResult> {
+  const reg = await contratosService.obterContratoAsync(contratoId);
+  if (!reg) throw new HttpError(404, "Contrato não encontrado");
+  const dados = await montarDadosContratoFromRegistroAsync(reg);
+  normalizePaths(dados);
+  const gerado = gerar(dados);
+  return {
+    contratoId: reg.id,
+    pasta: gerado.pasta,
+    docx: gerado.docx,
+    pdf: gerado.pdf,
+    cnh: gerado.cnh,
+  };
+}
+
+export type DocumentoDownload = {
+  buffer: Buffer;
+  filename: string;
+  contentType: string;
+};
+
+export function resolverDownloadDocumentoContrato(
+  gerado: GerarDocumentoContratoResult,
+  formato: "docx" | "pdf",
+): DocumentoDownload {
+  const filePath = formato === "pdf" ? gerado.pdf : gerado.docx;
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new HttpError(
+      404,
+      formato === "pdf"
+        ? "PDF não disponível (geração PDF só no Windows)."
+        : "Documento Word não encontrado.",
+    );
+  }
+  const buffer = fs.readFileSync(filePath);
+  const filename = path.basename(filePath);
+  const contentType =
+    formato === "pdf"
+      ? "application/pdf"
+      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  return { buffer, filename, contentType };
 }
 
 export type ContratoEncerrarInput = {

@@ -83,6 +83,33 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
     }),
   });
 
+  const gerarDocumento = compileRoute("/api/contratos/:id/gerar-documento");
+  routes.push({
+    method: "POST",
+    pattern: gerarDocumento.regex,
+    paramNames: gerarDocumento.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const gerado = await contratosWrite.gerarDocumentoContrato(ctx.params.id);
+        const download = ctx.query.get("download")?.trim().toLowerCase();
+        if (download === "docx" || download === "pdf") {
+          const file = contratosWrite.resolverDownloadDocumentoContrato(
+            gerado,
+            download,
+          );
+          ctx.res.statusCode = 200;
+          ctx.res.setHeader("Content-Type", file.contentType);
+          ctx.res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+          ctx.res.end(file.buffer);
+          return;
+        }
+        json(ctx.res, 200, { data: gerado });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
   const sincronizar = compileRoute("/api/contratos/sincronizar");
   routes.push({
     method: "POST",

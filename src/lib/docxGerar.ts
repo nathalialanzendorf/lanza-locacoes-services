@@ -271,6 +271,21 @@ function formatNomeTitulo(nome: string): string {
     .join(" ");
 }
 
+/** Caminho da pasta do contrato (sem gravar ficheiros). */
+export function resolverPastaContratoFromDados(dados: GerarContratoDados): string {
+  const dini = parseData(dados.prazo.inicio);
+  const nomeCli = formatNomeTitulo(dados.cliente.nome);
+  const baseDir = dados.contratosDir ?? defaultContratosDir();
+  return path.join(
+    baseDir,
+    `${String(dini.getDate()).padStart(2, "0")}.${String(dini.getMonth() + 1).padStart(2, "0")}.${dini.getFullYear()} - ${nomeCli}`,
+  );
+}
+
+export function resolverNomeArquivoContrato(nomeCliente: string): string {
+  return `Contrato - ${formatNomeTitulo(nomeCliente)}`;
+}
+
 /** Nome do locatário no corpo do contrato e assinatura — sempre maiúsculas. */
 function formatNomeLocatarioContrato(nome: string): string {
   return nome.replace(/\s+/g, " ").trim().toLocaleUpperCase("pt-BR");
@@ -710,14 +725,9 @@ export function gerar(dados: GerarContratoDados): {
 
   aplicarNomesAssinaturaFinal(dom, body, cli.nome);
 
-  const nomeCli = formatNomeTitulo(cli.nome);
-  const baseDir = dados.contratosDir ?? defaultContratosDir();
-  const pasta = path.join(
-    baseDir,
-    `${String(dini.getDate()).padStart(2, "0")}.${String(dini.getMonth() + 1).padStart(2, "0")}.${dini.getFullYear()} - ${nomeCli}`,
-  );
+  const pasta = resolverPastaContratoFromDados(dados);
   fs.mkdirSync(pasta, { recursive: true });
-  const nomeArq = `Contrato - ${nomeCli}`;
+  const nomeArq = resolverNomeArquivoContrato(cli.nome);
   const saidaDocx = path.join(pasta, `${nomeArq}.docx`);
   const saidaPdf = path.join(pasta, `${nomeArq}.pdf`);
 

@@ -425,6 +425,7 @@ export {
 export {
   registrarContrato,
   registrarContratoAsync,
+  registrarContratoFromDadosAsync,
   encerrarContratoDb,
   encerrarContratoDbAsync,
   atualizarContratoDbAsync,
@@ -448,11 +449,17 @@ export {
   type DespesasIniciaisContratoResult,
 } from "../../../src/lib/contratoDespesasIniciais.js";
 
-export { gerar, type GerarContratoDados } from "../../../src/lib/docxGerar.js";
+export {
+  resolverPastaContratoFromDados,
+  resolverNomeArquivoContrato,
+  gerar,
+  type GerarContratoDados,
+} from "../../../src/lib/docxGerar.js";
 
 export {
   montarDadosContratoFromDb,
   montarDadosContratoFromDbAsync,
+  dadosParaContratoExtraido,
   type MontarContratoDbInput,
 } from "../../../src/lib/montarDadosContrato.js";
 

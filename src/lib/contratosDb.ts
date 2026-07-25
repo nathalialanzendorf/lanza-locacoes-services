@@ -3,7 +3,8 @@ import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
-import { findClienteDbAsync, findVeiculoDbAsync } from "./montarDadosContrato.js";
+import { findClienteDbAsync, findVeiculoDbAsync, dadosParaContratoExtraido } from "./montarDadosContrato.js";
+import type { GerarContratoDados } from "./docxGerar.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
@@ -628,6 +629,64 @@ export async function registrarContratoAsync(
       pastaKey,
       catalogo,
     );
+    if (idx >= 0) db.contratos[idx] = registro;
+    else db.contratos.push(registro);
+    await assertRelationalStore();
+    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
+    return registro;
+  }
+
+  const scope: ContratosLoadScope | undefined =
+    cliente.id && veiculoIdResolved
+      ? { clienteId: cliente.id, veiculoId: veiculoIdResolved }
+      : undefined;
+  const db = await loadContratosDbAsync(scope);
+  const idx = db.contratos.findIndex((c) => normPath(c.pastaContrato) === pastaKey);
+  const existing = idx >= 0 ? db.contratos[idx] : undefined;
+  const registro = buildRegistro(ext, existing, opts, db, pastaKey, catalogo);
+  if (idx >= 0) db.contratos[idx] = registro;
+  else db.contratos.push(registro);
+  await saveContratosDbAsync(db);
+  return registro;
+}
+
+/** Cadastra ou atualiza contrato a partir dos dados do formulário (sem gerar/ler Word). */
+export async function registrarContratoFromDadosAsync(
+  dados: GerarContratoDados,
+  opts: RegistrarContratoOpts = {},
+): Promise<ContratoRegistro> {
+  const ext = dadosParaContratoExtraido(dados);
+  const [cliente, veiculo] = await Promise.all([
+    findClienteDbAsync(ext.cpf ?? undefined, ext.clienteNome),
+    findVeiculoDbAsync(ext.placa),
+  ]);
+  const veiculoIdResolved =
+    veiculo.id ?? resolveVeiculoIdListagem({ placa: veiculo.placa }, [veiculo]) ?? null;
+  const pastaKey = normPath(ext.pastaContrato);
+  const catalogo = { clientes: [cliente], veiculos: [veiculo] };
+
+  if (await useRelationalStore()) {
+    let irmaos: ContratoRegistro[] = [];
+    if (opts.versao == null && cliente.id && veiculoIdResolved) {
+      irmaos = (await queryContratosFromSql({
+        clienteId: cliente.id,
+        veiculoId: veiculoIdResolved,
+      })) as ContratoRegistro[];
+    }
+    const byPasta = (await queryContratosFromSql({
+      pastaContrato: pastaKey,
+    })) as ContratoRegistro[];
+    const existing = byPasta[0];
+    const db: ContratosDb = {
+      descricao: "Contratos de locação (ativos e encerrados). id = uuid.",
+      atualizadoEm: new Date().toISOString().slice(0, 10),
+      schemaContrato: DEFAULT_SCHEMA,
+      contratos: existing
+        ? [...irmaos.filter((c) => c.id !== existing.id), existing]
+        : irmaos,
+    };
+    const idx = existing ? db.contratos.findIndex((c) => c.id === existing.id) : -1;
+    const registro = buildRegistro(ext, existing, opts, db, pastaKey, catalogo);
     if (idx >= 0) db.contratos[idx] = registro;
     else db.contratos.push(registro);
     await assertRelationalStore();

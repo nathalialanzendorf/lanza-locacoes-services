@@ -423,7 +423,12 @@ export async function loadClienteDespesasDbAsync(
         clienteDespesas: rows,
       } as Record<string, unknown>);
     }
-    return normalizeRawDb((await loadClienteDespesasFromSql()) as unknown as Record<string, unknown>);
+    return normalizeRawDb({
+      descricao: DEFAULT_DESCRICAO,
+      atualizadoEm: new Date().toISOString().slice(0, 10),
+      schemaClienteDespesa: DEFAULT_SCHEMA,
+      clienteDespesas: [],
+    } as Record<string, unknown>);
   }
   const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_CLIENTE_DESPESAS, {
     descricao: DEFAULT_DESCRICAO,
@@ -624,6 +629,14 @@ export type ClienteDespesaPersistOpts = {
   fonteDetran?: string;
   /** Default false — integração Rastreame descontinuada. */
   syncRastreame?: boolean;
+  /** UUID do veículo já resolvido (ex.: criação de contrato). */
+  veiculoId?: string;
+  /** Não consulta auto_infracao existente (criação inicial do contrato). */
+  skipDupCheck?: boolean;
+  /** Não consulta semanal duplicada (primeira locação). */
+  skipDupSemanal?: boolean;
+  /** Valor semanal do contrato recém-criado (evita carregar contratos). */
+  valorSemanalContrato?: number;
 };
 
 async function pushAposPersistir(
@@ -707,16 +720,21 @@ export async function gravarClienteDespesa(
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
   const relational = await useRelationalStore();
-  const veiculoScope = isEntityUuid(veiculoIdRaw.trim())
-    ? { veiculoId: veiculoIdRaw.trim() }
-    : { placa: veiculoIdRaw.trim() };
-  const veiculosDb = await loadVeiculosDbAsync(veiculoScope);
-  const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
-  const veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
+  let veiculoId: string;
+  if (opts?.veiculoId?.trim() && isEntityUuid(opts.veiculoId.trim())) {
+    veiculoId = opts.veiculoId.trim();
+  } else {
+    const veiculoScope = isEntityUuid(veiculoIdRaw.trim())
+      ? { veiculoId: veiculoIdRaw.trim() }
+      : { placa: veiculoIdRaw.trim() };
+    const veiculosDb = await loadVeiculosDbAsync(veiculoScope);
+    const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
+    veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
+  }
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || "Infração";
 
-  if (relational) {
+  if (relational && !opts?.skipDupCheck) {
     const dupRel = await findClienteDespesaByReferenciaAsync(autoKey);
     if (dupRel) {
       return { registro: dupRel, aviso: "Auto já cadastrado", duplicado: true };
@@ -860,7 +878,8 @@ export async function gravarClienteDespesa(
         registro,
         registro.descricao,
         venc,
-        valorParcelaSemanalContrato(veiculoId) ?? undefined,
+        opts?.valorSemanalContrato ?? valorParcelaSemanalContrato(veiculoId) ?? undefined,
+        opts?.skipDupSemanal,
       );
     }
     await persistClienteDespesasRowsAsync(
@@ -1790,13 +1809,16 @@ async function criarProximaParcelaSemanalRelational(
   descricaoAntes: string,
   vencimentoAntes: string,
   valorParcela?: number,
+  skipDupSemanal = false,
 ): Promise<ClienteDespesaRegistro | null> {
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
   if (!prox) return null;
   const alvo = normDescSemanal(prox.descricao);
-  if (despesaSemanalDescricaoDuplicada(pago.veiculoId, alvo)) return null;
-  if (!getCobrancasRuntimeCtx()?.clienteDespesas?.length) {
-    if (await despesaSemanalDescricaoDuplicadaAsync(pago.veiculoId, alvo)) return null;
+  if (!skipDupSemanal) {
+    if (despesaSemanalDescricaoDuplicada(pago.veiculoId, alvo)) return null;
+    if (!getCobrancasRuntimeCtx()?.clienteDespesas?.length) {
+      if (await despesaSemanalDescricaoDuplicadaAsync(pago.veiculoId, alvo)) return null;
+    }
   }
   return buildProximaParcelaSemanalRegistro(pago, prox, valorParcela);
 }

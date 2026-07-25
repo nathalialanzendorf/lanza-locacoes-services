@@ -5,7 +5,21 @@ import {
   loadClientesDbAsync,
   type ClienteRegistro,
 } from "./clientesDb.js";
-import { fmtDataBr } from "./contratoExtrair.js";
+import {
+  addDays,
+  fmtDataBr,
+  parseDataBr,
+  type ContratoExtraido,
+} from "./contratoExtrair.js";
+import {
+  resolverNomeArquivoContrato,
+  resolverPastaContratoFromDados,
+  type CaucaoParcelas,
+  type CaucaoSemanalParcelado,
+  type GerarContratoDados,
+  type SemanaParcelas,
+} from "./docxGerar.js";
+import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
 import { formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -14,13 +28,6 @@ import {
   loadVeiculosDbAsync,
   type VeiculoRegistro,
 } from "./veiculosDb.js";
-import type {
-  CaucaoParcelas,
-  CaucaoSemanalParcelado,
-  GerarContratoDados,
-  SemanaParcelas,
-} from "./docxGerar.js";
-import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
 
 const DEFAULT_TEMPLATE = path.join(
   REPO_ROOT,
@@ -477,4 +484,37 @@ export async function montarDadosContratoFromDbAsync(
   const cliente = await findClienteDbAsync(input.cpf, input.clienteNome, input.clienteId);
   const veiculo = await findVeiculoDbAsync(input.placa, input.veiculoId);
   return montarDadosContratoCore(input, cliente, veiculo);
+}
+
+/** Monta campos do contrato a partir dos dados do formulário (sem ler .docx). */
+export function dadosParaContratoExtraido(
+  dados: GerarContratoDados,
+  pastaContrato?: string,
+): ContratoExtraido {
+  const pasta = pastaContrato ?? resolverPastaContratoFromDados(dados);
+  const dini = parseDataBr(dados.prazo.inicio);
+  if (!dini) throw new Error(`Data de início inválida: ${dados.prazo.inicio}`);
+  const dfim = addDays(dini, dados.prazo.dias);
+  const nomeArq = resolverNomeArquivoContrato(dados.cliente.nome);
+  const diaPag = dados.diaPagamento ?? "todos os sábados";
+  return {
+    pastaContrato: pasta,
+    docx: path.join(pasta, `${nomeArq}.docx`),
+    versaoDocumento: 0,
+    totalDocumentosContrato: 1,
+    clienteNome: dados.cliente.nome,
+    placa: dados.veiculo.placa,
+    cpf: dados.cliente.cpf?.trim() || null,
+    inicio: dini,
+    fim: dfim,
+    prazoDias: dados.prazo.dias,
+    tipoContrato: "semanal",
+    diaPagamentoSemana: diaPag,
+    diaPagamentoMes: null,
+    diaPagamentoTexto: diaPag,
+    valorSemanal: dados.valores.semana,
+    valorMensal: null,
+    valorDiaria: dados.valores.diaria ?? null,
+    valorCaucao: dados.valores.caucao,
+  };
 }

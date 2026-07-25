@@ -153,15 +153,16 @@ function pathsContratos(): OpenApiPaths {
       }),
     }),
     "/api/contratos/criar": pathItem({
-      post: op("post", "Contratos", "Gerar contrato (Word/PDF) e registrar", {
+      post: op("post", "Contratos", "Cadastrar contrato no banco", {
         operationId: "criarContrato",
-        description: "Aceita dados completos ou `{ placa, semana, ... }` para montar do DB.",
+        description: "Grava o contrato no Postgres. Word/PDF em POST /api/contratos/{id}/gerar-documento.",
         requestBody: { type: "object" },
       }),
     }),
     "/api/contratos/renovar": pathItem({
-      post: op("post", "Contratos", "Renovar contrato", {
+      post: op("post", "Contratos", "Renovar contrato no banco", {
         operationId: "renovarContrato",
+        description: "Encerra o anterior e grava a renovação. Documento Word/PDF separado.",
         requestBody: { type: "object" },
       }),
     }),
@@ -181,6 +182,17 @@ function pathsContratos(): OpenApiPaths {
           },
           ["dataEncerramento", "motivoEncerramento"],
         ),
+      }),
+    }),
+    "/api/contratos/{id}/gerar-documento": pathItem({
+      post: op("post", "Contratos", "Gerar Word/PDF do contrato", {
+        operationId: "gerarDocumentoContrato",
+        description: "Use ?download=docx ou ?download=pdf para transferir o ficheiro.",
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          query("download", { type: "string", enum: ["docx", "pdf"] }),
+        ],
+        requestBody: { type: "object" },
       }),
     }),
     "/api/contratos/sincronizar": pathItem({

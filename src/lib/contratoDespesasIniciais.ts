@@ -7,7 +7,7 @@ import {
 } from "./caucaoParcelas.js";
 import {
   gravarClienteDespesa,
-  loadClienteDespesasDbAsync,
+  type ClienteDespesaPersistOpts,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import type { ContratoRegistro } from "./contratosDb.js";
@@ -18,7 +18,6 @@ import {
   montarDescricaoPrimeiraSemanalContrato,
   vencimentoBrToIsoEndDay,
 } from "./pagamentoSemanal.js";
-import { formatPlacaHyphen } from "./placa.js";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -50,25 +49,25 @@ export function contratoTemParcelamento(
   );
 }
 
-async function jaExistemDespesasIniciais(reg: ContratoRegistro): Promise<boolean> {
-  const db = await loadClienteDespesasDbAsync();
-  const placa = formatPlacaHyphen(reg.placa);
-  const clienteId = reg.clienteId;
-  return db.clienteDespesas.some(
-    (d) =>
-      d.ativo !== false &&
-      d.origem === "contrato-criar" &&
-      formatPlacaHyphen(d.veiculoId) === placa &&
-      (!clienteId || d.condutorId === clienteId),
-  );
-}
-
 type GravarOpts = {
+  veiculoId: string | null;
   placa: string;
   clienteId: string | null;
   inicioBr: string;
   pagaEm: string;
+  valorSemanal: number;
 };
+
+function persistOptsContratoCriar(opts: GravarOpts): ClienteDespesaPersistOpts {
+  return {
+    syncRastreame: false,
+    skipInferir: true,
+    skipDupCheck: true,
+    skipDupSemanal: true,
+    veiculoId: opts.veiculoId ?? undefined,
+    valorSemanalContrato: opts.valorSemanal,
+  };
+}
 
 type DespesaPatch = {
   categoria: string;
@@ -81,8 +80,9 @@ async function gravarPaga(
   opts: GravarOpts,
   patch: DespesaPatch,
 ): Promise<{ registro: ClienteDespesaRegistro; proximaParcela: ClienteDespesaRegistro | null }> {
+  const veiculoRef = opts.veiculoId ?? opts.placa;
   const r = await gravarClienteDespesa(
-    opts.placa,
+    veiculoRef,
     {
       autoInfracao: localAutoInfracao(),
       localInfracao: "",
@@ -96,7 +96,7 @@ async function gravarPaga(
       rastreameTipo: "OUTROS",
       ...patch,
     },
-    { syncRastreame: false, skipInferir: true },
+    persistOptsContratoCriar(opts),
   );
   return { registro: r.registro, proximaParcela: r.proximaParcela ?? null };
 }
@@ -105,8 +105,9 @@ async function gravarAberta(
   opts: GravarOpts,
   patch: DespesaPatch,
 ): Promise<ClienteDespesaRegistro> {
+  const veiculoRef = opts.veiculoId ?? opts.placa;
   const r = await gravarClienteDespesa(
-    opts.placa,
+    veiculoRef,
     {
       autoInfracao: localAutoInfracao(),
       localInfracao: "",
@@ -120,7 +121,7 @@ async function gravarAberta(
       rastreameTipo: "OUTROS",
       ...patch,
     },
-    { syncRastreame: false, skipInferir: true },
+    persistOptsContratoCriar(opts),
   );
   return r.registro;
 }
@@ -138,22 +139,33 @@ export type DespesasIniciaisContratoResult = {
  * - entrada paga na data do contrato;
  * - parcelas futuras em aberto (caução e/ou saldo da 1.ª semana);
  * - sem parcelamento da semana: próxima semanal em aberto (automático na baixa).
+ *
+ * Criação inicial: não consulta despesas/contratos existentes — só upserts novos.
  */
 export async function gerarDespesasIniciaisContratoAsync(
   reg: ContratoRegistro,
   dados: GerarContratoDados,
   _input: MontarContratoDbInput | null,
-): Promise<DespesasIniciaisContratoResult | null> {
-  if (await jaExistemDespesasIniciais(reg)) return null;
-
+): Promise<DespesasIniciaisContratoResult> {
   const inicioBr = reg.dataInicio.trim();
   const placa = reg.placa;
+  const veiculoId =
+    reg.veiculoId?.trim() && /^[0-9a-f-]{36}$/i.test(reg.veiculoId.trim())
+      ? reg.veiculoId.trim()
+      : null;
   const clienteId = reg.clienteId;
   const valorSemanal = reg.valorSemanal ?? dados.valores.semana;
   const valorCaucaoTotal = reg.valorCaucao ?? dados.valores.caucao;
   const diaPagamento = dados.diaPagamento ?? reg.diaPagamentoTexto ?? "todos os sábados";
   const pagaEm = vencimentoBrToIsoEndDay(inicioBr);
-  const gravarOpts: GravarOpts = { placa, clienteId, inicioBr, pagaEm };
+  const gravarOpts: GravarOpts = {
+    veiculoId,
+    placa,
+    clienteId,
+    inicioBr,
+    pagaEm,
+    valorSemanal,
+  };
 
   const caucaoParcelas: ClienteDespesaRegistro[] = [];
   const semanaParcelas: ClienteDespesaRegistro[] = [];
