@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import { findClienteDbAsync, findVeiculoDbAsync } from "./montarDadosContrato.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
@@ -429,11 +429,33 @@ function hasContratosScope(scope?: ContratosLoadScope): boolean {
   if (!scope) return false;
   return Boolean(
     scope.id?.trim() ||
+      scope.pastaContrato?.trim() ||
       scope.status?.trim() ||
       scope.clienteId?.trim() ||
       scope.veiculoId?.trim() ||
       (scope.veiculoIds?.length ?? 0) > 0,
   );
+}
+
+function contratosScopeFromPastaOrId(pastaOrId: string): ContratosLoadScope {
+  const key = pastaOrId.trim();
+  if (/^[0-9a-f-]{36}$/i.test(key)) return { id: key };
+  return { pastaContrato: normPath(path.resolve(key)) };
+}
+
+async function loadContratoDbParaMutacao(
+  pastaOrId: string,
+): Promise<{ db: ContratosDb; idx: number } | null> {
+  if (await useRelationalStore()) {
+    const db = await loadContratosDbAsync(contratosScopeFromPastaOrId(pastaOrId));
+    const idx = findContratoIndex(db, pastaOrId);
+    if (idx < 0) return null;
+    return { db, idx };
+  }
+  const db = loadContratosDb();
+  const idx = findContratoIndex(db, pastaOrId);
+  if (idx < 0) return null;
+  return { db, idx };
 }
 
 export async function loadContratosDbAsync(scope?: ContratosLoadScope): Promise<ContratosDb> {
@@ -654,14 +676,14 @@ export async function encerrarContratoDbAsync(
   pastaOrId: string,
   opts: EncerrarContratoDbOpts,
 ): Promise<ContratoRegistro> {
-  const db = await loadContratosDbAsync();
-  const idx = findContratoIndex(db, pastaOrId);
-  if (idx < 0) {
+  const loaded = await loadContratoDbParaMutacao(pastaOrId);
+  if (!loaded) {
     if (process.env.VERCEL) {
       throw new Error(`Contrato não encontrado: ${pastaOrId}`);
     }
     return encerrarContratoDb(pastaOrId, opts);
   }
+  const { db, idx } = loaded;
   const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
   db.contratos[idx] = registro;
   if (await useRelationalStore()) {
@@ -693,11 +715,11 @@ export async function atualizarContratoDbAsync(
   id: string,
   patch: AtualizarContratoDbPatch,
 ): Promise<ContratoRegistro> {
-  const db = await loadContratosDbAsync();
-  const idx = findContratoIndex(db, id);
-  if (idx < 0) {
+  const loaded = await loadContratoDbParaMutacao(id);
+  if (!loaded) {
     throw new Error(`Contrato não encontrado: ${id}`);
   }
+  const { db, idx } = loaded;
   const atual = db.contratos[idx]!;
   const registro: ContratoRegistro = {
     ...atual,
@@ -710,6 +732,10 @@ export async function atualizarContratoDbAsync(
     registro.status = patch.status;
   }
   db.contratos[idx] = registro;
+  if (await useRelationalStore()) {
+    await upsertContratoToSql(registro as unknown as Record<string, unknown>);
+    return registro;
+  }
   await saveContratosDbAsync(db);
   return registro;
 }
@@ -727,12 +753,16 @@ export function excluirContrato(pastaOrId: string): ContratoRegistro {
 }
 
 export async function excluirContratoAsync(pastaOrId: string): Promise<ContratoRegistro> {
-  const db = await loadContratosDbAsync();
-  const idx = findContratoIndex(db, pastaOrId);
-  if (idx < 0) {
+  const loaded = await loadContratoDbParaMutacao(pastaOrId);
+  if (!loaded) {
     throw new Error(`Contrato não encontrado: ${pastaOrId}`);
   }
+  const { db, idx } = loaded;
   const [removido] = db.contratos.splice(idx, 1);
+  if (await useRelationalStore()) {
+    await deleteContratoFromSql(removido!.id);
+    return removido!;
+  }
   await saveContratosDbAsync(db);
   return removido!;
 }

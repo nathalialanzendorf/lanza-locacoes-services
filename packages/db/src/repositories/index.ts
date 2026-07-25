@@ -30,6 +30,7 @@ export {
   loadContratosFromSql,
   saveContratosToSql,
   upsertContratoToSql,
+  deleteContratoFromSql,
   queryContratosFromSql,
   type ContratosSqlFilter,
   loadLocacoesFromSql,

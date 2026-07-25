@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { pgQuery } from "../client/PostgresPool.js";
+import { pgWriteQuery } from "../client/pgWrite.js";
 import { resolveVeiculoIdFromSql } from "./coreRepositories.js";
 import {
   asBool,
@@ -143,6 +144,8 @@ async function loadContratoSnapshotsForIds(ids: string[]): Promise<{
 
 export type ContratosSqlFilter = {
   id?: string;
+  /** Caminho normalizado da pasta do contrato (mutação por pasta). */
+  pastaContrato?: string;
   status?: string;
   clienteId?: string;
   /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
@@ -162,6 +165,11 @@ export async function queryContratosFromSql(
   if (filter.id?.trim() && isUuid(filter.id.trim())) {
     params.push(filter.id.trim());
     where.push(`c.id::text = $${p++}`);
+  }
+
+  if (!filter.id?.trim() && filter.pastaContrato?.trim()) {
+    params.push(filter.pastaContrato.trim());
+    where.push(`lower(c.pasta_contrato) = $${p++}`);
   }
 
   if (filter.status?.trim()) {
@@ -246,9 +254,11 @@ async function upsertContratoRowToSql(
         COALESCE($22::timestamptz, now()), now())
       ON CONFLICT (id) DO UPDATE SET
         status = EXCLUDED.status,
+        data_fim_prevista = EXCLUDED.data_fim_prevista,
         data_encerramento = EXCLUDED.data_encerramento,
         quebra_contrato = EXCLUDED.quebra_contrato,
         motivo_encerramento = EXCLUDED.motivo_encerramento,
+        prazo_dias = EXCLUDED.prazo_dias,
         tipo_contrato = EXCLUDED.tipo_contrato,
         dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
         dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
@@ -337,6 +347,12 @@ async function upsertContratoRowToSql(
 export async function upsertContratoToSql(c: Record<string, unknown>): Promise<void> {
   const placaMap = await loadPlacaMap();
   await upsertContratoRowToSql(c, placaMap);
+}
+
+/** Remove um contrato do Postgres (snapshots em CASCADE). */
+export async function deleteContratoFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.contratos WHERE id = $1`, [id.trim()]);
+  return (r.rowCount ?? 0) > 0;
 }
 
 export async function saveContratosToSql(db: ContratosDbShape): Promise<void> {

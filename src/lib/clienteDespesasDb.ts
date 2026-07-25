@@ -444,7 +444,50 @@ async function loadDespesasMut(): Promise<ClienteDespesasDb> {
   return loadClienteDespesasDbAsync();
 }
 
-async function saveDespesasMut(db: ClienteDespesasDb): Promise<void> {
+/** Carrega uma despesa por id ou auto (sem catálogo inteiro no Postgres). */
+async function findClienteDespesaByReferenciaAsync(
+  idOrAuto: string,
+): Promise<ClienteDespesaRegistro | null> {
+  const key = idOrAuto.trim();
+  if (await useRelationalStore()) {
+    const row = await queryClienteDespesaByReferenciaFromSql(key);
+    return row ? (row as ClienteDespesaRegistro) : null;
+  }
+  const db = loadClienteDespesasDb();
+  const ku = key.toUpperCase();
+  return (
+    db.clienteDespesas.find((m) => m.id === key) ??
+    db.clienteDespesas.find((m) => m.autoInfracao.trim().toUpperCase() === ku) ??
+    null
+  );
+}
+
+/** Grava só as linhas informadas no Postgres; no JSON persiste o arquivo inteiro. */
+async function persistClienteDespesasRowsAsync(
+  rows: ClienteDespesaRegistro[],
+  jsonDb?: ClienteDespesasDb,
+): Promise<void> {
+  if (rows.length === 0) return;
+  if (await useRelationalStore()) {
+    for (const r of rows) {
+      await upsertClienteDespesaRowToSql(
+        r as unknown as Record<string, unknown>,
+        persistOptsClienteDespesa(r),
+      );
+    }
+    return;
+  }
+  if (jsonDb) await saveClienteDespesasDbAsync(jsonDb);
+}
+
+async function saveDespesasMut(
+  db: ClienteDespesasDb,
+  changed?: ClienteDespesaRegistro[],
+): Promise<void> {
+  if (await useRelationalStore() && changed?.length) {
+    await persistClienteDespesasRowsAsync(changed);
+    return;
+  }
   await saveClienteDespesasDbAsync(db);
 }
 
@@ -669,18 +712,31 @@ export async function gravarClienteDespesa(
   input: ClienteDespesaInput,
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
-  const db = await loadDespesasMut();
-  const veiculosDb = await loadVeiculosDbAsync();
+  const relational = await useRelationalStore();
+  const veiculoScope = isEntityUuid(veiculoIdRaw.trim())
+    ? { veiculoId: veiculoIdRaw.trim() }
+    : { placa: veiculoIdRaw.trim() };
+  const veiculosDb = await loadVeiculosDbAsync(veiculoScope);
   const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
   const veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || "Infração";
 
-  const dup = db.clienteDespesas.find(
-    (m) => m.autoInfracao.trim().toUpperCase() === autoKey,
-  );
-  if (dup) {
-    return { registro: dup, aviso: "Auto já cadastrado", duplicado: true };
+  if (relational) {
+    const dupRel = await findClienteDespesaByReferenciaAsync(autoKey);
+    if (dupRel) {
+      return { registro: dupRel, aviso: "Auto já cadastrado", duplicado: true };
+    }
+  }
+
+  const db = relational ? null : await loadDespesasMut();
+  if (!relational) {
+    const dup = db!.clienteDespesas.find(
+      (m) => m.autoInfracao.trim().toUpperCase() === autoKey,
+    );
+    if (dup) {
+      return { registro: dup, aviso: "Auto já cadastrado", duplicado: true };
+    }
   }
 
   if (isQuitadaDetranSemData(input)) {
@@ -796,7 +852,39 @@ export async function gravarClienteDespesa(
   if (input.rastreameDataIso != null) registro.rastreameDataIso = input.rastreameDataIso;
   if (input.rastreameTipo != null) registro.rastreameTipo = input.rastreameTipo;
 
-  db.clienteDespesas.push(registro);
+  if (relational) {
+    let proximaParcela: ClienteDespesaRegistro | null = null;
+    if (
+      input.paga === true &&
+      registro.categoria === "Locação semanal" &&
+      isPagamentoSemanalDescricao(registro.descricao)
+    ) {
+      const venc =
+        dataVencimentoSemanalBr(registro.descricao, registro.rastreameDataIso) ??
+        registro.dataAutuacao;
+      proximaParcela = await criarProximaParcelaSemanalRelational(
+        registro,
+        registro.descricao,
+        venc,
+        valorParcelaSemanalContrato(veiculoId) ?? undefined,
+      );
+    }
+    await persistClienteDespesasRowsAsync(
+      proximaParcela ? [registro, proximaParcela] : [registro],
+    );
+    const synced = await pushAposPersistir(
+      proximaParcela ? [registro, proximaParcela] : [registro],
+      opts,
+    );
+    return {
+      registro: synced[0]!,
+      aviso,
+      duplicado: false,
+      proximaParcela: proximaParcela ? synced[1] ?? null : null,
+    };
+  }
+
+  db!.clienteDespesas.push(registro);
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
@@ -809,19 +897,19 @@ export async function gravarClienteDespesa(
       veiculoId,
       registro.pagaEm,
       registro.rastreameDataIso,
-      db,
+      db!,
     );
     if (venc) {
       proximaParcela = criarProximaParcelaSemanalSeNecessario(
         registro,
         registro.descricao,
         venc,
-        db,
+        db!,
       );
     }
   }
 
-  await saveDespesasMut(db);
+  await saveDespesasMut(db!, proximaParcela ? [registro, proximaParcela] : [registro]);
 
   const synced = await pushAposPersistir(
     proximaParcela ? [registro, proximaParcela] : [registro],
@@ -1109,6 +1197,25 @@ export async function confirmarCondutorClienteDespesa(
   condutorId?: string | null,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<ClienteDespesaRegistro | null> {
+  if (await useRelationalStore()) {
+    const m = await findClienteDespesaByReferenciaAsync(autoInfracao);
+    if (!m) return null;
+    if (condutorId !== undefined) m.condutorId = condutorId;
+    m.condutorConfirmado = true;
+    m.condutorNaoIdentificado = false;
+    m.debitoParceiroConfirmado = false;
+    m.debitoParceiroId = null;
+    m.revisarManual = false;
+    m.revisarMotivo = null;
+    m.atualizadoEm = nowIso();
+    removerParceiroDespesaPorOrigem(
+      origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
+    );
+    await persistClienteDespesasRowsAsync([m]);
+    const [synced] = await pushAposPersistir([m], opts);
+    return synced ?? m;
+  }
+
   const db = await loadDespesasMut();
   const key = autoInfracao.trim().toUpperCase();
   const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
@@ -1127,7 +1234,7 @@ export async function confirmarCondutorClienteDespesa(
     origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
   );
   db.clienteDespesas[idx] = m;
-  await saveDespesasMut(db);
+  await saveDespesasMut(db, [m]);
   const [synced] = await pushAposPersistir([m], opts);
   return synced ?? m;
 }
@@ -1136,6 +1243,22 @@ export async function confirmarDebitoParceiroDespesa(
   autoInfracao: string,
   parceiroId?: string | null,
 ): Promise<ClienteDespesaRegistro | null> {
+  if (await useRelationalStore()) {
+    const m = await findClienteDespesaByReferenciaAsync(autoInfracao);
+    if (!m) return null;
+    m.debitoParceiroConfirmado = true;
+    if (parceiroId !== undefined) m.debitoParceiroId = parceiroId;
+    m.condutorNaoIdentificado = true;
+    m.condutorConfirmado = true;
+    m.condutorId = null;
+    m.revisarManual = false;
+    m.revisarMotivo = null;
+    m.atualizadoEm = nowIso();
+    await persistClienteDespesasRowsAsync([m]);
+    espelharClienteDespesaSemLocatario(m);
+    return m;
+  }
+
   const db = await loadDespesasMut();
   const key = autoInfracao.trim().toUpperCase();
   const idx = db.clienteDespesas.findIndex((m) => m.autoInfracao.trim().toUpperCase() === key);
@@ -1151,7 +1274,7 @@ export async function confirmarDebitoParceiroDespesa(
   m.revisarMotivo = null;
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
-  await saveDespesasMut(db);
+  await saveDespesasMut(db, [m]);
   espelharClienteDespesaSemLocatario(m);
   return m;
 }
@@ -1450,7 +1573,7 @@ export async function editarClienteDespesa(
     );
   }
 
-  await saveDespesasMut(db);
+  await saveDespesasMut(db, proximaParcela ? [m, proximaParcela!] : [m]);
 
   const synced = await pushAposPersistir(
     proximaParcela ? [m, proximaParcela] : [m],
