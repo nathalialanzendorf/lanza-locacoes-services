@@ -46,12 +46,24 @@ export type DetranScCaptureState = {
 
 type Cap = { auth?: string; empresa?: string; appVersion?: string };
 
+export type DetranScCapturedSession = {
+  auth: string;
+  empresa: string;
+  appVersion?: string | null;
+};
+
+export type DetranScCaptureStartOpts = {
+  /** Se definido, grava a sessão via este callback (ex.: API remota Vercel). */
+  persist?: (session: DetranScCapturedSession) => Promise<void>;
+};
+
 let state: DetranScCaptureState = { status: "idle", available: isDetranScCaptureAvailable() };
 let ws: WebSocket | null = null;
 let chromeChild: ChildProcess | null = null;
 let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let cap: Cap = {};
+let persistFn: DetranScCaptureStartOpts["persist"] | null = null;
 
 export function isDetranScCaptureAvailable(): boolean {
   if (process.env.VERCEL) return false;
@@ -122,17 +134,25 @@ function cleanupTimers(): void {
 async function persistCapture(): Promise<void> {
   if (!cap.auth || !cap.empresa || !isLikelyJwt(cap.auth)) return;
 
-  await saveDetranScSession({
+  const session: DetranScCapturedSession = {
     auth: jwtSemBearer(cap.auth),
     empresa: cap.empresa,
     appVersion: cap.appVersion ?? null,
-  });
+  };
+
+  if (persistFn) {
+    await persistFn(session);
+  } else {
+    await saveDetranScSession(session);
+  }
   clearDetranScRuntimeSession();
 
   state = {
     status: "captured",
     available: isDetranScCaptureAvailable(),
-    message: "Sessão DETRAN SC capturada e guardada automaticamente.",
+    message: persistFn
+      ? "Sessão DETRAN SC capturada e enviada para a API remota."
+      : "Sessão DETRAN SC capturada e guardada automaticamente.",
     startedAt: state.startedAt,
     capturedAt: new Date().toISOString(),
   };
@@ -193,7 +213,9 @@ function attachNetworkListener(socket: WebSocket): void {
   });
 }
 
-export async function startDetranScCapture(): Promise<DetranScCaptureState> {
+export async function startDetranScCapture(
+  opts?: DetranScCaptureStartOpts,
+): Promise<DetranScCaptureState> {
   if (!isDetranScCaptureAvailable()) {
     state = {
       status: "unavailable",
@@ -209,6 +231,7 @@ export async function startDetranScCapture(): Promise<DetranScCaptureState> {
   }
 
   cap = {};
+  persistFn = opts?.persist ?? null;
   cleanupTimers();
 
   state = {
@@ -295,6 +318,7 @@ export async function startDetranScCapture(): Promise<DetranScCaptureState> {
 
 export async function stopDetranScCapture(resetIdle = true): Promise<DetranScCaptureState> {
   cleanupTimers();
+  persistFn = null;
   try {
     ws?.close();
   } catch {
