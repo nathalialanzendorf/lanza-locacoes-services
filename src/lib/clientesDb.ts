@@ -15,11 +15,11 @@ import {
   saveJsonDocument,
   saveJsonDocumentAsync,
   useRelationalStore,
+  assertRelationalStore,
   loadClientesFromSql,
   queryClientesFromSql,
   saveClientesToSql,
   upsertClienteToSql,
-  exportJsonBackup,
 } from "@lanza/db";
 import { isEntityUuid } from "./filtroListagem.js";
 import { clientesScopeFromFilter } from "./scopedCatalogo.js";
@@ -177,14 +177,8 @@ export function saveClientesDb(db: ClientesDb): void {
 export async function saveClientesDbAsync(db: ClientesDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  if (await useRelationalStore()) {
-    await saveClientesToSql(db);
-    exportJsonBackup("clientes.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_CLIENTES, db as Record<string, unknown>, {
-    description: DEFAULT_DESCRICAO,
-  });
+  await assertRelationalStore();
+  await saveClientesToSql(db);
 }
 
 export function isClienteAtivo(c: ClienteRegistro): boolean {

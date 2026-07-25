@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, exportJsonBackup, type ContratosSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import { findClienteDbAsync, findVeiculoDbAsync } from "./montarDadosContrato.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
@@ -492,12 +492,8 @@ export function saveContratosDb(db: ContratosDb): void {
 export async function saveContratosDbAsync(db: ContratosDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   db.schemaContrato = DEFAULT_SCHEMA;
-  if (await useRelationalStore()) {
-    await saveContratosToSql(db);
-    exportJsonBackup("contratos.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_CONTRATOS, db as Record<string, unknown>);
+  await assertRelationalStore();
+  await saveContratosToSql(db);
 }
 
 type RegistrarCatalogo = {

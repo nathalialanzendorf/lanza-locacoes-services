@@ -11,7 +11,7 @@ import {
   loadClientesDbAsync,
   loadTriagemDbAsync,
   montarRelatorio,
-  registrarAchadosCliente,
+  registrarAchadosClienteAsync,
   registrarAnaliseCadastroNoClienteAsync,
   registrarTriagemAsync,
   saveTriagemDbAsync,
@@ -23,6 +23,7 @@ import {
   type TriagemRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import { upsertTriagemToSql, useRelationalStore } from "@lanza/db";
 
 const TJSC_FLAG = path.join(
   REPO_ROOT,
@@ -300,7 +301,7 @@ export async function executarAnaliseCadastro(input: AnaliseCadastroInput) {
         await loadClientesDbAsync({ cpf: locatario.cpf })
       ).clientes.find((c) => c.cpf?.replace(/\D/g, "") === locatario.cpf)?.id ??
       null;
-    const linhas = registrarAchadosCliente({
+    const linhas = await registrarAchadosClienteAsync({
       cpf: locatario.cpf,
       cpfFormatado: locatario.cpfFormatado,
       nome: locatario.nome,
@@ -332,7 +333,11 @@ export async function registrarDecisaoAnalise(id: string, aprovado: boolean) {
   t.aprovado = aprovado;
   t.atualizadoEm = new Date().toISOString();
   db.triagens[idx] = t;
-  await saveTriagemDbAsync(db);
+  if (await useRelationalStore()) {
+    await upsertTriagemToSql(t as unknown as Record<string, unknown>);
+  } else {
+    await saveTriagemDbAsync(db);
+  }
 
   const cliente = await registrarAnaliseCadastroNoClienteAsync(t.cpf, analiseClienteDeRegistro(t));
   return { registro: t, cliente };

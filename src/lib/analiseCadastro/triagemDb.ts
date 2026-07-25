@@ -20,9 +20,10 @@ import {
   saveJsonDocument,
   saveJsonDocumentAsync,
   useRelationalStore,
+  assertRelationalStore,
   loadTriagensFromSql,
   saveTriagensToSql,
-  exportJsonBackup,
+  upsertTriagemToSql,
   type TriagemDbShape,
 } from "@lanza/db";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "../clientesDb.js";
@@ -151,15 +152,8 @@ export async function saveTriagemDbAsync(db: TriagemDb): Promise<void> {
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaTriagem = DEFAULT_SCHEMA;
-  if (await useRelationalStore()) {
-    await saveTriagensToSql(db as unknown as TriagemDbShape);
-    exportJsonBackup("analise-cadastro.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_TRIAGEM, db as unknown as Record<string, unknown>, {
-    mkdir: true,
-    trailingNewline: true,
-  });
+  await assertRelationalStore();
+  await saveTriagensToSql(db as unknown as TriagemDbShape);
 }
 
 function resumirFonte(f: ResultadoFonte): FonteResumo {
@@ -282,7 +276,11 @@ export async function registrarTriagemAsync(args: {
     const registro: TriagemRegistro = { ...existente, ...base };
     if (args.aprovado === undefined) registro.aprovado = existente.aprovado ?? null;
     db.triagens[idx] = registro;
-    await saveTriagemDbAsync(db);
+    if (await useRelationalStore()) {
+      await upsertTriagemToSql(registro as unknown as Record<string, unknown>);
+    } else {
+      await saveTriagemDbAsync(db);
+    }
     return { registro, acao: "atualizado" };
   }
 
@@ -292,7 +290,11 @@ export async function registrarTriagemAsync(args: {
     ...base,
   };
   db.triagens.push(registro);
-  await saveTriagemDbAsync(db);
+  if (await useRelationalStore()) {
+    await upsertTriagemToSql(registro as unknown as Record<string, unknown>);
+  } else {
+    await saveTriagemDbAsync(db);
+  }
   return { registro, acao: "novo" };
 }
 

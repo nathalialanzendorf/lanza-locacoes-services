@@ -365,7 +365,7 @@ export {
   type TriagemRegistro,
 } from "../../../src/lib/analiseCadastro/triagemDb.js";
 
-export { registrarAchadosCliente } from "../../../src/lib/analiseCadastro/clienteAnaliseDb.js";
+export { registrarAchadosCliente, registrarAchadosClienteAsync } from "../../../src/lib/analiseCadastro/clienteAnaliseDb.js";
 
 export type { DadosLocatario, ResultadoFonte } from "../../../src/lib/analiseCadastro/tipos.js";
 

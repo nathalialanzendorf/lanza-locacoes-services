@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { ReadOnlyBackendError } from "../util/readOnlyBackendError.js";
 import { isReadOnlyServerlessFs } from "../util/serverlessFs.js";
+import { skipJsonStoresWrite } from "../repositories/relationalConfig.js";
 import type { JsonDocumentAdapter, SaveJsonDocumentOptions } from "./types.js";
 
 export class FileJsonDocumentAdapter implements JsonDocumentAdapter {
@@ -22,6 +23,11 @@ export class FileJsonDocumentAdapter implements JsonDocumentAdapter {
   ): void {
     if (isReadOnlyServerlessFs()) {
       throw new ReadOnlyBackendError();
+    }
+    if (skipJsonStoresWrite()) {
+      throw new ReadOnlyBackendError(
+        "Gravação em JSON desactivada — configure PostgreSQL (LANZA_DB_BACKEND=postgres).",
+      );
     }
     if (options?.mkdir) {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });

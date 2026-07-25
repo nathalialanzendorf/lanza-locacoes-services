@@ -113,14 +113,34 @@ export async function deleteParceiroRowFromSql(id: string): Promise<boolean> {
   return (r.rowCount ?? 0) > 0;
 }
 
+export async function upsertVinculoToSql(v: {
+  id: string;
+  parceiroId: string;
+  veiculoId: string;
+}): Promise<void> {
+  await pgWriteQuery(
+    `INSERT INTO lanza.parceiro_veiculo_vinculos (id, parceiro_id, veiculo_id, atualizado_em)
+     VALUES ($1,$2,$3,now())
+     ON CONFLICT (id) DO UPDATE SET parceiro_id = EXCLUDED.parceiro_id, veiculo_id = EXCLUDED.veiculo_id, atualizado_em = now()`,
+    [v.id, v.parceiroId, v.veiculoId],
+  );
+}
+
+export async function deleteVinculoFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.parceiro_veiculo_vinculos WHERE id = $1`, [id.trim()]);
+  return (r.rowCount ?? 0) > 0;
+}
+
+export async function deleteVinculosByVeiculoFromSql(veiculoId: string): Promise<number> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.parceiro_veiculo_vinculos WHERE veiculo_id = $1`, [
+    veiculoId.trim(),
+  ]);
+  return r.rowCount ?? 0;
+}
+
 export async function saveVinculosToSql(db: VinculosDbShape): Promise<void> {
   for (const v of db.vinculos) {
-    await pgWriteQuery(
-      `INSERT INTO lanza.parceiro_veiculo_vinculos (id, parceiro_id, veiculo_id, atualizado_em)
-       VALUES ($1,$2,$3,now())
-       ON CONFLICT (id) DO UPDATE SET parceiro_id = EXCLUDED.parceiro_id, veiculo_id = EXCLUDED.veiculo_id, atualizado_em = now()`,
-      [v.id, v.parceiroId, v.veiculoId],
-    );
+    await upsertVinculoToSql(v);
   }
 }
 

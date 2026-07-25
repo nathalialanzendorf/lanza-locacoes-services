@@ -3,10 +3,12 @@ import path from "node:path";
 
 import { DATABASE_DIR } from "../paths.js";
 import { isReadOnlyServerlessFs } from "../util/serverlessFs.js";
+import { skipJsonStoresWrite } from "./relationalConfig.js";
 
-/** Exporta documento JSON local como backup (dual-write). */
+/** Exporta documento JSON local (opt-in: LANZA_JSON_BACKUP=1). Desactivado por defeito. */
 export function exportJsonBackup(fileName: string, data: object): void {
-  if (process.env.LANZA_JSON_BACKUP === "0") return;
+  if (skipJsonStoresWrite()) return;
+  if (process.env.LANZA_JSON_BACKUP !== "1") return;
   if (isReadOnlyServerlessFs()) return;
   const dir = process.env.LANZA_DATABASE_DIR?.trim() || DATABASE_DIR;
   try {

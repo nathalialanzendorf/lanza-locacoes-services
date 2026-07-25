@@ -28,7 +28,6 @@ import {
   type TriagemDbShape,
 } from "./domainRepositories.js";
 import { pgQuery } from "../client/PostgresPool.js";
-import { exportJsonBackup } from "./jsonExport.js";
 
 type Loader = () => Promise<Record<string, unknown>>;
 
@@ -59,20 +58,6 @@ const LOADERS: Record<string, Loader> = {
   "parceiro-despesas": async () => (await loadParceiroDespesasFromSql()) as Record<string, unknown>,
   "analise-cadastro": async () => (await loadTriagensFromSql()) as Record<string, unknown>,
   "cliente-analise": async () => (await loadClienteAnaliseFromSql()) as Record<string, unknown>,
-};
-
-const BACKUP_FILE: Record<string, string> = {
-  clientes: "clientes.json",
-  veiculos: "veiculos.json",
-  parceiros: "parceiros.json",
-  "parceiro-veiculo": "parceiro-veiculo.json",
-  contratos: "contratos.json",
-  locacoes: "locacoes.json",
-  infracoes: "infracoes.json",
-  "cliente-despesas": "cliente-despesas.json",
-  "parceiro-despesas": "parceiro-despesas.json",
-  "analise-cadastro": "analise-cadastro.json",
-  "cliente-analise": "cliente-analise.json",
 };
 
 const SAVERS: Record<string, Saver> = {
@@ -119,6 +104,4 @@ export async function saveRelationalStore(
     throw new Error(`Store relacional não mapeado: ${storeName}`);
   }
   await save(data);
-  const backup = BACKUP_FILE[storeName];
-  if (backup) exportJsonBackup(backup, data);
 }

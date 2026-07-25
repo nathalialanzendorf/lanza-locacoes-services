@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, exportJsonBackup, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
 import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -503,14 +503,8 @@ export async function findClienteDespesaByIdAsync(id: string): Promise<ClienteDe
 export async function saveClienteDespesasDbAsync(db: ClienteDespesasDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  if (await useRelationalStore()) {
-    await saveClienteDespesasToSql(db as unknown as Parameters<typeof saveClienteDespesasToSql>[0]);
-    exportJsonBackup("cliente-despesas.json", db as unknown as Record<string, unknown>);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_CLIENTE_DESPESAS, db as Record<string, unknown>, {
-    description: DEFAULT_DESCRICAO,
-  });
+  await assertRelationalStore();
+  await saveClienteDespesasToSql(db as unknown as Parameters<typeof saveClienteDespesasToSql>[0]);
 }
 
 /** @deprecated use loadInfracoesDb from ./infracoesDb.js (tabela dedicada) */

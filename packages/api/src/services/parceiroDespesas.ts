@@ -17,7 +17,7 @@ import {
   type VeiculoRegistro,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
-import { queryParceiroDespesasFromSql, queryVeiculosByIdsFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
+import { queryParceiroDespesasFromSql, queryVeiculosByIdsFromSql, resolveVeiculoIdFromSql, upsertParceiroDespesaToSql, deleteParceiroDespesaFromSql, useRelationalStore } from "@lanza/db";
 import { listarVinculosAsync } from "./parceiros.js";
 import { dataStringNoPeriodo } from "../lib-imports.js";
 
@@ -194,7 +194,11 @@ export async function atualizarParceiroDespesa(
   const reg = db.parceiroDespesas[idx]!;
   Object.assign(reg, patch);
   db.parceiroDespesas[idx] = reg;
-  await saveParceiroDespesasDbAsync(db);
+  if (await useRelationalStore()) {
+    await upsertParceiroDespesaToSql(reg as unknown as Record<string, unknown>);
+  } else {
+    await saveParceiroDespesasDbAsync(db);
+  }
   return reg;
 }
 
@@ -214,6 +218,11 @@ export async function removerParceiroDespesa(id: string): Promise<ParceiroDespes
   const idx = db.parceiroDespesas.findIndex((d) => d.id === id);
   if (idx < 0) throw new HttpError(404, "Despesa parceiro não encontrada");
   const [removido] = db.parceiroDespesas.splice(idx, 1);
+  if (await useRelationalStore()) {
+    const ok = await deleteParceiroDespesaFromSql(id);
+    if (!ok) throw new HttpError(500, "Falha ao remover despesa no banco de dados");
+    return removido!;
+  }
   await saveParceiroDespesasDbAsync(db);
   return removido!;
 }

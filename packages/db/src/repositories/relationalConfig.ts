@@ -1,5 +1,6 @@
 import { pgQuery } from "../client/PostgresPool.js";
 import { getDbBackend } from "../adapters/index.js";
+import { ReadOnlyBackendError } from "../util/readOnlyBackendError.js";
 
 let relationalStoreCached: boolean | null = null;
 
@@ -20,6 +21,16 @@ export async function useRelationalStore(): Promise<boolean> {
   } catch {
     relationalStoreCached = false;
     return false;
+  }
+}
+
+/** Falha se PostgreSQL relacional não estiver disponível para gravação. */
+export async function assertRelationalStore(): Promise<void> {
+  if (!(await useRelationalStore())) {
+    throw new ReadOnlyBackendError(
+      "Gravação indisponível: configure PostgreSQL (PGHOST, PGPASSWORD ou AWS_ROLE_ARN) " +
+        "e LANZA_DB_BACKEND=postgres. Gravação em JSON foi desactivada.",
+    );
   }
 }
 

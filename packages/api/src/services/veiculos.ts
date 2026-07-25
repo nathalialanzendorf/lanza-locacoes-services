@@ -12,6 +12,7 @@ import {
   type VeiculoPatch,
   type VeiculoRegistro,
 } from "../lib-imports.js";
+import { upsertVeiculoToSql, useRelationalStore } from "@lanza/db";
 import { HttpError } from "../http.js";
 import { criarParceiroAsync, vincularVeiculoParceiroAsync } from "./parceiros.js";
 
@@ -123,8 +124,12 @@ export async function criarVeiculo(input: CriarVeiculoInput): Promise<{
       origem: (input.origem as string | undefined) ?? "api",
       atualizadoEm: ts,
     };
-    db.veiculos.push(registro);
-    await saveVeiculosDbAsync(db);
+    if (await useRelationalStore()) {
+      await upsertVeiculoToSql(registro as unknown as Record<string, unknown>);
+    } else {
+      db.veiculos.push(registro);
+      await saveVeiculosDbAsync(db);
+    }
     acao = "novo";
   }
 

@@ -14,7 +14,10 @@ import {
   upsertParceiroRowToSql,
   deleteParceiroRowFromSql,
   saveVinculosToSql,
-  exportJsonBackup,
+  upsertVinculoToSql,
+  deleteVinculoFromSql,
+  deleteVinculosByVeiculoFromSql,
+  assertRelationalStore,
 } from "@lanza/db";
 
 import { REPO_ROOT } from "../lib-imports.js";
@@ -93,22 +96,14 @@ async function loadParceirosDbAsync(): Promise<ParceirosDb> {
 
 async function saveParceirosDbAsync(db: ParceirosDb): Promise<void> {
   db.atualizadoEm = hoje();
-  if (usePostgresStore()) {
-    await saveParceirosToSql(db);
-    exportJsonBackup("parceiros.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DBP, db);
+  await assertRelationalStore();
+  await saveParceirosToSql(db);
 }
 
 async function saveVinculosDbAsync(db: VinculosDb): Promise<void> {
   db.atualizadoEm = hoje();
-  if (usePostgresStore()) {
-    await saveVinculosToSql(db);
-    exportJsonBackup("parceiro-veiculo.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DBL, db);
+  await assertRelationalStore();
+  await saveVinculosToSql(db);
 }
 
 function saveParceirosDb(db: ParceirosDb): void {
@@ -311,6 +306,11 @@ export async function vincularVeiculoParceiroAsync(
     parceiroId: parceiro.id,
   };
   db.vinculos.push(vinculo);
+  if (usePostgresStore()) {
+    await deleteVinculosByVeiculoFromSql(veiculoId);
+    await upsertVinculoToSql(vinculo);
+    return vinculo;
+  }
   await saveVinculosDbAsync(db);
   return vinculo;
 }
@@ -335,6 +335,11 @@ export async function removerVinculoAsync(id: string): Promise<VinculoParceiro> 
   const idx = db.vinculos.findIndex((v) => v.id === id);
   if (idx < 0) throw new HttpError(404, "Vínculo não encontrado");
   const [removido] = db.vinculos.splice(idx, 1);
+  if (usePostgresStore()) {
+    const ok = await deleteVinculoFromSql(id);
+    if (!ok) throw new HttpError(500, "Falha ao remover vínculo no banco de dados");
+    return removido!;
+  }
   await saveVinculosDbAsync(db);
   return removido!;
 }

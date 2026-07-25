@@ -447,36 +447,70 @@ export async function loadLocacoesFromSql(): Promise<LocacoesDbShape> {
   };
 }
 
+async function upsertLocacaoRowToSql(
+  l: Record<string, unknown>,
+  placaMap: Map<string, string>,
+): Promise<void> {
+  const id = asText(l.id) ?? randomUUID();
+  await pgQuery(
+    `INSERT INTO lanza.locacoes (
+      id, veiculo_id, placa, cliente_id, condutor_nome, contrato_id, situacao, inicio, fim,
+      tipo_locacao, valor_cobrado, valor_pago, substitui_veiculo_id, substitui_placa, observacao,
+      cadastrado_em, atualizado_em
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,COALESCE($16::timestamptz, now()), now())
+    ON CONFLICT (id) DO UPDATE SET
+      veiculo_id = EXCLUDED.veiculo_id,
+      placa = EXCLUDED.placa,
+      cliente_id = EXCLUDED.cliente_id,
+      condutor_nome = EXCLUDED.condutor_nome,
+      contrato_id = EXCLUDED.contrato_id,
+      situacao = EXCLUDED.situacao,
+      inicio = EXCLUDED.inicio,
+      fim = EXCLUDED.fim,
+      tipo_locacao = EXCLUDED.tipo_locacao,
+      valor_cobrado = EXCLUDED.valor_cobrado,
+      valor_pago = EXCLUDED.valor_pago,
+      substitui_veiculo_id = EXCLUDED.substitui_veiculo_id,
+      substitui_placa = EXCLUDED.substitui_placa,
+      observacao = EXCLUDED.observacao,
+      atualizado_em = now()`,
+    [
+      id,
+      resolveVeiculoId(asText(l.veiculoId), placaMap),
+      formatPlacaHyphen(asText(l.placa) ?? ""),
+      isUuid(asText(l.clienteId)) ? l.clienteId : null,
+      asText(l.condutorNome),
+      isUuid(asText(l.contratoId)) ? l.contratoId : null,
+      asText(l.situacao) ?? "locado",
+      asText(l.inicio) ?? "",
+      asText(l.fim),
+      asText(l.tipoLocacao),
+      l.valorCobrado != null ? asNumber(l.valorCobrado) : null,
+      l.valorPago != null ? asNumber(l.valorPago) : null,
+      resolveVeiculoId(asText(l.substituiVeiculoId), placaMap),
+      asText(l.substituiPlaca),
+      asText(l.observacao),
+      parseIso(asText(l.cadastradoEm)),
+    ],
+  );
+}
+
+/** Grava ou atualiza uma única locação no Postgres (sem reescrever toda a tabela). */
+export async function upsertLocacaoToSql(l: Record<string, unknown>): Promise<void> {
+  const placaMap = await loadPlacaMap();
+  await upsertLocacaoRowToSql(l, placaMap);
+}
+
+/** Remove uma locação do Postgres. */
+export async function deleteLocacaoFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.locacoes WHERE id = $1`, [id.trim()]);
+  return (r.rowCount ?? 0) > 0;
+}
+
 export async function saveLocacoesToSql(db: LocacoesDbShape): Promise<void> {
   const placaMap = await loadPlacaMap();
   for (const l of db.locacoes) {
-    const id = asText(l.id) ?? randomUUID();
-    await pgQuery(
-      `INSERT INTO lanza.locacoes (
-        id, veiculo_id, placa, cliente_id, condutor_nome, contrato_id, situacao, inicio, fim,
-        tipo_locacao, valor_cobrado, valor_pago, substitui_veiculo_id, substitui_placa, observacao,
-        cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,COALESCE($16::timestamptz, now()), now())
-      ON CONFLICT (id) DO UPDATE SET fim = EXCLUDED.fim, situacao = EXCLUDED.situacao, atualizado_em = now()`,
-      [
-        id,
-        resolveVeiculoId(asText(l.veiculoId), placaMap),
-        formatPlacaHyphen(asText(l.placa) ?? ""),
-        isUuid(asText(l.clienteId)) ? l.clienteId : null,
-        asText(l.condutorNome),
-        isUuid(asText(l.contratoId)) ? l.contratoId : null,
-        asText(l.situacao) ?? "locado",
-        asText(l.inicio) ?? "",
-        asText(l.fim),
-        asText(l.tipoLocacao),
-        l.valorCobrado != null ? asNumber(l.valorCobrado) : null,
-        l.valorPago != null ? asNumber(l.valorPago) : null,
-        resolveVeiculoId(asText(l.substituiVeiculoId), placaMap),
-        asText(l.substituiPlaca),
-        asText(l.observacao),
-        parseIso(asText(l.cadastradoEm)),
-      ],
-    );
+    await upsertLocacaoRowToSql(l, placaMap);
   }
 }
 
@@ -617,65 +651,111 @@ export async function loadInfracoesFromSql(): Promise<InfracoesDbShape> {
   };
 }
 
+async function upsertInfracaoRowToSql(
+  i: Record<string, unknown>,
+  placaMap: Map<string, string>,
+): Promise<void> {
+  const id = asText(i.id) ?? randomUUID();
+  const raw = i.detranRaw as Record<string, unknown> | undefined;
+  const complemento = asText(i.complemento) ?? asText(raw?.complemento);
+  const senhaDetran = asText(i.senhaDetran) ?? asText(i.senha) ?? asText(raw?.senha);
+
+  await pgQuery(
+    `INSERT INTO lanza.infracoes (
+      id, numero_auto, id_auto_infracao, veiculo_id, descricao, data_autuacao,
+      data_hora_autuacao, local_infracao, valor, situacao, status, protocolo,
+      data_limite_defesa, limite_defesa, prazo_defesa_expirado, data_vencimento_original,
+      convertida_em_debito, quitada_detran, status_infracao, status_detran, fonte,
+      condutor_id, condutor_confirmado, condutor_contrato, condutor_nao_identificado,
+      pdf_arquivo, detran_raw, origem, sync_em, ativo, cadastrado_em, atualizado_em,
+      complemento, senha_detran, notificacao_pdf_arquivo
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+      $22,$23,$24,$25,$26,$27,$28,$29,$30,
+      COALESCE($31::timestamptz, now()), now(),
+      $32,$33,$34)
+    ON CONFLICT (id) DO UPDATE SET
+      numero_auto = EXCLUDED.numero_auto,
+      id_auto_infracao = EXCLUDED.id_auto_infracao,
+      veiculo_id = EXCLUDED.veiculo_id,
+      descricao = EXCLUDED.descricao,
+      data_autuacao = EXCLUDED.data_autuacao,
+      data_hora_autuacao = EXCLUDED.data_hora_autuacao,
+      local_infracao = EXCLUDED.local_infracao,
+      valor = EXCLUDED.valor,
+      situacao = EXCLUDED.situacao,
+      status = EXCLUDED.status,
+      protocolo = EXCLUDED.protocolo,
+      data_limite_defesa = EXCLUDED.data_limite_defesa,
+      limite_defesa = EXCLUDED.limite_defesa,
+      prazo_defesa_expirado = EXCLUDED.prazo_defesa_expirado,
+      data_vencimento_original = EXCLUDED.data_vencimento_original,
+      convertida_em_debito = EXCLUDED.convertida_em_debito,
+      quitada_detran = EXCLUDED.quitada_detran,
+      status_infracao = EXCLUDED.status_infracao,
+      status_detran = EXCLUDED.status_detran,
+      fonte = EXCLUDED.fonte,
+      condutor_id = EXCLUDED.condutor_id,
+      condutor_confirmado = EXCLUDED.condutor_confirmado,
+      condutor_contrato = EXCLUDED.condutor_contrato,
+      condutor_nao_identificado = EXCLUDED.condutor_nao_identificado,
+      pdf_arquivo = EXCLUDED.pdf_arquivo,
+      detran_raw = EXCLUDED.detran_raw,
+      origem = EXCLUDED.origem,
+      sync_em = EXCLUDED.sync_em,
+      ativo = EXCLUDED.ativo,
+      complemento = EXCLUDED.complemento,
+      senha_detran = EXCLUDED.senha_detran,
+      notificacao_pdf_arquivo = EXCLUDED.notificacao_pdf_arquivo,
+      atualizado_em = now()`,
+    [
+      id,
+      asText(i.numeroAuto) ?? id,
+      typeof i.idAutoInfracao === "number" ? i.idAutoInfracao : null,
+      resolveVeiculoId(asText(i.veiculoId), placaMap),
+      asText(i.descricao) ?? "",
+      asText(i.dataAutuacao) ?? "",
+      asText(i.dataHoraAutuacao),
+      asText(i.localInfracao),
+      asNumber(i.valor ?? i.valorMulta, 0),
+      asText(i.situacao),
+      asText(i.status),
+      asText(i.protocolo),
+      asText(i.dataLimiteDefesa),
+      asText(i.limiteDefesa),
+      asBool(i.prazoDefesaExpirado, false),
+      asText(i.dataVencimentoOriginal),
+      asBool(i.convertidaEmDebito, false),
+      asBool(i.quitadaDetran, false),
+      asText(i.statusInfracao),
+      asText(i.statusDetran),
+      asText(i.fonte),
+      isUuid(asText(i.condutorId)) ? i.condutorId : null,
+      asBool(i.condutorConfirmado, false),
+      asText(i.condutorContrato),
+      asBool(i.condutorNaoIdentificado, false),
+      asText(i.pdfArquivo),
+      i.detranRaw != null ? (i.detranRaw as object) : null,
+      asText(i.origem),
+      parseIso(asText(i.syncEm)),
+      asBool(i.ativo, true),
+      parseIso(asText(i.cadastradoEm)),
+      complemento,
+      senhaDetran,
+      asText(i.notificacaoPdfArquivo),
+    ],
+  );
+}
+
+/** Grava ou atualiza uma única infração no Postgres (sem reescrever toda a tabela). */
+export async function upsertInfracaoToSql(i: Record<string, unknown>): Promise<void> {
+  const placaMap = await loadPlacaMap();
+  await upsertInfracaoRowToSql(i, placaMap);
+}
+
 export async function saveInfracoesToSql(db: InfracoesDbShape): Promise<void> {
   const placaMap = await loadPlacaMap();
   for (const i of db.infracoes) {
-    const id = asText(i.id) ?? randomUUID();
-    const raw = i.detranRaw as Record<string, unknown> | undefined;
-    const complemento = asText(i.complemento) ?? asText(raw?.complemento);
-    const senhaDetran = asText(i.senhaDetran) ?? asText(i.senha) ?? asText(raw?.senha);
-
-    await pgQuery(
-      `INSERT INTO lanza.infracoes (
-        id, numero_auto, id_auto_infracao, veiculo_id, descricao, data_autuacao,
-        data_hora_autuacao, local_infracao, valor, situacao, status, protocolo,
-        data_limite_defesa, limite_defesa, prazo_defesa_expirado, data_vencimento_original,
-        convertida_em_debito, quitada_detran, status_infracao, status_detran, fonte,
-        condutor_id, condutor_confirmado, condutor_contrato, condutor_nao_identificado,
-        pdf_arquivo, detran_raw, origem, sync_em, ativo, cadastrado_em, atualizado_em,
-        complemento, senha_detran, notificacao_pdf_arquivo
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
-        $22,$23,$24,$25,$26,$27,$28,$29,$30,
-        COALESCE($31::timestamptz, now()), now(),
-        $32,$33,$34)
-      ON CONFLICT (id) DO UPDATE SET situacao = EXCLUDED.situacao, valor = EXCLUDED.valor, atualizado_em = now()`,
-      [
-        id,
-        asText(i.numeroAuto) ?? id,
-        typeof i.idAutoInfracao === "number" ? i.idAutoInfracao : null,
-        resolveVeiculoId(asText(i.veiculoId), placaMap),
-        asText(i.descricao) ?? "",
-        asText(i.dataAutuacao) ?? "",
-        asText(i.dataHoraAutuacao),
-        asText(i.localInfracao),
-        asNumber(i.valor ?? i.valorMulta, 0),
-        asText(i.situacao),
-        asText(i.status),
-        asText(i.protocolo),
-        asText(i.dataLimiteDefesa),
-        asText(i.limiteDefesa),
-        asBool(i.prazoDefesaExpirado, false),
-        asText(i.dataVencimentoOriginal),
-        asBool(i.convertidaEmDebito, false),
-        asBool(i.quitadaDetran, false),
-        asText(i.statusInfracao),
-        asText(i.statusDetran),
-        asText(i.fonte),
-        isUuid(asText(i.condutorId)) ? i.condutorId : null,
-        asBool(i.condutorConfirmado, false),
-        asText(i.condutorContrato),
-        asBool(i.condutorNaoIdentificado, false),
-        asText(i.pdfArquivo),
-        i.detranRaw != null ? (i.detranRaw as object) : null,
-        asText(i.origem),
-        parseIso(asText(i.syncEm)),
-        asBool(i.ativo, true),
-        parseIso(asText(i.cadastradoEm)),
-        complemento,
-        senhaDetran,
-        asText(i.notificacaoPdfArquivo),
-      ],
-    );
+    await upsertInfracaoRowToSql(i, placaMap);
   }
 }
 
@@ -1164,33 +1244,65 @@ export async function loadParceiroDespesasFromSql(): Promise<ParceiroDespesasDbS
   };
 }
 
+async function upsertParceiroDespesaRowToSql(
+  d: Record<string, unknown>,
+  placaMap: Map<string, string>,
+): Promise<void> {
+  const id = asText(d.id) ?? randomUUID();
+  const placa = formatPlacaHyphen(asText(d.placa) ?? asText(d.veiculoId) ?? "");
+  await pgQuery(
+    `INSERT INTO lanza.parceiro_despesas (
+      id, veiculo_id, placa, categoria, descricao, data, valor, competencia, origem,
+      rastreame_manutencao_id, rastreame_sync_em, rastreame_hash, baixa, atualizado_em
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
+    ON CONFLICT (id) DO UPDATE SET
+      veiculo_id = EXCLUDED.veiculo_id,
+      placa = EXCLUDED.placa,
+      categoria = EXCLUDED.categoria,
+      descricao = EXCLUDED.descricao,
+      data = EXCLUDED.data,
+      valor = EXCLUDED.valor,
+      competencia = EXCLUDED.competencia,
+      origem = EXCLUDED.origem,
+      rastreame_manutencao_id = EXCLUDED.rastreame_manutencao_id,
+      rastreame_sync_em = EXCLUDED.rastreame_sync_em,
+      rastreame_hash = EXCLUDED.rastreame_hash,
+      baixa = EXCLUDED.baixa,
+      atualizado_em = now()`,
+    [
+      id,
+      resolveVeiculoId(asText(d.veiculoId) ?? placa, placaMap),
+      placa,
+      asText(d.categoria) ?? "Outros",
+      asText(d.descricao) ?? "",
+      asText(d.data) ?? "",
+      asNumber(d.valor, 0),
+      asText(d.competencia) ?? "",
+      asText(d.origem),
+      d.rastreameManutencaoId != null ? String(d.rastreameManutencaoId) : null,
+      parseIso(asText(d.rastreameSyncEm)),
+      asText(d.rastreameHash),
+      asText(d.baixa),
+    ],
+  );
+}
+
+/** Grava ou atualiza uma única despesa de parceiro no Postgres. */
+export async function upsertParceiroDespesaToSql(d: Record<string, unknown>): Promise<void> {
+  const placaMap = await loadPlacaMap();
+  await upsertParceiroDespesaRowToSql(d, placaMap);
+}
+
+/** Remove uma despesa de parceiro do Postgres. */
+export async function deleteParceiroDespesaFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.parceiro_despesas WHERE id = $1`, [id.trim()]);
+  return (r.rowCount ?? 0) > 0;
+}
+
 export async function saveParceiroDespesasToSql(db: ParceiroDespesasDbShape): Promise<void> {
   const placaMap = await loadPlacaMap();
   for (const d of db.parceiroDespesas) {
-    const id = asText(d.id) ?? randomUUID();
-    const placa = formatPlacaHyphen(asText(d.placa) ?? asText(d.veiculoId) ?? "");
-    await pgQuery(
-      `INSERT INTO lanza.parceiro_despesas (
-        id, veiculo_id, placa, categoria, descricao, data, valor, competencia, origem,
-        rastreame_manutencao_id, rastreame_sync_em, rastreame_hash, baixa, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
-      ON CONFLICT (id) DO UPDATE SET baixa = EXCLUDED.baixa, valor = EXCLUDED.valor, atualizado_em = now()`,
-      [
-        id,
-        resolveVeiculoId(asText(d.veiculoId) ?? placa, placaMap),
-        placa,
-        asText(d.categoria) ?? "Outros",
-        asText(d.descricao) ?? "",
-        asText(d.data) ?? "",
-        asNumber(d.valor, 0),
-        asText(d.competencia) ?? "",
-        asText(d.origem),
-        d.rastreameManutencaoId != null ? String(d.rastreameManutencaoId) : null,
-        parseIso(asText(d.rastreameSyncEm)),
-        asText(d.rastreameHash),
-        asText(d.baixa),
-      ],
-    );
+    await upsertParceiroDespesaRowToSql(d, placaMap);
   }
 }
 
@@ -1304,93 +1416,97 @@ export async function loadTriagensFromSql(): Promise<TriagemDbShape> {
   };
 }
 
-export async function saveTriagensToSql(db: TriagemDbShape): Promise<void> {
-  for (const t of db.triagens) {
-    const triagemId = asText(t.id) ?? randomUUID();
-    const cpf = normCpf(asText(t.cpf)) ?? asText(t.cpf) ?? "";
-    const dataConsulta = asText(t.dataConsulta) ?? "";
-    const clienteId = isUuid(asText(t.clienteId)) ? t.clienteId : null;
-    const lgpd = t.lgpd as Record<string, unknown> | undefined;
-    const baseLegal = lgpd ? asText(lgpd.baseLegal) : null;
+export async function upsertTriagemToSql(t: Record<string, unknown>): Promise<void> {
+  const triagemId = asText(t.id) ?? randomUUID();
+  const cpf = normCpf(asText(t.cpf)) ?? asText(t.cpf) ?? "";
+  const dataConsulta = asText(t.dataConsulta) ?? "";
+  const clienteId = isUuid(asText(t.clienteId)) ? t.clienteId : null;
+  const lgpd = t.lgpd as Record<string, unknown> | undefined;
+  const baseLegal = lgpd ? asText(lgpd.baseLegal) : null;
 
-    if (t.aprovado === true || t.aprovado === false) {
-      if (clienteId) {
-        await pgQuery(
-          `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
-           WHERE id = $1::uuid`,
-          [clienteId, t.aprovado],
-        );
-      } else if (cpf) {
-        await pgQuery(
-          `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
-           WHERE cpf_norm = $1 OR cpf = $1`,
-          [cpf, t.aprovado],
-        );
-      }
+  if (t.aprovado === true || t.aprovado === false) {
+    if (clienteId) {
+      await pgQuery(
+        `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
+         WHERE id = $1::uuid`,
+        [clienteId, t.aprovado],
+      );
+    } else if (cpf) {
+      await pgQuery(
+        `UPDATE lanza.clientes SET analise_aprovado = $2, analise_avaliado_em = now(), atualizado_em = now()
+         WHERE cpf_norm = $1 OR cpf = $1`,
+        [cpf, t.aprovado],
+      );
     }
+  }
 
-    const fontes = t.fontes as Record<string, unknown>[] | undefined;
-    if (Array.isArray(fontes)) {
-      for (const f of fontes) {
-        const origem = asText(f.id) ?? asText(f.nome) ?? "fonte";
-        const status = mapAnaliseCadastroStatus(asBool(f.alerta, false), asText(f.status));
-        await pgQuery(
-          `INSERT INTO lanza.cliente_analise_cadastro (
-            id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
-            evidencia, base_legal, cadastrado_em, atualizado_em
-          ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
-            COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
-          ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
-            status = EXCLUDED.status, descricao = EXCLUDED.descricao, evidencia = EXCLUDED.evidencia,
-            base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
-            consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
-          [
-            randomUUID(),
-            clienteId,
-            cpf,
-            dataConsulta,
-            parseIso(asText(f.consultadoEm)),
-            origem,
-            asText(f.observacao) ?? "",
-            status,
-            asText(f.evidencia),
-            baseLegal,
-            parseIso(asText(t.cadastradoEm)),
-            parseIso(asText(t.atualizadoEm)),
-          ],
-        );
-      }
-    }
-
-    if (dataConsulta) {
-      const triagemStatus =
-        t.aprovado === false
-          ? "reprovado"
-          : t.aprovado === true
-            ? "aprovado"
-            : mapAnaliseCadastroStatus(asBool(t.alertaGeral, false), null);
+  const fontes = t.fontes as Record<string, unknown>[] | undefined;
+  if (Array.isArray(fontes)) {
+    for (const f of fontes) {
+      const origem = asText(f.id) ?? asText(f.nome) ?? "fonte";
+      const status = mapAnaliseCadastroStatus(asBool(f.alerta, false), asText(f.status));
       await pgQuery(
         `INSERT INTO lanza.cliente_analise_cadastro (
-          id, cliente_id, cpf, data_consulta, origem, descricao, status, base_legal,
-          cadastrado_em, atualizado_em
-        ) VALUES ($1,$2,$3,$4::date,'triagem',$5,$6::lanza.analise_cadastro_status,$7,
-          COALESCE($8::timestamptz, now()), COALESCE($9::timestamptz, now()))
+          id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
+          evidencia, base_legal, cadastrado_em, atualizado_em
+        ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
+          COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
         ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
-          status = EXCLUDED.status, descricao = EXCLUDED.descricao, base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
-          atualizado_em = now()`,
+          status = EXCLUDED.status, descricao = EXCLUDED.descricao, evidencia = EXCLUDED.evidencia,
+          base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
+          consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
         [
-          triagemId,
+          randomUUID(),
           clienteId,
           cpf,
           dataConsulta,
-          asText(t.resumo) ?? "",
-          triagemStatus,
+          parseIso(asText(f.consultadoEm)),
+          origem,
+          asText(f.observacao) ?? "",
+          status,
+          asText(f.evidencia),
           baseLegal,
           parseIso(asText(t.cadastradoEm)),
           parseIso(asText(t.atualizadoEm)),
         ],
       );
     }
+  }
+
+  if (dataConsulta) {
+    const triagemStatus =
+      t.aprovado === false
+        ? "reprovado"
+        : t.aprovado === true
+          ? "aprovado"
+          : mapAnaliseCadastroStatus(asBool(t.alertaGeral, false), null);
+    await pgQuery(
+      `INSERT INTO lanza.cliente_analise_cadastro (
+        id, cliente_id, cpf, data_consulta, origem, descricao, status, base_legal,
+        cadastrado_em, atualizado_em
+      ) VALUES ($1,$2,$3,$4::date,'triagem',$5,$6::lanza.analise_cadastro_status,$7,
+        COALESCE($8::timestamptz, now()), COALESCE($9::timestamptz, now()))
+      ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
+        status = EXCLUDED.status, descricao = EXCLUDED.descricao, base_legal = COALESCE(EXCLUDED.base_legal, lanza.cliente_analise_cadastro.base_legal),
+        atualizado_em = now()`,
+      [
+        triagemId,
+        clienteId,
+        cpf,
+        dataConsulta,
+        asText(t.resumo) ?? "",
+        triagemStatus,
+        baseLegal,
+        parseIso(asText(t.cadastradoEm)),
+        parseIso(asText(t.atualizadoEm)),
+      ],
+    );
+  }
+}
+
+export async function saveTriagensToSql(db: TriagemDbShape): Promise<void> {
+  for (const t of db.triagens) {
+    await upsertTriagemToSql(t);
   }
 }
 
@@ -1452,40 +1568,44 @@ export async function loadClienteAnaliseFromSql(): Promise<ClienteAnaliseDbShape
   };
 }
 
+export async function upsertClienteAnaliseRowToSql(r: Record<string, unknown>): Promise<void> {
+  const id = asText(r.id) ?? randomUUID();
+  const cpf = normCpf(asText(r.cpf)) ?? asText(r.cpf) ?? "";
+  const origem = asText(r.fonte) ?? asText(r.site) ?? "?";
+  const achados = r.achados as Record<string, unknown>[] | undefined;
+  const achadosJson =
+    Array.isArray(achados) && achados.length
+      ? achados.map((a) => ({ tipo: asText(a.tipo) ?? "outro", descricao: asText(a.descricao) ?? "" }))
+      : null;
+
+  await pgQuery(
+    `INSERT INTO lanza.cliente_analise_cadastro (
+      id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
+      evidencia, achados, cadastrado_em, atualizado_em
+    ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
+      COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
+    ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
+      descricao = EXCLUDED.descricao, status = EXCLUDED.status, evidencia = EXCLUDED.evidencia,
+      achados = EXCLUDED.achados, consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
+    [
+      id,
+      isUuid(asText(r.clienteId)) ? r.clienteId : null,
+      cpf,
+      asText(r.dataConsulta) ?? "",
+      parseIso(asText(r.consultadoEm)),
+      origem,
+      asText(r.identificado) ?? "",
+      mapAnaliseCadastroStatus(asBool(r.alerta, false), asText(r.status)),
+      asText(r.evidencia),
+      achadosJson,
+      parseIso(asText(r.cadastradoEm)),
+      parseIso(asText(r.atualizadoEm)),
+    ],
+  );
+}
+
 export async function saveClienteAnaliseToSql(db: ClienteAnaliseDbShape): Promise<void> {
   for (const r of db.registros) {
-    const id = asText(r.id) ?? randomUUID();
-    const cpf = normCpf(asText(r.cpf)) ?? asText(r.cpf) ?? "";
-    const origem = asText(r.fonte) ?? asText(r.site) ?? "?";
-    const achados = r.achados as Record<string, unknown>[] | undefined;
-    const achadosJson =
-      Array.isArray(achados) && achados.length
-        ? achados.map((a) => ({ tipo: asText(a.tipo) ?? "outro", descricao: asText(a.descricao) ?? "" }))
-        : null;
-
-    await pgQuery(
-      `INSERT INTO lanza.cliente_analise_cadastro (
-        id, cliente_id, cpf, data_consulta, consultado_em, origem, descricao, status,
-        evidencia, achados, cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4::date,$5,$6,$7,$8::lanza.analise_cadastro_status,$9,$10,
-        COALESCE($11::timestamptz, now()), COALESCE($12::timestamptz, now()))
-      ON CONFLICT (cpf, origem, data_consulta) DO UPDATE SET
-        descricao = EXCLUDED.descricao, status = EXCLUDED.status, evidencia = EXCLUDED.evidencia,
-        achados = EXCLUDED.achados, consultado_em = EXCLUDED.consultado_em, atualizado_em = now()`,
-      [
-        id,
-        isUuid(asText(r.clienteId)) ? r.clienteId : null,
-        cpf,
-        asText(r.dataConsulta) ?? "",
-        parseIso(asText(r.consultadoEm)),
-        origem,
-        asText(r.identificado) ?? "",
-        mapAnaliseCadastroStatus(asBool(r.alerta, false), asText(r.status)),
-        asText(r.evidencia),
-        achadosJson,
-        parseIso(asText(r.cadastradoEm)),
-        parseIso(asText(r.atualizadoEm)),
-      ],
-    );
+    await upsertClienteAnaliseRowToSql(r);
   }
 }

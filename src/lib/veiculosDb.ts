@@ -9,11 +9,11 @@ import {
   saveJsonDocument,
   saveJsonDocumentAsync,
   useRelationalStore,
+  assertRelationalStore,
   loadVeiculosFromSql,
   queryVeiculosFromSql,
   saveVeiculosToSql,
   upsertVeiculoToSql,
-  exportJsonBackup,
 } from "@lanza/db";
 import { veiculosScopeFromFilter } from "./scopedCatalogo.js";
 import { isEntityUuid } from "./filtroListagem.js";
@@ -125,14 +125,8 @@ export function saveVeiculosDb(db: VeiculosDb): void {
 export async function saveVeiculosDbAsync(db: VeiculosDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
-  if (await useRelationalStore()) {
-    await saveVeiculosToSql(db);
-    exportJsonBackup("veiculos.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_VEICULOS, db as Record<string, unknown>, {
-    description: DEFAULT_DESCRICAO,
-  });
+  await assertRelationalStore();
+  await saveVeiculosToSql(db);
 }
 
 export function isVeiculoAtivo(v: VeiculoRegistro): boolean {

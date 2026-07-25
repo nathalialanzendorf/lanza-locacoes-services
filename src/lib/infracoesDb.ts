@@ -9,9 +9,10 @@ import {
   saveJsonDocument,
   saveJsonDocumentAsync,
   useRelationalStore,
+  assertRelationalStore,
   loadInfracoesFromSql,
   saveInfracoesToSql,
-  exportJsonBackup,
+  upsertInfracaoToSql,
 } from "@lanza/db";
 import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran } from "./detranSc/types.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
@@ -491,14 +492,8 @@ export async function saveInfracoesDbAsync(db: InfracoesDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   if (!db.schemaInfracao) db.schemaInfracao = DEFAULT_SCHEMA;
-  if (await useRelationalStore()) {
-    await saveInfracoesToSql(db);
-    exportJsonBackup("infracoes.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_INFRACOES, db as Record<string, unknown>, {
-    description: DEFAULT_DESCRICAO,
-  });
+  await assertRelationalStore();
+  await saveInfracoesToSql(db);
 }
 
 export function findInfracaoByNumeroAuto(numeroAuto: string): InfracaoRegistro | null {
@@ -555,7 +550,11 @@ export async function confirmarDebitoParceiroInfracaoAsync(
   reg.condutorContrato = null;
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
-  await saveInfracoesDbAsync(db);
+  if (await useRelationalStore()) {
+    await upsertInfracaoToSql(reg as unknown as Record<string, unknown>);
+  } else {
+    await saveInfracoesDbAsync(db);
+  }
   espelharInfracaoParceiro(reg);
   return reg;
 }
@@ -590,7 +589,11 @@ export async function vincularClienteDespesaInfracaoAsync(
   reg.clienteDespesaId = clienteDespesaId;
   reg.atualizadoEm = nowIso();
   db.infracoes[idx] = reg;
-  await saveInfracoesDbAsync(db);
+  if (await useRelationalStore()) {
+    await upsertInfracaoToSql(reg as unknown as Record<string, unknown>);
+  } else {
+    await saveInfracoesDbAsync(db);
+  }
   return reg;
 }
 

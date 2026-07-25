@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, exportJsonBackup, queryLocacoesFromSql, resolveVeiculoIdFromSql } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadLocacoesFromSql, saveLocacoesToSql, upsertLocacaoToSql, deleteLocacaoFromSql, queryLocacoesFromSql, resolveVeiculoIdFromSql } from "@lanza/db";
 import { resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { findVeiculoById, loadVeiculosDbAsync } from "./veiculosDb.js";
@@ -191,12 +191,8 @@ export async function saveLocacoesDbAsync(db: LocacoesDb): Promise<void> {
   db.atualizadoEm = new Date().toISOString().slice(0, 10);
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schemaLocacao = DEFAULT_SCHEMA;
-  if (await useRelationalStore()) {
-    await saveLocacoesToSql(db);
-    exportJsonBackup("locacoes.json", db);
-    return;
-  }
-  await saveJsonDocumentAsync(DB_LOCACOES, db as Record<string, unknown>, { trailingNewline: true });
+  await assertRelationalStore();
+  await saveLocacoesToSql(db);
 }
 
 export type LocacaoInput = {
@@ -326,6 +322,10 @@ export function gravarLocacao(input: LocacaoInput): GravarLocacaoResult {
 export async function gravarLocacaoAsync(input: LocacaoInput): Promise<GravarLocacaoResult> {
   const db = await loadLocacoesDbAsync();
   const result = applyGravarLocacao(db, input);
+  if (await useRelationalStore()) {
+    await upsertLocacaoToSql(result.registro as unknown as Record<string, unknown>);
+    return result;
+  }
   await saveLocacoesDbAsync(db);
   return result;
 }
@@ -344,6 +344,10 @@ export async function excluirLocacaoAsync(id: string): Promise<LocacaoRegistro |
   const idx = db.locacoes.findIndex((l) => l.id === id);
   if (idx < 0) return null;
   const [removido] = db.locacoes.splice(idx, 1);
+  if (await useRelationalStore()) {
+    await deleteLocacaoFromSql(id);
+    return removido ?? null;
+  }
   await saveLocacoesDbAsync(db);
   return removido ?? null;
 }

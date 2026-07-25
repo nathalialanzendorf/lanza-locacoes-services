@@ -1,4 +1,4 @@
-export { useRelationalStore, skipJsonStoresWrite } from "./relationalConfig.js";
+export { useRelationalStore, assertRelationalStore, skipJsonStoresWrite } from "./relationalConfig.js";
 export { exportJsonBackup } from "./jsonExport.js";
 export {
   loadParceirosFromSql,
@@ -7,6 +7,9 @@ export {
   upsertParceiroRowToSql,
   deleteParceiroRowFromSql,
   saveVinculosToSql,
+  upsertVinculoToSql,
+  deleteVinculoFromSql,
+  deleteVinculosByVeiculoFromSql,
   loadVeiculosFromSql,
   saveVeiculosToSql,
   upsertVeiculoToSql,
@@ -35,10 +38,13 @@ export {
   type ContratosSqlFilter,
   loadLocacoesFromSql,
   saveLocacoesToSql,
+  upsertLocacaoToSql,
+  deleteLocacaoFromSql,
   queryLocacoesFromSql,
   type LocacoesSqlFilter,
   loadInfracoesFromSql,
   saveInfracoesToSql,
+  upsertInfracaoToSql,
   queryInfracoesFromSql,
   type InfracoesSqlFilter,
   loadClienteDespesasFromSql,
@@ -52,12 +58,16 @@ export {
   type PersistClienteDespesaSqlOpts,
   loadParceiroDespesasFromSql,
   saveParceiroDespesasToSql,
+  upsertParceiroDespesaToSql,
+  deleteParceiroDespesaFromSql,
   queryParceiroDespesasFromSql,
   type ParceiroDespesasSqlFilter,
   loadTriagensFromSql,
   saveTriagensToSql,
+  upsertTriagemToSql,
   loadClienteAnaliseFromSql,
   saveClienteAnaliseToSql,
+  upsertClienteAnaliseRowToSql,
   type TriagemDbShape,
   type ClienteAnaliseDbShape,
 } from "./domainRepositories.js";

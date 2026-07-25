@@ -19,9 +19,10 @@ import {
   loadJsonDocument,
   saveJsonDocument,
   useRelationalStore,
+  assertRelationalStore,
   loadClienteAnaliseFromSql,
   saveClienteAnaliseToSql,
-  exportJsonBackup,
+  upsertClienteAnaliseRowToSql,
   type ClienteAnaliseDbShape,
 } from "@lanza/db";
 import { REPO_ROOT } from "../repoRoot.js";
@@ -140,12 +141,8 @@ export async function saveClienteAnaliseDbAsync(db: ClienteAnaliseDb): Promise<v
   db.atualizadoEm = hojeIso();
   if (!db.descricao) db.descricao = DEFAULT_DESCRICAO;
   db.schema = DEFAULT_SCHEMA;
-  if (await useRelationalStore()) {
-    await saveClienteAnaliseToSql(db as unknown as ClienteAnaliseDbShape);
-    exportJsonBackup("cliente-analise.json", db);
-    return;
-  }
-  saveJsonDocument(DB_CLIENTE_ANALISE, db, { mkdir: true, trailingNewline: true });
+  await assertRelationalStore();
+  await saveClienteAnaliseToSql(db as unknown as ClienteAnaliseDbShape);
 }
 
 /** Fonte normalizada para gravar uma linha (aceita ResultadoFonte ou FonteResumo). */
@@ -170,12 +167,10 @@ export interface RegistrarAchadosArgs {
   fontes: FonteParaCliente[];
 }
 
-/**
- * Grava (upsert por cpf+fonte+dataConsulta) uma linha por fonte consultada.
- * Devolve as linhas resultantes.
- */
-export function registrarAchadosCliente(args: RegistrarAchadosArgs): RegistroClienteAnalise[] {
-  const db = loadClienteAnaliseDb();
+function applyRegistrarAchadosClienteOnDb(
+  db: ClienteAnaliseDb,
+  args: RegistrarAchadosArgs,
+): RegistroClienteAnalise[] {
   const ts = nowIso();
   const cpf = normCpf(args.cpf);
   const saidas: RegistroClienteAnalise[] = [];
@@ -221,7 +216,32 @@ export function registrarAchadosCliente(args: RegistrarAchadosArgs): RegistroCli
     }
   }
 
+  return saidas;
+}
+
+/**
+ * Grava (upsert por cpf+fonte+dataConsulta) uma linha por fonte consultada.
+ * Devolve as linhas resultantes.
+ */
+export function registrarAchadosCliente(args: RegistrarAchadosArgs): RegistroClienteAnalise[] {
+  const db = loadClienteAnaliseDb();
+  const saidas = applyRegistrarAchadosClienteOnDb(db, args);
   saveClienteAnaliseDb(db);
+  return saidas;
+}
+
+export async function registrarAchadosClienteAsync(
+  args: RegistrarAchadosArgs,
+): Promise<RegistroClienteAnalise[]> {
+  const db = await loadClienteAnaliseDbAsync();
+  const saidas = applyRegistrarAchadosClienteOnDb(db, args);
+  if (await useRelationalStore()) {
+    for (const registro of saidas) {
+      await upsertClienteAnaliseRowToSql(registro as unknown as Record<string, unknown>);
+    }
+    return saidas;
+  }
+  await saveClienteAnaliseDbAsync(db);
   return saidas;
 }
 
