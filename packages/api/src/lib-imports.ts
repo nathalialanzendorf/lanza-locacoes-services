@@ -476,7 +476,6 @@ export {
 
 export {
   ensurePdfFromDocx,
-  pdfCloudConfigured,
 } from "../../../src/lib/exportDocxToPdf.js";
 
 export {

@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
+import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 
 function convertApiSecret(): string | null {
@@ -48,7 +50,37 @@ type ConvertApiFile = {
   Url?: string;
 };
 
-/** Converte DOCX → PDF via ConvertAPI (Vercel/Linux). Requer CONVERTAPI_SECRET. */
+let wasmModulePromise: Promise<WebAssembly.Module> | null = null;
+
+async function docxWasmModule(): Promise<WebAssembly.Module> {
+  if (!wasmModulePromise) {
+    wasmModulePromise = (async () => {
+      const require = createRequire(import.meta.url);
+      const wasmPath = require.resolve("docx-to-pdf-wasm/wasm");
+      const wasmBytes = await readFile(wasmPath);
+      return WebAssembly.compile(wasmBytes);
+    })();
+  }
+  return wasmModulePromise;
+}
+
+/** Converte DOCX → PDF via WebAssembly (funciona na Vercel/Linux, sem cadastro). */
+export async function exportDocxToPdfWasm(absDocx: string, absPdf: string): Promise<boolean> {
+  try {
+    const { convertToPdf } = await import("docx-to-pdf-wasm");
+    const module = await docxWasmModule();
+    const docx = new Uint8Array(fs.readFileSync(absDocx));
+    const pdf = await convertToPdf(module, docx);
+    if (!pdf?.length) return false;
+    fs.writeFileSync(absPdf, Buffer.from(pdf));
+    return fs.existsSync(absPdf);
+  } catch (e) {
+    console.error("[aviso] PDF WASM nao gerado:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+/** Converte DOCX → PDF via ConvertAPI (opcional). Requer CONVERTAPI_SECRET. */
 export async function exportDocxToPdfConvertApi(
   absDocx: string,
   absPdf: string,
@@ -101,18 +133,21 @@ export async function exportDocxToPdfConvertApi(
   return fs.existsSync(absPdf);
 }
 
-/** Gera PDF a partir de DOCX já gravado (Word local ou ConvertAPI na nuvem). */
+/** Gera PDF a partir de DOCX já gravado (Word, WASM ou ConvertAPI opcional). */
 export async function ensurePdfFromDocx(absDocx: string, absPdf: string): Promise<boolean> {
   if (fs.existsSync(absPdf)) return true;
   if (!fs.existsSync(absDocx)) return false;
 
+  const absDocxResolved = path.resolve(absDocx);
+  const absPdfResolved = path.resolve(absPdf);
+
   if (process.platform === "win32") {
-    if (exportDocxToPdfWin(path.resolve(absDocx), path.resolve(absPdf))) return true;
+    if (exportDocxToPdfWin(absDocxResolved, absPdfResolved)) return true;
   }
 
-  if (await exportDocxToPdfConvertApi(path.resolve(absDocx), path.resolve(absPdf))) {
-    return true;
-  }
+  if (await exportDocxToPdfWasm(absDocxResolved, absPdfResolved)) return true;
+
+  if (await exportDocxToPdfConvertApi(absDocxResolved, absPdfResolved)) return true;
 
   return false;
 }

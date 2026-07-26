@@ -12,7 +12,6 @@ import {
   gerar,
   gerarDespesasIniciaisContratoAsync,
   ensurePdfFromDocx,
-  pdfCloudConfigured,
   montarDadosContratoFromDbAsync,
   registrarContratoFromDadosAsync,
   validarModoContratoAsync,
@@ -309,9 +308,7 @@ export function resolverDownloadDocumentoContrato(
     throw new HttpError(
       404,
       formato === "pdf"
-        ? pdfCloudConfigured() || process.platform === "win32"
-          ? "PDF não disponível — a conversão falhou. Tente baixar o Word (.docx)."
-          : "PDF na nuvem requer CONVERTAPI_SECRET na Vercel (ou baixe o Word .docx e exporte no Word)."
+        ? "PDF não disponível — a conversão falhou. Tente baixar o Word (.docx)."
         : "Documento Word não encontrado.",
     );
   }
