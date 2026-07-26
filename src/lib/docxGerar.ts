@@ -8,6 +8,10 @@ import { defaultContratosDir } from "./lanzaPaths.js";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 
+/** Contrato: Arial 9pt em todo o documento (Word usa meios-pontos: 9pt = 18). */
+const CONTRATO_FONT = "Arial";
+const CONTRATO_FONT_SZ = "18";
+
 const _MESES = [
   "janeiro",
   "fevereiro",
@@ -100,6 +104,116 @@ function clearParagraphRuns(p: Element): void {
   }
 }
 
+function runIsBold(rPr: Element | null): boolean {
+  if (!rPr) return false;
+  const boldTags = rPr.getElementsByTagNameNS(W, "b");
+  for (let i = 0; i < boldTags.length; i++) {
+    const b = boldTags[i] as Element;
+    const off = b.getAttributeNS(W, "val") ?? b.getAttribute("w:val");
+    if (off !== "0" && off !== "false") return true;
+  }
+  return false;
+}
+
+function applyContratoFontRPr(doc: Document, rPr: Element, bold: boolean): void {
+  const remove: Element[] = [];
+  for (let i = 0; i < rPr.childNodes.length; i++) {
+    const node = rPr.childNodes[i];
+    if (node.nodeType !== 1) continue;
+    const el = node as Element;
+    if (el.namespaceURI === W) {
+      const ln = el.localName;
+      if (
+        ln === "rFonts" ||
+        ln === "sz" ||
+        ln === "szCs" ||
+        ln === "b" ||
+        ln === "bCs"
+      ) {
+        remove.push(el);
+      }
+    }
+  }
+  for (const el of remove) rPr.removeChild(el);
+
+  const rFonts = doc.createElementNS(W, "w:rFonts");
+  rFonts.setAttributeNS(W, "ascii", CONTRATO_FONT);
+  rFonts.setAttributeNS(W, "hAnsi", CONTRATO_FONT);
+  rFonts.setAttributeNS(W, "cs", CONTRATO_FONT);
+  rFonts.setAttributeNS(W, "eastAsia", CONTRATO_FONT);
+  rPr.insertBefore(rFonts, rPr.firstChild);
+
+  const sz = doc.createElementNS(W, "w:sz");
+  sz.setAttributeNS(W, "val", CONTRATO_FONT_SZ);
+  rPr.appendChild(sz);
+
+  const szCs = doc.createElementNS(W, "w:szCs");
+  szCs.setAttributeNS(W, "val", CONTRATO_FONT_SZ);
+  rPr.appendChild(szCs);
+
+  if (bold) {
+    rPr.appendChild(doc.createElementNS(W, "w:b"));
+  }
+}
+
+function ensureRunFont(doc: Document, r: Element, bold?: boolean): void {
+  let rPr: Element | null = null;
+  for (let i = 0; i < r.childNodes.length; i++) {
+    const node = r.childNodes[i];
+    if (node.nodeType === 1 && (node as Element).localName === "rPr") {
+      rPr = node as Element;
+      break;
+    }
+  }
+  const useBold = bold ?? runIsBold(rPr);
+  if (!rPr) {
+    rPr = doc.createElementNS(W, "w:rPr");
+    r.insertBefore(rPr, r.firstChild);
+  }
+  applyContratoFontRPr(doc, rPr, useBold);
+}
+
+/** Garante Arial 9 em todas as runs e defaults de parágrafo (substitui Calibri 11 do template). */
+function normalizeDocumentFonts(dom: Document): void {
+  const root = dom.documentElement;
+  const runs = root.getElementsByTagNameNS(W, "r");
+  for (let i = 0; i < runs.length; i++) {
+    ensureRunFont(dom, runs[i] as Element);
+  }
+
+  const paragraphs = root.getElementsByTagNameNS(W, "p");
+  for (let i = 0; i < paragraphs.length; i++) {
+    const p = paragraphs[i] as Element;
+    for (let j = 0; j < p.childNodes.length; j++) {
+      const node = p.childNodes[j];
+      if (node.nodeType !== 1 || (node as Element).localName !== "pPr") continue;
+      const pPr = node as Element;
+      for (let k = 0; k < pPr.childNodes.length; k++) {
+        const child = pPr.childNodes[k];
+        if (child.nodeType === 1 && (child as Element).localName === "rPr") {
+          applyContratoFontRPr(dom, child as Element, runIsBold(child as Element));
+        }
+      }
+    }
+  }
+
+  const docDefaults = root.getElementsByTagNameNS(W, "docDefaults");
+  for (let i = 0; i < docDefaults.length; i++) {
+    const rPrDefault = docDefaults[i]!.getElementsByTagNameNS(W, "rPr");
+    for (let j = 0; j < rPrDefault.length; j++) {
+      applyContratoFontRPr(dom, rPrDefault[j] as Element, false);
+    }
+  }
+
+  const styles = root.getElementsByTagNameNS(W, "style");
+  for (let i = 0; i < styles.length; i++) {
+    const styleRPr = (styles[i] as Element).getElementsByTagNameNS(W, "rPr");
+    for (let j = 0; j < styleRPr.length; j++) {
+      applyContratoFontRPr(dom, styleRPr[j] as Element, runIsBold(styleRPr[j] as Element));
+    }
+  }
+}
+
 function appendRun(
   doc: Document,
   p: Element,
@@ -107,11 +221,9 @@ function appendRun(
   bold: boolean,
 ): void {
   const r = doc.createElementNS(W, "w:r");
-  if (bold) {
-    const rPr = doc.createElementNS(W, "w:rPr");
-    rPr.appendChild(doc.createElementNS(W, "w:b"));
-    r.appendChild(rPr);
-  }
+  const rPr = doc.createElementNS(W, "w:rPr");
+  applyContratoFontRPr(doc, rPr, bold);
+  r.appendChild(rPr);
   const t = doc.createElementNS(W, "w:t");
   if (/^\s|\s$/.test(text)) {
     t.setAttribute("xml:space", "preserve");
@@ -700,6 +812,8 @@ export function gerar(dados: GerarContratoDados): {
 
   aplicarNomesAssinaturaFinal(dom, body, cli.nome);
 
+  normalizeDocumentFonts(dom);
+
   const pasta = resolverPastaContratoFromDados(dados);
   fs.mkdirSync(pasta, { recursive: true });
   const nomeArq = resolverNomeArquivoContrato(cli.nome);
@@ -708,6 +822,17 @@ export function gerar(dados: GerarContratoDados): {
 
   const newXml = new XMLSerializer().serializeToString(docEl);
   zip.file("word/document.xml", newXml);
+
+  const stylesEntry = zip.file("word/styles.xml");
+  if (stylesEntry) {
+    const stylesDom = new DOMParser().parseFromString(stylesEntry.asText(), "application/xml");
+    normalizeDocumentFonts(stylesDom);
+    zip.file(
+      "word/styles.xml",
+      new XMLSerializer().serializeToString(stylesDom.documentElement),
+    );
+  }
+
   fs.writeFileSync(saidaDocx, zip.generate({ type: "nodebuffer" }));
 
   let pdfOk = false;
