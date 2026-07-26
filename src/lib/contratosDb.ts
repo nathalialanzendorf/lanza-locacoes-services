@@ -978,14 +978,16 @@ function validarModoContratoComLista(
   filtros: FiltrosContratoCliente,
   contratos: ContratoRegistro[],
   veiculoIdResolved?: string | null,
+  veiculos?: VeiculoRegistro[],
 ): ValidarModoContratoResult {
-  const irmaos = listarContratosClienteVeiculo(filtros, contratos);
+  const catalogoVeiculos = veiculos ?? loadVeiculosDb().veiculos;
+  const irmaos = listarContratosClienteVeiculo(filtros, contratos, catalogoVeiculos);
   const ativo = irmaos.find((c) => c.status === "ativo");
   const placaFmt = filtros.placa?.trim() ? formatPlacaHyphen(filtros.placa) : "";
   const vid =
     veiculoIdResolved ??
     (filtros.placa?.trim()
-      ? resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos)
+      ? resolveVeiculoIdListagem({ placa: filtros.placa }, catalogoVeiculos)
       : null) ??
     null;
   const rotuloVeiculo = placaFmt || "deste veículo";
@@ -1094,16 +1096,28 @@ export async function validarModoContratoAsync(
   modo: ModoContratoCli,
   filtros: FiltrosContratoCliente,
 ): Promise<ValidarModoContratoResult> {
+  const veiculoIdInput = filtros.veiculoId?.trim() || null;
+  const placaInput = filtros.placa?.trim() || null;
+  const veiculosDb = veiculoIdInput
+    ? await loadVeiculosDbAsync({ veiculoId: veiculoIdInput })
+    : placaInput
+      ? await loadVeiculosDbAsync({ placa: placaInput })
+      : { veiculos: [] as VeiculoRegistro[] };
+
   let veiculoIdResolved: string | null =
-    filtros.veiculoId?.trim() ||
-    (filtros.placa?.trim()
-      ? (resolveVeiculoIdListagem(
-          { placa: filtros.placa },
-          (await loadVeiculosDbAsync({ placa: filtros.placa })).veiculos,
-        ) ?? null)
+    veiculoIdInput ||
+    (placaInput
+      ? resolveVeiculoIdListagem({ placa: placaInput }, veiculosDb.veiculos) ?? null
       : null);
+
   const contratos = await loadContratosParaValidacaoAsync(filtros, veiculoIdResolved);
-  return validarModoContratoComLista(modo, filtros, contratos, veiculoIdResolved);
+  return validarModoContratoComLista(
+    modo,
+    filtros,
+    contratos,
+    veiculoIdResolved,
+    veiculosDb.veiculos,
+  );
 }
 
 /** Encerra o contrato ativo antes de gerar a renovação (vN+1 ou troca de veículo). */

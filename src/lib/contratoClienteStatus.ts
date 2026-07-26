@@ -13,6 +13,7 @@ import {
   editarClienteAsync,
   findClienteById,
   findClienteByCpf,
+  loadClientesDbAsync,
   normNomeKey,
   type ClienteRegistro,
 } from "./clientesDb.js";
@@ -38,6 +39,7 @@ import { rastreameClienteContratoObrigatorio } from "./rastreameEspelhoConfig.js
 import {
   findVeiculoById,
   findVeiculoByPlaca,
+  loadVeiculosDbAsync,
   type VeiculoRegistro,
 } from "./veiculosDb.js";
 
@@ -72,6 +74,22 @@ function resolverCliente(ref: ClienteContratoRef): ClienteRegistro | null {
   return null;
 }
 
+async function resolverClienteAsync(ref: ClienteContratoRef): Promise<ClienteRegistro | null> {
+  if (ref.clienteId?.trim()) {
+    const db = await loadClientesDbAsync({ ids: [ref.clienteId.trim()] });
+    const c = db.clientes.find((x) => x.id === ref.clienteId!.trim()) ?? null;
+    if (c) return c;
+  }
+  if (ref.cpf?.trim()) {
+    const db = await loadClientesDbAsync({ cpf: ref.cpf.trim() });
+    const key = normCpfKey(ref.cpf.trim());
+    const c =
+      db.clientes.find((x) => x.cpf && normCpfKey(String(x.cpf)) === key) ?? null;
+    if (c) return c;
+  }
+  return null;
+}
+
 function resolverVeiculo(ref: ClienteContratoRef): VeiculoRegistro | null {
   if (ref.veiculoId) {
     const v = findVeiculoById(ref.veiculoId);
@@ -79,6 +97,24 @@ function resolverVeiculo(ref: ClienteContratoRef): VeiculoRegistro | null {
   }
   if (ref.placa) return findVeiculoByPlaca(ref.placa);
   return null;
+}
+
+async function resolverVeiculoAsync(ref: ClienteContratoRef): Promise<VeiculoRegistro | null> {
+  if (ref.veiculoId?.trim()) {
+    const db = await loadVeiculosDbAsync({ veiculoId: ref.veiculoId.trim() });
+    const v = db.veiculos.find((x) => x.id === ref.veiculoId!.trim()) ?? null;
+    if (v) return v;
+  }
+  if (ref.placa?.trim()) {
+    const db = await loadVeiculosDbAsync({ placa: ref.placa.trim() });
+    return db.veiculos[0] ?? null;
+  }
+  return null;
+}
+
+async function reloadClienteAsync(clienteId: string): Promise<ClienteRegistro | null> {
+  const db = await loadClientesDbAsync({ ids: [clienteId] });
+  return db.clientes.find((c) => c.id === clienteId) ?? null;
 }
 
 function resolverRastreavelKey(ref: ClienteContratoRef, veiculo?: VeiculoRegistro | null): string | null {
@@ -179,7 +215,7 @@ async function garantirMotoristaNoRastreame(
 
   try {
     await replicarClienteNoRastreame({ ...cliente, ativo: true });
-    const atualizado = findClienteById(cliente.id) ?? cliente;
+    const atualizado = (await reloadClienteAsync(cliente.id)) ?? cliente;
     key = await resolverMotoristaKey(atualizado);
     motoristaId = atualizado.rastreameMotoristaId ?? undefined;
     if (key) {
@@ -202,12 +238,12 @@ export async function ativarClienteDoContrato(
   ref: ClienteContratoRef,
   opts: { dryRun?: boolean } = {},
 ): Promise<StatusClienteResult> {
-  const cliente = resolverCliente(ref);
+  const cliente = await resolverClienteAsync(ref);
   if (!cliente) {
     return { cliente: null, local: "nao_encontrado", rastreame: "ignorado", vinculo: "ignorado" };
   }
 
-  const veiculo = resolverVeiculo(ref);
+  const veiculo = await resolverVeiculoAsync(ref);
   const rastreavelKey = resolverRastreavelKey(ref, veiculo);
 
   let local: StatusClienteResult["local"] = "sem_alteracao";
@@ -244,8 +280,9 @@ export async function ativarClienteDoContrato(
   }
 
   if (!rastreameClienteContratoObrigatorio()) {
+    const refreshedDb = await loadClientesDbAsync({ ids: [atualizado.id] });
     return {
-      cliente: findClienteById(atualizado.id) ?? atualizado,
+      cliente: refreshedDb.clientes.find((c) => c.id === atualizado.id) ?? atualizado,
       local,
       rastreame: "ignorado",
       vinculo,
@@ -258,7 +295,7 @@ export async function ativarClienteDoContrato(
     opts,
   );
   if (avisoMotorista) avisos.push(avisoMotorista);
-  atualizado = findClienteById(atualizado.id) ?? atualizado;
+  atualizado = (await reloadClienteAsync(atualizado.id)) ?? atualizado;
 
   if (motoristaKey) {
     try {
@@ -291,7 +328,7 @@ export async function ativarClienteDoContrato(
   }
 
   return {
-    cliente: findClienteById(atualizado.id) ?? atualizado,
+    cliente: (await reloadClienteAsync(atualizado.id)) ?? atualizado,
     local,
     rastreame,
     vinculo,
@@ -307,12 +344,12 @@ export async function desativarClienteDoContrato(
   ref: ClienteContratoRef & { contratoId?: string | null },
   opts: { dryRun?: boolean } = {},
 ): Promise<StatusClienteResult> {
-  const cliente = resolverCliente(ref);
+  const cliente = await resolverClienteAsync(ref);
   if (!cliente) {
     return { cliente: null, local: "nao_encontrado", rastreame: "ignorado", vinculo: "ignorado" };
   }
 
-  const veiculo = resolverVeiculo(ref);
+  const veiculo = await resolverVeiculoAsync(ref);
   const rastreavelKey = resolverRastreavelKey(ref, veiculo);
   const motoristaKey = await resolverMotoristaKey(cliente);
   const outroAtivo = await temOutroContratoAtivoAsync(cliente, ref.contratoId);
