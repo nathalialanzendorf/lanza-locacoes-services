@@ -10,6 +10,7 @@ import {
   type RegistrarContratoOpts,
 } from "../lib/contratosDb.js";
 import { defaultContratosDir } from "../lib/lanzaPaths.js";
+import { StatusContrato } from "../lib/domain/statusContrato.js";
 
 const EXCL_PATH =
   /Modelo|compra e venda|contrato-compra|Or[çc]amentos|\sCopy\b|[\\/]Copy[\\/]|templates/i;
@@ -157,7 +158,7 @@ export async function importarContratos(
             dataEncerramento: enc.dataEncerramento,
             motivoEncerramento: enc.motivoEncerramento,
             quebraContrato: enc.quebraContrato,
-            status: "encerrado",
+            status: StatusContrato.Encerrado,
           }
         : {};
 
@@ -183,10 +184,10 @@ export async function importarContratos(
       const enc = inferirEncerramento(path.basename(c.pastaContrato), inicio, fim);
       if (!enc) continue;
       const mudou =
-        c.status !== "encerrado" ||
+        c.status !== StatusContrato.Encerrado ||
         c.motivoEncerramento !== enc.motivoEncerramento ||
         (c.dataEncerramento ?? null) !== (c.dataEncerramento ?? enc.dataEncerramento);
-      c.status = "encerrado";
+      c.status = StatusContrato.Encerrado;
       c.motivoEncerramento = enc.motivoEncerramento;
       c.quebraContrato = enc.quebraContrato;
       if (!c.dataEncerramento && enc.dataEncerramento) c.dataEncerramento = enc.dataEncerramento;

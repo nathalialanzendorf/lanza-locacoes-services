@@ -19,20 +19,16 @@ import {
   tituloInfracaoBase,
 } from "./infracaoTitulo.js";
 import { RELATORIOS_COBRANCAS_DIR } from "./relatoriosPaths.js";
+import { TipoCobranca, type TipoCobrancaValor } from "./domain/tipoCobranca.js";
+
+export { TipoCobranca, type TipoCobrancaValor };
+export type TipoCobranca = TipoCobrancaValor;
 
 /** Pasta com os modelos de mensagem (um arquivo .txt por cobrança). */
 export const TEMPLATES_DIR = path.join(REPO_ROOT, "templates", "cobrancas");
 
 /** Onde os textos gerados são salvos (`relatorios/_tmp/cobrancas/`). */
 export const COBRANCAS_OUT_DIR = RELATORIOS_COBRANCAS_DIR;
-
-export type TipoCobranca =
-  | "semanal"
-  | "estacionamento"
-  | "pedagio"
-  | "multa"
-  | "renegociacao"
-  | "manutencao";
 
 /** Dia do escalonamento semanal → arquivo de template. */
 export const TEMPLATE_SEMANAL: Record<number, string> = {
@@ -280,7 +276,7 @@ export function gerarSemanal(
     texto,
     nomeArquivo: `cobranca-semanal-dia${dia}-${slug(placa)}-${dataArquivo()}.txt`,
     dados: {
-      tipo: "semanal",
+      tipo: TipoCobranca.Semanal,
       placa,
       marcaModelo: marcaModeloDe(v),
       nome,
@@ -304,7 +300,7 @@ export function gerarEstacionamento(
     titulo: texto.split("\n")[0] ?? "",
     texto,
     nomeArquivo: `cobranca-estacionamento-${slug(placa)}-${dataArquivo()}.txt`,
-    dados: { tipo: "estacionamento", placa, marcaModelo: marcaModeloDe(v), nome },
+    dados: { tipo: TipoCobranca.Estacionamento, placa, marcaModelo: marcaModeloDe(v), nome },
   };
 }
 
@@ -322,13 +318,13 @@ export function gerarPedagio(
     titulo: texto.split("\n")[0] ?? "",
     texto,
     nomeArquivo: `cobranca-pedagio-${slug(placa)}-${dataArquivo()}.txt`,
-    dados: { tipo: "pedagio", placa, marcaModelo: marcaModeloDe(v), nome },
+    dados: { tipo: TipoCobranca.Pedagio, placa, marcaModelo: marcaModeloDe(v), nome },
   };
 }
 
 function gerarCobrancaValorTotal(
   placaRaw: string,
-  tipo: "renegociacao" | "manutencao",
+  tipo: TipoCobrancaValor,
   template: string,
   prefixoArquivo: string,
   valorTotal: number,
@@ -365,9 +361,9 @@ export function gerarRenegociacao(
 ): ResultadoCobranca {
   return gerarCobrancaValorTotal(
     placaRaw,
-    "renegociacao",
+    TipoCobranca.Renegociacao,
     TEMPLATE_RENEGOCIACAO,
-    "renegociacao",
+    TipoCobranca.Renegociacao,
     valorTotal,
     opts,
   );
@@ -380,9 +376,9 @@ export function gerarManutencao(
 ): ResultadoCobranca {
   return gerarCobrancaValorTotal(
     placaRaw,
-    "manutencao",
+    TipoCobranca.Manutencao,
     TEMPLATE_MANUTENCAO,
-    "manutencao",
+    TipoCobranca.Manutencao,
     valorTotal,
     opts,
   );

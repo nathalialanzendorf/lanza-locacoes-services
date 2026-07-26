@@ -42,6 +42,7 @@ import {
   type IdempotenciaBaixa,
 } from "./idempotenciaBaixa.js";
 export type { IdempotenciaStatus } from "./idempotenciaBaixa.js";
+import { StatusContrato, CategoriaDespesaCliente } from "../domain/index.js";
 
 export type LinhaPlanoBaixa = {
   num: number;
@@ -203,7 +204,7 @@ function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null 
 function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
   const p = compactPlaca(resolvePlacaReferencia(veiculoId));
   const list = contratosList().filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
+    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? "") === p,
   );
   const par = list.find((c) => c.clienteId === clienteId);
   if (par) return par;
@@ -217,7 +218,7 @@ function contratoReferenciaSemanalAtraso(veiculoId: string, clienteId: string) {
   if (ativo) return ativo;
   const placa = resolvePlacaReferencia(veiculoId);
   const encerrado = contratoMaisRecentePar({ placa, clienteId }, contratosList());
-  return encerrado?.status === "encerrado" ? encerrado : null;
+  return encerrado?.status === StatusContrato.Encerrado ? encerrado : null;
 }
 
 function vencimentosSemanalAbertosCliente(clienteId: string, placaOuVeiculoId?: string): string[] {
@@ -230,7 +231,7 @@ function vencimentosSemanalAbertosCliente(clienteId: string, placaOuVeiculoId?: 
         d.condutorId === clienteId &&
         d.ativo !== false &&
         d.paga !== true &&
-        d.categoria === "Locação semanal" &&
+        d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
         /ATRASADO/i.test(d.descricao ?? "") &&
         (!placaFiltro || placasIguais(resolvePlacaDespesa(d), placaFiltro)),
     )
@@ -313,15 +314,15 @@ export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
 
 export function tipoRastreame(categoria?: string): string {
   switch (categoria) {
-    case "Renegociação":
+    case CategoriaDespesaCliente.Renegociacao:
       return "DOCUMENTACAO";
-    case "Pedágio":
+    case CategoriaDespesaCliente.Pedagio:
     case "Pedágio Digital":
-    case "Estacionamento":
+    case CategoriaDespesaCliente.Estacionamento:
       return "PEDAGIO";
-    case "Infração":
+    case CategoriaDespesaCliente.Infracao:
       return "MULTA";
-    case "Manutenção":
+    case CategoriaDespesaCliente.Manutencao:
       return "ALIMENTACAO";
     default:
       return "OUTROS";
@@ -433,14 +434,14 @@ export function diasDoVencimento(dataRecebimentoBr: string, dataVencimentoBr: st
 }
 
 function dataPrevistaPagamento(d: ClienteDespesaRegistro): string {
-  if (d.categoria === "Locação semanal" && isPagamentoSemanalDescricao(d.descricao)) {
+  if (d.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(d.descricao)) {
     return dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;
   }
   return d.dataAutuacao;
 }
 
 function janelaDiasDespesa(d: ClienteDespesaRegistro): { min: number; max: number } {
-  if (d.categoria === "Locação semanal" && isPagamentoSemanalDescricao(d.descricao)) {
+  if (d.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(d.descricao)) {
     return { min: -7, max: 14 };
   }
   return { min: -45, max: 45 };
@@ -457,7 +458,7 @@ function escolherDespesaAlvo(
   dataRecebimentoBr: string,
 ): ClienteDespesaRegistro | null {
   const semanais = abertas.filter(
-    (d) => d.categoria === "Locação semanal" && /ATRASADO/i.test(d.descricao),
+    (d) => d.categoria === CategoriaDespesaCliente.LocacaoSemanal && /ATRASADO/i.test(d.descricao),
   );
   const pool = semanais.length > 0 ? semanais : abertas;
   if (pool.length === 0) return null;
@@ -536,7 +537,7 @@ function previewProximaParcela(
   clienteId: string,
 ): LinhaPlanoBaixa | null {
   const vencimentoAntes =
-    pago.categoria === "Locação semanal" && isPagamentoSemanalDescricao(descricaoAntes)
+    pago.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(descricaoAntes)
       ? dataVencimentoSemanalBr(descricaoAntes, pago.rastreameDataIso) ?? pago.dataAutuacao
       : pago.dataAutuacao;
   const prox = proximaParcelaSemanal(descricaoAntes, vencimentoAntes);
@@ -547,7 +548,7 @@ function previewProximaParcela(
     (d) =>
       d.ativo !== false &&
       d.veiculoId === pago.veiculoId &&
-      d.categoria === "Locação semanal" &&
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       stripAtrasadoSemanal(d.descricao).toLowerCase() === alvo,
   );
   if (dup) return null;
@@ -672,7 +673,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   const tipo = tipoRastreame(alvo.categoria);
   const valorDevido = alvo.valorMulta;
   const vencimento =
-    alvo.categoria === "Locação semanal" && isPagamentoSemanalDescricao(alvo.descricao)
+    alvo.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(alvo.descricao)
       ? dataVencimentoSemanalBr(alvo.descricao, alvo.rastreameDataIso) ?? alvo.dataAutuacao
       : alvo.dataAutuacao;
   const deltaVenc = diasDoVencimento(dataBr, vencimento);
@@ -828,7 +829,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   }
 
   let calculoSemanalAtraso: CalculoSemanalAtrasoPlano | null = null;
-  if (alvo.categoria === "Locação semanal" && /ATRASADO/i.test(alvo.descricao)) {
+  if (alvo.categoria === CategoriaDespesaCliente.LocacaoSemanal && /ATRASADO/i.test(alvo.descricao)) {
     calculoSemanalAtraso = montarCalculoSemanalAtrasoPlano({
       clienteId: cliente.id!,
       clienteNome: cliente.nome,

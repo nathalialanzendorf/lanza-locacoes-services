@@ -6,6 +6,7 @@
 
  */
 
+import { CategoriaDespesaCliente } from "../domain/categoriaDespesaCliente.js";
 import { normNomeKey } from "../clientesDb.js";
 
 import type { PagBankCredito } from "./statements.js";
@@ -56,7 +57,7 @@ const ARLEM_QUERY = "Arlem Eduardo Preira Rodriguez";
 
 export const EXCLUIR_CATEGORIA_AUTO: Record<string, string[]> = {
 
-  [JULIANO_ID]: ["Infração"],
+  [JULIANO_ID]: [CategoriaDespesaCliente.Infracao],
 
 };
 

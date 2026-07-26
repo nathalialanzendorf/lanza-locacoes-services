@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { CategoriaDespesaCliente } from "./domain/categoriaDespesaCliente.js";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -376,7 +377,7 @@ export function parceiroDespesaInputFromInfracao(reg: InfracaoRegistro): Parceir
   const data = dataVencimentoInfracaoParceiro(reg);
   return {
     placa: reg.veiculoId,
-    categoria: "Outros",
+    categoria: CategoriaDespesaCliente.Outros,
     descricao: `Multa sem locatário — ${reg.descricao} (${reg.numeroAuto})`,
     data,
     valor: reg.valorMulta,
@@ -842,7 +843,7 @@ export function clienteDespesaInputFromInfracao(reg: InfracaoRegistro): {
     quitadaDetran: reg.quitadaDetran,
     statusInfracao: reg.statusInfracao as string | undefined,
     statusDetran: reg.statusDetran,
-    categoria: "Infração",
+    categoria: CategoriaDespesaCliente.Infracao,
     origem: reg.origem,
   };
 }

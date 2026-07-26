@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 
+import { CategoriaDespesaCliente } from "../domain/categoriaDespesaCliente.js";
 import { compactPlaca } from "../placa.js";
 import {
   loadParceiroDespesasDb,
@@ -111,7 +112,7 @@ function dataParaIsoDate(data: string, competencia: string): string {
 
 function infoManutencao(reg: ParceiroDespesaRegistro): string {
   const desc = String(reg.descricao ?? "").trim();
-  return desc || String(reg.categoria ?? "Manutenção").trim();
+  return desc || String(reg.categoria ?? CategoriaDespesaCliente.Manutencao).trim();
 }
 
 function hashManutencao(rastreavelKey: string, info: string, valor: number, data: string): string {

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { CategoriaDespesaCliente } from "../domain/categoriaDespesaCliente.js";
 import type { DetranScInfracao } from "./types.js";
 import { formatPlacaHyphen } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
@@ -95,7 +96,7 @@ type EspelhoInfracaoResult = {
 function registroPdfFromInfracao(reg: InfracaoRegistro): SincronizarClienteDespesaResult["registro"] {
   return {
     id: reg.id,
-    categoria: "Infração",
+    categoria: CategoriaDespesaCliente.Infracao,
     veiculoId: reg.veiculoId,
     autoInfracao: reg.numeroAuto,
     numeroAuto: reg.numeroAuto,

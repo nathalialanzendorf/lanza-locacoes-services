@@ -1,4 +1,5 @@
 import { loadClienteDespesasDb, loadClienteDespesasDbAsync } from "./clienteDespesasDb.js";
+import { CategoriaDespesaCliente } from "./domain/categoriaDespesaCliente.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, saveVeiculosDb, saveVeiculosDbAsync } from "./veiculosDb.js";
 
@@ -7,11 +8,11 @@ import { loadVeiculosDb, loadVeiculosDbAsync, saveVeiculosDb, saveVeiculosDbAsyn
  * locatário). A data mais antiga entre elas é o "início das locações".
  */
 const CATEGORIAS_LOCACAO = new Set([
-  "Locação semanal",
-  "Caução",
-  "Diária",
-  "Renegociação",
-  "Quebra contrato",
+  CategoriaDespesaCliente.LocacaoSemanal,
+  CategoriaDespesaCliente.Caucao,
+  CategoriaDespesaCliente.Diaria,
+  CategoriaDespesaCliente.Renegociacao,
+  CategoriaDespesaCliente.QuebraContrato,
 ]);
 
 type VeiculoRow = {
@@ -87,7 +88,7 @@ function derivarInicioLocacoesFromDespesas(
   const minPorPlaca = new Map<string, Date>();
   for (const d of db.clienteDespesas ?? []) {
     if (d.ativo === false) continue;
-    const cat = d.categoria ?? "Infração";
+    const cat = d.categoria ?? CategoriaDespesaCliente.Infracao;
     if (!CATEGORIAS_LOCACAO.has(cat)) continue;
     if (!d.veiculoId) continue;
     const dt = parseDataInicio(d.dataAutuacao);

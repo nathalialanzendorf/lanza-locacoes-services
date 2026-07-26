@@ -1,18 +1,19 @@
 /**
- * Constantes de categoria — sem imports para evitar ciclos ESM no cold start (Vercel).
+ * Constantes de categoria — reexporta domínio canônico (sem ciclos ESM no cold start).
  */
+export {
+  CategoriaDespesaCliente,
+  CATEGORIA_PEDAGIO_ALIAS,
+  CATEGORIAS_ESTACIONAMENTO_ALIAS,
+} from "./domain/categoriaDespesaCliente.js";
+
+import { CategoriaDespesaCliente, CATEGORIAS_ESTACIONAMENTO_ALIAS } from "./domain/categoriaDespesaCliente.js";
 
 /** Categoria em cliente-despesas.json (débito de pedágio). */
-export const CATEGORIA_PEDAGIO = "Pedágio";
-
-/** Valor legado gravado como categoria — normalizar para `Pedágio`. */
-export const CATEGORIA_PEDAGIO_ALIAS = "Pedágio Digital";
+export const CATEGORIA_PEDAGIO = CategoriaDespesaCliente.Pedagio;
 
 /** Categoria em cliente-despesas.json (débito de estacionamento rotativo). */
-export const CATEGORIA_ESTACIONAMENTO = "Estacionamento";
+export const CATEGORIA_ESTACIONAMENTO = CategoriaDespesaCliente.Estacionamento;
 
-/** Valores legados gravados como categoria — normalizar para `Estacionamento`. */
-export const CATEGORIA_ESTACIONAMENTO_ALIASES = [
-  "Estacionamento rotativo SigaPay",
-  "SigaPay",
-] as const;
+/** @deprecated Use {@link CATEGORIAS_ESTACIONAMENTO_ALIAS}. */
+export const CATEGORIA_ESTACIONAMENTO_ALIASES = CATEGORIAS_ESTACIONAMENTO_ALIAS;

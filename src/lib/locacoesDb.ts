@@ -7,13 +7,26 @@ import { resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { findVeiculoById, loadVeiculosDbAsync } from "./veiculosDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import {
+  CategoriaMovimentacao,
+  CATEGORIAS_MOVIMENTACAO_VALIDAS,
+  SituacaoLocacao,
+  type CategoriaMovimentacaoValor,
+  type SituacaoLocacaoValor,
+} from "./domain/index.js";
+import {
+  TipoLocacao,
+  TIPOS_LOCACAO_VALIDOS,
+  type TipoLocacaoValor,
+} from "./domain/tipoLocacao.js";
+
+export type { CategoriaMovimentacaoValor as SituacaoLocacao, SituacaoLocacaoValor };
+export type { TipoLocacaoValor as TipoLocacao };
+export { CategoriaMovimentacao, SituacaoLocacao, TipoLocacao };
 
 export const DB_LOCACOES = path.join(REPO_ROOT, "database", "locacoes.json");
 const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
 const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
-
-export type SituacaoLocacao = "reserva" | "manutencao" | "locado";
-export type TipoLocacao = "diaria" | "semanal" | "mensal";
 
 export type LocacaoRegistro = {
   id: string;
@@ -216,8 +229,8 @@ export type LocacaoInput = {
   observacao?: string | null;
 };
 
-const SITUACOES: ReadonlySet<string> = new Set(["reserva", "manutencao", "locado"]);
-const TIPOS: ReadonlySet<string> = new Set(["diaria", "semanal", "mensal"]);
+const SITUACOES = CATEGORIAS_MOVIMENTACAO_VALIDAS;
+const TIPOS = TIPOS_LOCACAO_VALIDOS;
 
 function resolveVeiculoLocacao(input: Pick<LocacaoInput, "placa" | "veiculoId">): {
   id: string | null;
@@ -248,7 +261,7 @@ function validar(input: LocacaoInput): void {
   if (input.tipoLocacao && !TIPOS.has(input.tipoLocacao)) {
     throw new Error(`tipoLocacao inválido: ${input.tipoLocacao} (use diaria|semanal|mensal)`);
   }
-  if (input.situacao === "locado" && !input.tipoLocacao) {
+  if (input.situacao === CategoriaMovimentacao.Locado && !input.tipoLocacao) {
     throw new Error("situacao 'locado' exige tipoLocacao (diaria|semanal|mensal)");
   }
 }
@@ -267,7 +280,7 @@ function applyGravarLocacao(db: LocacoesDb, input: LocacaoInput): GravarLocacaoR
   const refCliente = input.clienteId ?? input.condutor;
   const condutor = resolveCondutor(refCliente);
   const sub = input.substituiPlaca ? resolveVeiculo(input.substituiPlaca) : null;
-  const comValores = input.situacao !== "manutencao";
+  const comValores = input.situacao !== CategoriaMovimentacao.Manutencao;
 
   const avisos: string[] = [];
   if (!veiculoId) avisos.push("placa não cadastrada em veiculos.json");
@@ -476,7 +489,7 @@ export function findReservaSubstitutaNaData(
   const matches = db.locacoes.filter(
     (l) =>
       placasIguais(l.placa, placaReserva) &&
-      l.situacao === "reserva" &&
+      l.situacao === CategoriaMovimentacao.Reserva &&
       Boolean(l.substituiPlaca?.trim()) &&
       locacaoCobreData(l, data),
   );
@@ -491,7 +504,7 @@ export function findManutencaoNaData(placa: string, data: Date): LocacaoRegistro
   const matches = db.locacoes.filter(
     (l) =>
       placasIguais(l.placa, placa) &&
-      l.situacao === "manutencao" &&
+      l.situacao === CategoriaMovimentacao.Manutencao &&
       locacaoCobreData(l, data),
   );
   if (!matches.length) return null;
@@ -541,16 +554,16 @@ function round2(n: number): number {
 
 /** Dias por unidade do tipo (mensal usa os dias do mês da competência). */
 function diasPorUnidade(tipo: TipoLocacao | null, pi: Date): number {
-  if (tipo === "diaria") return 1;
-  if (tipo === "semanal") return 7;
-  if (tipo === "mensal") return new Date(pi.getFullYear(), pi.getMonth() + 1, 0).getDate();
+  if (tipo === TipoLocacao.Diaria) return 1;
+  if (tipo === TipoLocacao.Semanal) return 7;
+  if (tipo === TipoLocacao.Mensal) return new Date(pi.getFullYear(), pi.getMonth() + 1, 0).getDate();
   return 1;
 }
 
-const UNIDADE_WORD: Record<TipoLocacao, { sing: string; plur: string; rate: string }> = {
-  diaria: { sing: "diária", plur: "diárias", rate: "/dia" },
-  semanal: { sing: "semana", plur: "semanas", rate: "/sem" },
-  mensal: { sing: "mês", plur: "meses", rate: "/mês" },
+const UNIDADE_WORD: Record<TipoLocacaoValor, { sing: string; plur: string; rate: string }> = {
+  [TipoLocacao.Diaria]: { sing: "diária", plur: "diárias", rate: "/dia" },
+  [TipoLocacao.Semanal]: { sing: "semana", plur: "semanas", rate: "/sem" },
+  [TipoLocacao.Mensal]: { sing: "mês", plur: "meses", rate: "/mês" },
 };
 
 function fmtDM(d: Date): string {
@@ -725,8 +738,8 @@ export function sugerirLocacoes(opts: SugerirOpts): SugestaoLocacoes {
       });
       if (!rec) continue;
 
-      if (l.situacao === "locado") {
-        const tipo = l.tipoLocacao ?? "semanal";
+      if (l.situacao === CategoriaMovimentacao.Locado) {
+        const tipo = l.tipoLocacao ?? TipoLocacao.Semanal;
         const dpu = diasPorUnidade(tipo, pi);
         const u = dias / dpu;
         locDias += dias;
@@ -743,11 +756,11 @@ export function sugerirLocacoes(opts: SugerirOpts): SugestaoLocacoes {
           descricao: `${palavraUnidade(u, tipo)} locado ${fmtPeriodoDM(rec.ini, rec.fim)} (R$ ${brlNum(l.valorPago ?? 0)}${UNIDADE_WORD[tipo].rate})`,
           valor: round2((l.valorPago ?? 0) * u),
         });
-      } else if (l.situacao === "manutencao") {
+      } else if (l.situacao === CategoriaMovimentacao.Manutencao) {
         manutDias += dias;
         manutRaw.push(rec);
-      } else if (l.situacao === "reserva") {
-        const tipo = l.tipoLocacao ?? "diaria";
+      } else if (l.situacao === CategoriaMovimentacao.Reserva) {
+        const tipo = l.tipoLocacao ?? TipoLocacao.Diaria;
         const dpu = diasPorUnidade(tipo, pi);
         const u = dias / dpu;
         const v = round2((l.valorPago ?? 0) * u);
@@ -765,7 +778,7 @@ export function sugerirLocacoes(opts: SugerirOpts): SugestaoLocacoes {
     const manutencaoItens: ValorItem[] = manutRaw.map((r) => {
       const v = diariaPago != null ? round2(diariaPago * r.dias) : 0;
       return {
-        descricao: `${palavraUnidade(r.dias, "diaria")} parado ${fmtPeriodoDM(r.ini, r.fim)} (R$ ${brlNum(v)})`,
+        descricao: `${palavraUnidade(r.dias, TipoLocacao.Diaria)} parado ${fmtPeriodoDM(r.ini, r.fim)} (R$ ${brlNum(v)})`,
         valor: v,
       };
     });

@@ -11,6 +11,7 @@ import {
   type SugestaoVeiculo,
   type TipoLocacao,
 } from "../lib/locacoesDb.js";
+import { CategoriaMovimentacao } from "../lib/domain/categoriaMovimentacao.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
 
 const HELP = `locacoes | movimentacao — skill cadastro-movimentacao (database/locacoes.json)
@@ -77,7 +78,7 @@ function add(argv: string[]): void {
   const l = r.registro;
   const periodo = `${l.inicio}${l.fim ? ` a ${l.fim}` : " (em aberto)"}`;
   const valores =
-    l.situacao !== "manutencao"
+    l.situacao !== CategoriaMovimentacao.Manutencao
       ? ` | ${l.tipoLocacao ?? "?"} cobrado R$ ${fmt(l.valorCobrado)} / pago R$ ${fmt(l.valorPago)}`
       : "";
   const sub = l.substituiPlaca ? ` | substitui ${l.substituiPlaca}` : "";
@@ -101,7 +102,7 @@ function listar(argv: string[]): void {
   for (const l of rows) {
     const periodo = `${l.inicio}${l.fim ? `–${l.fim}` : "–(aberto)"}`;
     const valores =
-      l.situacao !== "manutencao"
+      l.situacao !== CategoriaMovimentacao.Manutencao
         ? ` ${l.tipoLocacao ?? "?"} R$ ${fmt(l.valorCobrado)}/R$ ${fmt(l.valorPago)}`
         : "";
     const cond = l.condutorNome ? ` ${l.condutorNome}` : "";

@@ -11,6 +11,7 @@ import { isClienteAtivo, loadClientesDb, type ClienteRegistro } from "../lib/cli
 import { loadContratosDb, type ContratoRegistro } from "../lib/contratosDb.js";
 import { isVeiculoAtivo, loadVeiculosDb, type VeiculoRegistro } from "../lib/veiculosDb.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
+import { StatusContrato } from "../lib/domain/statusContrato.js";
 
 type Contagens = {
   total: number;
@@ -29,7 +30,7 @@ function contarVeiculos(list: VeiculoRegistro[]): Contagens {
 }
 
 function contarContratos(list: ContratoRegistro[]): Contagens {
-  const ativos = list.filter((c) => c.status === "ativo").length;
+  const ativos = list.filter((c) => c.status === StatusContrato.Ativo).length;
   return { total: list.length, ativos, inativos: list.length - ativos };
 }
 

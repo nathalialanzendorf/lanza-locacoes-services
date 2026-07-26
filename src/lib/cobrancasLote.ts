@@ -36,6 +36,7 @@ import {
   type ResumoCobrancaSemanal,
 } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca } from "./placa.js";
+import { StatusContrato, CategoriaDespesaCliente, TipoCobrancaAction, tipoCobrancaDeAction } from "./domain/index.js";
 
 export type LoteCobrancaItem = {
   alvo: AlvoCobranca;
@@ -81,7 +82,7 @@ function contratoAtivoPlaca(
 ) {
   const p = compactPlaca(placa);
   const list = (contratos ?? cobrancasRuntimeContratos()).filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
+    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? "") === p,
   );
   if (clienteId) {
     const par = list.find((c) => c.clienteId === clienteId);
@@ -104,7 +105,7 @@ function contratoReferenciaSemanalAtraso(
     { placa, clienteId },
     contratos ?? cobrancasRuntimeContratos(),
   );
-  return encerrado?.status === "encerrado" ? encerrado : null;
+  return encerrado?.status === StatusContrato.Encerrado ? encerrado : null;
 }
 
 function somaValorDespesas(despesas: ClienteDespesaRegistro[]): number {
@@ -112,15 +113,7 @@ function somaValorDespesas(despesas: ClienteDespesaRegistro[]): number {
 }
 
 function tipoCobrancaWhatsApp(tipo: TipoCobrancaAction): TipoCobranca {
-  const map: Record<TipoCobrancaAction, TipoCobranca> = {
-    "pagamento-semanal": "semanal",
-    renegociacao: "renegociacao",
-    infracoes: "multa",
-    pedagio: "pedagio",
-    "estacionamento-rotativo": "estacionamento",
-    manutencao: "manutencao",
-  };
-  return map[tipo];
+  return tipoCobrancaDeAction(tipo);
 }
 
 function gerarWhatsAppAlvo(
@@ -129,27 +122,27 @@ function gerarWhatsAppAlvo(
 ): ResultadoCobranca[] {
   const nome = opts?.nome ?? alvo.clienteNome ?? undefined;
   switch (alvo.tipo) {
-    case "pagamento-semanal": {
+    case TipoCobrancaAction.PagamentoSemanal: {
       const dia = opts?.dia;
       if (dia == null) {
         throw new Error("Dia de escalonamento não informado para pagamento semanal.");
       }
       return [gerarSemanal(alvo.placa, dia, { nome, valor: opts?.valor })];
     }
-    case "renegociacao":
+    case TipoCobrancaAction.Renegociacao:
       return [
         gerarRenegociacao(alvo.placa, somaValorDespesas(alvo.despesas), { nome }),
       ];
-    case "infracoes":
+    case TipoCobrancaAction.Infracoes:
       return gerarMultas(alvo.placa, {
         nome,
         autos: alvo.despesas.map((d) => d.autoInfracao),
       });
-    case "pedagio":
+    case TipoCobrancaAction.Pedagio:
       return [gerarPedagio(alvo.placa, { nome })];
-    case "estacionamento-rotativo":
+    case TipoCobrancaAction.EstacionamentoRotativo:
       return [gerarEstacionamento(alvo.placa, { nome })];
-    case "manutencao":
+    case TipoCobrancaAction.Manutencao:
       return [
         gerarManutencao(alvo.placa, somaValorDespesas(alvo.despesas), { nome }),
       ];
@@ -171,7 +164,7 @@ function despesasSemanalEscopo(
   const placaKey = compactPlaca(alvo.placa);
   return list.filter(
     (d) =>
-      d.categoria === "Locação semanal" &&
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       compactPlaca(d.veiculoId) === placaKey &&
       (!alvo.clienteId || d.condutorId === alvo.clienteId),
   );
@@ -250,7 +243,7 @@ export function buildSemanalAtrasoParaEscopo(
   );
   return buildSemanalAtrasoAlvo(
     {
-      tipo: "pagamento-semanal",
+      tipo: TipoCobrancaAction.PagamentoSemanal,
       placa,
       clienteId,
       clienteNome,
@@ -299,7 +292,7 @@ export function executarLoteCobranca(
       arquivos: [],
     };
 
-    if (tipo === "pagamento-semanal") {
+    if (tipo === TipoCobrancaAction.PagamentoSemanal) {
       const contrato = contratoAtivoPlaca(alvo.placa, alvo.clienteId, opts?.ctx?.contratos);
       const dataInicioJurosMultaBr = contrato?.dataInicioJurosMultaBr ?? null;
       const vencimentosBr = alvo.vencimentosBr ?? [];
@@ -370,7 +363,7 @@ export function executarLoteCobranca(
     }
 
     try {
-      if (tipo === "pagamento-semanal") {
+      if (tipo === TipoCobrancaAction.PagamentoSemanal) {
         if (item.diaEscalonamento == null) {
           item.resultados = [];
         } else {

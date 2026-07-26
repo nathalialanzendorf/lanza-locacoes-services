@@ -15,6 +15,7 @@ import {
 } from "../lib/pagamentoSemanalCobranca.js";
 import { parseDataBr, resolverCliente } from "../lib/recebimento/baixaPlano.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
+import { StatusContrato, CategoriaDespesaCliente } from "../lib/domain/index.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
   const i = argv.indexOf(nome);
@@ -70,7 +71,7 @@ function normPlaca(p: string): string {
 function contratoAtivoPlaca(placa: string) {
   const p = normPlaca(placa);
   const list = loadContratosDb().contratos.filter(
-    (c) => c.status === "ativo" && normPlaca(c.placa ?? "") === p,
+    (c) => c.status === StatusContrato.Ativo && normPlaca(c.placa ?? "") === p,
   );
   list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   return list[0] ?? null;
@@ -84,7 +85,7 @@ function vencimentosAbertosCliente(clienteId: string, placa?: string): string[] 
         d.condutorId === clienteId &&
         d.ativo !== false &&
         d.paga !== true &&
-        d.categoria === "Locação semanal" &&
+        d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
         /ATRASADO/i.test(d.descricao) &&
         (!placa || normPlaca(d.veiculoId) === normPlaca(placa)),
     )

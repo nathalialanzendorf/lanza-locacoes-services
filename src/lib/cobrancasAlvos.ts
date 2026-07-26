@@ -39,31 +39,19 @@ import {
   type VeiculoRegistro,
 } from "./veiculosDb.js";
 
-export type TipoCobrancaAction =
-  | "pagamento-semanal"
-  | "renegociacao"
-  | "infracoes"
-  | "pedagio"
-  | "estacionamento-rotativo"
-  | "manutencao";
+import {
+  CategoriaDespesaCliente,
+  StatusContrato,
+  TipoCobrancaAction,
+  TIPOS_COBRANCA_ACTION,
+  RotuloTipoCobrancaAction,
+  type TipoCobrancaActionValor,
+} from "./domain/index.js";
 
-export const TIPOS_COBRANCA_ACTION: readonly TipoCobrancaAction[] = [
-  "pagamento-semanal",
-  "renegociacao",
-  "infracoes",
-  "pedagio",
-  "estacionamento-rotativo",
-  "manutencao",
-] as const;
-
-export const ROTULO_TIPO_COBRANCA: Record<TipoCobrancaAction, string> = {
-  "pagamento-semanal": "Pagamento semanal",
-  renegociacao: "Renegociação",
-  infracoes: "Infrações",
-  pedagio: "Pedágio Digital",
-  "estacionamento-rotativo": "Estacionamento rotativo",
-  manutencao: "Manutenção",
-};
+export type TipoCobrancaAction = TipoCobrancaActionValor;
+export { TIPOS_COBRANCA_ACTION };
+/** @deprecated Prefer {@link RotuloTipoCobrancaAction} */
+export const ROTULO_TIPO_COBRANCA = RotuloTipoCobrancaAction;
 
 export type ModoCanvasCobranca = "completo" | "simples-tipo" | "simples-placa";
 
@@ -175,7 +163,7 @@ function temContratoAtivoLocacao(
 ): boolean {
   if (!clienteId) return false;
   const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
-  return contrato?.status === "ativo";
+  return contrato?.status === StatusContrato.Ativo;
 }
 
 function contratoParEncerrado(
@@ -185,7 +173,7 @@ function contratoParEncerrado(
 ): ContratoRegistro | undefined {
   if (!clienteId) return undefined;
   const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
-  return contrato?.status === "encerrado" ? contrato : undefined;
+  return contrato?.status === StatusContrato.Encerrado ? contrato : undefined;
 }
 
 /** Semanal ATRASADO de ex-locatário (contrato encerrado) — cobrança via tipo renegociacao. */
@@ -193,7 +181,7 @@ function despesaRenegociacaoEncerrada(
   d: ClienteDespesaRegistro,
   contratos: ContratoRegistro[],
 ): boolean {
-  if (d.categoria !== "Locação semanal") return false;
+  if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) return false;
   if (!/ATRASADO/i.test(d.descricao ?? "")) return false;
   const placa = placaHyphenVeiculoRef(d.veiculoId);
   const clienteId = d.condutorId ?? inferirCondutorIdDespesaPorData(d);
@@ -209,7 +197,7 @@ function clienteTemPendenciaEncerrada(
   situacao: SituacaoCobrancaFiltro = "em_aberto",
 ): boolean {
   for (const c of contratos) {
-    if (c.clienteId !== clienteId || c.status !== "encerrado" || !c.placa) continue;
+    if (c.clienteId !== clienteId || c.status !== StatusContrato.Encerrado || !c.placa) continue;
     if (temContratoAtivoLocacao(clienteId, c.placa, contratos)) continue;
     for (const d of despesas) {
       if (!despesaNaSituacao(d, situacao)) continue;
@@ -230,7 +218,7 @@ function contratoAtivoPorPlaca(
 ): ContratoRegistro | undefined {
   const p = compactPlaca(placa);
   const list = contratos.filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa) === p,
+    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa) === p,
   );
   if (list.length === 0) return undefined;
   return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
@@ -257,7 +245,7 @@ function condutorEfetivoPagamentoSemanal(
       },
       contratos,
     );
-    if (contratoCondutor?.status === "ativo") {
+    if (contratoCondutor?.status === StatusContrato.Ativo) {
       const cliente = clientes.get(d.condutorId);
       return {
         clienteId: d.condutorId,
@@ -265,7 +253,7 @@ function condutorEfetivoPagamentoSemanal(
       };
     }
     // Ex-locatário desta placa — semanal vira renegociação.
-    if (contratoCondutor?.status === "encerrado") {
+    if (contratoCondutor?.status === StatusContrato.Encerrado) {
       return { clienteId: null, clienteNome: null };
     }
     // condutorId legado/desalinhado — usa locatário ativo da placa (ex.: pós-backfill Postgres).
@@ -316,7 +304,7 @@ function semanalAtrasoObsoleto(
   let totalPagoRegular = 0;
 
   for (const other of todas) {
-    if (other.categoria !== "Locação semanal") continue;
+    if (other.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (compactPlacaVeiculoRef(other.veiculoId) !== placaKey) continue;
     if (other.condutorId !== clienteId) continue;
     if (other.paga !== true) continue;
@@ -383,7 +371,7 @@ function agruparInfracoesPorCondutor(
     let alvo = porChave.get(chave);
     if (!alvo) {
       alvo = {
-        tipo: "infracoes",
+        tipo: TipoCobrancaAction.Infracoes,
         placa,
         clienteId: efetivo.clienteId,
         clienteNome: efetivo.clienteNome,
@@ -462,7 +450,7 @@ function filtrarPagamentoSemanal(
   for (const d of db.clienteDespesas) {
     if (!despesaNaSituacao(d, situacao)) continue;
     if (!despesaNoPeriodo(d, filtro ?? {})) continue;
-    if (d.categoria !== "Locação semanal") continue;
+    if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (situacao === "em_aberto") {
       if (!/ATRASADO/i.test(d.descricao)) continue;
       const vencSemanal = vencimentoDespesaSemanalBr(
@@ -521,7 +509,7 @@ function filtrarPagamentoSemanal(
     let alvo = porChave.get(chave);
     if (!alvo) {
       alvo = {
-        tipo: "pagamento-semanal",
+        tipo: TipoCobrancaAction.PagamentoSemanal,
         placa,
         clienteId: efetivo.clienteId,
         clienteNome: efetivo.clienteNome,
@@ -739,17 +727,17 @@ function filtrarAlvosPorEscopo(
 export function normalizarTipoCobrancaAction(raw: string): TipoCobrancaAction | null {
   const t = raw.trim().toLowerCase();
   const map: Record<string, TipoCobrancaAction> = {
-    "pagamento-semanal": "pagamento-semanal",
-    pagamento_semanal: "pagamento-semanal",
-    renegociacao: "renegociacao",
-    renegociação: "renegociacao",
-    infracoes: "infracoes",
-    infrações: "infracoes",
-    pedagio: "pedagio",
-    pedágio: "pedagio",
-    "estacionamento-rotativo": "estacionamento-rotativo",
-    manutencao: "manutencao",
-    manutenção: "manutencao",
+    "pagamento-semanal": TipoCobrancaAction.PagamentoSemanal,
+    pagamento_semanal: TipoCobrancaAction.PagamentoSemanal,
+    renegociacao: TipoCobrancaAction.Renegociacao,
+    renegociação: TipoCobrancaAction.Renegociacao,
+    infracoes: TipoCobrancaAction.Infracoes,
+    infrações: TipoCobrancaAction.Infracoes,
+    pedagio: TipoCobrancaAction.Pedagio,
+    pedágio: TipoCobrancaAction.Pedagio,
+    "estacionamento-rotativo": TipoCobrancaAction.EstacionamentoRotativo,
+    manutencao: TipoCobrancaAction.Manutencao,
+    manutenção: TipoCobrancaAction.Manutencao,
   };
   return map[t] ?? null;
 }
@@ -773,20 +761,17 @@ export function listarAlvosCobranca(
 
   let alvos: AlvoCobranca[];
 
-  if (tipo === "pagamento-semanal") {
+  if (tipo === TipoCobrancaAction.PagamentoSemanal) {
     alvos = filtrarPagamentoSemanal(db, veiculos, clientes, contratos, filtro);
   } else {
-    const categoriaMap: Record<
-      Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">,
-      string
-    > = {
-      renegociacao: "Renegociação",
-      pedagio: "Pedágio",
-      "estacionamento-rotativo": "Estacionamento",
-      manutencao: "Manutenção",
-    };
+    const categoriaMap = {
+      [TipoCobrancaAction.Renegociacao]: CategoriaDespesaCliente.Renegociacao,
+      [TipoCobrancaAction.Pedagio]: CategoriaDespesaCliente.Pedagio,
+      [TipoCobrancaAction.EstacionamentoRotativo]: CategoriaDespesaCliente.Estacionamento,
+      [TipoCobrancaAction.Manutencao]: CategoriaDespesaCliente.Manutencao,
+    } as const;
 
-    if (tipo === "infracoes") {
+    if (tipo === TipoCobrancaAction.Infracoes) {
       const despesas = db.clienteDespesas.filter((d) => {
         if (!infracaoIncluirListagemRelatorio(d)) return false;
         if (!despesaCobravelLocatario(d)) return false;
@@ -803,19 +788,19 @@ export function listarAlvosCobranca(
       alvos = agruparInfracoesPorCondutor(despesas, veiculos, clientes);
     } else {
       const categoria =
-        categoriaMap[tipo as Exclude<TipoCobrancaAction, "pagamento-semanal" | "infracoes">];
+        categoriaMap[tipo as keyof typeof categoriaMap];
       const despesas = db.clienteDespesas.filter((d) => {
         if (!despesaNaSituacao(d, situacao)) return false;
         if (!despesaCobravelLocatario(d)) return false;
         if (!despesaNoPeriodo(d, filtro ?? {})) return false;
-        if (tipo === "manutencao" && !isCategoriaManutencao(d.categoria)) return false;
-        if (tipo === "pedagio" && !isCategoriaPedagio(d.categoria)) return false;
-        if (tipo === "estacionamento-rotativo" && !isCategoriaEstacionamento(d.categoria)) {
+        if (tipo === TipoCobrancaAction.Manutencao && !isCategoriaManutencao(d.categoria)) return false;
+        if (tipo === TipoCobrancaAction.Pedagio && !isCategoriaPedagio(d.categoria)) return false;
+        if (tipo === TipoCobrancaAction.EstacionamentoRotativo && !isCategoriaEstacionamento(d.categoria)) {
           return false;
         }
-        if (tipo === "renegociacao") {
+        if (tipo === TipoCobrancaAction.Renegociacao) {
           const cat = (d.categoria ?? "").trim();
-          if (cat === categoriaMap.renegociacao) {
+          if (cat === categoriaMap[TipoCobrancaAction.Renegociacao]) {
             // ok
           } else if (incluirEncerrados && despesaRenegociacaoEncerrada(d, contratos)) {
             // semanal ATRASADO de contrato encerrado
@@ -823,14 +808,14 @@ export function listarAlvosCobranca(
             return false;
           }
         } else if (
-          tipo !== "manutencao" &&
-          tipo !== "pedagio" &&
-          tipo !== "estacionamento-rotativo" &&
+          tipo !== TipoCobrancaAction.Manutencao &&
+          tipo !== TipoCobrancaAction.Pedagio &&
+          tipo !== TipoCobrancaAction.EstacionamentoRotativo &&
           (d.categoria ?? "") !== categoria
         ) {
           return false;
         }
-        if (tipo === "manutencao" && d.valorMulta <= 0) return false;
+        if (tipo === TipoCobrancaAction.Manutencao && d.valorMulta <= 0) return false;
         if (
           veiculoIdFiltro &&
           !despesaCombinaVeiculoFiltro(d.veiculoId, { veiculoId: veiculoIdFiltro }, veiculosLista)

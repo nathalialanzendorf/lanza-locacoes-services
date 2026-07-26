@@ -9,8 +9,10 @@ import {
   normalizeDocxMoneyText,
 } from "./docxPlain.js";
 import { formatPlacaHyphen } from "./placa.js";
+import { TipoContrato, type TipoContratoValor } from "./domain/tipoLocacao.js";
 
-export type TipoContrato = "semanal" | "diaria" | "mensal";
+export { TipoContrato, type TipoContratoValor };
+export type TipoContrato = TipoContratoValor;
 
 export type PagamentoExtraido = {
   tipoContrato: TipoContrato;
@@ -261,20 +263,20 @@ export function extrairPagamento(texto: string): PagamentoExtraido {
   const cl32 = blocoPagamentoLocacao(texto);
   const t = cl32.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
-  let tipoContrato: TipoContrato = "semanal";
+  let tipoContrato: TipoContratoValor = TipoContrato.Semanal;
   if (/mensalmente|por mes\b|ao mes\b|locacao mensal|locação mensal/i.test(t)) {
-    tipoContrato = "mensal";
+    tipoContrato = TipoContrato.Mensal;
   } else if (/diariamente|por dia\b|locacao diaria|locação diária/i.test(t)) {
-    tipoContrato = "diaria";
+    tipoContrato = TipoContrato.Diaria;
   } else if (/semanalmente|por semana\b|locacao semanal|locação semanal/i.test(t)) {
-    tipoContrato = "semanal";
+    tipoContrato = TipoContrato.Semanal;
   }
 
   let diaPagamentoSemana: string | null = null;
   let diaPagamentoMes: number | null = null;
   let diaPagamentoTexto: string | null = null;
 
-  if (tipoContrato === "mensal") {
+  if (tipoContrato === TipoContrato.Mensal) {
     const dm =
       t.match(/(?:todo|toda)\s+dia\s+(\d{1,2})/i) ??
       t.match(/dia\s+(\d{1,2})\s+de\s+cada/i) ??
@@ -285,7 +287,7 @@ export function extrairPagamento(texto: string): PagamentoExtraido {
     }
     const tm = cl32.match(/(?:todo|toda)\s+dia\s+\d{1,2}/i) ?? cl32.match(/dia\s+\d{1,2}/i);
     if (tm) diaPagamentoTexto = tm[0]!.trim();
-  } else if (tipoContrato === "semanal") {
+  } else if (tipoContrato === TipoContrato.Semanal) {
     for (const { key, re } of DIAS_SEMANA) {
       if (re.test(t)) {
         diaPagamentoSemana = key;
@@ -375,9 +377,9 @@ export function extrairContrato(
   const valorDiariaDoc = extrairValorDiariaReais(texto);
 
   const valorBase =
-    pagamento.tipoContrato === "mensal"
+    pagamento.tipoContrato === TipoContrato.Mensal
       ? valorMensal
-      : pagamento.tipoContrato === "diaria"
+      : pagamento.tipoContrato === TipoContrato.Diaria
         ? valorDiariaDoc
         : valorSemanal;
 
@@ -467,8 +469,8 @@ export function addDays(d: Date, n: number): Date {
 
 /** Valor de cada parcela conforme o tipo de contrato. */
 export function valorParcelaContrato(c: ContratoExtraido): number {
-  if (c.tipoContrato === "mensal" && c.valorMensal != null) return c.valorMensal;
-  if (c.tipoContrato === "diaria" && c.valorDiaria != null) return c.valorDiaria;
+  if (c.tipoContrato === TipoContrato.Mensal && c.valorMensal != null) return c.valorMensal;
+  if (c.tipoContrato === TipoContrato.Diaria && c.valorDiaria != null) return c.valorDiaria;
   if (c.valorSemanal != null) return c.valorSemanal;
   throw new Error("Valor da locação não definido no contrato.");
 }
@@ -483,7 +485,7 @@ export function valorDiariaContrato(c: ContratoExtraido): number {
 
 /** Intervalo entre vencimentos (dias). */
 export function intervaloPagamentoDias(c: ContratoExtraido): number {
-  if (c.tipoContrato === "mensal") return 30;
-  if (c.tipoContrato === "diaria") return 1;
+  if (c.tipoContrato === TipoContrato.Mensal) return 30;
+  if (c.tipoContrato === TipoContrato.Diaria) return 1;
   return 7;
 }

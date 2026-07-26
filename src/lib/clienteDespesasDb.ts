@@ -25,6 +25,13 @@ import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { findVeiculoInDb, loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
 import { loadContratosDb, contratoMaisRecentePar, type ContratoRegistro } from "./contratosDb.js";
 import { CATEGORIA_PEDAGIO } from "./despesaCategorias.js";
+import {
+  CategoriaDespesaCliente,
+  CATEGORIAS_SYNC_RASTREAME,
+} from "./domain/categoriaDespesaCliente.js";
+import { StatusContrato } from "./domain/statusContrato.js";
+
+export { CATEGORIAS_SYNC_RASTREAME };
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
@@ -41,30 +48,19 @@ export const DB_CLIENTE_DESPESAS = path.join(
 const DB_INFRACOES_LEGACY = path.join(REPO_ROOT, "database", "infracoes.json");
 const DB_MULTAS_LEGACY = path.join(REPO_ROOT, "database", "multas.json");
 
-/** Categorias replicadas em Gastos Gerais (Rastreame, tipo OUTROS). */
-export const CATEGORIAS_SYNC_RASTREAME = new Set([
-  "Locação semanal",
-  "Outros",
-  "Caução",
-  "Estacionamento",
-  CATEGORIA_PEDAGIO,
-  "Manutenção",
-  "Quebra contrato",
-]);
-
 /**
  * Categorias cujo condutor é inferido pelo contrato ativo na data
  * (mesmo vínculo das infrações: placa + dataAutuacao com hora).
  */
 export function categoriaInfereCondutor(categoria: string | undefined | null): boolean {
-  const c = (categoria ?? "Infração").trim();
-  return c === "Infração" || isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
+  const c = (categoria ?? CategoriaDespesaCliente.Infracao).trim();
+  return c === CategoriaDespesaCliente.Infracao || isCategoriaPedagio(c) || isCategoriaEstacionamento(c);
 }
 
 /** Manutenção cobrável do locatário (lavação entra aqui; categoria legada "Lavação" ainda aceita). */
 export function isCategoriaManutencao(categoria: string | undefined | null): boolean {
   const c = (categoria ?? "").trim();
-  return c === "Manutenção" || c === "Lavação";
+  return c === CategoriaDespesaCliente.Manutencao || c === CategoriaDespesaCliente.Lavacao;
 }
 
 export type ClienteDespesaRegistro = {
@@ -320,7 +316,7 @@ function normalizeRawDb(raw: Record<string, unknown>): ClienteDespesasDb {
   const rawList = (raw.clienteDespesas ?? raw.infracoes ?? raw.multas ?? []) as ClienteDespesaRegistro[];
   const clienteDespesas = rawList.map((r) => ({
     ...r,
-    categoria: r.categoria ?? "Infração",
+    categoria: r.categoria ?? CategoriaDespesaCliente.Infracao,
   }));
   return {
     descricao: (raw.descricao as string) || DEFAULT_DESCRICAO,
@@ -732,7 +728,7 @@ export async function gravarClienteDespesa(
     veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
   }
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
-  const categoria = input.categoria?.trim() || "Infração";
+  const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;
 
   if (relational && !opts?.skipDupCheck) {
     const dupRel = await findClienteDespesaByReferenciaAsync(autoKey);
@@ -868,7 +864,7 @@ export async function gravarClienteDespesa(
     let proximaParcela: ClienteDespesaRegistro | null = null;
     if (
       input.paga === true &&
-      registro.categoria === "Locação semanal" &&
+      registro.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       isPagamentoSemanalDescricao(registro.descricao)
     ) {
       const venc =
@@ -902,7 +898,7 @@ export async function gravarClienteDespesa(
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
     input.paga === true &&
-    registro.categoria === "Locação semanal" &&
+    registro.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(registro.descricao)
   ) {
     const venc = vencimentoSemanalParaBaixa(
@@ -943,7 +939,7 @@ export function gravarInfracao(
   input: ClienteDespesaInput,
   opts?: ClienteDespesaPersistOpts,
 ): Promise<GravarClienteDespesaResult> {
-  return gravarClienteDespesa(veiculoIdRaw, { ...input, categoria: input.categoria ?? "Infração" }, opts);
+  return gravarClienteDespesa(veiculoIdRaw, { ...input, categoria: input.categoria ?? CategoriaDespesaCliente.Infracao }, opts);
 }
 
 export async function sincronizarClienteDespesa(
@@ -954,7 +950,7 @@ export async function sincronizarClienteDespesa(
   const db = loadClienteDespesasDb();
   const veiculoId = formatPlacaHyphen(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
-  const categoria = input.categoria?.trim() || "Infração";
+  const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;
   const idx = db.clienteDespesas.findIndex(
     (m) => m.autoInfracao.trim().toUpperCase() === autoKey,
   );
@@ -1181,7 +1177,7 @@ export function sincronizarInfracao(
 ): Promise<SincronizarClienteDespesaResult> {
   return sincronizarClienteDespesa(
     veiculoIdRaw,
-    { ...input, categoria: input.categoria ?? "Infração" },
+    { ...input, categoria: input.categoria ?? CategoriaDespesaCliente.Infracao },
     opts,
   );
 }
@@ -1302,7 +1298,7 @@ export function confirmarCondutorInfracao(
 }
 
 export function isInfracaoTransito(r: ClienteDespesaRegistro): boolean {
-  return (r.categoria ?? "Infração") === "Infração";
+  return (r.categoria ?? CategoriaDespesaCliente.Infracao) === CategoriaDespesaCliente.Infracao;
 }
 
 /** Infração sem data de autuação válida — nova não vincula locatário (vai a parceiro). */
@@ -1326,7 +1322,7 @@ function contratosAtribuicao(ctx?: DespesaAtribuicaoContext): ContratoRegistro[]
 function contratoAtivoPorVeiculoIdDb(veiculoId: string, contratos?: ContratoRegistro[]) {
   if (!isEntityUuid(veiculoId)) return undefined;
   const list = (contratos ?? loadContratosDb().contratos).filter(
-    (c) => c.status === "ativo" && c.veiculoId === veiculoId,
+    (c) => c.status === StatusContrato.Ativo && c.veiculoId === veiculoId,
   );
   if (list.length === 0) return undefined;
   return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
@@ -1336,7 +1332,7 @@ function contratoAtivoPorVeiculoIdDb(veiculoId: string, contratos?: ContratoRegi
 function contratoAtivoPorPlacaDb(placa: string, contratos?: ContratoRegistro[]) {
   const p = compactPlaca(placa);
   const list = (contratos ?? loadContratosDb().contratos).filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa ?? c.veiculoId) === p,
+    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? c.veiculoId) === p,
   );
   if (list.length === 0) return undefined;
   return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
@@ -1384,7 +1380,7 @@ export function despesaAtribuidaACliente(
   }
 
   const cat = (d.categoria ?? "").trim();
-  if (cat === "Locação semanal" || cat === "Renegociação" || cat === "Caução") {
+  if (cat === CategoriaDespesaCliente.LocacaoSemanal || cat === CategoriaDespesaCliente.Renegociacao || cat === CategoriaDespesaCliente.Caucao) {
     if (d.condutorId === clienteId) return true;
     if (d.condutorId && d.condutorId !== clienteId) return false;
     const veiculoId =
@@ -1450,8 +1446,8 @@ export function isSyncRastreameEligible(r: ClienteDespesaRegistro): boolean {
   if (!isClienteDespesaAtiva(r)) return false;
   if (r.rastreameId != null && r.rastreameId !== "") return true;
   if (r.origem === "rastreame") return true;
-  const cat = r.categoria ?? "Infração";
-  if (cat === "Infração") return false;
+  const cat = r.categoria ?? CategoriaDespesaCliente.Infracao;
+  if (cat === CategoriaDespesaCliente.Infracao) return false;
   return CATEGORIAS_SYNC_RASTREAME.has(cat);
 }
 
@@ -1521,7 +1517,7 @@ export async function editarClienteDespesa(
   const eraPaga = m.paga === true;
   const descricaoAntes = m.descricao;
   const vencimentoAntes =
-    m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)
+    m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)
       ? dataVencimentoSemanalBr(m.descricao, m.rastreameDataIso) ?? m.dataAutuacao
       : m.dataAutuacao;
 
@@ -1553,7 +1549,7 @@ export async function editarClienteDespesa(
   if (patch.veiculoId !== undefined) m.veiculoId = resolvePlacaVeiculoCadastro(patch.veiculoId);
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
-  if (m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)) {
+  if (m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)) {
     const normalized = normalizarBaixaSemanal({
       descricao: m.descricao,
       dataAutuacao: m.dataAutuacao,
@@ -1574,7 +1570,7 @@ export async function editarClienteDespesa(
     !eraPaga &&
     m.paga === true &&
     m.ativo !== false &&
-    m.categoria === "Locação semanal" &&
+    m.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(descricaoAntes)
   ) {
     proximaParcela = criarProximaParcelaSemanalSeNecessario(
@@ -1622,7 +1618,7 @@ function vencimentoSemanalParaBaixa(
     (d) =>
       d.ativo !== false &&
       formatPlacaHyphen(d.veiculoId) === placa &&
-      d.categoria === "Locação semanal" &&
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       normDescSemanal(d.descricao) === norm,
   );
   if (irma) {
@@ -1654,7 +1650,7 @@ function valorParcelaSemanalContrato(veiculoId: string): number | null {
   const contratos = getCobrancasRuntimeCtx()?.contratos ?? loadContratosDb().contratos;
   const contrato = contratos.find(
     (c) =>
-      c.status === "ativo" &&
+      c.status === StatusContrato.Ativo &&
       formatPlacaHyphen(c.veiculoId ?? c.placa ?? "") === placa,
   );
   return contrato?.valorSemanal ?? null;
@@ -1695,7 +1691,7 @@ function applyClienteDespesaPatch(
   }
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
-  if (m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)) {
+  if (m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)) {
     const normalized = normalizarBaixaSemanal({
       descricao: m.descricao,
       dataAutuacao: m.dataAutuacao,
@@ -1733,7 +1729,7 @@ async function resolveClienteDespesaForEdit(key: string): Promise<ClienteDespesa
 function persistOptsClienteDespesa(d: ClienteDespesaRegistro): PersistClienteDespesaSqlOpts {
   return {
     veiculoId: isEntityUuid(d.veiculoId) ? d.veiculoId : undefined,
-    skipInfracaoLookup: (d.categoria ?? "Infração") !== "Infração",
+    skipInfracaoLookup: (d.categoria ?? CategoriaDespesaCliente.Infracao) !== CategoriaDespesaCliente.Infracao,
   };
 }
 
@@ -1748,7 +1744,7 @@ function despesaSemanalDescricaoDuplicada(
     (d) =>
       d.ativo !== false &&
       d.veiculoId === veiculoId &&
-      d.categoria === "Locação semanal" &&
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       normDescSemanal(d.descricao) === descricaoNorm,
   );
 }
@@ -1766,7 +1762,7 @@ async function despesaSemanalDescricaoDuplicadaAsync(
   const rows = (await queryClienteDespesasFromSql({ veiculoId: veiculoUuid, ativo: true })) as ClienteDespesaRegistro[];
   return rows.some(
     (d) =>
-      d.categoria === "Locação semanal" && normDescSemanal(String(d.descricao ?? "")) === descricaoNorm,
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal && normDescSemanal(String(d.descricao ?? "")) === descricaoNorm,
   );
 }
 
@@ -1778,7 +1774,7 @@ function buildProximaParcelaSemanalRegistro(
   const ts = nowIso();
   return {
     id: crypto.randomUUID(),
-    categoria: "Locação semanal",
+    categoria: CategoriaDespesaCliente.LocacaoSemanal,
     veiculoId: pago.veiculoId,
     autoInfracao: `LOCAL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     descricao: prox.descricao,
@@ -1837,7 +1833,7 @@ async function editarClienteDespesaRelational(
   const eraPaga = m.paga === true;
   const descricaoAntes = m.descricao;
   const vencimentoAntes =
-    m.categoria === "Locação semanal" && isPagamentoSemanalDescricao(m.descricao)
+    m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)
       ? dataVencimentoSemanalBr(m.descricao, m.rastreameDataIso) ?? m.dataAutuacao
       : m.dataAutuacao;
 
@@ -1848,7 +1844,7 @@ async function editarClienteDespesaRelational(
     !eraPaga &&
     m.paga === true &&
     m.ativo !== false &&
-    m.categoria === "Locação semanal" &&
+    m.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(descricaoAntes)
   ) {
     proximaParcela = await criarProximaParcelaSemanalRelational(
@@ -1893,7 +1889,7 @@ function criarProximaParcelaSemanalSeNecessario(
     (d) =>
       d.ativo !== false &&
       d.veiculoId === pago.veiculoId &&
-      d.categoria === "Locação semanal" &&
+      d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       normDescSemanal(d.descricao) === alvo,
   );
   if (dup) return null;
@@ -1901,7 +1897,7 @@ function criarProximaParcelaSemanalSeNecessario(
   const ts = nowIso();
   const registro: ClienteDespesaRegistro = {
     id: crypto.randomUUID(),
-    categoria: "Locação semanal",
+    categoria: CategoriaDespesaCliente.LocacaoSemanal,
     veiculoId: pago.veiculoId,
     autoInfracao: `LOCAL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     descricao: prox.descricao,

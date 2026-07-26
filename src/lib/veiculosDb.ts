@@ -19,6 +19,7 @@ import { veiculosScopeFromFilter } from "./scopedCatalogo.js";
 import { isEntityUuid } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { registroEstaAtivo } from "./domain/index.js";
 
 export const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
 
@@ -130,7 +131,7 @@ export async function saveVeiculosDbAsync(db: VeiculosDb): Promise<void> {
 }
 
 export function isVeiculoAtivo(v: VeiculoRegistro): boolean {
-  return v.ativo !== false;
+  return registroEstaAtivo(v.ativo);
 }
 
 export function findVeiculoByPlaca(placa: string): VeiculoRegistro | null {

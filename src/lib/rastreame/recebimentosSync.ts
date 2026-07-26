@@ -41,6 +41,7 @@ import {
   isPagamentoSemanalDescricao,
   vencimentoBrToIsoEndDay,
 } from "../pagamentoSemanal.js";
+import { CategoriaDespesaCliente } from "../domain/categoriaDespesaCliente.js";
 
 export type SyncRecebimentosOpts = {
   dryRun?: boolean;
@@ -113,15 +114,15 @@ function isGastoAtivo(g: GastoRecord): boolean {
 
 export function categoriaFromInfo(info: string): string {
   const t = info.toLowerCase();
-  if (/pagamento semanal|semanal/.test(t)) return "Locação semanal";
-  if (/quebra|encerramento|rescis/.test(t)) return "Quebra contrato";
-  if (/cau[cç][aã]o/.test(t)) return "Caução";
+  if (/pagamento semanal|semanal/.test(t)) return CategoriaDespesaCliente.LocacaoSemanal;
+  if (/quebra|encerramento|rescis/.test(t)) return CategoriaDespesaCliente.QuebraContrato;
+  if (/cau[cç][aã]o/.test(t)) return CategoriaDespesaCliente.Caucao;
   if (/manuten|avaria|porta|parachoque|reparo|[óo]leo|troca de [óo]leo|pneu|franquia|lava/.test(t))
-    return "Manutenção";
-  if (/estacion/.test(t)) return "Estacionamento";
-  if (/ped[aá]gio/.test(t)) return "Pedágio";
-  if (/negocia/.test(t)) return "Renegociação";
-  return "Outros";
+    return CategoriaDespesaCliente.Manutencao;
+  if (/estacion/.test(t)) return CategoriaDespesaCliente.Estacionamento;
+  if (/ped[aá]gio/.test(t)) return CategoriaDespesaCliente.Pedagio;
+  if (/negocia/.test(t)) return CategoriaDespesaCliente.Renegociacao;
+  return CategoriaDespesaCliente.Outros;
 }
 
 /**
@@ -135,16 +136,16 @@ export function categoriaFromGasto(tipo: string | null, info: string): string {
   switch ((tipo ?? "").toUpperCase()) {
     case "MULTA":
     case "MULTAS":
-      return "Infração";
+      return CategoriaDespesaCliente.Infracao;
     case "DOCUMENTACAO": {
       const fromInfo = categoriaFromInfo(info);
-      if (fromInfo !== "Outros") return fromInfo;
-      return "Renegociação";
+      if (fromInfo !== CategoriaDespesaCliente.Outros) return fromInfo;
+      return CategoriaDespesaCliente.Renegociacao;
     }
     case "PEDAGIO":
-      return "Pedágio";
+      return CategoriaDespesaCliente.Pedagio;
     case "ALIMENTACAO":
-      return "Manutenção";
+      return CategoriaDespesaCliente.Manutencao;
     case "OUTROS":
     default:
       return categoriaFromInfo(info);
@@ -252,7 +253,7 @@ function gastoToUpsertInput(
   // Em aberto: vencimento = dia DD da descrição (não copiar a data de outra parcela).
   if (
     emAberto &&
-    categoria === "Locação semanal" &&
+    categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(info)
   ) {
     const venc = dataVencimentoSemanalBr(info, dataIsoHint);
@@ -273,7 +274,7 @@ function gastoToUpsertInput(
     rastreameRastreavelKey: rastreavelKey || null,
     rastreameDataIso:
       emAberto &&
-      categoria === "Locação semanal" &&
+      categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       isPagamentoSemanalDescricao(info)
         ? vencimentoBrToIsoEndDay(dataAutuacao)
         : dataIsoHint,
@@ -396,7 +397,7 @@ async function pushOneRegistro(
 
   const info = infoParaRastreame(reg);
   const emAbertoSemanal =
-    reg.categoria === "Locação semanal" &&
+    reg.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     reg.paga !== true &&
     isPagamentoSemanalDescricao(info);
   let dataAutuacaoPush = reg.dataAutuacao;

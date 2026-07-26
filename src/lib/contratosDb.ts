@@ -11,6 +11,15 @@ import { parseDataBrOuIsoDia } from "./dataBr.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import {
+  MotivoEncerramento,
+  StatusContrato,
+  contratoOperacionalAtivo,
+  type MotivoEncerramentoValor,
+  type StatusContratoValor,
+} from "./domain/index.js";
+
+export { MotivoEncerramento, type MotivoEncerramentoValor };
 
 export const DB_CONTRATOS = path.join(REPO_ROOT, "database", "contratos.json");
 
@@ -55,7 +64,6 @@ export type ContratoVeiculo = {
  * - `troca`: troca de veículo — sempre gera um **novo contrato** para o mesmo cliente
  *   com **outro veículo** (não é quebra; a caução transfere para o novo contrato).
  */
-export type MotivoEncerramento = "devolvido" | "recuperado" | "troca";
 
 export type ContratoRegistro = {
   id: string;
@@ -78,8 +86,8 @@ export type ContratoRegistro = {
   /** true se encerramento antecipado (quebra de contrato / retenção caução). */
   quebraContrato?: boolean;
   /** Como o veículo saiu da locação: devolvido, recuperado ou troca (novo contrato com outro veículo). */
-  motivoEncerramento?: MotivoEncerramento | null;
-  status: "ativo" | "encerrado";
+  motivoEncerramento?: MotivoEncerramentoValor | null;
+  status: StatusContratoValor;
   prazoDias: number;
   tipoContrato: TipoContrato;
   diaPagamentoSemana: string | null;
@@ -148,24 +156,23 @@ const DEFAULT_SCHEMA: Record<string, string> = {
 
 export type RegistrarContratoOpts = {
   dataEncerramento?: string | null;
-  status?: "ativo" | "encerrado";
+  status?: StatusContratoValor;
   /** Força versão (senão calcula automaticamente pelo par cliente + veículo). */
   versao?: number;
   contratoAnteriorId?: string | null;
   quebraContrato?: boolean;
-  motivoEncerramento?: MotivoEncerramento | null;
+  motivoEncerramento?: MotivoEncerramentoValor | null;
 };
 
 export type EncerrarContratoDbOpts = {
   dataEncerramento: string;
-  motivoEncerramento: MotivoEncerramento;
+  motivoEncerramento: MotivoEncerramentoValor;
   quebraContrato?: boolean;
 };
 
 /** Contrato em locação ativa (status ativo e sem data de encerramento). */
 export function contratoAtivoOperacional(c: ContratoRegistro): boolean {
-  if (c.status !== "ativo") return false;
-  return !String(c.dataEncerramento ?? "").trim();
+  return contratoOperacionalAtivo(c);
 }
 
 /** Contrato ativo cujo fim previsto ainda não passou (ou sem fim previsto). */
@@ -524,8 +531,8 @@ function buildRegistro(
       ? opts.dataEncerramento
       : (existing?.dataEncerramento ?? null);
 
-  let status: "ativo" | "encerrado" = opts.status ?? existing?.status ?? "ativo";
-  if (encerramento) status = "encerrado";
+  let status: StatusContratoValor = opts.status ?? existing?.status ?? StatusContrato.Ativo;
+  if (encerramento) status = StatusContrato.Encerrado;
   else if (opts.status) status = opts.status;
 
   const clientes = catalogo?.clientes ?? loadClientesDb().clientes;
@@ -736,7 +743,7 @@ function applyEncerramentoContrato(
     dataEncerramento: opts.dataEncerramento.trim(),
     motivoEncerramento: opts.motivoEncerramento,
     quebraContrato: opts.quebraContrato ?? registro.quebraContrato ?? false,
-    status: "encerrado",
+    status: StatusContrato.Encerrado,
     atualizadoEm: nowIso(),
   };
 }
@@ -756,7 +763,7 @@ export function encerrarContratoDb(
       dataEncerramento: opts.dataEncerramento.trim(),
       motivoEncerramento: opts.motivoEncerramento,
       quebraContrato: opts.quebraContrato ?? false,
-      status: "encerrado",
+      status: StatusContrato.Encerrado,
     });
   }
   const registro = applyEncerramentoContrato(db.contratos[idx]!, opts);
@@ -827,7 +834,7 @@ export async function atualizarContratoDbAsync(
     atualizadoEm: nowIso(),
   };
   if (patch.dataEncerramento !== undefined && patch.dataEncerramento) {
-    registro.status = "encerrado";
+    registro.status = StatusContrato.Encerrado;
   } else if (patch.status) {
     registro.status = patch.status;
   }
@@ -956,7 +963,7 @@ async function loadContratosParaValidacaoAsync(
 
   if (vid) {
     batches.push(
-      (await queryContratosFromSql({ status: "ativo", veiculoId: vid })) as ContratoRegistro[],
+      (await queryContratosFromSql({ status: StatusContrato.Ativo, veiculoId: vid })) as ContratoRegistro[],
     );
   }
 
@@ -982,7 +989,7 @@ function validarModoContratoComLista(
 ): ValidarModoContratoResult {
   const catalogoVeiculos = veiculos ?? loadVeiculosDb().veiculos;
   const irmaos = listarContratosClienteVeiculo(filtros, contratos, catalogoVeiculos);
-  const ativo = irmaos.find((c) => c.status === "ativo");
+  const ativo = irmaos.find((c) => c.status === StatusContrato.Ativo);
   const placaFmt = filtros.placa?.trim() ? formatPlacaHyphen(filtros.placa) : "";
   const vid =
     veiculoIdResolved ??
@@ -995,7 +1002,7 @@ function validarModoContratoComLista(
   if (modo === "criar") {
     const ativoOutro = contratos.find(
       (c) =>
-        c.status === "ativo" &&
+        c.status === StatusContrato.Ativo &&
         contratoMesmoVeiculo(c, vid, placaFmt) &&
         !mesmoParClienteVeiculo(
           c,
@@ -1043,7 +1050,7 @@ function validarModoContratoComLista(
     if (trocaVeiculo) {
       const ativoOutro = contratos.find(
         (c) =>
-          c.status === "ativo" &&
+          c.status === StatusContrato.Ativo &&
           contratoMesmoVeiculo(c, vid, placaFmt) &&
           !mesmoParClienteVeiculo(
             c,
@@ -1146,7 +1153,7 @@ export async function encerrarContratoAtivoParaRenovarAsync(
       alvo = db.contratos.find((c) => c.id === renovarId);
     }
     if (!alvo) throw new Error(`Contrato a renovar não encontrado: ${renovarId}`);
-    if (alvo.status !== "ativo") return null;
+    if (alvo.status !== StatusContrato.Ativo) return null;
     if (
       !mesmoClienteContrato(
         alvo,
@@ -1173,7 +1180,7 @@ export async function encerrarContratoAtivoParaRenovarAsync(
       [...byId.values()],
       veiculosDb.veiculos,
     );
-    ativo = irmaos.find((c) => c.status === "ativo");
+    ativo = irmaos.find((c) => c.status === StatusContrato.Ativo);
   } else {
     const scope: ContratosLoadScope | undefined =
       filtros.clienteId?.trim() && veiculoIdNova
@@ -1181,7 +1188,7 @@ export async function encerrarContratoAtivoParaRenovarAsync(
         : undefined;
     const db = await loadContratosDbAsync(scope);
     const irmaos = listarContratosClienteVeiculo(filtros, db.contratos, veiculosDb.veiculos);
-    ativo = irmaos.find((c) => c.status === "ativo");
+    ativo = irmaos.find((c) => c.status === StatusContrato.Ativo);
   }
 
   if (!ativo) return null;

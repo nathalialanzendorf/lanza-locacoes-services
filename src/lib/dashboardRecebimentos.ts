@@ -27,6 +27,7 @@ import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { formatVeiculoLabel } from "./veiculoLabel.js";
 import { placaHyphenVeiculoRef, veiculoRefAtivo, type VeiculoRegistro } from "./veiculosDb.js";
+import { StatusContrato, CategoriaDespesaCliente, TipoCobrancaAction } from "./domain/index.js";
 
 export type DashboardRecebimentoLinha = {
   clienteId: string | null;
@@ -93,7 +94,7 @@ function contratoAtivoPlaca(
 ): ContratoRegistro | null {
   const p = compactPlaca(placa);
   const list = contratos.filter(
-    (c) => c.status === "ativo" && compactPlaca(c.placa ?? "") === p,
+    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? "") === p,
   );
   if (clienteId) {
     const par = list.find((c) => c.clienteId === clienteId);
@@ -199,7 +200,7 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
 
   for (const d of ctx.clienteDespesas) {
     if (!despesaAberta(d)) continue;
-    if (d.categoria !== "Locação semanal") continue;
+    if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (isJurosMultaSemanalDescricao(d.descricao ?? "")) continue;
     if (!veiculoAtivo(d.veiculoId, ctx.veiculos)) continue;
 
@@ -266,7 +267,7 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
 }
 
 function listarAtrasados(hoje: string, ctx: CobrancasDbContext): DashboardRecebimentoLinha[] {
-  const alvos = listarAlvosCobranca("pagamento-semanal", undefined, ctx);
+  const alvos = listarAlvosCobranca(TipoCobrancaAction.PagamentoSemanal, undefined, ctx);
   const linhas: DashboardRecebimentoLinha[] = [];
   const vistos = new Set<string>();
 
@@ -319,7 +320,7 @@ function totalSemanalAberto(ctx: CobrancasDbContext): number {
       .filter(
         (d) =>
           despesaAberta(d) &&
-          d.categoria === "Locação semanal" &&
+          d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
           !isJurosMultaSemanalDescricao(d.descricao ?? "") &&
           veiculoAtivo(d.veiculoId, ctx.veiculos) &&
           clienteAtivo(d.condutorId, ctx.clientes),
@@ -338,8 +339,8 @@ export function obterDashboardRecebimentos(ctx?: CobrancasDbContext): DashboardR
     venceHoje: round2(venceHoje.reduce((s, l) => s + l.valor, 0)),
     atrasado: round2(atrasados.reduce((s, l) => s + l.valor, 0)),
     semanal: totalSemanalAberto(db),
-    caucao: somaCategoria("Caução", db),
-    renegociacao: somaCategoria("Renegociação", db),
+    caucao: somaCategoria(CategoriaDespesaCliente.Caucao, db),
+    renegociacao: somaCategoria(CategoriaDespesaCliente.Renegociacao, db),
   };
 
   return {

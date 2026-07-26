@@ -7,14 +7,15 @@ import {
   type ResultadoCobranca,
   type TipoCobranca,
 } from "../lib/cobrancas.js";
+import { TipoCobranca as TipoCobrancaEnum } from "../lib/domain/tipoCobranca.js";
 import { mainSemanalAtraso } from "./relatorioCobrancasSemanalAtraso.js";
 import { mainLote } from "./relatorioCobrancasLote.js";
 
 const MODOS_POR_PLACA = new Set([
-  "semanal",
+  TipoCobrancaEnum.Semanal,
   "semanal-atraso",
-  "estacionamento",
-  "multa",
+  TipoCobrancaEnum.Estacionamento,
+  TipoCobrancaEnum.Multa,
 ]);
 
 function getOpt(argv: string[], nome: string): string | undefined {
@@ -72,7 +73,7 @@ export function main(argv: string[]): void {
     let resultados: ResultadoCobranca[] = [];
 
     switch (tipo) {
-      case "semanal": {
+      case TipoCobrancaEnum.Semanal: {
         const dia = Number(getOpt(argv, "--dia") ?? 1);
         if (![1, 2, 3, 4].includes(dia)) {
           console.error("Erro: --dia deve ser 1, 2, 3 ou 4.");
@@ -81,10 +82,10 @@ export function main(argv: string[]): void {
         resultados = [gerarSemanal(placa, dia, { nome })];
         break;
       }
-      case "estacionamento":
+      case TipoCobrancaEnum.Estacionamento:
         resultados = [gerarEstacionamento(placa, { nome })];
         break;
-      case "multa": {
+      case TipoCobrancaEnum.Multa: {
         const auto = getOpt(argv, "--auto");
         resultados = gerarMultas(placa, { auto, nome });
         if (resultados.length === 0) {

@@ -17,6 +17,7 @@ import {
   vencimentoDespesaSemanalBr,
 } from "./pagamentoSemanal.js";
 import type { ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { CategoriaDespesaCliente, TipoCobrancaAction } from "./domain/index.js";
 import { compactPlaca } from "./placa.js";
 import { compactPlacaVeiculoRef } from "./veiculosDb.js";
 
@@ -348,7 +349,7 @@ export function dataPagamentoEfetivoSemanal(
 ): string {
   const placaKey = compactPlaca(placa);
   for (const d of despesas) {
-    if (d.categoria !== "Locação semanal") continue;
+    if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (d.paga !== true) continue;
     if (isJurosMultaSemanalDescricao(d.descricao ?? "")) continue;
     if (/\[NEGOCIADO/i.test(d.descricao ?? "")) continue;
@@ -376,7 +377,7 @@ export function despesaSemanalElegivelRelatorio(
   },
   hojeBr: string,
 ): boolean {
-  if (d.categoria !== "Locação semanal") return true;
+  if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) return true;
   const venc =
     vencimentoDespesaSemanalBr(d.descricao ?? "", d.rastreameDataIso, d.dataAutuacao) ??
     "";
@@ -774,7 +775,7 @@ export function montarPacoteCobrancaSemanalAtraso(opts: {
 
   const payload: Record<string, unknown> = {
     ...input,
-    tipo: "pagamento-semanal",
+    tipo: TipoCobrancaAction.PagamentoSemanal,
     cliente: opts.clienteId != null || opts.clienteNome
       ? { id: opts.clienteId ?? null, nome: opts.clienteNome ?? null }
       : null,

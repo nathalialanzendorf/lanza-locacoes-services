@@ -24,6 +24,7 @@ import {
 } from "./contratoVinculoDb.js";
 import { loadContratosDb, loadContratosDbAsync } from "./contratosDb.js";
 import { useRelationalStore, queryContratosFromSql } from "@lanza/db";
+import { StatusContrato } from "./domain/statusContrato.js";
 import { normCpfKey } from "./rastreame/mapMotoristaCliente.js";
 import {
   ativarMotorista,
@@ -144,7 +145,7 @@ export function temOutroContratoAtivo(
 ): boolean {
   return contratos.some(
     (c) =>
-      c.status === "ativo" &&
+      c.status === StatusContrato.Ativo &&
       c.id !== excetoContratoId &&
       mesmoCliente(c.clienteId, c.cpf, c.clienteNome, cliente),
   );
@@ -157,7 +158,7 @@ export async function temOutroContratoAtivoAsync(
   if (await useRelationalStore()) {
     const clienteId = cliente.id?.trim();
     if (!clienteId) return false;
-    const rows = await queryContratosFromSql({ clienteId, status: "ativo" });
+    const rows = await queryContratosFromSql({ clienteId, status: StatusContrato.Ativo });
     const exc = excetoContratoId?.trim() || null;
     return rows.some((c) => String(c.id) !== exc);
   }

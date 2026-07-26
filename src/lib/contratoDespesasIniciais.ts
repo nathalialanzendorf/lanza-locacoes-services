@@ -18,6 +18,8 @@ import {
   montarDescricaoPrimeiraSemanalContrato,
   vencimentoBrToIsoEndDay,
 } from "./pagamentoSemanal.js";
+import { CategoriaDespesaCliente } from "./domain/categoriaDespesaCliente.js";
+import { SituacaoDespesa } from "./domain/situacaoDespesa.js";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -86,7 +88,7 @@ async function gravarPaga(
     {
       autoInfracao: localAutoInfracao(),
       localInfracao: "",
-      situacao: "Pago",
+      situacao: SituacaoDespesa.Pago,
       limiteDefesa: "",
       paga: true,
       pagaEm: opts.pagaEm,
@@ -111,7 +113,7 @@ async function gravarAberta(
     {
       autoInfracao: localAutoInfracao(),
       localInfracao: "",
-      situacao: "Em aberto",
+      situacao: SituacaoDespesa.EmAberto,
       limiteDefesa: "",
       paga: false,
       pagaEm: null,
@@ -179,7 +181,7 @@ export async function gerarDespesasIniciaisContratoAsync(
     const entrada = round2(valorCaucaoTotal - cp.aberto);
     if (entrada > 0.01) {
       const r = await gravarPaga(gravarOpts, {
-        categoria: "Caução",
+        categoria: CategoriaDespesaCliente.Caucao,
         descricao: infoCaucaoEntrada(),
         dataAutuacao: inicioBr,
         valorMulta: entrada,
@@ -190,7 +192,7 @@ export async function gerarDespesasIniciaisContratoAsync(
       const n = i + 1;
       caucaoParcelas.push(
         await gravarAberta(gravarOpts, {
-          categoria: "Caução",
+          categoria: CategoriaDespesaCliente.Caucao,
           descricao: infoParcelaCaucao(n, cp.parcelas),
           dataAutuacao: cp.datas[i]!,
           valorMulta: cp.valorParcela,
@@ -204,7 +206,7 @@ export async function gerarDespesasIniciaisContratoAsync(
       const n = i + 1;
       caucaoParcelas.push(
         await gravarAberta(gravarOpts, {
-          categoria: "Caução",
+          categoria: CategoriaDespesaCliente.Caucao,
           descricao: infoParcelaCaucao(n, cp.parcelas),
           dataAutuacao: datas[i]!,
           valorMulta: cp.valorParcela,
@@ -213,7 +215,7 @@ export async function gerarDespesasIniciaisContratoAsync(
     }
   } else {
     const r = await gravarPaga(gravarOpts, {
-      categoria: "Caução",
+      categoria: CategoriaDespesaCliente.Caucao,
       descricao: infoCaucaoEntrada(),
       dataAutuacao: inicioBr,
       valorMulta: valorCaucaoTotal,
@@ -227,7 +229,7 @@ export async function gerarDespesasIniciaisContratoAsync(
     const sp = dados.semanaParcelas;
     if (sp.valorEntrada > 0.01) {
       const r = await gravarPaga(gravarOpts, {
-        categoria: "Locação semanal",
+        categoria: CategoriaDespesaCliente.LocacaoSemanal,
         descricao: descPrimeiraSemana,
         dataAutuacao: inicioBr,
         valorMulta: sp.valorEntrada,
@@ -240,7 +242,7 @@ export async function gerarDespesasIniciaisContratoAsync(
       const n = i + 1;
       semanaParcelas.push(
         await gravarAberta(gravarOpts, {
-          categoria: "Locação semanal",
+          categoria: CategoriaDespesaCliente.LocacaoSemanal,
           descricao: infoParcelaPrimeiraSemana(n, sp.parcelas),
           dataAutuacao: datas[i]!,
           valorMulta: sp.valorParcela,
@@ -249,7 +251,7 @@ export async function gerarDespesasIniciaisContratoAsync(
     }
   } else {
     const r = await gravarPaga(gravarOpts, {
-      categoria: "Locação semanal",
+      categoria: CategoriaDespesaCliente.LocacaoSemanal,
       descricao: descPrimeiraSemana,
       dataAutuacao: inicioBr,
       valorMulta: valorSemanal,

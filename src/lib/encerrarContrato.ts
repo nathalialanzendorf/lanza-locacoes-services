@@ -23,6 +23,7 @@ import {
 } from "./clienteDespesasDb.js";
 import { loadCobrancasDbContextAsync, loadCobrancasScopedDbContextAsync, type CobrancasDbContext, type CobrancasScopedContextInput } from "./cobrancasDbContext.js";
 import { queryContratosFromSql } from "@lanza/db";
+import { CategoriaDespesaCliente } from "./domain/categoriaDespesaCliente.js";
 import { isEntityUuid } from "./filtroListagem.js";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import {
@@ -173,7 +174,7 @@ function brl(v: number): string {
 export function valorQuebraContratoEncerramento(r: EncerramentoResult): number {
   const quebraDb = r.debitosDiversos.find(
     (m) =>
-      (m.categoria ?? "") === "Quebra contrato" ||
+      (m.categoria ?? "") === CategoriaDespesaCliente.QuebraContrato ||
       /quebra de contrato|reten[cç][aã]o cau[cç][aã]o.*quebra/i.test(m.descricao ?? ""),
   );
   return quebraDb?.valorMulta ?? r.retencaoCaucao;
@@ -316,7 +317,7 @@ function expandirRenegociacoesPlanoFaltante(
 
   for (const m of db.clienteDespesas) {
     if (!isClienteDespesaAtiva(m)) continue;
-    if ((m.categoria ?? "") !== "Renegociação") continue;
+    if ((m.categoria ?? "") !== CategoriaDespesaCliente.Renegociacao) continue;
     if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) continue;
     const parsed = parseParcelaRenegociacaoDescricao(m.descricao);
     if (!parsed) continue;
@@ -340,7 +341,7 @@ function expandirRenegociacoesPlanoFaltante(
   const planosAbertos = new Set<number>();
 
   for (const m of diversos) {
-    if ((m.categoria ?? "") !== "Renegociação") {
+    if ((m.categoria ?? "") !== CategoriaDespesaCliente.Renegociacao) {
       semPlanoReneg.push(m);
       continue;
     }
@@ -364,7 +365,7 @@ function expandirRenegociacoesPlanoFaltante(
     sinteticos.push({
       ...(ref ?? {}),
       id: ref?.id ?? `plano-reneg-${inicioFaltante}x${total}`,
-      categoria: "Renegociação",
+      categoria: CategoriaDespesaCliente.Renegociacao,
       veiculoId: contrato.placa,
       autoInfracao: ref?.autoInfracao ?? `PLANO-${inicioFaltante}x${total}`,
       descricao: `ATRASADO Pagamento renegociação ${inicioFaltante}x${total} (${qtd} parcelas faltantes)`,
@@ -424,7 +425,7 @@ function coletarDebitosAbertosDb(
     if (isInfracaoTransito(m)) continue;
     if (isCategoriaManutencao(m.categoria)) continue;
 
-    if ((m.categoria ?? "") === "Locação semanal") {
+    if ((m.categoria ?? "") === CategoriaDespesaCliente.LocacaoSemanal) {
       parcelasSemanal.push(m);
       continue;
     }
@@ -495,7 +496,7 @@ function inferirSemanasPagasDoDb(
   const pagasNoPeriodo = clienteDespesasEnc().filter((m) => {
     if (!isClienteDespesaAtiva(m)) return false;
     if (m.paga !== true) return false;
-    if ((m.categoria ?? "") !== "Locação semanal") return false;
+    if ((m.categoria ?? "") !== CategoriaDespesaCliente.LocacaoSemanal) return false;
     if (m.condutorId !== clienteId) return false;
     const da = parseDataBr(m.dataAutuacao);
     return da != null && da >= startOfDay(contrato.inicio) && da <= limite;
@@ -614,7 +615,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
         vencimento: vencStr,
         valorSemanal: valorParcela,
         placa: contrato.placa,
-        categoria: "Locação semanal",
+        categoria: CategoriaDespesaCliente.LocacaoSemanal,
         descricao: "Vencimento semanal",
       });
 
@@ -626,7 +627,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
           valorDiaria,
           total: round2(diasAtraso * valorDiaria),
           placa: contrato.placa,
-          categoria: "Locação semanal",
+          categoria: CategoriaDespesaCliente.LocacaoSemanal,
         });
       }
     }
@@ -644,7 +645,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
       vencimento: m.dataAutuacao,
       valorSemanal: round2(m.valorMulta),
       placa: m.veiculoId,
-      categoria: m.categoria ?? "Locação semanal",
+      categoria: m.categoria ?? CategoriaDespesaCliente.LocacaoSemanal,
       descricao: m.descricao,
     }));
   }
@@ -740,7 +741,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   );
   const temQuebraRastreame = debitosDiversos.some(
     (m) =>
-      (m.categoria ?? "") === "Quebra contrato" ||
+      (m.categoria ?? "") === CategoriaDespesaCliente.QuebraContrato ||
       /quebra de contrato|reten[cç][aã]o cau[cç][aã]o.*quebra/i.test(m.descricao ?? ""),
   );
   const retencaoNoTotal = temQuebraRastreame ? 0 : retencaoCaucao;
@@ -835,7 +836,7 @@ export function formatarEncerramentoTexto(
           rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
-          m.categoria ?? "Infração",
+          m.categoria ?? CategoriaDespesaCliente.Infracao,
           `R$ ${brl(m.valorMulta)}`,
         ),
       );
@@ -855,7 +856,7 @@ export function formatarEncerramentoTexto(
           rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
-          m.categoria ?? "Manutenção",
+          m.categoria ?? CategoriaDespesaCliente.Manutencao,
           valor,
         ),
       );
@@ -873,7 +874,7 @@ export function formatarEncerramentoTexto(
           p.descricao ?? "Vencimento semanal",
           placaLinha(p.placa),
           p.vencimento,
-          p.categoria ?? "Locação semanal",
+          p.categoria ?? CategoriaDespesaCliente.LocacaoSemanal,
           `R$ ${brl(p.valorSemanal)}`,
         ),
       );
@@ -892,7 +893,7 @@ export function formatarEncerramentoTexto(
             `${d.diasAtraso} dia(s) × R$ ${brl(d.valorDiaria)}`,
             placaLinha(d.placa),
             d.vencimento,
-            d.categoria ?? "Locação semanal",
+            d.categoria ?? CategoriaDespesaCliente.LocacaoSemanal,
             `R$ ${brl(d.total)}`,
           ),
         );
@@ -909,7 +910,7 @@ export function formatarEncerramentoTexto(
           rotuloGastoClienteDespesa(m),
           placaLinha(m.veiculoId),
           m.dataAutuacao,
-          m.categoria ?? "Outros",
+          m.categoria ?? CategoriaDespesaCliente.Outros,
           `R$ ${brl(m.valorMulta)}`,
         ),
       );

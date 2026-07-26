@@ -1,12 +1,10 @@
  
  
- 
- 
- 
- 
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+
+import { registroEstaAtivo } from "./domain/index.js";
 
 import {
   jsonDocumentExists,
@@ -182,7 +180,7 @@ export async function saveClientesDbAsync(db: ClientesDb): Promise<void> {
 }
 
 export function isClienteAtivo(c: ClienteRegistro): boolean {
-  return c.ativo !== false;
+  return registroEstaAtivo(c.ativo);
 }
 
 export function findClienteById(id: string): ClienteRegistro | null {

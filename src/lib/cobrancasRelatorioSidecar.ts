@@ -48,6 +48,13 @@ import {
   type TipoCobrancaAction,
 } from "./cobrancasAlvos.js";
 import {
+  CategoriaDespesaCliente,
+  StatusContrato,
+  TipoCobrancaAction,
+  RotuloTipoCobrancaAction,
+  type StatusContratoValor,
+} from "./domain/index.js";
+import {
   contratoMaisRecentePar,
   type ContratoRegistro,
   type MotivoEncerramento,
@@ -236,7 +243,7 @@ function linhaDespesa(d: ClienteDespesaRegistro): LinhaRelatorioCobranca {
     descricao,
     placa: veiculoLabelDespesa(d),
     data: vencimentoClienteDespesaBr(d) ?? "—",
-    categoria: d.categoria ?? "Outros",
+    categoria: d.categoria ?? CategoriaDespesaCliente.Outros,
     valor: round2(Number(d.valorMulta) || 0),
   };
 }
@@ -267,7 +274,7 @@ function contratoAtivoPar(
   const p = compactPlaca(placa);
   const list = cobrancasRuntimeContratos().filter(
     (c) =>
-      c.status === "ativo" &&
+      c.status === StatusContrato.Ativo &&
       compactPlaca(c.placa ?? "") === p &&
       (!clienteId || c.clienteId === clienteId),
   );
@@ -301,7 +308,7 @@ function contratoReferenciaCobranca(
 
 function ultimoContratoPorCliente(clienteId: string): ContratoRegistro | undefined {
   const ativos = cobrancasRuntimeContratos().filter(
-    (c) => c.status === "ativo" && c.clienteId === clienteId,
+    (c) => c.status === StatusContrato.Ativo && c.clienteId === clienteId,
   );
   if (ativos.length > 0) {
     return ativos.sort(ordenarContratosRecentes)[0];
@@ -326,7 +333,7 @@ function rotuloMotivoEncerramento(motivo?: MotivoEncerramento | null): string {
 }
 
 function linhaEncerramentoContrato(c: ContratoRegistro | undefined): string | null {
-  if (!c || c.status !== "encerrado" || !c.dataEncerramento?.trim()) return null;
+  if (!c || c.status !== StatusContrato.Encerrado || !c.dataEncerramento?.trim()) return null;
   return `Encerrado em ${c.dataEncerramento.trim()} — ${rotuloMotivoEncerramento(c.motivoEncerramento)}`;
 }
 
@@ -340,7 +347,7 @@ function contratoInfo(placa: string, clienteId: string | null, dataAtualBr: stri
   if (dataInicio) {
     const inicio = parseDataBr(dataInicio);
     const fimRef =
-      c?.status === "encerrado" && c.dataEncerramento
+      c?.status === StatusContrato.Encerrado && c.dataEncerramento
         ? parseDataBr(c.dataEncerramento)
         : parseDataBr(dataAtualBr);
     if (inicio && fimRef) qtdDiasLocado = daysBetween(inicio, fimRef);
@@ -377,7 +384,7 @@ function classificarDespesa(
   const cat = d.categoria ?? "";
   if (isInfracaoTransito(d)) return "infracoes";
   if (isCategoriaManutencao(cat)) return "manutencoes";
-  if (cat === "Locação semanal") return "parcelasEmAberto";
+  if (cat === CategoriaDespesaCliente.LocacaoSemanal) return "parcelasEmAberto";
   return "debitosDiversos";
 }
 
@@ -489,24 +496,19 @@ export function stripRodapeWhatsApp(texto: string): string {
 }
 
 const ORDEM_TIPO_WHATSAPP = [
-  "pagamento-semanal",
+  TipoCobrancaAction.PagamentoSemanal,
   "semanal-atraso",
-  "infracoes",
-  "renegociacao",
-  "pedagio",
-  "estacionamento-rotativo",
-  "manutencao",
+  TipoCobrancaAction.Infracoes,
+  TipoCobrancaAction.Renegociacao,
+  TipoCobrancaAction.Pedagio,
+  TipoCobrancaAction.EstacionamentoRotativo,
+  TipoCobrancaAction.Manutencao,
   "despesas-em-aberto",
 ] as const;
 
 const ROTULO_TIPO_WHATSAPP: Record<string, string> = {
-  "pagamento-semanal": "Pagamento semanal",
+  ...RotuloTipoCobrancaAction,
   "semanal-atraso": "Atraso semanal (juros e multa)",
-  infracoes: "Infrações",
-  renegociacao: "Renegociação",
-  pedagio: "Pedágio Digital",
-  "estacionamento-rotativo": "Estacionamento rotativo",
-  manutencao: "Manutenção",
   "despesas-em-aberto": "Despesas em aberto",
 };
 
@@ -778,7 +780,7 @@ function vencimentosAtrasadoSemanal(
   const vencimentos: string[] = [];
 
   for (const d of despesas) {
-    if (d.categoria !== "Locação semanal") continue;
+    if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (!/ATRASADO/i.test(d.descricao ?? "")) continue;
     if (compactPlaca(d.veiculoId) !== placaKey) continue;
     if (clienteId && !despesaDoCliente(d, clienteId)) continue;
@@ -1369,7 +1371,7 @@ export type GrupoInfracoesResumido = {
 };
 
 export type BlocoContratoInfracoesResumido = {
-  id: "ativo" | "encerrado";
+  id: StatusContratoValor;
   titulo: string;
   qtd: number;
   total: number;
@@ -1450,7 +1452,7 @@ function rotuloInputInfracaoResumida(
 ): RotuloGastoInput {
   const auto = String(reg.numeroAuto ?? "").trim().toUpperCase();
   return {
-    categoria: "Infração",
+    categoria: CategoriaDespesaCliente.Infracao,
     titulo: despesa?.titulo,
     descricao: reg.descricao,
     dataAutuacao: reg.dataAutuacao,
@@ -1528,20 +1530,20 @@ function nomeClienteResumidoInfracao(clienteId: string | null): string {
 
 function clienteTemContratoAtivo(clienteId: string): boolean {
   return cobrancasRuntimeContratos().some(
-    (c) => c.clienteId === clienteId && c.status === "ativo",
+    (c) => c.clienteId === clienteId && c.status === StatusContrato.Ativo,
   );
 }
 
-function situacaoContratoClienteInfracao(clienteId: string | null): "ativo" | "encerrado" {
-  if (!clienteId) return "encerrado";
-  return clienteTemContratoAtivo(clienteId) ? "ativo" : "encerrado";
+function situacaoContratoClienteInfracao(clienteId: string | null): StatusContratoValor {
+  if (!clienteId) return StatusContrato.Encerrado;
+  return clienteTemContratoAtivo(clienteId) ? StatusContrato.Ativo : StatusContrato.Encerrado;
 }
 
 function ultimoEncerramentoCliente(clienteId: string | null): string | null {
   if (!clienteId) return "Sem contrato ativo";
   if (clienteTemContratoAtivo(clienteId)) return null;
   const encerrados = cobrancasRuntimeContratos().filter(
-    (c) => c.clienteId === clienteId && c.status === "encerrado",
+    (c) => c.clienteId === clienteId && c.status === StatusContrato.Encerrado,
   );
   if (encerrados.length === 0) return "Sem contrato ativo";
   const recente = encerrados.sort(ordenarContratosRecentes)[0];
@@ -1578,11 +1580,11 @@ function veiculoContratoCliente(clienteId: string | null): {
   if (!clienteId) return {};
   const contratos = cobrancasRuntimeContratos().filter((c) => c.clienteId === clienteId);
   const ativos = contratos
-    .filter((c) => c.status === "ativo")
+    .filter((c) => c.status === StatusContrato.Ativo)
     .sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   const ref =
     ativos[0] ??
-    contratos.filter((c) => c.status === "encerrado").sort(ordenarContratosRecentes)[0];
+    contratos.filter((c) => c.status === StatusContrato.Encerrado).sort(ordenarContratosRecentes)[0];
   if (!ref) return {};
   const placa = formatPlacaHyphen(ref.placa ?? ref.veiculoId ?? "");
   if (!placa) return {};
@@ -1618,8 +1620,8 @@ const BLOCOS_CONTRATO_RESUMIDO: Array<{
   id: BlocoContratoInfracoesResumido["id"];
   titulo: string;
 }> = [
-  { id: "ativo", titulo: "Contrato ativo" },
-  { id: "encerrado", titulo: "Contrato encerrado" },
+  { id: StatusContrato.Ativo, titulo: "Contrato ativo" },
+  { id: StatusContrato.Encerrado, titulo: "Contrato encerrado" },
 ];
 
 function montarBlocosInfracoesResumido(
@@ -1690,7 +1692,7 @@ export function ehRelatorioInfracoesGlobal(
 ): boolean {
   return (
     tipos.length === 1 &&
-    tipos[0] === "infracoes" &&
+    tipos[0] === TipoCobrancaAction.Infracoes &&
     filtro.clienteId == null &&
     filtro.placa == null &&
     filtro.veiculoId == null

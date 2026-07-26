@@ -37,6 +37,7 @@ import {
 } from "../lib/pagamentoSemanalCobranca.js";
 import { resolverCliente } from "../lib/recebimento/baixaPlano.js";
 import { compactPlaca } from "../lib/placa.js";
+import { TipoCobrancaAction } from "../lib/domain/tipoCobranca.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
   const i = argv.indexOf(nome);
@@ -195,9 +196,9 @@ function imprimirListagem(tipo: TipoCobrancaAction, filtro: FiltroAlvosCobranca)
     const nome = a.clienteNome ?? "(sem cliente)";
     const qtd = a.despesas.length;
     const extra =
-      tipo === "pagamento-semanal" && a.vencimentosBr?.length
+      tipo === TipoCobrancaAction.PagamentoSemanal && a.vencimentosBr?.length
         ? ` · venc.: ${a.vencimentosBr.join(", ")}${rotuloDiaSemanal(a.vencimentosBr, hojeBr())}`
-        : tipo === "renegociacao" || tipo === "manutencao"
+        : tipo === TipoCobrancaAction.Renegociacao || tipo === TipoCobrancaAction.Manutencao
           ? ` · ${brl(a.despesas.reduce((s, d) => s + (Number(d.valorMulta) || 0), 0))}`
           : "";
     console.log(`  ${a.placa} · ${nome} · ${qtd} despesa(s)${extra}`);
@@ -324,7 +325,7 @@ export function mainLote(argv: string[]): void {
   const dataPagamento = getOpt(argv, "--data-pagamento");
 
   if (
-    tipos.includes("pagamento-semanal") &&
+    tipos.includes(TipoCobrancaAction.PagamentoSemanal) &&
     diaOverride != null &&
     ![1, 2, 3, 4].includes(diaOverride)
   ) {

@@ -24,6 +24,7 @@ import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
 import { formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
+import { TipoContrato } from "./domain/tipoLocacao.js";
 import {
   loadVeiculosDb,
   loadVeiculosDbAsync,
@@ -570,7 +571,7 @@ export function dadosParaContratoExtraido(
     fim: dfim,
     horaInicio: fmtHoraBr(diniComHora),
     prazoDias: dados.prazo.dias,
-    tipoContrato: "semanal",
+    tipoContrato: TipoContrato.Semanal,
     diaPagamentoSemana: diaPag,
     diaPagamentoMes: null,
     diaPagamentoTexto: diaPag,

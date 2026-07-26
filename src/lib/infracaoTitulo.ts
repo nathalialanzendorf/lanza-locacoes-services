@@ -7,6 +7,8 @@
  *   ou `Multa {tipo} - {dataAutuacao}` (pago).
  */
 
+import { CategoriaDespesaCliente } from "./domain/categoriaDespesaCliente.js";
+
 function norm(s: string): string {
   return String(s ?? "")
     .normalize("NFD")
@@ -16,7 +18,7 @@ function norm(s: string): string {
 
 /** Categoria é infração de trânsito? */
 export function isCategoriaInfracao(categoria?: string): boolean {
-  return norm(categoria ?? "Infração").startsWith("infra");
+  return norm(categoria ?? CategoriaDespesaCliente.Infracao).startsWith("infra");
 }
 
 /**

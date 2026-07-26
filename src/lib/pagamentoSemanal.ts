@@ -17,28 +17,7 @@ const JUROS_DESC_RE =
   /^(?:ATRASADO\s*[-–—]?\s*)?Juros e multa\s*-\s*Pagamento semanal\s+(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})\s*$/i;
 
 import { diaPagamentoParaDow, parseDataBrToDate } from "./caucaoParcelas.js";
-
-const DOW_JS: Record<string, number> = {
-  domingo: 0,
-  segunda: 1,
-  terca: 2,
-  terça: 2,
-  quarta: 3,
-  quinta: 4,
-  sexta: 5,
-  sabado: 6,
-  sábado: 6,
-};
-
-const DOW_JS_LABELS = [
-  "Domingo",
-  "Segunda",
-  "Terça",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sábado",
-] as const;
+import { DOW_JS, DOW_JS_LABELS } from "./domain/diasSemana.js";
 
 export type PagamentoSemanalParsed = {
   diaSemanaLabel: string;
