@@ -41,8 +41,8 @@ export function createVercelPostgresPool(config?: Partial<PgConfig>): pg.Pool {
     password: () => signer.getAuthToken(),
     port: pgConfig.port,
     ssl: pgSslOptions(pgConfig.sslMode) ?? { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10_000,
-    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 30_000,
+    idleTimeoutMillis: 60_000,
     max: 5,
   });
 

@@ -19,6 +19,7 @@ import {
   type MontarContratoDbInput,
   type MotivoEncerramento,
 } from "../lib-imports.js";
+import { hasContratoAssinadoColumns } from "@lanza/db";
 import { HttpError } from "../http.js";
 import * as contratosService from "./contratos.js";
 import * as documentos from "./documentos.js";
@@ -41,6 +42,77 @@ function normalizePaths(dados: GerarContratoDados): void {
 }
 
 export type ContratoCriarRenovarInput = GerarContratoDados | MontarContratoDbInput;
+
+const POS_SAVE_TIMEOUT_MS = process.env.VERCEL ? 22_000 : 90_000;
+
+class StepTimeoutError extends Error {
+  constructor(label: string, ms: number) {
+    super(`${label} excedeu ${Math.round(ms / 1000)}s`);
+    this.name = "StepTimeoutError";
+  }
+}
+
+async function withStepTimeout<T>(label: string, ms: number, fn: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fn(),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new StepTimeoutError(label, ms)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function posSaveContratoCriar(
+  reg: ContratoRegistro,
+  dados: GerarContratoDados,
+  montarInput: MontarContratoDbInput | null,
+): Promise<{
+  clienteStatus: Awaited<ReturnType<typeof ativarClienteDoContrato>> | null;
+  despesasIniciais: Awaited<ReturnType<typeof gerarDespesasIniciaisContratoAsync>> | null;
+  aviso: string | null;
+}> {
+  let clienteStatus: Awaited<ReturnType<typeof ativarClienteDoContrato>> | null = null;
+  let despesasIniciais: Awaited<ReturnType<typeof gerarDespesasIniciaisContratoAsync>> | null =
+    null;
+  const avisos: string[] = [];
+
+  await Promise.all([
+    ativarClienteDoContrato({
+      clienteId: reg.clienteId,
+      cpf: reg.cpf,
+      nome: reg.clienteNome,
+      placa: reg.placa,
+      veiculoId: reg.veiculoId,
+    })
+      .then((r) => {
+        clienteStatus = r;
+      })
+      .catch((err) => {
+        avisos.push(
+          `vínculo cliente/veículo: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }),
+    gerarDespesasIniciaisContratoAsync(reg, dados, montarInput)
+      .then((r) => {
+        despesasIniciais = r;
+      })
+      .catch((err) => {
+        avisos.push(
+          `despesas iniciais: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }),
+  ]);
+
+  return {
+    clienteStatus,
+    despesasIniciais,
+    aviso: avisos.length ? avisos.join("; ") : null,
+  };
+}
 
 function montarInputFromRegistro(reg: ContratoRegistro): MontarContratoDbInput {
   return {
@@ -140,21 +212,19 @@ async function executarContratoModo(
           : {}),
     });
   } catch (err) {
-    throw new HttpError(500, err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/connection terminated|connection timeout|timeout expired/i.test(msg)) {
+      throw new HttpError(
+        504,
+        "Ligação ao PostgreSQL expirou. Tente novamente em alguns segundos — o contrato pode ter sido salvo.",
+      );
+    }
+    throw new HttpError(500, msg);
   }
 
   let clienteStatus = null;
-  if (modo === "criar" && reg) {
-    clienteStatus = await ativarClienteDoContrato({
-      clienteId: reg.clienteId,
-      cpf: reg.cpf,
-      nome: reg.clienteNome,
-      placa: reg.placa,
-      veiculoId: reg.veiculoId,
-    });
-  }
-
   let despesasIniciais = null;
+  let despesasIniciaisAviso: string | null = null;
   if (modo === "criar" && reg) {
     const montarInput =
       "placa" in input && input.placa && "semana" in input && input.semana != null
@@ -163,12 +233,20 @@ async function executarContratoModo(
           ? (input as MontarContratoDbInput)
           : null;
     try {
-      despesasIniciais = await gerarDespesasIniciaisContratoAsync(reg, dados, montarInput);
-    } catch (err) {
-      throw new HttpError(
-        500,
-        `Contrato criado, mas falha ao gerar despesas iniciais: ${err instanceof Error ? err.message : String(err)}`,
+      const pos = await withStepTimeout("Pós-gravação do contrato", POS_SAVE_TIMEOUT_MS, () =>
+        posSaveContratoCriar(reg, dados, montarInput),
       );
+      clienteStatus = pos.clienteStatus;
+      despesasIniciais = pos.despesasIniciais;
+      despesasIniciaisAviso = pos.aviso;
+    } catch (err) {
+      despesasIniciaisAviso =
+        err instanceof StepTimeoutError
+          ? "Contrato salvo. Vínculo e despesas iniciais não concluíram a tempo — recarregue a lista ou gere as despesas manualmente."
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      console.error("[contratos] falha pós-gravação:", despesasIniciaisAviso);
     }
   }
 
@@ -179,6 +257,7 @@ async function executarContratoModo(
     contratoEncerrado,
     clienteStatus,
     despesasIniciais,
+    despesasIniciaisAviso,
     documento: null,
   };
 }
@@ -309,6 +388,12 @@ export async function atualizarContrato(id: string, input: ContratoAtualizarInpu
     };
 
     if (input.contratoAssinado?.conteudoBase64?.trim()) {
+      if (!(await hasContratoAssinadoColumns())) {
+        throw new HttpError(
+          503,
+          "Upload de contrato assinado indisponível — execute a migration 017_contrato_assinado.sql no PostgreSQL.",
+        );
+      }
       const nome = input.contratoAssinado.nomeArquivo?.trim() || "contrato-assinado.pdf";
       const buf = Buffer.from(input.contratoAssinado.conteudoBase64, "base64");
       if (!buf.length) {
@@ -331,7 +416,11 @@ export async function atualizarContrato(id: string, input: ContratoAtualizarInpu
     return { contrato };
   } catch (err) {
     if (err instanceof HttpError) throw err;
-    throw new HttpError(404, err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/Upload de contrato assinado indisponível/i.test(msg)) {
+      throw new HttpError(503, msg);
+    }
+    throw new HttpError(404, msg);
   }
 }
 

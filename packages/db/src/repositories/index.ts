@@ -35,6 +35,7 @@ export {
   upsertContratoToSql,
   deleteContratoFromSql,
   queryContratosFromSql,
+  hasContratoAssinadoColumns,
   type ContratosSqlFilter,
   loadLocacoesFromSql,
   saveLocacoesToSql,

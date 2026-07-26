@@ -1,4 +1,4 @@
-import { blobReadWriteToken, isBlobConfigured } from "./config.js";
+import { blobReadWriteToken, isBlobConfigured, isReadOnlyServerlessFs } from "./config.js";
 import {
   deleteLocalMirror,
   getLocalMirror,
@@ -55,6 +55,11 @@ export async function putBytes(
   }
   if (localMirrorEnabled()) {
     return putLocalMirror(pathname, body, contentType);
+  }
+  if (isReadOnlyServerlessFs()) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN não configurado na Vercel. Crie um Blob Store no projeto e redeploy.",
+    );
   }
   throw new Error("Armazenamento não configurado (Blob ou espelho local)");
 }

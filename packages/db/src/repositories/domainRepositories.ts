@@ -15,12 +15,36 @@ import {
 } from "../migration/relationalUtils.js";
 
 async function loadPlacaMap(): Promise<Map<string, string>> {
+  const now = Date.now();
+  if (placaMapCache && now - placaMapCache.at < PLACA_MAP_TTL_MS) {
+    return placaMapCache.map;
+  }
   const r = await pgQuery<{ id: string; placa_norm: string }>(
     "SELECT id, placa_norm FROM lanza.veiculos",
   );
   const map = new Map<string, string>();
   for (const row of r.rows) map.set(row.placa_norm, row.id);
+  placaMapCache = { map, at: now };
   return map;
+}
+
+let placaMapCache: { map: Map<string, string>; at: number } | null = null;
+const PLACA_MAP_TTL_MS = 5 * 60 * 1000;
+
+let contratoAssinadoColumnsCache: boolean | null = null;
+
+/** Colunas de upload de contrato assinado (migration 017) — opcionais até a migration rodar. */
+export async function hasContratoAssinadoColumns(): Promise<boolean> {
+  if (contratoAssinadoColumnsCache != null) return contratoAssinadoColumnsCache;
+  const r = await pgQuery<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'lanza' AND table_name = 'contratos'
+         AND column_name = 'contrato_assinado_storage_key'
+     ) AS exists`,
+  );
+  contratoAssinadoColumnsCache = r.rows[0]?.exists === true;
+  return contratoAssinadoColumnsCache;
 }
 
 function resolveVeiculoId(
@@ -244,69 +268,109 @@ async function upsertContratoRowToSql(
     const id = asText(c.id) ?? randomUUID();
     const veiculoRef = asText(c.veiculoId) ?? asText(c.placa) ?? "";
     const placa = formatPlacaHyphen(asText(c.placa) ?? veiculoRef);
-    await pgQuery(
-      `INSERT INTO lanza.contratos (
-        id, versao, contrato_anterior_id, cliente_id, veiculo_id,
-        pasta_contrato, data_inicio, data_fim_prevista,
-        data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
-        tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
-        valor_semanal, valor_mensal, valor_diaria, valor_caucao,
-        contrato_assinado_storage_key, contrato_assinado_nome,
-        cadastrado_em, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,
-        COALESCE($24::timestamptz, now()), now())
-      ON CONFLICT (id) DO UPDATE SET
-        status = EXCLUDED.status,
-        data_inicio = EXCLUDED.data_inicio,
-        data_fim_prevista = EXCLUDED.data_fim_prevista,
-        data_encerramento = EXCLUDED.data_encerramento,
-        quebra_contrato = EXCLUDED.quebra_contrato,
-        motivo_encerramento = EXCLUDED.motivo_encerramento,
-        prazo_dias = EXCLUDED.prazo_dias,
-        tipo_contrato = EXCLUDED.tipo_contrato,
-        dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
-        dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
-        dia_pagamento_texto = EXCLUDED.dia_pagamento_texto,
-        valor_semanal = EXCLUDED.valor_semanal,
-        valor_mensal = EXCLUDED.valor_mensal,
-        valor_diaria = EXCLUDED.valor_diaria,
-        valor_caucao = EXCLUDED.valor_caucao,
-        contrato_assinado_storage_key = COALESCE(
-          EXCLUDED.contrato_assinado_storage_key,
-          lanza.contratos.contrato_assinado_storage_key
-        ),
-        contrato_assinado_nome = COALESCE(
-          EXCLUDED.contrato_assinado_nome,
-          lanza.contratos.contrato_assinado_nome
-        ),
-        atualizado_em = now()`,
-      [
-        id,
-        asNumber(c.versao, 1),
-        isUuid(asText(c.contratoAnteriorId)) ? c.contratoAnteriorId : null,
-        isUuid(asText(c.clienteId)) ? c.clienteId : null,
-        resolveVeiculoId(veiculoRef, placaMap),
-        asText(c.pastaContrato),
-        asText(c.dataInicio) ?? "",
-        asText(c.dataFimPrevista) ?? "",
-        asText(c.dataEncerramento),
-        asBool(c.quebraContrato, false),
-        asText(c.motivoEncerramento),
-        asText(c.status) ?? "ativo",
-        asNumber(c.prazoDias, 0),
-        asText(c.tipoContrato) ?? "semanal",
-        asText(c.diaPagamentoSemana),
-        typeof c.diaPagamentoMes === "number" ? c.diaPagamentoMes : null,
-        asText(c.diaPagamentoTexto),
-        c.valorSemanal != null ? asNumber(c.valorSemanal) : null,
-        c.valorMensal != null ? asNumber(c.valorMensal) : null,
-        c.valorDiaria != null ? asNumber(c.valorDiaria) : null,
-        asNumber(c.valorCaucao, 0),
-        asText(c.contratoAssinadoStorageKey),
-        asText(c.contratoAssinadoNome),
-        parseIso(asText(c.cadastradoEm)),
-      ],
-    );
+    const storageKey = asText(c.contratoAssinadoStorageKey);
+    const assinadoNome = asText(c.contratoAssinadoNome);
+    const hasAssinadoCols = await hasContratoAssinadoColumns();
+    if (!hasAssinadoCols && (storageKey || assinadoNome)) {
+      throw new Error(
+        "Upload de contrato assinado indisponível — execute a migration 017_contrato_assinado.sql no PostgreSQL.",
+      );
+    }
+
+    const baseParams: unknown[] = [
+      id,
+      asNumber(c.versao, 1),
+      isUuid(asText(c.contratoAnteriorId)) ? c.contratoAnteriorId : null,
+      isUuid(asText(c.clienteId)) ? c.clienteId : null,
+      resolveVeiculoId(veiculoRef, placaMap),
+      asText(c.pastaContrato),
+      asText(c.dataInicio) ?? "",
+      asText(c.dataFimPrevista) ?? "",
+      asText(c.dataEncerramento),
+      asBool(c.quebraContrato, false),
+      asText(c.motivoEncerramento),
+      asText(c.status) ?? "ativo",
+      asNumber(c.prazoDias, 0),
+      asText(c.tipoContrato) ?? "semanal",
+      asText(c.diaPagamentoSemana),
+      typeof c.diaPagamentoMes === "number" ? c.diaPagamentoMes : null,
+      asText(c.diaPagamentoTexto),
+      c.valorSemanal != null ? asNumber(c.valorSemanal) : null,
+      c.valorMensal != null ? asNumber(c.valorMensal) : null,
+      c.valorDiaria != null ? asNumber(c.valorDiaria) : null,
+      asNumber(c.valorCaucao, 0),
+    ];
+
+    if (hasAssinadoCols) {
+      await pgQuery(
+        `INSERT INTO lanza.contratos (
+          id, versao, contrato_anterior_id, cliente_id, veiculo_id,
+          pasta_contrato, data_inicio, data_fim_prevista,
+          data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
+          tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
+          valor_semanal, valor_mensal, valor_diaria, valor_caucao,
+          contrato_assinado_storage_key, contrato_assinado_nome,
+          cadastrado_em, atualizado_em
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,
+          COALESCE($24::timestamptz, now()), now())
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          data_inicio = EXCLUDED.data_inicio,
+          data_fim_prevista = EXCLUDED.data_fim_prevista,
+          data_encerramento = EXCLUDED.data_encerramento,
+          quebra_contrato = EXCLUDED.quebra_contrato,
+          motivo_encerramento = EXCLUDED.motivo_encerramento,
+          prazo_dias = EXCLUDED.prazo_dias,
+          tipo_contrato = EXCLUDED.tipo_contrato,
+          dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
+          dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
+          dia_pagamento_texto = EXCLUDED.dia_pagamento_texto,
+          valor_semanal = EXCLUDED.valor_semanal,
+          valor_mensal = EXCLUDED.valor_mensal,
+          valor_diaria = EXCLUDED.valor_diaria,
+          valor_caucao = EXCLUDED.valor_caucao,
+          contrato_assinado_storage_key = COALESCE(
+            EXCLUDED.contrato_assinado_storage_key,
+            lanza.contratos.contrato_assinado_storage_key
+          ),
+          contrato_assinado_nome = COALESCE(
+            EXCLUDED.contrato_assinado_nome,
+            lanza.contratos.contrato_assinado_nome
+          ),
+          atualizado_em = now()`,
+        [...baseParams, storageKey, assinadoNome, parseIso(asText(c.cadastradoEm))],
+      );
+    } else {
+      await pgQuery(
+        `INSERT INTO lanza.contratos (
+          id, versao, contrato_anterior_id, cliente_id, veiculo_id,
+          pasta_contrato, data_inicio, data_fim_prevista,
+          data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
+          tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
+          valor_semanal, valor_mensal, valor_diaria, valor_caucao,
+          cadastrado_em, atualizado_em
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+          COALESCE($22::timestamptz, now()), now())
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          data_inicio = EXCLUDED.data_inicio,
+          data_fim_prevista = EXCLUDED.data_fim_prevista,
+          data_encerramento = EXCLUDED.data_encerramento,
+          quebra_contrato = EXCLUDED.quebra_contrato,
+          motivo_encerramento = EXCLUDED.motivo_encerramento,
+          prazo_dias = EXCLUDED.prazo_dias,
+          tipo_contrato = EXCLUDED.tipo_contrato,
+          dia_pagamento_semana = EXCLUDED.dia_pagamento_semana,
+          dia_pagamento_mes = EXCLUDED.dia_pagamento_mes,
+          dia_pagamento_texto = EXCLUDED.dia_pagamento_texto,
+          valor_semanal = EXCLUDED.valor_semanal,
+          valor_mensal = EXCLUDED.valor_mensal,
+          valor_diaria = EXCLUDED.valor_diaria,
+          valor_caucao = EXCLUDED.valor_caucao,
+          atualizado_em = now()`,
+        [...baseParams, parseIso(asText(c.cadastradoEm))],
+      );
+    }
     const cli = c.cliente as Record<string, unknown> | undefined;
     const end = cli?.endereco as Record<string, unknown> | undefined;
     const cnh = cli?.cnh as Record<string, unknown> | undefined;

@@ -37,7 +37,12 @@ export async function listarDocumentos(query: {
   cursor?: string;
 }): Promise<{ blobs: StoredBlob[]; cursor?: string; hasMore: boolean }> {
   if (!isStorageActive()) {
-    throw new HttpError(503, "Armazenamento Blob não configurado");
+    throw new HttpError(
+      503,
+      process.env.VERCEL
+        ? "Armazenamento Blob não configurado na Vercel — crie um Blob Store e defina BLOB_READ_WRITE_TOKEN."
+        : "Armazenamento Blob não configurado",
+    );
   }
   const prefix = query.prefix?.trim();
   const fullPrefix = prefix ? blobKey(prefix) : storagePrefix();
@@ -73,7 +78,12 @@ export async function enviarDocumento(input: {
   placa?: string;
 }): Promise<StoredBlob> {
   if (!isStorageActive()) {
-    throw new HttpError(503, "Armazenamento Blob não configurado");
+    throw new HttpError(
+      503,
+      process.env.VERCEL
+        ? "Armazenamento Blob não configurado na Vercel — crie um Blob Store e defina BLOB_READ_WRITE_TOKEN."
+        : "Armazenamento Blob não configurado",
+    );
   }
   const key = input.pathname.startsWith(storagePrefix())
     ? input.pathname
@@ -101,7 +111,12 @@ export async function enviarDocumentoBinario(input: {
   tipo?: string;
 }): Promise<StoredBlob> {
   if (!isStorageActive()) {
-    throw new HttpError(503, "Armazenamento Blob não configurado");
+    throw new HttpError(
+      503,
+      process.env.VERCEL
+        ? "Armazenamento Blob não configurado na Vercel — crie um Blob Store e defina BLOB_READ_WRITE_TOKEN."
+        : "Armazenamento Blob não configurado",
+    );
   }
   const key = input.pathname.startsWith(storagePrefix())
     ? input.pathname
@@ -122,7 +137,12 @@ export async function enviarDocumentoBinario(input: {
 
 export async function removerDocumento(pathname: string): Promise<boolean> {
   if (!isStorageActive()) {
-    throw new HttpError(503, "Armazenamento Blob não configurado");
+    throw new HttpError(
+      503,
+      process.env.VERCEL
+        ? "Armazenamento Blob não configurado na Vercel — crie um Blob Store e defina BLOB_READ_WRITE_TOKEN."
+        : "Armazenamento Blob não configurado",
+    );
   }
   const key = pathname.includes("/") ? pathname : blobKey(pathname);
   const ok = await deleteBlob(key);
