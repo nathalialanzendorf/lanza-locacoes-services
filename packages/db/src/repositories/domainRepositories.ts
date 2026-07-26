@@ -35,7 +35,7 @@ let contratoAssinadoColumnsCache: boolean | null = null;
 
 /** Colunas de upload de contrato assinado (migration 017) — opcionais até a migration rodar. */
 export async function hasContratoAssinadoColumns(): Promise<boolean> {
-  if (contratoAssinadoColumnsCache != null) return contratoAssinadoColumnsCache;
+  if (contratoAssinadoColumnsCache === true) return true;
   const r = await pgQuery<{ exists: boolean }>(
     `SELECT EXISTS (
        SELECT 1 FROM information_schema.columns
@@ -43,8 +43,9 @@ export async function hasContratoAssinadoColumns(): Promise<boolean> {
          AND column_name = 'contrato_assinado_storage_key'
      ) AS exists`,
   );
-  contratoAssinadoColumnsCache = r.rows[0]?.exists === true;
-  return contratoAssinadoColumnsCache;
+  const exists = r.rows[0]?.exists === true;
+  if (exists) contratoAssinadoColumnsCache = true;
+  return exists;
 }
 
 function resolveVeiculoId(
