@@ -78,6 +78,32 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 | `LANZA_JWT_SECRET` | string aleatória longa (ex.: 32+ bytes em base64url) — **obrigatório** para login |
 | `LANZA_JWT_EXPIRES_IN` | `7d` *(opcional)* |
 
+## Vercel Blob (contratos assinados, documentos)
+
+| Variável | Valor |
+|----------|-------|
+| `BLOB_STORE_ID` | Injetado ao ligar Blob Store ao projeto (OIDC na Vercel) |
+| `BLOB_READ_WRITE_TOKEN` | Injetado automaticamente; fallback local com `vercel env pull` |
+| `LANZA_STORAGE_PREFIX` | `lanza-docs` *(opcional — prefixo lógico dos ficheiros)* |
+
+**Criar e ligar via CLI:**
+
+```powershell
+cd D:\Dropbox\Aworklanza\lanza-locacoes-services
+npx vercel login
+npx vercel link
+npx vercel blob create-store lanza-docs --access public --yes
+```
+
+**Ou via token REST:**
+
+```powershell
+$env:VERCEL_TOKEN = "..."   # vercel.com/account/tokens
+node scripts/set-vercel-blob.mjs
+```
+
+Depois: **Redeploy** do projeto API. Upload de contrato assinado exige migration `017_contrato_assinado.sql` no RDS.
+
 Gere e grave com:
 
 ```powershell

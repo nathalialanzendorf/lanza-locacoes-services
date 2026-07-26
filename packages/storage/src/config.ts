@@ -6,6 +6,10 @@ export function blobReadWriteToken(): string | null {
   return token || null;
 }
 
+export function blobStoreId(): string | null {
+  return process.env.BLOB_STORE_ID?.trim() || null;
+}
+
 function isReadOnlyServerlessFs(): boolean {
   return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 }
@@ -30,8 +34,11 @@ export function localMirrorRoot(): string | null {
   return "relatorios/_tmp/blob-mirror";
 }
 
+/** Blob ativo: token estático ou OIDC na Vercel (BLOB_STORE_ID). */
 export function isBlobConfigured(): boolean {
-  return Boolean(blobReadWriteToken());
+  if (blobReadWriteToken()) return true;
+  if (process.env.VERCEL && blobStoreId()) return true;
+  return false;
 }
 
 export function isStorageActive(): boolean {

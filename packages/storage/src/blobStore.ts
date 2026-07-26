@@ -19,10 +19,9 @@ async function blobModule(): Promise<BlobModule> {
   return blobModulePromise;
 }
 
-function tokenOrThrow(): string {
+function blobAuthOpts<T extends Record<string, unknown>>(opts: T): T & { token?: string } {
   const token = blobReadWriteToken();
-  if (!token) throw new Error("BLOB_READ_WRITE_TOKEN não configurado");
-  return token;
+  return token ? { ...opts, token } : opts;
 }
 
 function bodyByteLength(body: Buffer | string): number {
@@ -37,12 +36,11 @@ export async function putBytes(
   const contentType = opts?.contentType;
   if (isBlobConfigured()) {
     const { put } = await blobModule();
-    const result = await put(pathname, body, {
+    const result = await put(pathname, body, blobAuthOpts({
       access: "public",
-      token: tokenOrThrow(),
       contentType,
       addRandomSuffix: false,
-    });
+    }));
     return {
       pathname: result.pathname,
       url: result.url,
@@ -58,7 +56,7 @@ export async function putBytes(
   }
   if (isReadOnlyServerlessFs()) {
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN não configurado na Vercel. Crie um Blob Store no projeto e redeploy.",
+      "Blob não configurado na Vercel. Crie um Blob Store no projeto (Storage → Blob) e redeploy.",
     );
   }
   throw new Error("Armazenamento não configurado (Blob ou espelho local)");
@@ -88,12 +86,10 @@ export async function putJson(
 
 async function fetchBlobByPathname(pathname: string): Promise<Buffer | null> {
   const { list } = await blobModule();
-  const token = tokenOrThrow();
-  const listed = await list({
+  const listed = await list(blobAuthOpts({
     prefix: pathname,
     limit: 20,
-    token,
-  });
+  }));
   const hit = listed.blobs.find((b) => b.pathname === pathname);
   if (!hit) return null;
   const res = await fetch(hit.downloadUrl);
@@ -125,12 +121,11 @@ export async function listBlobs(opts: {
 }): Promise<ListBlobsResult> {
   if (isBlobConfigured()) {
     const { list } = await blobModule();
-    const result = await list({
+    const result = await list(blobAuthOpts({
       prefix: opts.prefix,
       limit: opts.limit ?? 100,
       cursor: opts.cursor,
-      token: tokenOrThrow(),
-    });
+    }));
     return {
       blobs: result.blobs.map((b) => ({
         pathname: b.pathname,
@@ -156,7 +151,7 @@ export async function deleteBlob(pathname: string): Promise<boolean> {
     const listed = await listBlobs({ prefix: pathname, limit: 1 });
     const hit = listed.blobs.find((b) => b.pathname === pathname);
     if (!hit) return false;
-    await del(hit.url, { token: tokenOrThrow() });
+    await del(hit.url, blobAuthOpts({}));
     return true;
   }
   if (localMirrorEnabled()) return deleteLocalMirror(pathname);

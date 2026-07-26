@@ -1,5 +1,6 @@
 export {
   blobReadWriteToken,
+  blobStoreId,
   isBlobConfigured,
   isStorageActive,
   localMirrorRoot,
