@@ -31,6 +31,8 @@ export type ContratoExtraido = {
   cpf: string | null;
   inicio: Date;
   fim: Date;
+  /** Horário de início/fim da locação (HH:MM). */
+  horaInicio?: string | null;
   prazoDias: number;
   tipoContrato: TipoContrato;
   diaPagamentoSemana: string | null;
@@ -442,6 +444,10 @@ export function fmtDataBr(d: Date): string {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+export function fmtHoraBr(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export function startOfDay(d: Date): Date {

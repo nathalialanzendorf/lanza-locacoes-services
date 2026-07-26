@@ -72,6 +72,7 @@ export type ContratoRegistro = {
   placa: string;
   cpf: string | null;
   dataInicio: string;
+  horaInicio?: string | null;
   dataFimPrevista: string;
   dataEncerramento?: string | null;
   /** true se encerramento antecipado (quebra de contrato / retenção caução). */
@@ -121,6 +122,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   placa: "Placa do veículo",
   cpf: "CPF do locatário",
   dataInicio: "DD/MM/AAAA",
+  horaInicio: "Horário de início/fim da locação (HH:MM) — padrão 18:00",
   dataFimPrevista: "DD/MM/AAAA — fim previsto no contrato",
   dataEncerramento: "DD/MM/AAAA — devolução/encerramento real (null se ativo)",
   quebraContrato: "true se houve quebra de contrato (encerramento antes do fim previsto)",
@@ -361,7 +363,8 @@ function mesmoParClienteVeiculo(
 }
 
 export type FiltrosContratoCliente = {
-  placa: string;
+  placa?: string;
+  veiculoId?: string | null;
   cpf?: string | null;
   clienteId?: string | null;
   clienteNome?: string;
@@ -551,6 +554,7 @@ function buildRegistro(
     placa: veiculo.placa,
     cpf: cliente.cpf,
     dataInicio: fmtDataBr(ext.inicio),
+    horaInicio: ext.horaInicio?.trim() || fmtHoraBr(ext.inicio) || "18:00",
     dataFimPrevista: fmtDataBr(ext.fim),
     dataEncerramento: encerramento,
     quebraContrato: opts.quebraContrato ?? existing?.quebraContrato ?? false,
@@ -788,6 +792,7 @@ export type AtualizarContratoDbPatch = Partial<
   Pick<
     ContratoRegistro,
     | "dataInicio"
+    | "horaInicio"
     | "dataFimPrevista"
     | "prazoDias"
     | "dataEncerramento"
@@ -931,8 +936,14 @@ async function loadContratosParaValidacaoAsync(
 
   let vid = veiculoIdResolved;
   if (vid === undefined) {
-    const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
-    vid = resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+    if (filtros.veiculoId?.trim()) {
+      vid = filtros.veiculoId.trim();
+    } else if (filtros.placa?.trim()) {
+      const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
+      vid = resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+    } else {
+      vid = null;
+    }
   }
   const clienteId = filtros.clienteId?.trim() || null;
   const batches: ContratoRegistro[][] = [];
@@ -970,11 +981,14 @@ function validarModoContratoComLista(
 ): ValidarModoContratoResult {
   const irmaos = listarContratosClienteVeiculo(filtros, contratos);
   const ativo = irmaos.find((c) => c.status === "ativo");
-  const placaFmt = formatPlacaHyphen(filtros.placa);
+  const placaFmt = filtros.placa?.trim() ? formatPlacaHyphen(filtros.placa) : "";
   const vid =
     veiculoIdResolved ??
-    resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos) ??
+    (filtros.placa?.trim()
+      ? resolveVeiculoIdListagem({ placa: filtros.placa }, loadVeiculosDb().veiculos)
+      : null) ??
     null;
+  const rotuloVeiculo = placaFmt || "deste veículo";
 
   if (modo === "criar") {
     const ativoOutro = contratos.find(
@@ -992,7 +1006,7 @@ function validarModoContratoComLista(
     );
     if (ativoOutro) {
       throw new Error(
-        `Veículo ${placaFmt} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de cadastrar outro locatário.`,
+        `Veículo ${rotuloVeiculo} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de cadastrar outro locatário.`,
       );
     }
     if (ativo) {
@@ -1040,7 +1054,7 @@ function validarModoContratoComLista(
       );
       if (ativoOutro) {
         throw new Error(
-          `Veículo ${placaFmt} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de renovar com este veículo.`,
+          `Veículo ${rotuloVeiculo} já possui contrato ativo com ${ativoOutro.clienteNome}. Encerre o contrato vigente antes de renovar com este veículo.`,
         );
       }
       if (irmaos.length > 0) {
@@ -1080,9 +1094,14 @@ export async function validarModoContratoAsync(
   modo: ModoContratoCli,
   filtros: FiltrosContratoCliente,
 ): Promise<ValidarModoContratoResult> {
-  const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
-  const veiculoIdResolved =
-    resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  let veiculoIdResolved: string | null =
+    filtros.veiculoId?.trim() ||
+    (filtros.placa?.trim()
+      ? (resolveVeiculoIdListagem(
+          { placa: filtros.placa },
+          (await loadVeiculosDbAsync({ placa: filtros.placa })).veiculos,
+        ) ?? null)
+      : null);
   const contratos = await loadContratosParaValidacaoAsync(filtros, veiculoIdResolved);
   return validarModoContratoComLista(modo, filtros, contratos, veiculoIdResolved);
 }
@@ -1093,9 +1112,14 @@ export async function encerrarContratoAtivoParaRenovarAsync(
   dataEncerramento: string,
 ): Promise<ContratoRegistro | null> {
   let ativo: ContratoRegistro | undefined;
-  const veiculosDb = await loadVeiculosDbAsync({ placa: filtros.placa });
-  const veiculoIdNova =
-    resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  let veiculoIdNova: string | null = filtros.veiculoId?.trim() || null;
+  const veiculosDb = filtros.placa?.trim()
+    ? await loadVeiculosDbAsync({ placa: filtros.placa })
+    : await loadVeiculosDbAsync();
+  if (!veiculoIdNova && filtros.placa?.trim()) {
+    veiculoIdNova =
+      resolveVeiculoIdListagem({ placa: filtros.placa }, veiculosDb.veiculos) ?? null;
+  }
 
   const renovarId = filtros.contratoRenovarId?.trim();
   if (renovarId) {
@@ -1150,7 +1174,7 @@ export async function encerrarContratoAtivoParaRenovarAsync(
   const ref = ativo.id?.trim() || ativo.pastaContrato?.trim();
   if (!ref) throw new Error("Contrato ativo sem identificador para encerramento.");
 
-  const placaNova = formatPlacaHyphen(filtros.placa);
+  const placaNova = filtros.placa?.trim() ? formatPlacaHyphen(filtros.placa) : "";
   const trocaVeiculo = !contratoMesmoVeiculo(ativo, veiculoIdNova, placaNova);
 
   return encerrarContratoDbAsync(ref, {

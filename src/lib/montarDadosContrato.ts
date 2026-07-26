@@ -8,6 +8,7 @@ import {
 import {
   addDays,
   fmtDataBr,
+  fmtHoraBr,
   parseDataBr,
   type ContratoExtraido,
 } from "./contratoExtrair.js";
@@ -82,6 +83,7 @@ export type MontarContratoDbInput = {
   periodo?: string;
   dias?: number;
   inicio?: string;
+  fim?: string;
   hora?: string;
   diaPagamento?: string;
   cnhArquivo?: string;
@@ -425,6 +427,7 @@ function montarDadosContratoCore(
 
   const end = enderecoCliente(cliente);
   const inicio = input.inicio?.trim() || fmtDataBr(new Date());
+  const fim = input.fim?.trim();
   const dias = periodoParaDias(input.periodo, input.dias);
   const parcelamento = resolverParcelamentoContrato(input);
 
@@ -451,6 +454,7 @@ function montarDadosContratoCore(
       dias,
       inicio,
       hora: input.hora ?? "18:00",
+      ...(fim ? { fim } : {}),
     },
     valores: {
       semana: input.semana,
@@ -494,7 +498,20 @@ export function dadosParaContratoExtraido(
   const pasta = pastaContrato ?? resolverPastaContratoFromDados(dados);
   const dini = parseDataBr(dados.prazo.inicio);
   if (!dini) throw new Error(`Data de início inválida: ${dados.prazo.inicio}`);
-  const dfim = addDays(dini, dados.prazo.dias);
+  const horaStr = dados.prazo.hora?.trim() || "18:00";
+  const [hhRaw, mmRaw] = horaStr.split(":");
+  const hh = Number.parseInt(hhRaw ?? "18", 10);
+  const mm = Number.parseInt(mmRaw ?? "0", 10);
+  const diniComHora = new Date(
+    dini.getFullYear(),
+    dini.getMonth(),
+    dini.getDate(),
+    Number.isFinite(hh) ? hh : 18,
+    Number.isFinite(mm) ? mm : 0,
+    0,
+  );
+  const dfimExplicit = dados.prazo.fim?.trim() ? parseDataBr(dados.prazo.fim.trim()) : null;
+  const dfim = dfimExplicit ?? addDays(diniComHora, dados.prazo.dias);
   const nomeArq = resolverNomeArquivoContrato(dados.cliente.nome);
   const diaPag = dados.diaPagamento ?? "todos os sábados";
   return {
@@ -505,8 +522,9 @@ export function dadosParaContratoExtraido(
     clienteNome: dados.cliente.nome,
     placa: dados.veiculo.placa,
     cpf: dados.cliente.cpf?.trim() || null,
-    inicio: dini,
+    inicio: diniComHora,
     fim: dfim,
+    horaInicio: fmtHoraBr(diniComHora),
     prazoDias: dados.prazo.dias,
     tipoContrato: "semanal",
     diaPagamentoSemana: diaPag,

@@ -32,6 +32,7 @@ let placaMapCache: { map: Map<string, string>; at: number } | null = null;
 const PLACA_MAP_TTL_MS = 5 * 60 * 1000;
 
 let contratoAssinadoColumnsCache: boolean | null = null;
+let horaInicioColumnCache: boolean | null = null;
 
 /** Colunas de upload de contrato assinado (migration 017) — opcionais até a migration rodar. */
 export async function hasContratoAssinadoColumns(): Promise<boolean> {
@@ -46,6 +47,25 @@ export async function hasContratoAssinadoColumns(): Promise<boolean> {
   const exists = r.rows[0]?.exists === true;
   if (exists) contratoAssinadoColumnsCache = true;
   return exists;
+}
+
+/** Coluna hora_inicio (migration 019) — opcional até a migration rodar. */
+export async function hasHoraInicioColumn(): Promise<boolean> {
+  if (horaInicioColumnCache === true) return true;
+  const r = await pgQuery<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'lanza' AND table_name = 'contratos'
+         AND column_name = 'hora_inicio'
+     ) AS exists`,
+  );
+  const exists = r.rows[0]?.exists === true;
+  if (exists) horaInicioColumnCache = true;
+  return exists;
+}
+
+function resolveHoraInicio(c: Record<string, unknown>): string {
+  return asText(c.horaInicio)?.trim() || "18:00";
 }
 
 function resolveVeiculoId(
@@ -90,6 +110,7 @@ function mapContratoRow(
     placa,
     cpf: cs?.cpf,
     dataInicio: row.data_inicio,
+    horaInicio: asText(row.hora_inicio) ?? "18:00",
     dataFimPrevista: row.data_fim_prevista,
     dataEncerramento: row.data_encerramento,
     quebraContrato: row.quebra_contrato === true,
@@ -272,6 +293,7 @@ async function upsertContratoRowToSql(
     const storageKey = asText(c.contratoAssinadoStorageKey);
     const assinadoNome = asText(c.contratoAssinadoNome);
     const hasAssinadoCols = await hasContratoAssinadoColumns();
+    const hasHoraCol = await hasHoraInicioColumn();
     if (!hasAssinadoCols && (storageKey || assinadoNome)) {
       throw new Error(
         "Upload de contrato assinado indisponível — execute a migration 017_contrato_assinado.sql no PostgreSQL.",
@@ -301,6 +323,12 @@ async function upsertContratoRowToSql(
       c.valorDiaria != null ? asNumber(c.valorDiaria) : null,
       asNumber(c.valorCaucao, 0),
     ];
+    const horaInicio = resolveHoraInicio(c);
+
+    const horaSql = hasHoraCol ? ", hora_inicio" : "";
+    const horaPlaceholder = hasHoraCol ? `,$${baseParams.length + 1}` : "";
+    const horaUpdate = hasHoraCol ? ", hora_inicio = EXCLUDED.hora_inicio" : "";
+    const horaParams = hasHoraCol ? [horaInicio] : [];
 
     if (hasAssinadoCols) {
       await pgQuery(
@@ -309,11 +337,11 @@ async function upsertContratoRowToSql(
           pasta_contrato, data_inicio, data_fim_prevista,
           data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
           tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
-          valor_semanal, valor_mensal, valor_diaria, valor_caucao,
+          valor_semanal, valor_mensal, valor_diaria, valor_caucao${horaSql},
           contrato_assinado_storage_key, contrato_assinado_nome,
           cadastrado_em, atualizado_em
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,
-          COALESCE($24::timestamptz, now()), now())
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21${horaPlaceholder},$${baseParams.length + horaParams.length + 1},$${baseParams.length + horaParams.length + 2},
+          COALESCE($${baseParams.length + horaParams.length + 3}::timestamptz, now()), now())
         ON CONFLICT (id) DO UPDATE SET
           status = EXCLUDED.status,
           data_inicio = EXCLUDED.data_inicio,
@@ -329,7 +357,7 @@ async function upsertContratoRowToSql(
           valor_semanal = EXCLUDED.valor_semanal,
           valor_mensal = EXCLUDED.valor_mensal,
           valor_diaria = EXCLUDED.valor_diaria,
-          valor_caucao = EXCLUDED.valor_caucao,
+          valor_caucao = EXCLUDED.valor_caucao${horaUpdate},
           contrato_assinado_storage_key = COALESCE(
             EXCLUDED.contrato_assinado_storage_key,
             lanza.contratos.contrato_assinado_storage_key
@@ -339,7 +367,7 @@ async function upsertContratoRowToSql(
             lanza.contratos.contrato_assinado_nome
           ),
           atualizado_em = now()`,
-        [...baseParams, storageKey, assinadoNome, parseIso(asText(c.cadastradoEm))],
+        [...baseParams, ...horaParams, storageKey, assinadoNome, parseIso(asText(c.cadastradoEm))],
       );
     } else {
       await pgQuery(
@@ -348,10 +376,10 @@ async function upsertContratoRowToSql(
           pasta_contrato, data_inicio, data_fim_prevista,
           data_encerramento, quebra_contrato, motivo_encerramento, status, prazo_dias,
           tipo_contrato, dia_pagamento_semana, dia_pagamento_mes, dia_pagamento_texto,
-          valor_semanal, valor_mensal, valor_diaria, valor_caucao,
+          valor_semanal, valor_mensal, valor_diaria, valor_caucao${horaSql},
           cadastrado_em, atualizado_em
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
-          COALESCE($22::timestamptz, now()), now())
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21${horaPlaceholder},
+          COALESCE($${baseParams.length + horaParams.length + 1}::timestamptz, now()), now())
         ON CONFLICT (id) DO UPDATE SET
           status = EXCLUDED.status,
           data_inicio = EXCLUDED.data_inicio,
@@ -367,9 +395,9 @@ async function upsertContratoRowToSql(
           valor_semanal = EXCLUDED.valor_semanal,
           valor_mensal = EXCLUDED.valor_mensal,
           valor_diaria = EXCLUDED.valor_diaria,
-          valor_caucao = EXCLUDED.valor_caucao,
+          valor_caucao = EXCLUDED.valor_caucao${horaUpdate},
           atualizado_em = now()`,
-        [...baseParams, parseIso(asText(c.cadastradoEm))],
+        [...baseParams, ...horaParams, parseIso(asText(c.cadastradoEm))],
       );
     }
     const cli = c.cliente as Record<string, unknown> | undefined;

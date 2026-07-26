@@ -369,7 +369,7 @@ export type GerarContratoDados = {
     endereco?: Record<string, string>;
   };
   veiculo: Record<string, string>;
-  prazo: { dias: number; inicio: string; hora?: string };
+  prazo: { dias: number; inicio: string; hora?: string; fim?: string };
   valores: { semana: number; caucao: number; diaria?: number };
   cnhCategoria?: string;
   diaPagamento?: string;
@@ -509,7 +509,7 @@ export function gerar(dados: GerarContratoDados): {
 
   const hora = prazo.hora ?? "18:00";
   const dini = parseData(prazo.inicio);
-  const dfim = addDays(dini, Number(prazo.dias));
+  const dfim = prazo.fim?.trim() ? parseData(prazo.fim.trim()) : addDays(dini, Number(prazo.dias));
   const inicioStr = fmtDataHora(dini, hora);
   const fimStr = fmtDataHora(dfim, hora);
 

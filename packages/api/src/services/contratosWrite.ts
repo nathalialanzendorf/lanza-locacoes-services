@@ -44,7 +44,9 @@ function normalizePaths(dados: GerarContratoDados): void {
 
 export type ContratoCriarRenovarInput = GerarContratoDados | MontarContratoDbInput;
 
-const POS_SAVE_TIMEOUT_MS = process.env.VERCEL ? 22_000 : 90_000;
+const CONTRATO_REQUEST_TIMEOUT_MS = 30_000;
+const POS_SAVE_TIMEOUT_MS = 10_000;
+const CONTRATO_GRAVAR_TIMEOUT_MS = CONTRATO_REQUEST_TIMEOUT_MS - POS_SAVE_TIMEOUT_MS;
 
 class StepTimeoutError extends Error {
   constructor(label: string, ms: number) {
@@ -125,6 +127,7 @@ function montarInputFromRegistro(reg: ContratoRegistro): MontarContratoDbInput {
     semana: reg.valorSemanal ?? 0,
     caucao: reg.valorCaucao ?? 0,
     inicio: reg.dataInicio,
+    hora: reg.horaInicio ?? "18:00",
     dias: reg.prazoDias ?? undefined,
     diaPagamento: reg.diaPagamentoTexto ?? reg.diaPagamentoSemana ?? undefined,
   };
@@ -151,9 +154,9 @@ async function executarContratoModo(
   let dados: GerarContratoDados;
 
   try {
-    if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
+    if ("veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null) {
       dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
-    } else if ("veiculoId" in input && input.veiculoId && "semana" in input && input.semana != null) {
+    } else if ("placa" in input && input.placa && "semana" in input && input.semana != null) {
       dados = await montarDadosContratoFromDbAsync(input as MontarContratoDbInput);
     } else {
       dados = input as GerarContratoDados;
@@ -165,11 +168,12 @@ async function executarContratoModo(
 
   const placa = dados.veiculo?.placa;
   const clienteNome = dados.cliente?.nome ?? "";
-  const cpf = dados.cliente?.cpf ?? null;
-  if (!placa) throw new HttpError(400, "Placa do veículo não informada");
+  if (!placa) throw new HttpError(400, "Veículo não informado ou sem placa cadastrada");
 
   const clienteIdFiltro =
     "clienteId" in input && input.clienteId ? String(input.clienteId).trim() : undefined;
+  const veiculoIdFiltro =
+    "veiculoId" in input && input.veiculoId ? String(input.veiculoId).trim() : undefined;
   const contratoRenovarId =
     "contratoRenovarId" in input && input.contratoRenovarId
       ? String(input.contratoRenovarId).trim()
@@ -177,7 +181,8 @@ async function executarContratoModo(
 
   const filtrosContrato = {
     placa,
-    cpf,
+    veiculoId: veiculoIdFiltro,
+    cpf: clienteIdFiltro ? null : dados.cliente?.cpf ?? null,
     clienteNome,
     clienteId: clienteIdFiltro,
     contratoRenovarId,
@@ -205,16 +210,18 @@ async function executarContratoModo(
 
   let reg = null;
   try {
-    reg = await registrarContratoFromDadosAsync(dados, {
-      ...(contratoAnteriorId
-        ? { contratoAnteriorId, versao: proximaVersao }
-        : proximaVersao > 1
-          ? { versao: proximaVersao }
-          : {}),
-    });
+    reg = await withStepTimeout("Gravação do contrato", CONTRATO_GRAVAR_TIMEOUT_MS, () =>
+      registrarContratoFromDadosAsync(dados, {
+        ...(contratoAnteriorId
+          ? { contratoAnteriorId, versao: proximaVersao }
+          : proximaVersao > 1
+            ? { versao: proximaVersao }
+            : {}),
+      }),
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (/connection terminated|connection timeout|timeout expired/i.test(msg)) {
+    if (err instanceof StepTimeoutError || /connection terminated|connection timeout|timeout expired/i.test(msg)) {
       throw new HttpError(
         504,
         "Ligação ao PostgreSQL expirou. Tente novamente em alguns segundos — o contrato pode ter sido salvo.",
@@ -357,6 +364,7 @@ export async function removerContrato(idOuPasta: string) {
 
 export type ContratoAtualizarInput = {
   dataInicio?: string;
+  horaInicio?: string;
   dataFimPrevista?: string;
   prazoDias?: number;
   dataEncerramento?: string | null;
@@ -380,6 +388,7 @@ export async function atualizarContrato(id: string, input: ContratoAtualizarInpu
   try {
     const patch: Parameters<typeof atualizarContratoDbAsync>[1] = {
       dataInicio: input.dataInicio,
+      horaInicio: input.horaInicio,
       dataFimPrevista: input.dataFimPrevista,
       prazoDias: input.prazoDias,
       dataEncerramento: input.dataEncerramento,
