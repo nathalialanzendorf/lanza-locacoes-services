@@ -144,7 +144,14 @@ function findClienteDbInList(
   opts: { cpf?: string; nome?: string; clienteId?: string },
 ): ClienteDb {
   if (list.length === 0) {
-    throw new Error("database/clientes.json vazio — use cadastro-cliente antes de gerar o contrato.");
+    if (opts.clienteId?.trim()) {
+      throw new Error(
+        `Cliente id ${opts.clienteId.trim()} não encontrado — verifique o cadastro no PostgreSQL.`,
+      );
+    }
+    throw new Error(
+      "Nenhum cliente encontrado para gerar o contrato — use cadastro-cliente ou informe clienteId.",
+    );
   }
 
   if (opts.clienteId?.trim()) {
@@ -223,12 +230,24 @@ export async function findClienteDbAsync(
   nome?: string,
   clienteId?: string,
 ): Promise<ClienteDb> {
-  const db = await loadClientesDbAsync({
-    ids: clienteId?.trim() ? [clienteId.trim()] : undefined,
-    cpf,
-    nome,
-  });
-  return findClienteDbInList(db.clientes, { cpf, nome, clienteId });
+  const id = clienteId?.trim();
+  const db = await loadClientesDbAsync(
+    id
+      ? { ids: [id] }
+      : {
+          cpf,
+          nome,
+        },
+  );
+  return findClienteDbInList(db.clientes, { cpf, nome, clienteId: id });
+}
+
+export async function findClienteFromDadosAsync(dados: GerarContratoDados): Promise<ClienteDb> {
+  return findClienteDbAsync(
+    dados.cliente.cpf?.trim() || undefined,
+    dados.cliente.nome,
+    dados.cliente.id,
+  );
 }
 
 export function findVeiculoDb(placa?: string, veiculoId?: string): VeiculoDb {
@@ -236,11 +255,15 @@ export function findVeiculoDb(placa?: string, veiculoId?: string): VeiculoDb {
 }
 
 export async function findVeiculoDbAsync(placa?: string, veiculoId?: string): Promise<VeiculoDb> {
-  const db = await loadVeiculosDbAsync({
-    veiculoId,
-    placa,
-  });
-  return findVeiculoDbInList(db.veiculos, { placa, veiculoId });
+  const id = veiculoId?.trim();
+  const db = await loadVeiculosDbAsync(
+    id ? { veiculoId: id } : { placa, veiculoId: id },
+  );
+  return findVeiculoDbInList(db.veiculos, { placa, veiculoId: id });
+}
+
+export async function findVeiculoFromDadosAsync(dados: GerarContratoDados): Promise<VeiculoDb> {
+  return findVeiculoDbAsync(dados.veiculo.placa, dados.veiculo.id);
 }
 
 /**
@@ -284,8 +307,9 @@ function validarEnderecoCliente(c: ClienteDb): void {
   }
 }
 
-function mapVeiculo(v: VeiculoDb): Record<string, string> {
+function mapVeiculo(v: VeiculoDb): Record<string, string> & { id?: string } {
   return {
+    id: v.id,
     placa: formatPlacaHyphen(v.placa),
     marcaModelo: strField(v.marcaModelo),
     fipeModelo: strField(v.fipeModelo),
@@ -437,6 +461,7 @@ function montarDadosContratoCore(
     cnhArquivo: input.cnhArquivo,
     diaPagamento: input.diaPagamento ?? "todos os sábados",
     cliente: {
+      id: cliente.id,
       nome: cliente.nome,
       cpf: cliente.cpf ?? "",
       endereco: {

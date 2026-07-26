@@ -3,10 +3,10 @@ import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
-import { findClienteDbAsync, findVeiculoDbAsync, dadosParaContratoExtraido } from "./montarDadosContrato.js";
+import { findClienteDbAsync, findClienteFromDadosAsync, findVeiculoDbAsync, findVeiculoFromDadosAsync, dadosParaContratoExtraido } from "./montarDadosContrato.js";
 import type { GerarContratoDados } from "./docxGerar.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
-import { extrairContrato, fmtDataBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
+import { extrairContrato, fmtDataBr, fmtHoraBr, resolverPastaContrato, type TipoContrato } from "./contratoExtrair.js";
 import { parseDataBrOuIsoDia } from "./dataBr.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { isEntityUuid, resolveVeiculoIdListagem } from "./filtroListagem.js";
@@ -667,8 +667,8 @@ export async function registrarContratoFromDadosAsync(
 ): Promise<ContratoRegistro> {
   const ext = dadosParaContratoExtraido(dados);
   const [cliente, veiculo] = await Promise.all([
-    findClienteDbAsync(ext.cpf ?? undefined, ext.clienteNome),
-    findVeiculoDbAsync(ext.placa),
+    findClienteFromDadosAsync(dados),
+    findVeiculoFromDadosAsync(dados),
   ]);
   const veiculoIdResolved =
     veiculo.id ?? resolveVeiculoIdListagem({ placa: veiculo.placa }, [veiculo]) ?? null;

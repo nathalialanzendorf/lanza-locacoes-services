@@ -364,11 +364,12 @@ export type GerarContratoDados = {
   contratosDir?: string;
   cnhArquivo?: string;
   cliente: {
+    id?: string;
     nome: string;
     cpf: string;
     endereco?: Record<string, string>;
   };
-  veiculo: Record<string, string>;
+  veiculo: Record<string, string> & { id?: string };
   prazo: { dias: number; inicio: string; hora?: string; fim?: string };
   valores: { semana: number; caucao: number; diaria?: number };
   cnhCategoria?: string;
