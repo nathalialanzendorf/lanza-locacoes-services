@@ -84,6 +84,8 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 |----------|-------|
 | `BLOB_STORE_ID` | Injetado ao ligar Blob Store ao projeto (OIDC na Vercel) |
 | `BLOB_READ_WRITE_TOKEN` | Injetado automaticamente; fallback local com `vercel env pull` |
+| `BLOB_ACCESS` | `private` *(default — deve coincidir com o access do store na Vercel)* |
+| `CONVERTAPI_SECRET` | Token ConvertAPI — DOCX→PDF na API Linux/Vercel ([convertapi.com](https://www.convertapi.com), 250 grátis/mês) |
 | `LANZA_STORAGE_PREFIX` | `lanza-docs` *(opcional — prefixo lógico dos ficheiros)* |
 
 **Criar e ligar via CLI:**
@@ -92,7 +94,7 @@ Copie no dashboard Vercel → **Settings → Environment Variables** (Production
 cd D:\Dropbox\Aworklanza\lanza-locacoes-services
 npx vercel login
 npx vercel link
-npx vercel blob create-store lanza-docs --access public --yes
+npx vercel blob create-store lanza-docs --access private --yes
 ```
 
 **Ou via token REST:**

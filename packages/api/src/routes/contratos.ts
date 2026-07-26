@@ -1,4 +1,15 @@
-import { badRequest, compileRoute, handleServiceError, json, notFound, readJsonBody, routeAsync, type RouteDef } from "../http.js";
+import {
+  badRequest,
+  compileRoute,
+  handleServiceError,
+  HttpError,
+  json,
+  notFound,
+  readBodyBuffer,
+  readJsonBody,
+  routeAsync,
+  type RouteDef,
+} from "../http.js";
 import * as contratosService from "../services/contratos.js";
 import * as contratosWrite from "../services/contratosWrite.js";
 import type { ContratoCriarRenovarInput } from "../services/contratosWrite.js";
@@ -98,6 +109,29 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
       } catch (err) {
         handleServiceError(ctx, err);
       }
+    }),
+  });
+
+  routes.push({
+    method: "PUT",
+    pattern: contratoAssinado.regex,
+    paramNames: contratoAssinado.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const filename =
+        ctx.query.get("filename")?.trim() ||
+        String(ctx.req.headers["x-filename"] ?? "").trim() ||
+        "contrato-assinado.pdf";
+      const contentType =
+        String(ctx.req.headers["content-type"] ?? "").trim() || "application/pdf";
+      const buffer = await readBodyBuffer(ctx.req);
+      if (!buffer.length) {
+        throw new HttpError(400, "Corpo do arquivo vazio");
+      }
+      const data = await contratosWrite.uploadContratoAssinado(ctx.params.id, buffer, {
+        nomeArquivo: filename,
+        contentType,
+      });
+      json(ctx.res, 200, { data });
     }),
   });
 

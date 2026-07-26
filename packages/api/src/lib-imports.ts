@@ -475,6 +475,11 @@ export {
 } from "../../../src/lib/docxGerar.js";
 
 export {
+  ensurePdfFromDocx,
+  pdfCloudConfigured,
+} from "../../../src/lib/exportDocxToPdf.js";
+
+export {
   montarDadosContratoFromDb,
   montarDadosContratoFromDbAsync,
   dadosParaContratoExtraido,

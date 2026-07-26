@@ -10,6 +10,15 @@ export function blobStoreId(): string | null {
   return process.env.BLOB_STORE_ID?.trim() || null;
 }
 
+/** Deve coincidir com o access do Blob Store na Vercel (`private` ou `public`). */
+export function blobAccess(): "private" | "public" {
+  const raw =
+    process.env.BLOB_ACCESS?.trim() ||
+    process.env.LANZA_BLOB_ACCESS?.trim() ||
+    "private";
+  return raw.toLowerCase() === "public" ? "public" : "private";
+}
+
 function isReadOnlyServerlessFs(): boolean {
   return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 }

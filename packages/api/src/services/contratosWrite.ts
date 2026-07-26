@@ -11,6 +11,8 @@ import {
   excluirContratoAsync,
   gerar,
   gerarDespesasIniciaisContratoAsync,
+  ensurePdfFromDocx,
+  pdfCloudConfigured,
   montarDadosContratoFromDbAsync,
   registrarContratoFromDadosAsync,
   validarModoContratoAsync,
@@ -277,6 +279,12 @@ export async function gerarDocumentoContrato(contratoId: string): Promise<GerarD
   const dados = await montarDadosContratoFromRegistroAsync(reg);
   normalizePaths(dados);
   const gerado = gerar(dados);
+  if (!gerado.pdf && gerado.docx) {
+    const pdfPath = gerado.docx.replace(/\.docx$/i, ".pdf");
+    if (await ensurePdfFromDocx(gerado.docx, pdfPath)) {
+      gerado.pdf = pdfPath;
+    }
+  }
   return {
     contratoId: reg.id,
     pasta: gerado.pasta,
@@ -301,7 +309,9 @@ export function resolverDownloadDocumentoContrato(
     throw new HttpError(
       404,
       formato === "pdf"
-        ? "PDF não disponível (geração PDF só no Windows)."
+        ? pdfCloudConfigured() || process.platform === "win32"
+          ? "PDF não disponível — a conversão falhou. Tente baixar o Word (.docx)."
+          : "PDF na nuvem requer CONVERTAPI_SECRET na Vercel (ou baixe o Word .docx e exporte no Word)."
         : "Documento Word não encontrado.",
     );
   }
@@ -388,31 +398,66 @@ export async function atualizarContrato(id: string, input: ContratoAtualizarInpu
     };
 
     if (input.contratoAssinado?.conteudoBase64?.trim()) {
-      if (!(await hasContratoAssinadoColumns())) {
-        throw new HttpError(
-          503,
-          "Upload de contrato assinado indisponível — execute a migration 017_contrato_assinado.sql no PostgreSQL.",
-        );
-      }
-      const nome = input.contratoAssinado.nomeArquivo?.trim() || "contrato-assinado.pdf";
-      const buf = Buffer.from(input.contratoAssinado.conteudoBase64, "base64");
-      if (!buf.length) {
-        throw new HttpError(400, "Arquivo do contrato assinado vazio ou base64 inválido");
-      }
-      const ext = path.extname(nome) || ".pdf";
-      const stored = await documentos.enviarDocumentoBinario({
-        pathname: `contratos/${id.trim()}/assinado${ext}`,
-        conteudo: buf,
-        contentType:
-          input.contratoAssinado.contentType?.trim() ||
-          mimeFromFilename(nome),
-        tipo: "contrato-assinado",
+      const uploaded = await persistContratoAssinadoBytes(id, {
+        nomeArquivo: input.contratoAssinado.nomeArquivo,
+        buffer: Buffer.from(input.contratoAssinado.conteudoBase64, "base64"),
+        contentType: input.contratoAssinado.contentType,
       });
-      patch.contratoAssinadoStorageKey = stored.pathname;
-      patch.contratoAssinadoNome = nome;
+      patch.contratoAssinadoStorageKey = uploaded.storageKey;
+      patch.contratoAssinadoNome = uploaded.nome;
     }
 
     const contrato = await atualizarContratoDbAsync(id, patch);
+    return { contrato };
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/Upload de contrato assinado indisponível/i.test(msg)) {
+      throw new HttpError(503, msg);
+    }
+    throw new HttpError(404, msg);
+  }
+}
+
+async function persistContratoAssinadoBytes(
+  id: string,
+  input: { nomeArquivo?: string; buffer: Buffer; contentType?: string },
+): Promise<{ storageKey: string; nome: string }> {
+  if (!(await hasContratoAssinadoColumns())) {
+    throw new HttpError(
+      503,
+      "Upload de contrato assinado indisponível — execute a migration 017_contrato_assinado.sql no PostgreSQL.",
+    );
+  }
+  const nome = input.nomeArquivo?.trim() || "contrato-assinado.pdf";
+  if (!input.buffer.length) {
+    throw new HttpError(400, "Arquivo do contrato assinado vazio");
+  }
+  const ext = path.extname(nome) || ".pdf";
+  const stored = await documentos.enviarDocumentoBinario({
+    pathname: `contratos/${id.trim()}/assinado${ext}`,
+    conteudo: input.buffer,
+    contentType: input.contentType?.trim() || mimeFromFilename(nome),
+    tipo: "contrato-assinado",
+  });
+  return { storageKey: stored.pathname, nome };
+}
+
+export async function uploadContratoAssinado(
+  id: string,
+  buffer: Buffer,
+  opts: { nomeArquivo: string; contentType?: string },
+) {
+  try {
+    const uploaded = await persistContratoAssinadoBytes(id, {
+      nomeArquivo: opts.nomeArquivo,
+      buffer,
+      contentType: opts.contentType,
+    });
+    const contrato = await atualizarContratoDbAsync(id, {
+      contratoAssinadoStorageKey: uploaded.storageKey,
+      contratoAssinadoNome: uploaded.nome,
+    });
     return { contrato };
   } catch (err) {
     if (err instanceof HttpError) throw err;

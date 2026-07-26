@@ -1,4 +1,9 @@
-import { blobReadWriteToken, isBlobConfigured, isReadOnlyServerlessFs } from "./config.js";
+import {
+  blobAccess,
+  blobReadWriteToken,
+  isBlobConfigured,
+  isReadOnlyServerlessFs,
+} from "./config.js";
 import {
   deleteLocalMirror,
   getLocalMirror,
@@ -37,7 +42,7 @@ export async function putBytes(
   if (isBlobConfigured()) {
     const { put } = await blobModule();
     const result = await put(pathname, body, blobAuthOpts({
-      access: "public",
+      access: blobAccess(),
       contentType,
       addRandomSuffix: false,
     }));
@@ -85,16 +90,12 @@ export async function putJson(
 }
 
 async function fetchBlobByPathname(pathname: string): Promise<Buffer | null> {
-  const { list } = await blobModule();
-  const listed = await list(blobAuthOpts({
-    prefix: pathname,
-    limit: 20,
+  const { get } = await blobModule();
+  const result = await get(pathname, blobAuthOpts({
+    access: blobAccess(),
   }));
-  const hit = listed.blobs.find((b) => b.pathname === pathname);
-  if (!hit) return null;
-  const res = await fetch(hit.downloadUrl);
-  if (!res.ok) return null;
-  return Buffer.from(await res.arrayBuffer());
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  return Buffer.from(await new Response(result.stream).arrayBuffer());
 }
 
 export async function getBytes(pathname: string): Promise<Buffer | null> {

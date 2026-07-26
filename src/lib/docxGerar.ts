@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import PizZip from "pizzip";
+import { exportDocxToPdfWin } from "./exportDocxToPdf.js";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { brl, cap, valorExtenso } from "./valorExtenso.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
@@ -333,32 +333,6 @@ function bodyParagraphs(body: Element): Element[] {
     if (el.namespaceURI === W && el.localName === "p") out.push(el);
   }
   return out;
-}
-
-function exportDocxToPdfWin(absDocx: string, absPdf: string): boolean {
-  const q = (s: string) => "'" + s.replace(/'/g, "''") + "'";
-  const ps = [
-    "$ErrorActionPreference='Stop'",
-    "$word = New-Object -ComObject Word.Application",
-    "$word.Visible = $false",
-    "try {",
-    `  $doc = $word.Documents.Open(${q(absDocx)})`,
-    `  $doc.SaveAs(${q(absPdf)}, 17)`,
-    "  $doc.Close([ref]$false)",
-    "} finally {",
-    "  $word.Quit()",
-    "}",
-  ].join("; ");
-  try {
-    execFileSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], {
-      stdio: "pipe",
-      windowsHide: true,
-    });
-    return fs.existsSync(absPdf);
-  } catch (e) {
-    console.error("[aviso] PDF nao gerado:", e instanceof Error ? e.message : e);
-    return false;
-  }
 }
 
 export type CaucaoParcelas = {
@@ -739,7 +713,7 @@ export function gerar(dados: GerarContratoDados): {
   if (process.platform === "win32") {
     pdfOk = exportDocxToPdfWin(path.resolve(saidaDocx), path.resolve(saidaPdf));
   } else {
-    console.error("[aviso] PDF via Word COM só no Windows; .docx gerado.");
+    console.error("[aviso] PDF via Word COM indisponível neste SO; use ConvertAPI ou baixe o .docx.");
   }
 
   let cnhDest: string | null = null;

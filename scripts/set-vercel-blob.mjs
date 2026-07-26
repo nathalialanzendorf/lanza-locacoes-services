@@ -10,7 +10,7 @@
  *
  * Alternativa CLI (projeto linkado):
  *   npx vercel link
- *   npx vercel blob create-store lanza-docs --access public --yes
+ *   npx vercel blob create-store lanza-docs --access private --yes
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -26,7 +26,7 @@ const projectName =
 const teamId =
   args.find((a) => a.startsWith("--team="))?.split("=")[1] ?? "team_TxQccO1Nw52O2cCmyP35wtp";
 const access =
-  args.find((a) => a.startsWith("--access="))?.split("=")[1] ?? "public";
+  args.find((a) => a.startsWith("--access="))?.split("=")[1] ?? "private";
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
