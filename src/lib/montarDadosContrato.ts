@@ -201,21 +201,33 @@ function findVeiculoDbInList(
   list: VeiculoDb[],
   opts: { placa?: string; veiculoId?: string },
 ): VeiculoDb {
+  if (list.length === 0) {
+    if (opts.veiculoId?.trim()) {
+      throw new Error(
+        `Veículo id ${opts.veiculoId.trim()} não encontrado — verifique o cadastro no PostgreSQL.`,
+      );
+    }
+    throw new Error(
+      "Nenhum veículo encontrado — use cadastro-veiculo ou informe veiculoId.",
+    );
+  }
+
   if (opts.veiculoId?.trim()) {
     const id = opts.veiculoId.trim();
     const byId = list.find((x) => x.id === id);
     if (byId) return byId;
+    throw new Error(`Veículo id ${id} não encontrado — use cadastro-veiculo.`);
   }
 
-  const placa = opts.placa?.trim() || opts.veiculoId?.trim();
+  const placa = opts.placa?.trim();
   if (!placa) {
     throw new Error("Informe veiculoId ou placa do veículo.");
   }
 
-  const v = list.find((x) => placasIguais(x.placa, placa) || x.id === placa);
+  const v = list.find((x) => placasIguais(x.placa, placa));
   if (!v) {
     throw new Error(
-      `Placa ${formatPlacaHyphen(placa)} não encontrada em veiculos.json — use cadastro-veiculo.`,
+      `Placa ${formatPlacaHyphen(placa)} não encontrada — use cadastro-veiculo.`,
     );
   }
   return v;
@@ -256,14 +268,21 @@ export function findVeiculoDb(placa?: string, veiculoId?: string): VeiculoDb {
 
 export async function findVeiculoDbAsync(placa?: string, veiculoId?: string): Promise<VeiculoDb> {
   const id = veiculoId?.trim();
+  const placaNorm = placa?.trim();
   const db = await loadVeiculosDbAsync(
-    id ? { veiculoId: id } : { placa, veiculoId: id },
+    id ? { veiculoId: id } : placaNorm ? { placa: placaNorm } : undefined,
   );
-  return findVeiculoDbInList(db.veiculos, { placa, veiculoId: id });
+  return findVeiculoDbInList(db.veiculos, { placa: placaNorm, veiculoId: id });
 }
 
 export async function findVeiculoFromDadosAsync(dados: GerarContratoDados): Promise<VeiculoDb> {
-  return findVeiculoDbAsync(dados.veiculo.placa, dados.veiculo.id);
+  const id = dados.veiculo.id?.trim();
+  return findVeiculoDbAsync(id ? undefined : dados.veiculo.placa, id);
+}
+
+export async function findVeiculoFromInputAsync(input: MontarContratoDbInput): Promise<VeiculoDb> {
+  const id = input.veiculoId?.trim();
+  return findVeiculoDbAsync(id ? undefined : input.placa, id);
 }
 
 /**
@@ -511,7 +530,7 @@ export async function montarDadosContratoFromDbAsync(
   input: MontarContratoDbInput,
 ): Promise<GerarContratoDados> {
   const cliente = await findClienteDbAsync(input.cpf, input.clienteNome, input.clienteId);
-  const veiculo = await findVeiculoDbAsync(input.placa, input.veiculoId);
+  const veiculo = await findVeiculoFromInputAsync(input);
   return montarDadosContratoCore(input, cliente, veiculo);
 }
 

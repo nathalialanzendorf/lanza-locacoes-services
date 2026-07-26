@@ -166,21 +166,23 @@ async function executarContratoModo(
   }
   normalizePaths(dados);
 
-  const placa = dados.veiculo?.placa;
+  const placa = dados.veiculo?.placa?.trim() || undefined;
   const clienteNome = dados.cliente?.nome ?? "";
-  if (!placa) throw new HttpError(400, "Veículo não informado ou sem placa cadastrada");
+  const veiculoIdFiltro =
+    "veiculoId" in input && input.veiculoId ? String(input.veiculoId).trim() : undefined;
+  if (!placa && !veiculoIdFiltro) {
+    throw new HttpError(400, "Veículo não informado — informe veiculoId ou placa cadastrada");
+  }
 
   const clienteIdFiltro =
     "clienteId" in input && input.clienteId ? String(input.clienteId).trim() : undefined;
-  const veiculoIdFiltro =
-    "veiculoId" in input && input.veiculoId ? String(input.veiculoId).trim() : undefined;
   const contratoRenovarId =
     "contratoRenovarId" in input && input.contratoRenovarId
       ? String(input.contratoRenovarId).trim()
       : undefined;
 
   const filtrosContrato = {
-    placa,
+    placa: placa ?? "",
     veiculoId: veiculoIdFiltro,
     cpf: clienteIdFiltro ? null : dados.cliente?.cpf ?? null,
     clienteNome,
