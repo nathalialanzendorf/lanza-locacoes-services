@@ -59,6 +59,7 @@ export {
   loadContratosDbAsync,
   findContratoInDb,
   contratoAtivoOperacional,
+  contratoVinculadoVeiculo,
   contratoMaisRecentePar,
   type ContratoRegistro,
 } from "../../../src/lib/contratosDb.js";

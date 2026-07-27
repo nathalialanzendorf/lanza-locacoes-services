@@ -20,9 +20,9 @@ import {
   type ParceiroDespesaRegistro,
   type VeiculoRegistro,
   contratoAtivoOperacional,
+  contratoVinculadoVeiculo,
   despesaClienteAbertaDashboard,
   obterDashboardRecebimentos,
-  placasIguais,
   loadCobrancasDbContextAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
@@ -121,7 +121,7 @@ function montarResumo(
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
   const contratosAtivos = contratos.filter((c) => contratoAtivoOperacional(c));
   const veiculoTemContratoAtivo = (v: VeiculoRegistro) =>
-    contratosAtivos.some((c) => placasIguais(c.placa, v.placa));
+    contratosAtivos.some((c) => contratoVinculadoVeiculo(c, v));
   const veiculosLocados = veiculosAtivos.filter(veiculoTemContratoAtivo);
   const veiculosNaoLocados = veiculosAtivos.filter((v) => !veiculoTemContratoAtivo(v));
 

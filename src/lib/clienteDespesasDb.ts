@@ -419,12 +419,7 @@ export async function loadClienteDespesasDbAsync(
         clienteDespesas: rows,
       } as Record<string, unknown>);
     }
-    return normalizeRawDb({
-      descricao: DEFAULT_DESCRICAO,
-      atualizadoEm: new Date().toISOString().slice(0, 10),
-      schemaClienteDespesa: DEFAULT_SCHEMA,
-      clienteDespesas: [],
-    } as Record<string, unknown>);
+    return normalizeRawDb(await loadClienteDespesasFromSql());
   }
   const raw = await loadJsonDocumentForApi<Record<string, unknown>>(DB_CLIENTE_DESPESAS, {
     descricao: DEFAULT_DESCRICAO,

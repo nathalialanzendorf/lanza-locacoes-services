@@ -1,7 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadContratosFromSql, queryContratosFromSql, saveContratosToSql, upsertContratoToSql, deleteContratoFromSql, type ContratosSqlFilter } from "@lanza/db";
 import { loadClientesDb, type ClienteRegistro } from "./clientesDb.js";
 import { findClienteDbAsync, findClienteFromDadosAsync, findVeiculoDbAsync, findVeiculoFromDadosAsync, dadosParaContratoExtraido } from "./montarDadosContrato.js";
 import type { GerarContratoDados } from "./docxGerar.js";
@@ -345,6 +345,14 @@ function contratoMesmoVeiculo(
   return false;
 }
 
+/** Contrato ativo na placa ou veiculoId do cadastro. */
+export function contratoVinculadoVeiculo(
+  c: ContratoRegistro,
+  v: Pick<VeiculoRegistro, "id" | "placa">,
+): boolean {
+  return contratoMesmoVeiculo(c, v.id ?? null, v.placa ?? "");
+}
+
 function mesmoClienteContrato(
   c: ContratoRegistro,
   clienteId: string | null,
@@ -487,7 +495,7 @@ export async function loadContratosDbAsync(scope?: ContratosLoadScope): Promise<
       const contratos = (await queryContratosFromSql(scope!)) as ContratoRegistro[];
       return { ...empty, contratos, schemaContrato: DEFAULT_SCHEMA };
     }
-    return { ...empty, contratos: [], schemaContrato: DEFAULT_SCHEMA };
+    return (await loadContratosFromSql()) as ContratosDb;
   }
   const db = await loadJsonDocumentForApi<ContratosDb>(DB_CONTRATOS, empty);
   if (!db.schemaContrato) db.schemaContrato = DEFAULT_SCHEMA;
