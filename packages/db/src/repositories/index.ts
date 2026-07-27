@@ -74,3 +74,10 @@ export {
   type TriagemDbShape,
   type ClienteAnaliseDbShape,
 } from "./domainRepositories.js";
+export {
+  queryVendasFromSql,
+  obterVendaFromSql,
+  upsertVendaToSql,
+  deleteVendaFromSql,
+  type VendasSqlFilter,
+} from "./vendasRepositories.js";

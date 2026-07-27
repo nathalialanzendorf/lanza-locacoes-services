@@ -96,6 +96,16 @@ export {
 export type { LocacaoInput } from "../../../src/lib/locacoesDb.js";
 
 export {
+  listarVendasAsync,
+  obterVendaAsync,
+  gravarVendaAsync,
+  excluirVendaAsync,
+  type VendaRegistro,
+  type VendaInput,
+  type ListarVendasOpts,
+} from "../../../src/lib/vendasDb.js";
+
+export {
   montarPlanoBaixa,
   montarPlanoBaixaAsync,
   withBaixaPlanoDbContext,

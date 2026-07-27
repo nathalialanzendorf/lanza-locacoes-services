@@ -127,6 +127,11 @@ export {
   upsertClienteAnaliseRowToSql,
   type TriagemDbShape,
   type ClienteAnaliseDbShape,
+  queryVendasFromSql,
+  obterVendaFromSql,
+  upsertVendaToSql,
+  deleteVendaFromSql,
+  type VendasSqlFilter,
 } from "./repositories/index.js";
 
 export { ReadOnlyBackendError } from "./util/readOnlyBackendError.js";

@@ -33,6 +33,7 @@ import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerRecebimentosRoutes } from "./routes/recebimentos.js";
 import { registerRelatoriosRoutes } from "./routes/relatorios.js";
 import { registerSyncRoutes } from "./routes/sync.js";
+import { registerVendasRoutes } from "./routes/vendas.js";
 import { registerVeiculosRoutes } from "./routes/veiculos.js";
 import { verifyAccessToken, extractBearerToken } from "./services/auth.js";
 
@@ -81,6 +82,7 @@ function collectRoutes(): RouteDef[] {
   registerConfigRoutes(routes);
   registerClientesRoutes(routes);
   registerVeiculosRoutes(routes);
+  registerVendasRoutes(routes);
   registerInicioLocacoesRoutes(routes);
   registerContratosRoutes(routes);
   registerDespesasRoutes(routes);
