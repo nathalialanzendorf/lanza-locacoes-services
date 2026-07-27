@@ -10,6 +10,10 @@ import {
   routeAsync,
   type RouteDef,
 } from "../http.js";
+import {
+  isTipoVeiculoFrotaValor,
+  parseTipoVeiculoFrota,
+} from "../../../../src/lib/domain/tipoVeiculoFrota.js";
 import * as veiculosService from "../services/veiculos.js";
 
 export function registerVeiculosRoutes(routes: RouteDef[]): void {
@@ -24,9 +28,21 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
         badRequest(ctx, 'Query "ativo" inválida — use true ou false');
         return;
       }
+      const particular = parseAtivoQuery(ctx.query.get("particular"));
+      if (ctx.query.has("particular") && particular === undefined) {
+        badRequest(ctx, 'Query "particular" inválida — use true ou false');
+        return;
+      }
+      const tipoFrotaRaw = ctx.query.get("tipoFrota")?.trim().toLowerCase();
+      if (ctx.query.has("tipoFrota") && !isTipoVeiculoFrotaValor(tipoFrotaRaw)) {
+        badRequest(ctx, 'Query "tipoFrota" inválida — use locacao, particular ou venda');
+        return;
+      }
       const placa = ctx.query.get("placa");
       json(ctx.res, 200, await veiculosService.listarVeiculosAsync({
         ativo,
+        particular,
+        tipoFrota: tipoFrotaRaw ? parseTipoVeiculoFrota(tipoFrotaRaw) : undefined,
         placa: placa ?? undefined,
       }));
     }),

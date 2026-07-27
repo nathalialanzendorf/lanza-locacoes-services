@@ -86,18 +86,25 @@ export function veiculosScopeFromFilter(input: {
   veiculoId?: string;
   placa?: string;
   ativo?: boolean;
+  /** @deprecated Use tipoFrota */
+  particular?: boolean;
+  tipoFrota?: string;
 }): VeiculosSqlFilter | null {
   const ids = [...new Set((input.ids ?? []).filter((id) => isEntityUuid(id.trim())).map((id) => id.trim()))];
   const veiculoId = input.veiculoId?.trim();
   if (veiculoId && isEntityUuid(veiculoId)) ids.push(veiculoId);
   const placa = input.placa?.trim();
   const ativo = input.ativo;
+  const particular = input.particular;
+  const tipoFrota = input.tipoFrota?.trim();
 
-  if (!ids.length && !placa && ativo === undefined) return null;
+  if (!ids.length && !placa && ativo === undefined && particular === undefined && !tipoFrota) return null;
 
   return {
     ...(ids.length ? { ids: [...new Set(ids)] } : {}),
     ...(placa ? { placa } : {}),
     ...(ativo !== undefined ? { ativo } : {}),
+    ...(tipoFrota ? { tipoFrota } : {}),
+    ...(particular !== undefined && !tipoFrota ? { particular } : {}),
   };
 }

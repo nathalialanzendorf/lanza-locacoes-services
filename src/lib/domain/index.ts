@@ -74,6 +74,16 @@ export {
 } from "./tipoCobranca.js";
 
 export {
+  TipoVeiculoFrota,
+  isTipoVeiculoFrotaValor,
+  parseTipoVeiculoFrota,
+  tipoFrotaDeVeiculo,
+  isVeiculoFrotaLocacao,
+  particularLegadoDeTipoFrota,
+  type TipoVeiculoFrotaValor,
+} from "./tipoVeiculoFrota.js";
+
+export {
   SituacaoLocacao,
   SITUACOES_LOCACAO_VALIDAS,
   isSituacaoLocacaoValor,

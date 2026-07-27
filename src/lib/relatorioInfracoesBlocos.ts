@@ -23,6 +23,7 @@ import {
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { isVeiculoFrotaLocacao } from "./domain/tipoVeiculoFrota.js";
 
 export type LinhaInfracaoBloco = {
   placa: string;
@@ -212,7 +213,7 @@ function nomeParceiroDebito(
 function loadVeiculoParticularPorPlaca(): Map<string, boolean> {
   const out = new Map<string, boolean>();
   for (const v of loadVeiculosDb().veiculos ?? []) {
-    if (v.particular === true) out.set(compactPlaca(v.placa), true);
+    if (!isVeiculoFrotaLocacao(v)) out.set(compactPlaca(v.placa), true);
   }
   return out;
 }
@@ -442,7 +443,7 @@ function loadParceirosNomesFromData(
 function loadVeiculoParticularPorPlacaFrom(veiculos: VeiculoRegistro[]): Map<string, boolean> {
   const out = new Map<string, boolean>();
   for (const v of veiculos) {
-    if (v.particular === true) out.set(compactPlaca(v.placa), true);
+    if (!isVeiculoFrotaLocacao(v)) out.set(compactPlaca(v.placa), true);
   }
   return out;
 }

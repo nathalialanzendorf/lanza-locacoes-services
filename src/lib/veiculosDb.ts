@@ -21,6 +21,7 @@ import { isEntityUuid } from "./filtroListagem.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { registroEstaAtivo } from "./domain/index.js";
+import { isVeiculoFrotaLocacao, particularLegadoDeTipoFrota, parseTipoVeiculoFrota, tipoFrotaDeVeiculo } from "./domain/tipoVeiculoFrota.js";
 
 export const DB_VEICULOS = path.join(REPO_ROOT, "database", "veiculos.json");
 
@@ -58,9 +59,15 @@ export type VeiculoRegistro = {
   /** false = excluído da frota ativa */
   ativo?: boolean;
   /**
+   * Classificação operacional: locacao | particular | venda.
+   * Preferir este campo; `particular` permanece por compatibilidade.
+   */
+  tipoFrota?: string;
+  /**
    * true = veículo PARTICULAR do proprietário (ex.: carro da Ana), não é de
    * locação. Entra nos syncs DETRAN (infrações/IPVA/licenciamento) mas NÃO no
    * rastreador fixo nem no Rastreame (não é rastreável de locação).
+   * @deprecated Use tipoFrota — mantido sincronizado com particular.
    */
   particular?: boolean;
   origem?: string;
@@ -92,6 +99,9 @@ export type VeiculosLoadScope = {
   veiculoId?: string;
   placa?: string;
   ativo?: boolean;
+  /** @deprecated Use tipoFrota */
+  particular?: boolean;
+  tipoFrota?: string;
   /** true = join FIPE (sync FIPE, relatórios); default false quando scoped. */
   comFipe?: boolean;
 };
@@ -191,7 +201,7 @@ export function veiculoRefAtivo(
 ): boolean {
   const veiculo = findVeiculoInDb({ veiculos }, ref);
   if (!veiculo) return false;
-  return veiculo.ativo !== false && veiculo.particular !== true;
+  return veiculo.ativo !== false && isVeiculoFrotaLocacao(veiculo);
 }
 
 export type VeiculoPatch = Partial<
@@ -211,9 +221,23 @@ export type VeiculoPatch = Partial<
     | "rastreameLabel"
     | "clienteVinculadoId"
     | "ativo"
+    | "tipoFrota"
+    | "particular"
     | "origem"
   >
 >;
+
+function sincronizarTipoFrotaVeiculo(v: VeiculoRegistro | VeiculoPatch): void {
+  if ("tipoFrota" in v && v.tipoFrota != null) {
+    const tipo = parseTipoVeiculoFrota(String(v.tipoFrota));
+    v.tipoFrota = tipo;
+    v.particular = particularLegadoDeTipoFrota(tipo);
+    return;
+  }
+  if ("particular" in v && v.particular !== undefined && !("tipoFrota" in v && v.tipoFrota != null)) {
+    v.tipoFrota = v.particular === true ? "particular" : "locacao";
+  }
+}
 
 function veiculoIdCompacto(id: string): string {
   return id.trim().replace(/-/g, "").toLowerCase();
@@ -246,6 +270,7 @@ function applyEditarVeiculo(
 
   const v = db.veiculos[idx]!;
   Object.assign(v, patch);
+  sincronizarTipoFrotaVeiculo(v);
   v.atualizadoEm = nowIso();
   db.veiculos[idx] = v;
   return v;
@@ -471,8 +496,8 @@ export function marcarVeiculoRastreameSyncOk(
 
 /** Veículo espelhado ou elegível para o Rastreame. */
 export function isSyncRastreameEligible(v: VeiculoRegistro): boolean {
-  // Particular (não-locação) nunca vira rastreável novo no Rastreame.
-  if (v.particular === true && (v.rastreameRastreavelKey == null || v.rastreameRastreavelKey === "")) {
+  // Fora da frota de locação nunca vira rastreável novo no Rastreame.
+  if (!isVeiculoFrotaLocacao(v) && (v.rastreameRastreavelKey == null || v.rastreameRastreavelKey === "")) {
     return false;
   }
   if (v.rastreameRastreavelKey != null && v.rastreameRastreavelKey !== "") return true;

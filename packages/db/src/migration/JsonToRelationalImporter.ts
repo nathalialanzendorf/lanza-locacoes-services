@@ -197,9 +197,9 @@ export class JsonToRelationalImporter {
           id, placa, placa_norm, marca_modelo, marca, modelo, ano_modelo, ano, chassi, renavam, cor,
           combustivel, categoria, tipo, licenca_ima, vencimento_documento, uf_registro,
           rastreame_rastreavel_key, rastreame_label, rastreame_sync_em,
-          cliente_vinculado_id, inicio_locacoes, ativo, particular, origem, atualizado_em
+          cliente_vinculado_id, inicio_locacoes, ativo, particular, tipo_frota, origem, atualizado_em
         ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,now()
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,now()
         )
         ON CONFLICT (id) DO UPDATE SET
           placa = EXCLUDED.placa, placa_norm = EXCLUDED.placa_norm,
@@ -232,6 +232,7 @@ export class JsonToRelationalImporter {
           asText(v.inicioLocacoes),
           asBool(v.ativo, true),
           asBool(v.particular, false),
+          asBool(v.particular, false) ? "particular" : "locacao",
           asText(v.origem),
         ],
       );

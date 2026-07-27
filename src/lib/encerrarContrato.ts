@@ -38,6 +38,7 @@ import {
 } from "./infracaoTitulo.js";
 import { compactPlaca, placasIguais } from "./placa.js";
 import { loadVeiculosDb, type VeiculoRegistro } from "./veiculosDb.js";
+import { isVeiculoFrotaLocacao } from "./domain/tipoVeiculoFrota.js";
 
 let _encCtx: CobrancasDbContext | null = null;
 
@@ -509,9 +510,9 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const pastaContrato = resolverPastaContratoEncerramento(input);
   const contrato = extrairContrato(pastaContrato, { paraEncerramento: true });
   const veicReg = findVeiculoEnc(contrato.placa);
-  if (veicReg?.particular === true) {
+  if (veicReg && !isVeiculoFrotaLocacao(veicReg)) {
     throw new Error(
-      `Veículo ${contrato.placa} é PARTICULAR (não-locação) — não há contrato/quebra de contrato.`,
+      `Veículo ${contrato.placa} não é de locação — não há contrato/quebra de contrato.`,
     );
   }
   const registroVigente = validarContratoVigenteParaEncerramento(

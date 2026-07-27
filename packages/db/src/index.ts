@@ -56,6 +56,8 @@ export {
 } from "./migration/JsonToRelationalImporter.js";
 
 export {
+  queryResumoCountsFromSql,
+  type ResumoCounts,
   useRelationalStore,
   assertRelationalStore,
   skipJsonStoresWrite,

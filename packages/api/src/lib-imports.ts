@@ -179,10 +179,15 @@ export {
 export {
   obterDashboardRecebimentos,
   obterDashboardRecebimentosAsync,
+  obterDashboardRecebimentosTotais,
+  listarDashboardRecebimentosVenceHoje,
+  listarDashboardRecebimentosAtrasados,
   despesaClienteAbertaDashboard,
   type DashboardRecebimentos,
   type DashboardRecebimentoLinha,
   type DashboardRecebimentosTotais,
+  type DashboardRecebimentosTotaisResponse,
+  type DashboardRecebimentosListaResponse,
 } from "../../../src/lib/dashboardRecebimentos.js";
 
 export { clienteExibicaoPorId } from "../../../src/lib/clienteExibicao.js";

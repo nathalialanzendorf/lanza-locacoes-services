@@ -74,10 +74,10 @@ export type LancarRastreadorResult = {
 
 function loadVeiculos(): { id: string; placa: string }[] {
   const raw = JSON.parse(fs.readFileSync(DB_VEICULOS, "utf8")) as {
-    veiculos: { id: string; placa: string; ativo?: boolean; particular?: boolean }[];
+    veiculos: { id: string; placa: string; ativo?: boolean; particular?: boolean; tipoFrota?: string }[];
   };
-  // Taxa só para veículos ATIVOS e de LOCAÇÃO (particular do proprietário não paga rastreador).
-  return raw.veiculos.filter((v) => v.ativo !== false && v.particular !== true);
+  // Taxa só para veículos ATIVOS da frota de LOCAÇÃO.
+  return raw.veiculos.filter((v) => v.ativo !== false && (v.tipoFrota === "locacao" || (v.tipoFrota == null && v.particular !== true)));
 }
 
 function findRastreadoresMes(

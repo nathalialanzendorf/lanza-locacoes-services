@@ -62,6 +62,7 @@ import {
 import { compararDataBrAsc, daysBetween, parseDataBr } from "./contratoExtrair.js";
 import { isCreditoDevolucaoLocatario } from "./encerrarContrato.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { isVeiculoFrotaLocacao } from "./domain/tipoVeiculoFrota.js";
 import { vencimentoClienteDespesaBr } from "./clienteDespesaVencimento.js";
 import { formatVeiculoLabel } from "./veiculoLabel.js";
 import { vencimentoDespesaSemanalBr } from "./pagamentoSemanal.js";
@@ -1418,7 +1419,7 @@ function mapaDespesaPorAutoInfracao(): Map<string, ClienteDespesaRegistro> {
 function veiculoParticularPorPlacaResumido(): Map<string, boolean> {
   const out = new Map<string, boolean>();
   for (const v of cobrancasRuntimeVeiculos() ?? []) {
-    if (v.particular === true) out.set(compactPlaca(v.placa), true);
+    if (!isVeiculoFrotaLocacao(v)) out.set(compactPlaca(v.placa), true);
   }
   return out;
 }
@@ -1516,7 +1517,7 @@ function ordenarGruposInfracoesResumido(
 function veiculosElegiveisResumidoInfracoes(): Map<string, boolean> {
   const map = new Map<string, boolean>();
   for (const v of cobrancasRuntimeVeiculos()) {
-    if (v.particular === true) continue;
+    if (!isVeiculoFrotaLocacao(v)) continue;
     map.set(compactPlaca(v.placa), true);
   }
   return map;

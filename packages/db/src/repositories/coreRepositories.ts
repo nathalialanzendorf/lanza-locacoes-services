@@ -187,6 +187,7 @@ function rowToVeiculo(r: Record<string, unknown>): VeiculoRow {
     clienteVinculadoId: r.cliente_vinculado_id ?? undefined,
     inicioLocacoes: r.inicio_locacoes ?? undefined,
     ativo: r.ativo !== false,
+    tipoFrota: (r.tipo_frota as string | undefined) ?? (r.particular === true ? "particular" : "locacao"),
     particular: r.particular === true,
     origem: r.origem ?? undefined,
     atualizadoEm: r.atualizado_em ?? undefined,
@@ -254,17 +255,26 @@ export async function saveVeiculosToSql(db: VeiculosDbShape): Promise<void> {
 }
 
 /** Grava ou atualiza um único veículo no Postgres (sem reescrever toda a tabela). */
+function tipoFrotaFromVeiculoRecord(v: Record<string, unknown>): string {
+  const tf = String(v.tipoFrota ?? "").trim().toLowerCase();
+  if (tf === "locacao" || tf === "particular" || tf === "venda") return tf;
+  return v.particular === true ? "particular" : "locacao";
+}
+
 export async function upsertVeiculoToSql(v: Record<string, unknown>): Promise<void> {
   const placa = formatPlacaHyphen(String(v.placa));
+  const tipoFrota = tipoFrotaFromVeiculoRecord(v);
+  const particular = tipoFrota === "particular";
   await pgWriteQuery(
     `INSERT INTO lanza.veiculos (
         id, placa, placa_norm, marca_modelo, marca, modelo, ano_modelo, ano, chassi, renavam, cor,
         combustivel, categoria, tipo, licenca_ima, vencimento_documento, uf_registro,
         rastreame_rastreavel_key, rastreame_label, rastreame_sync_em,
-        cliente_vinculado_id, inicio_locacoes, ativo, particular, origem, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,now())
+        cliente_vinculado_id, inicio_locacoes, ativo, particular, tipo_frota, origem, atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,now())
       ON CONFLICT (id) DO UPDATE SET
         placa = EXCLUDED.placa, placa_norm = EXCLUDED.placa_norm, ativo = EXCLUDED.ativo,
+        particular = EXCLUDED.particular, tipo_frota = EXCLUDED.tipo_frota,
         cliente_vinculado_id = EXCLUDED.cliente_vinculado_id, rastreame_label = EXCLUDED.rastreame_label, atualizado_em = now()`,
     [
       v.id,
@@ -290,7 +300,8 @@ export async function upsertVeiculoToSql(v: Record<string, unknown>): Promise<vo
       v.clienteVinculadoId ?? null,
       v.inicioLocacoes ?? null,
       v.ativo !== false,
-      v.particular === true,
+      particular,
+      tipoFrota,
       v.origem ?? null,
     ],
   );
@@ -499,6 +510,9 @@ export type VeiculosSqlFilter = {
   veiculoId?: string;
   placa?: string;
   ativo?: boolean;
+  /** @deprecated Use tipoFrota */
+  particular?: boolean;
+  tipoFrota?: string;
 };
 
 /** Veículos filtrados — sem join FIPE (listagens/enriquecimento). */
@@ -523,6 +537,14 @@ export async function queryVeiculosFromSql(filter: VeiculosSqlFilter = {}): Prom
     where.push(`(v.ativo IS DISTINCT FROM false)`);
   } else if (filter.ativo === false) {
     where.push(`(v.ativo = false)`);
+  }
+  if (filter.tipoFrota?.trim()) {
+    params.push(filter.tipoFrota.trim().toLowerCase());
+    where.push(`(v.tipo_frota = $${params.length})`);
+  } else if (filter.particular === true) {
+    where.push(`(v.tipo_frota = 'particular' OR v.particular IS TRUE)`);
+  } else if (filter.particular === false) {
+    where.push(`(v.tipo_frota = 'locacao' OR (v.tipo_frota IS NULL AND v.particular IS NOT TRUE))`);
   }
 
   if (where.length === 0) {

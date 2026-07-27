@@ -20,6 +20,7 @@ import {
 } from "./infracaoTitulo.js";
 import { RELATORIOS_COBRANCAS_DIR } from "./relatoriosPaths.js";
 import { TipoCobranca, type TipoCobrancaValor } from "./domain/tipoCobranca.js";
+import { isVeiculoFrotaLocacao } from "./domain/tipoVeiculoFrota.js";
 
 export { TipoCobranca, type TipoCobrancaValor };
 export type TipoCobranca = TipoCobrancaValor;
@@ -202,11 +203,11 @@ function buscarVeiculo(placa: string): Veiculo | undefined {
   return carregarVeiculos().get(compactPlaca(placa));
 }
 
-/** Veículo particular (não-locação) não gera cobrança de locatário. */
+/** Veículo fora da frota de locação não gera cobrança de locatário. */
 function assertVeiculoLocacao(placa: string, v: Veiculo | undefined): void {
-  if (v?.particular === true) {
+  if (v && !isVeiculoFrotaLocacao(v)) {
     throw new Error(
-      `Veículo ${placa} é PARTICULAR (não-locação) — não gera cobranças de locatário.`,
+      `Veículo ${placa} não é de locação — não gera cobranças de locatário.`,
     );
   }
 }

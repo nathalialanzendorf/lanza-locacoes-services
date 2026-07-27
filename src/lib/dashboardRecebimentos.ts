@@ -56,6 +56,19 @@ export type DashboardRecebimentosTotais = {
   renegociacao: number;
 };
 
+export type DashboardRecebimentosTotaisResponse = {
+  dataReferenciaBr: string;
+  tituloPagamentoSemanal: string;
+  totais: DashboardRecebimentosTotais;
+  contagens: { venceHoje: number; atrasados: number };
+};
+
+export type DashboardRecebimentosListaResponse = {
+  dataReferenciaBr: string;
+  tituloPagamentoSemanal?: string;
+  items: DashboardRecebimentoLinha[];
+};
+
 export type DashboardRecebimentos = {
   dataReferenciaBr: string;
   /** Ex.: Pagamento semanal (SÁBADO) */
@@ -373,11 +386,61 @@ function totalSemanalAberto(ctx: CobrancasDbContext): number {
   );
 }
 
+export type DashboardRecebimentosMeta = {
+  dataReferenciaBr: string;
+  tituloPagamentoSemanal: string;
+};
+
+function dashboardMeta(): DashboardRecebimentosMeta {
+  return {
+    dataReferenciaBr: hojeBr(),
+    tituloPagamentoSemanal: `Pagamento semanal (${nomeDiaSemanaBr()})`,
+  };
+}
+
+export function listarDashboardRecebimentosVenceHoje(
+  ctx?: CobrancasDbContext,
+): DashboardRecebimentoLinha[] {
+  const db = ctx ?? loadCobrancasDbContextSync();
+  return listarVenceHoje(hojeBr(), db);
+}
+
+export function listarDashboardRecebimentosAtrasados(
+  ctx?: CobrancasDbContext,
+): DashboardRecebimentoLinha[] {
+  const db = ctx ?? loadCobrancasDbContextSync();
+  return listarAtrasados(hojeBr(), db);
+}
+
+export function obterDashboardRecebimentosTotais(
+  ctx?: CobrancasDbContext,
+): DashboardRecebimentosTotaisResponse {
+  const db = ctx ?? loadCobrancasDbContextSync();
+  const meta = dashboardMeta();
+  const venceHoje = listarVenceHoje(meta.dataReferenciaBr, db);
+  const atrasados = listarAtrasados(meta.dataReferenciaBr, db);
+
+  return {
+    ...meta,
+    totais: {
+      venceHoje: round2(venceHoje.reduce((s, l) => s + l.valor, 0)),
+      atrasado: round2(atrasados.reduce((s, l) => s + l.valor, 0)),
+      semanal: totalSemanalAberto(db),
+      caucao: somaCategoria(CategoriaDespesaCliente.Caucao, db),
+      renegociacao: somaCategoria(CategoriaDespesaCliente.Renegociacao, db),
+    },
+    contagens: {
+      venceHoje: venceHoje.length,
+      atrasados: atrasados.length,
+    },
+  };
+}
+
 export function obterDashboardRecebimentos(ctx?: CobrancasDbContext): DashboardRecebimentos {
   const db = ctx ?? loadCobrancasDbContextSync();
-  const dataReferenciaBr = hojeBr();
-  const venceHoje = listarVenceHoje(dataReferenciaBr, db);
-  const atrasados = listarAtrasados(dataReferenciaBr, db);
+  const meta = dashboardMeta();
+  const venceHoje = listarVenceHoje(meta.dataReferenciaBr, db);
+  const atrasados = listarAtrasados(meta.dataReferenciaBr, db);
 
   const totais: DashboardRecebimentosTotais = {
     venceHoje: round2(venceHoje.reduce((s, l) => s + l.valor, 0)),
@@ -388,8 +451,7 @@ export function obterDashboardRecebimentos(ctx?: CobrancasDbContext): DashboardR
   };
 
   return {
-    dataReferenciaBr,
-    tituloPagamentoSemanal: `Pagamento semanal (${nomeDiaSemanaBr()})`,
+    ...meta,
     venceHoje,
     atrasados,
     totais,

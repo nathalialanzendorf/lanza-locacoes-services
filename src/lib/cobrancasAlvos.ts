@@ -41,6 +41,7 @@ import {
   veiculoRefAtivo,
   type VeiculoRegistro,
 } from "./veiculosDb.js";
+import { isVeiculoFrotaLocacao } from "./domain/tipoVeiculoFrota.js";
 
 import {
   CategoriaDespesaCliente,
@@ -86,7 +87,7 @@ function veiculosAtivos(ctx?: CobrancasDbContext) {
   const lista = ctx?.veiculos ?? loadVeiculosDb().veiculos;
   for (const v of lista) {
     if (v.ativo === false) continue;
-    if (v.particular === true) continue;
+    if (!isVeiculoFrotaLocacao(v)) continue;
     map.set(compactPlaca(v.placa), v);
     if (v.id?.trim()) map.set(v.id.trim(), v);
   }
