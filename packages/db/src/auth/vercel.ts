@@ -4,7 +4,7 @@ import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
 import { attachDatabasePool } from "@vercel/functions";
 import pg from "pg";
 
-import { getPgConfig, pgSslOptions, type PgConfig } from "../config.js";
+import { getPgConfig, pgSslOptions, PG_CONNECTION_TIMEOUT_MS, type PgConfig } from "../config.js";
 
 const { Pool } = pg;
 
@@ -41,7 +41,7 @@ export function createVercelPostgresPool(config?: Partial<PgConfig>): pg.Pool {
     password: () => signer.getAuthToken(),
     port: pgConfig.port,
     ssl: pgSslOptions(pgConfig.sslMode) ?? { rejectUnauthorized: false },
-    connectionTimeoutMillis: 30_000,
+    connectionTimeoutMillis: PG_CONNECTION_TIMEOUT_MS,
     idleTimeoutMillis: 60_000,
     max: 5,
   });

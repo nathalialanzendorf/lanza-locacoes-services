@@ -3,6 +3,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { fetchWithTimeout } from "./httpTimeout.js";
 
 function convertApiSecret(): string | null {
   return (
@@ -93,7 +94,7 @@ export async function exportDocxToPdfConvertApi(
   form.append("File", new Blob([docxBuffer]), path.basename(absDocx));
   form.append("StoreFile", "false");
 
-  const res = await fetch("https://v2.convertapi.com/convert/docx/to/pdf", {
+  const res = await fetchWithTimeout("https://v2.convertapi.com/convert/docx/to/pdf", {
     method: "POST",
     headers: { Authorization: `Bearer ${secret}` },
     body: form,
@@ -116,7 +117,7 @@ export async function exportDocxToPdfConvertApi(
   if (file.FileData) {
     pdfBuffer = Buffer.from(file.FileData, "base64");
   } else if (file.Url) {
-    const dl = await fetch(file.Url);
+    const dl = await fetchWithTimeout(file.Url);
     if (!dl.ok) {
       console.error("[aviso] ConvertAPI download falhou:", dl.status);
       return false;

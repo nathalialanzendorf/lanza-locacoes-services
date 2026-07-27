@@ -3,6 +3,7 @@
  * Credenciais via variáveis de ambiente do utilizador — nunca versionar tokens.
  */
 import { loadLocalEnv } from "../loadLocalEnv.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 
 loadLocalEnv();
 
@@ -63,7 +64,7 @@ export async function checkPagBankAuth(): Promise<{ ok: true; creditos: number }
     page: "1",
   });
   const url = `${PAGBANK_API}/checkingaccount/statements/list?${q.toString()}`;
-  const r = await fetch(url, { method: "GET", headers: pagBankHeaders() });
+  const r = await fetchWithTimeout(url, { method: "GET", headers: pagBankHeaders() });
   const text = await r.text();
   if (!r.ok) {
     throw new Error(`PagBank HTTP ${r.status}: ${text.slice(0, 300)}`);

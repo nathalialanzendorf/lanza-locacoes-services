@@ -29,7 +29,7 @@ const PEDAGIO_DIGITAL_WEBSITE_URL = "https://pedagiodigital.com/";
 export const PEDAGIO_DIGITAL_RECAPTCHA_SITEKEY =
   "6LfNthIrAAAAAIezkzLOg01fWHcyQtk-PjbraHwz";
 
-const DEFAULT_TIMEOUT_MS = 120_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 5_000;
 
 export type CaptchaProvider = "capsolver" | "2captcha" | "anticaptcha";

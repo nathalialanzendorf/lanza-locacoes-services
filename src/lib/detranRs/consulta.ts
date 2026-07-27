@@ -1,5 +1,6 @@
 import { compactPlaca } from "../placa.js";
 import { DETRAN_RS_API_BASE, detranRsJsonHeaders } from "./auth.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 
 /** Resposta crua do endpoint de consulta de veículo do DETRAN RS. */
 export type DetranRsConsultaVeiculo = Record<string, unknown>;
@@ -17,7 +18,7 @@ export async function consultarVeiculoDetranRs(
   const renavamUrl = String(renavam).replace(/\D/g, "");
   const url = `${DETRAN_RS_API_BASE}/veiculos/${encodeURIComponent(placaUrl)}/?renavam=${encodeURIComponent(renavamUrl)}&contabiliza=false`;
 
-  const resp = await fetch(url, { headers: detranRsJsonHeaders() });
+  const resp = await fetchWithTimeout(url, { headers: detranRsJsonHeaders() });
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
     throw new Error(

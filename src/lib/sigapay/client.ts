@@ -1,6 +1,4 @@
-/**
- * HTTP de baixo nível para a API SigaPay (Zona Azul Brasil).
- */
+import { fetchWithTimeout } from "../httpTimeout.js";
 import {
   clearSigapaySession,
   SIGAPAY_API_BASE,
@@ -44,7 +42,7 @@ async function doFetch(path: string, opts: ApiFetchOpts): Promise<Response> {
   const headers = await sigapayJsonHeaders(opts.referer);
   const hasBody = opts.body !== undefined;
   if (!hasBody) delete headers["Content-Type"];
-  return fetch(url, {
+  return fetchWithTimeout(url, {
     method: opts.method ?? "GET",
     headers,
     body: hasBody ? JSON.stringify(opts.body) : undefined,

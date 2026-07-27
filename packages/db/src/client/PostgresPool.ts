@@ -3,7 +3,7 @@ import pg from "pg";
 import { createVercelPostgresPool } from "../auth/vercel.js";
 import { getDbBackend } from "../adapters/index.js";
 import { resolvePgPassword } from "../auth/iam.js";
-import { getPgConfig, pgSslOptions, type PgConfig } from "../config.js";
+import { getPgConfig, pgSslOptions, PG_CONNECTION_TIMEOUT_MS, type PgConfig } from "../config.js";
 import { loggedPgQuery } from "./pgSqlLog.js";
 
 const { Pool } = pg;
@@ -33,7 +33,7 @@ export class PostgresPool {
     this.poolOptions = {
       max: options.max ?? 5,
       idleTimeoutMillis: options.idleTimeoutMillis ?? 30_000,
-      connectionTimeoutMillis: options.connectionTimeoutMillis ?? 15_000,
+      connectionTimeoutMillis: options.connectionTimeoutMillis ?? PG_CONNECTION_TIMEOUT_MS,
     };
   }
 

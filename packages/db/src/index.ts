@@ -8,6 +8,7 @@ export {
   LANZA_PRODUCTION_PGHOST,
   LANZA_PRODUCTION_AWS_ROLE_ARN,
   LANZA_PRODUCTION_AWS_REGION,
+  PG_CONNECTION_TIMEOUT_MS,
   type PgConfig,
   type PgSslMode,
 } from "./config.js";

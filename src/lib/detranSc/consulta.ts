@@ -3,6 +3,7 @@ import {
   DETRAN_SC_API_BASE,
   detranScJsonHeaders,
 } from "./auth.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 import type { DetranScConsultaVeiculo } from "./types.js";
 
 // Início da consulta: GET /veiculo/requisitar-consulta?p=PLACA&r=RENAVAM&c=CAPTCHA&v=
@@ -110,7 +111,7 @@ async function iniciarConsulta(
     `${DETRAN_SC_API_BASE}${REQUISITAR_PATH}` +
     `?p=${encodeURIComponent(placaApi)}&r=${encodeURIComponent(renavamApi)}&c=${cParam}&v=`;
 
-  const r = await fetch(url, { headers: await detranScJsonHeaders() });
+  const r = await fetchWithTimeout(url, { headers: await detranScJsonHeaders() });
   const text = await r.text();
   if (debug) {
     console.error(`[detran-debug] GET requisitar-consulta p=${placaApi} → HTTP ${r.status}: ${text.slice(0, 400)}`);
@@ -144,7 +145,7 @@ async function buscarResposta(ticket: string): Promise<DetranScConsultaVeiculo> 
   const delays = [500, 1000, 1500, 2000, 2500, 3000];
 
   for (let i = 0; i < delays.length; i++) {
-    const r = await fetch(url, { headers: await detranScJsonHeaders() });
+    const r = await fetchWithTimeout(url, { headers: await detranScJsonHeaders() });
     const raw = await r.json().catch(() => ({}));
 
     if (r.status === 202 || r.status === 204) {

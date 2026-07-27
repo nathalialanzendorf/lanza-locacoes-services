@@ -12,7 +12,7 @@ const CACHE_PATH =
   process.env.TEMP ||
   (process.platform === "win32" ? path.join(process.cwd(), "relatorios", "_tmp", "_ocr-cache") : "/tmp");
 
-const OCR_TIMEOUT_MS = Number(process.env.LANZA_OCR_TIMEOUT_MS ?? 120_000);
+const OCR_TIMEOUT_MS = Number(process.env.LANZA_OCR_TIMEOUT_MS ?? 30_000);
 
 type TesseractModule = typeof import("tesseract.js");
 

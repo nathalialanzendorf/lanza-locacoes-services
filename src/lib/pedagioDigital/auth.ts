@@ -9,6 +9,7 @@
  * `PEDAGIO_DIGITAL_COOKIE` + `PEDAGIO_DIGITAL_CSRF` — têm prioridade sobre o login.
  */
 import { loadLocalEnv } from "../loadLocalEnv.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 import {
   clearCachedSession,
   readCachedSession,
@@ -105,7 +106,7 @@ export async function loginPedagioDigital(): Promise<PedagioSession | null> {
     return null;
   }
 
-  const r = await fetch(PEDAGIO_DIGITAL_LOGIN_URL, {
+  const r = await fetchWithTimeout(PEDAGIO_DIGITAL_LOGIN_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",

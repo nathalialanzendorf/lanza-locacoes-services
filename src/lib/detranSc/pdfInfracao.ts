@@ -11,6 +11,7 @@ import type { DetranScInfracao } from "./types.js";
 import { compactPlaca } from "../placa.js";
 
 import { loadInfracoesDb } from "../infracoesDb.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 
 
 
@@ -280,7 +281,7 @@ function urlAitPdf(placa: string, ticket: string, idAutoInfracao: number): strin
 
 
 async function fetchPdfUrl(url: string): Promise<Buffer | null> {
-  const r = await fetch(url, { headers: await detranScPdfHeaders() });
+  const r = await fetchWithTimeout(url, { headers: await detranScPdfHeaders() });
   if (!r.ok) {
     if (process.env.DETRAN_SC_DEBUG === "1") {
       console.error(`[detran-pdf] HTTP ${r.status} ${url}`);
@@ -326,7 +327,7 @@ async function fetchNotificacaoAutuacao(
 
   const url = urlNotificacaoAutuacao(protocolo, senha);
 
-  const r = await fetch(url, { headers: await detranScJsonHeaders() });
+  const r = await fetchWithTimeout(url, { headers: await detranScJsonHeaders() });
 
   if (!r.ok) {
 

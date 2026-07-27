@@ -3,6 +3,7 @@
  * Reutilizável por motorista, gastos e outras integrações.
  */
 import { loadLocalEnv } from "../loadLocalEnv.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 
 loadLocalEnv();
 
@@ -43,7 +44,7 @@ export async function loginRastreame(): Promise<string | null> {
     "utf8",
   ).toString("base64");
   try {
-    const r = await fetch(LOGIN_URL, {
+    const r = await fetchWithTimeout(LOGIN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,5 +1,8 @@
 export const API_VERSION = "0.1.0";
 
+/** Timeout padrão de operações HTTP / rede na API (ms). */
+export const HTTP_TIMEOUT_MS = 30_000;
+
 export function apiPort(): number {
   const raw = process.env.PORT ?? process.env.LANZA_API_PORT ?? "3100";
   const n = Number.parseInt(raw, 10);

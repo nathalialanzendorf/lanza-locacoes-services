@@ -1,6 +1,4 @@
-/**
- * HTTP de baixo nível para o BFF de pedagiodigital.com.
- */
+import { fetchWithTimeout } from "../httpTimeout.js";
 import {
   clearPedagioSession,
   PEDAGIO_DIGITAL_API_BASE,
@@ -48,7 +46,7 @@ async function doFetch(
   const headers = await pedagioDigitalJsonHeaders(opts.referer);
   const hasBody = opts.body !== undefined;
   if (!hasBody) delete headers["Content-Type"];
-  return fetch(url, {
+  return fetchWithTimeout(url, {
     method: opts.method ?? "GET",
     headers,
     body: hasBody ? JSON.stringify(opts.body) : undefined,

@@ -3,10 +3,10 @@ import {
   createVercelPostgresPool,
   getDbBackend,
   getVercelPostgresPool,
+  PG_CONNECTION_TIMEOUT_MS,
   pgQuery,
   setVercelPostgresPool,
-} from "@lanza/db";
-import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "../lib-imports.js";
+} from "@lanza/db";import { isBlobConfigured, isStorageActive, localMirrorRoot, storagePrefix } from "../lib-imports.js";
 import { obterRastreameEspelhoConfig } from "../lib-imports.js";
 
 export type SystemStatus = {
@@ -63,7 +63,7 @@ async function pingPostgres(): Promise<{ ok: boolean; error?: string }> {
         }
         await pgQuery("SELECT 1");
       })(),
-      8_000,
+      PG_CONNECTION_TIMEOUT_MS,
       "ping Postgres",
     );
     return { ok: true };

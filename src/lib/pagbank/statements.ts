@@ -2,6 +2,7 @@
  * Extrato PagBank (minhaconta.pagbank.com.br) — créditos na conta.
  */
 import { pagBankHeaders, PAGBANK_API } from "./auth.js";
+import { fetchWithTimeout } from "../httpTimeout.js";
 
 export type PagBankCredito = {
   id: string;
@@ -212,7 +213,7 @@ export async function fetchCreditosPagBank(
     page: String(page),
   });
   const url = `${PAGBANK_API}/checkingaccount/statements/list?${q.toString()}`;
-  const r = await fetch(url, { method: "GET", headers: pagBankHeaders() });
+  const r = await fetchWithTimeout(url, { method: "GET", headers: pagBankHeaders() });
   const text = await r.text();
   if (!r.ok) {
     throw new Error(`PagBank HTTP ${r.status}: ${text.slice(0, 400)}`);

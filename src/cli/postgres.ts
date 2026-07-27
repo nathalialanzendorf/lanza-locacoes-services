@@ -8,7 +8,7 @@ import {
   pgSslOptions,
   resolvePgPassword,
 } from "../lib/postgres/index.js";
-import { importJsonStores, runSchemaMigration } from "@lanza/db";
+import { importJsonStores, runSchemaMigration, PG_CONNECTION_TIMEOUT_MS } from "@lanza/db";
 import { PgAuthError } from "@lanza/db";
 
 const HELP = `postgres — conexão PostgreSQL (RDS AWS)
@@ -109,7 +109,7 @@ export async function main(args: string[]): Promise<void> {
           user: config.user,
           password: token,
           ssl: pgSslOptions(config.sslMode),
-          connectionTimeoutMillis: 15_000,
+          connectionTimeoutMillis: PG_CONNECTION_TIMEOUT_MS,
         });
         try {
           const role = config.user.replace(/"/g, '""');
