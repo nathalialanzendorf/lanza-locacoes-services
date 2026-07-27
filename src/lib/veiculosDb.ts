@@ -11,6 +11,7 @@ import {
   useRelationalStore,
   assertRelationalStore,
   loadVeiculosFromSql,
+  loadVeiculosFromSqlLight,
   queryVeiculosFromSql,
   saveVeiculosToSql,
   upsertVeiculoToSql,
@@ -109,7 +110,7 @@ export async function loadVeiculosDbAsync(scope?: VeiculosLoadScope): Promise<Ve
         veiculos,
       };
     }
-    return (await loadVeiculosFromSql()) as VeiculosDb;
+    return (await loadVeiculosFromSqlLight()) as VeiculosDb;
   }
   return loadJsonDocumentForApi<VeiculosDb>(DB_VEICULOS, {
     descricao: DEFAULT_DESCRICAO,

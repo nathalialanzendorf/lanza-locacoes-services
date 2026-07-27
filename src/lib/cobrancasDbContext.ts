@@ -109,6 +109,21 @@ export function loadCobrancasDbContextSync(): CobrancasDbContext {
   };
 }
 
+export async function loadCobrancasDbContextForResumoAsync(): Promise<CobrancasDbContext> {
+  const [clienteDespesasDb, clientesDb, veiculosDb, contratosDb] = await Promise.all([
+    loadClienteDespesasDbAsync({ emAberto: true, ativo: true }),
+    loadClientesDbAsync(),
+    loadVeiculosDbAsync(),
+    loadContratosDbAsync(),
+  ]);
+  return {
+    clienteDespesas: clienteDespesasDb.clienteDespesas,
+    clientes: clientesDb.clientes,
+    veiculos: veiculosDb.veiculos,
+    contratos: contratosDb.contratos,
+  };
+}
+
 export async function loadCobrancasDbContextAsync(): Promise<CobrancasDbContext> {
   const [clienteDespesasDb, clientesDb, veiculosDb, contratosDb] = await Promise.all([
     loadClienteDespesasDbAsync(),

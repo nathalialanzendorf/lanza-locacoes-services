@@ -23,7 +23,7 @@ import {
   contratoVinculadoVeiculo,
   despesaClienteAbertaDashboard,
   obterDashboardRecebimentos,
-  loadCobrancasDbContextAsync,
+  loadCobrancasDbContextForResumoAsync,
   loadCobrancasDbContextSync,
   type CobrancasDbContext,
   type DashboardRecebimentos,
@@ -208,7 +208,7 @@ export async function obterResumoAsync() {
   const [parceiroDespesasDb, infracoesDb, cobrancasCtx] = await Promise.all([
     loadParceiroDespesasDbAsync(),
     loadInfracoesDbAsync(),
-    loadCobrancasDbContextAsync(),
+    loadCobrancasDbContextForResumoAsync(),
   ]);
 
   const stores: ResumoStores = {

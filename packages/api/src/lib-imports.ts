@@ -195,6 +195,7 @@ export {
 
 export {
   loadCobrancasDbContextAsync,
+  loadCobrancasDbContextForResumoAsync,
   loadCobrancasDbContextSync,
   loadCobrancasScopedDbContextAsync,
   getCobrancasRuntimeCtx,

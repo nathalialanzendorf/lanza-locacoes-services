@@ -70,6 +70,7 @@ export {
   deleteVinculoFromSql,
   deleteVinculosByVeiculoFromSql,
   loadVeiculosFromSql,
+  loadVeiculosFromSqlLight,
   saveVeiculosToSql,
   upsertVeiculoToSql,
   loadClientesFromSql,

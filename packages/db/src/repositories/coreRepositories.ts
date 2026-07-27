@@ -200,6 +200,19 @@ function rowToVeiculo(r: Record<string, unknown>): VeiculoRow {
   return veiculo;
 }
 
+export async function loadVeiculosFromSqlLight(): Promise<VeiculosDbShape> {
+  const r = await pgQuery(
+    `SELECT v.* FROM lanza.veiculos v ORDER BY v.placa`,
+    undefined,
+    "loadVeiculosFromSqlLight",
+  );
+  return {
+    descricao: DEFAULT_VEICULOS_DESC,
+    atualizadoEm: new Date().toISOString().slice(0, 10),
+    veiculos: r.rows.map((row) => rowToVeiculo(row as Record<string, unknown>)),
+  };
+}
+
 export async function loadVeiculosFromSql(): Promise<VeiculosDbShape> {
   const r = await pgQuery(
     `SELECT v.*,
@@ -513,7 +526,7 @@ export async function queryVeiculosFromSql(filter: VeiculosSqlFilter = {}): Prom
   }
 
   if (where.length === 0) {
-    return (await loadVeiculosFromSql()).veiculos;
+    return (await loadVeiculosFromSqlLight()).veiculos;
   }
 
   const r = await pgQuery(
