@@ -240,6 +240,18 @@ export function vencimentoSemanalElegivelCobranca(
   return inferirDiaEscalonamento(vencimentoBr, hojeBr) != null;
 }
 
+/** Igual a {@link vencimentoSemanalElegivelCobranca}, mas ignora datas inválidas (evita derrubar o dashboard). */
+export function vencimentoSemanalElegivelCobrancaSafe(
+  vencimentoBr: string,
+  hojeBr: string,
+): boolean {
+  try {
+    return vencimentoSemanalElegivelCobranca(vencimentoBr, hojeBr);
+  } catch {
+    return false;
+  }
+}
+
 /** Dias corridos desde o vencimento (negativo = futuro). */
 function diasDesdeVencimento(vencimentoBr: string, hojeBr: string): number {
   const vencimento = parseDataBrOrThrow(vencimentoBr);

@@ -26,7 +26,10 @@ import {
   isJurosMultaSemanalDescricao,
   vencimentoDespesaSemanalBr,
 } from "./pagamentoSemanal.js";
-import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
+import {
+  vencimentoSemanalElegivelCobranca,
+  vencimentoSemanalElegivelCobrancaSafe,
+} from "./pagamentoSemanalCobranca.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
@@ -160,9 +163,10 @@ function temContratoAtivoLocacao(
   clienteId: string | null | undefined,
   placa: string,
   contratos: ContratoRegistro[],
+  veiculoId?: string | null,
 ): boolean {
   if (!clienteId) return false;
-  const contrato = contratoMaisRecentePar({ placa, clienteId }, contratos);
+  const contrato = contratoMaisRecentePar({ placa, veiculoId, clienteId }, contratos);
   return contrato?.status === StatusContrato.Ativo;
 }
 
@@ -215,11 +219,15 @@ function clienteTemPendenciaEncerrada(
 function contratoAtivoPorPlaca(
   placa: string,
   contratos: ContratoRegistro[],
+  veiculoId?: string | null,
 ): ContratoRegistro | undefined {
   const p = compactPlaca(placa);
-  const list = contratos.filter(
-    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa) === p,
-  );
+  const vid = veiculoId?.trim() || null;
+  const list = contratos.filter((c) => {
+    if (c.status !== StatusContrato.Ativo) return false;
+    if (vid && c.veiculoId === vid) return true;
+    return compactPlaca(c.placa ?? "") === p;
+  });
   if (list.length === 0) return undefined;
   return list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0];
 }
@@ -234,6 +242,7 @@ function condutorEfetivoPagamentoSemanal(
   placa: string,
   clientes: ReturnType<typeof clientesAtivos>,
   contratos: ContratoRegistro[],
+  veiculoId?: string | null,
 ): { clienteId: string | null; clienteNome: string | null } {
   const placaFmt = formatPlacaHyphen(placa);
 
@@ -241,6 +250,7 @@ function condutorEfetivoPagamentoSemanal(
     const contratoCondutor = contratoMaisRecentePar(
       {
         placa: placaFmt,
+        veiculoId,
         clienteId: d.condutorId,
       },
       contratos,
@@ -257,7 +267,7 @@ function condutorEfetivoPagamentoSemanal(
       return { clienteId: null, clienteNome: null };
     }
     // condutorId legado/desalinhado — usa locatário ativo da placa (ex.: pós-backfill Postgres).
-    const vigenteComCondutor = contratoAtivoPorPlaca(placaFmt, contratos);
+    const vigenteComCondutor = contratoAtivoPorPlaca(placaFmt, contratos, veiculoId);
     if (vigenteComCondutor?.clienteId) {
       return {
         clienteId: vigenteComCondutor.clienteId,
@@ -267,7 +277,7 @@ function condutorEfetivoPagamentoSemanal(
     return { clienteId: null, clienteNome: null };
   }
 
-  const vigente = contratoAtivoPorPlaca(placaFmt, contratos);
+  const vigente = contratoAtivoPorPlaca(placaFmt, contratos, veiculoId);
   if (vigente?.clienteId) {
     return {
       clienteId: vigente.clienteId,
@@ -460,7 +470,7 @@ function filtrarPagamentoSemanal(
       );
       if (
         vencSemanal &&
-        !vencimentoSemanalElegivelCobranca(vencSemanal, dataReferencia)
+        !vencimentoSemanalElegivelCobrancaSafe(vencSemanal, dataReferencia)
       ) {
         continue;
       }
@@ -475,13 +485,16 @@ function filtrarPagamentoSemanal(
     }
 
     const placa = placaFromVeiculoRef(d.veiculoId, veiculos);
-    const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes, contratos);
-    if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa, contratos)) {
+    const veiculo = veiculos.get(String(d.veiculoId ?? "").trim()) ?? veiculos.get(compactPlaca(d.veiculoId));
+    const veiculoId = veiculo?.id?.trim() || null;
+    const efetivo = condutorEfetivoPagamentoSemanal(d, placa, clientes, contratos, veiculoId);
+    if (!efetivo.clienteId || !temContratoAtivoLocacao(efetivo.clienteId, placa, contratos, veiculoId)) {
       continue;
     }
     const contrato = contratoMaisRecentePar(
       {
         placa,
+        veiculoId,
         clienteId: efetivo.clienteId,
       },
       contratos,
@@ -630,11 +643,16 @@ export function listarEscoposContratosAtivosCobranca(
   const contratos = ctx?.contratos ?? loadContratosDb().contratos;
 
   for (const c of contratos) {
-    if (!contratoAtivoOperacional(c) || !c.placa || !c.clienteId) continue;
-    if (!placaElegivel(c.placa, veiculos)) continue;
+    if (!contratoAtivoOperacional(c) || !c.clienteId) continue;
+    const veiculoRef = c.veiculoId?.trim() || c.placa?.trim() || "";
+    if (!veiculoRef) continue;
+    if (!placaElegivel(veiculoRef, veiculos)) continue;
     if (!clienteElegivel(c.clienteId, clientes)) continue;
 
-    const p = compactPlaca(c.placa);
+    const placaFmt = c.placa?.trim()
+      ? formatPlacaHyphen(c.placa)
+      : placaFromVeiculoRef(veiculoRef, veiculos);
+    const p = compactPlaca(placaFmt);
     const cur = porPlaca.get(p);
     if (!cur) {
       porPlaca.set(p, c);
@@ -652,9 +670,12 @@ export function listarEscoposContratosAtivosCobranca(
 
   const escopos: FiltroAlvosCobranca[] = [];
   for (const c of porPlaca.values()) {
+    const placaEscopo = c.placa?.trim()
+      ? formatPlacaHyphen(c.placa)
+      : placaFromVeiculoRef(String(c.veiculoId ?? ""), veiculos);
     escopos.push({
       clienteId: c.clienteId!,
-      placa: formatPlacaHyphen(c.placa),
+      placa: placaEscopo,
     });
   }
 

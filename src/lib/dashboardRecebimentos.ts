@@ -16,6 +16,10 @@ import {
   type CobrancasDbContext,
 } from "./cobrancasDbContext.js";
 import type { ContratoRegistro } from "./contratosDb.js";
+import {
+  contratoMaisRecentePar,
+  contratoVinculadoVeiculo,
+} from "./contratosDb.js";
 import { compararDataBrAsc } from "./contratoExtrair.js";
 import { diaPagamentoParaDow } from "./caucaoParcelas.js";
 import { hojeBr, hojeDowBr, nomeDiaSemanaBr, parseDataBrOuIsoDia } from "./dataBr.js";
@@ -23,10 +27,10 @@ import {
   isJurosMultaSemanalDescricao,
   vencimentoDespesaSemanalBr,
 } from "./pagamentoSemanal.js";
-import { vencimentoSemanalElegivelCobranca } from "./pagamentoSemanalCobranca.js";
+import { vencimentoSemanalElegivelCobrancaSafe } from "./pagamentoSemanalCobranca.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { formatVeiculoLabel } from "./veiculoLabel.js";
-import { placaHyphenVeiculoRef, veiculoRefAtivo, type VeiculoRegistro } from "./veiculosDb.js";
+import { findVeiculoInDb, placaHyphenVeiculoRef, veiculoRefAtivo, type VeiculoRegistro } from "./veiculosDb.js";
 import { StatusContrato, CategoriaDespesaCliente, TipoCobrancaAction } from "./domain/index.js";
 
 export type DashboardRecebimentoLinha = {
@@ -87,21 +91,60 @@ function clienteAtivo(clienteId: string | null | undefined, clientes: ClienteReg
   return c != null && c.ativo !== false;
 }
 
-function contratoAtivoPlaca(
-  placa: string,
+function contratoAtivoVeiculoRef(
+  veiculoRef: string,
   contratos: ContratoRegistro[],
+  veiculos: VeiculoRegistro[],
   clienteId?: string | null,
 ): ContratoRegistro | null {
-  const p = compactPlaca(placa);
-  const list = contratos.filter(
-    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? "") === p,
+  const placa = placaDoVeiculoRef(veiculoRef, veiculos);
+  const veiculo = findVeiculoInDb({ veiculos }, veiculoRef);
+  const veiculoId = veiculo?.id?.trim() || null;
+
+  if (clienteId) {
+    const par = contratoMaisRecentePar(
+      { placa, veiculoId, clienteId },
+      contratos,
+      veiculos,
+    );
+    if (par?.status === StatusContrato.Ativo) return par;
+  }
+
+  const ativos = contratos.filter(
+    (c) =>
+      c.status === StatusContrato.Ativo &&
+      contratoVinculadoVeiculo(c, veiculo ?? { id: veiculoId ?? veiculoRef, placa }),
   );
   if (clienteId) {
-    const par = list.find((c) => c.clienteId === clienteId);
+    const par = ativos.find((c) => c.clienteId === clienteId);
     if (par) return par;
   }
-  list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
-  return list[0] ?? null;
+  ativos.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
+  return ativos[0] ?? null;
+}
+
+function clienteIdEfetivoDespesa(
+  d: ClienteDespesaRegistro,
+  ctx: CobrancasDbContext,
+): string | null {
+  if (d.condutorId && clienteAtivo(d.condutorId, ctx.clientes)) {
+    return d.condutorId;
+  }
+  const contrato = contratoAtivoVeiculoRef(d.veiculoId, ctx.contratos, ctx.veiculos);
+  if (contrato?.clienteId && clienteAtivo(contrato.clienteId, ctx.clientes)) {
+    return contrato.clienteId;
+  }
+  return d.condutorId ?? null;
+}
+
+function despesaElegivelTotaisDashboard(
+  d: ClienteDespesaRegistro,
+  ctx: CobrancasDbContext,
+): boolean {
+  if (!despesaAberta(d)) return false;
+  if (!veiculoAtivo(d.veiculoId, ctx.veiculos)) return false;
+  const clienteId = clienteIdEfetivoDespesa(d, ctx);
+  return Boolean(clienteId && clienteAtivo(clienteId, ctx.clientes));
 }
 
 function chaveClientePlaca(clienteId: string | null, placa: string): string {
@@ -109,7 +152,7 @@ function chaveClientePlaca(clienteId: string | null, placa: string): string {
 }
 
 function diasAtrasoDeVencimento(vencBr: string, hoje: string): number | null {
-  if (!vencimentoSemanalElegivelCobranca(vencBr, hoje)) return null;
+  if (!vencimentoSemanalElegivelCobrancaSafe(vencBr, hoje)) return null;
   const venc = parseDataBrOuIsoDia(vencBr);
   const ref = parseDataBrOuIsoDia(hoje);
   if (!venc || !ref) return null;
@@ -210,10 +253,10 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
       d.dataAutuacao,
     );
     if (!venc || venc !== hoje) continue;
-    if (vencimentoSemanalElegivelCobranca(venc, hoje)) continue;
+    if (vencimentoSemanalElegivelCobrancaSafe(venc, hoje)) continue;
 
     const placa = placaDoVeiculoRef(d.veiculoId, ctx.veiculos);
-    const contrato = contratoAtivoPlaca(placa, ctx.contratos, d.condutorId);
+    const contrato = contratoAtivoVeiculoRef(d.veiculoId, ctx.contratos, ctx.veiculos, d.condutorId);
     const clienteId = contrato?.clienteId ?? d.condutorId ?? null;
     if (!clienteAtivo(clienteId, ctx.clientes)) continue;
 
@@ -241,7 +284,12 @@ function listarVenceHoje(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
   const hojeDow = hojeDowBr();
   for (const escopo of listarEscoposContratosAtivosCobranca(ctx)) {
     if (!escopo.placa || !escopo.clienteId) continue;
-    const contrato = contratoAtivoPlaca(escopo.placa, ctx.contratos, escopo.clienteId);
+    const contrato = contratoMaisRecentePar(
+      { placa: escopo.placa, clienteId: escopo.clienteId },
+      ctx.contratos,
+      ctx.veiculos,
+    );
+    if (contrato?.status !== StatusContrato.Ativo) continue;
     if (!contrato?.diaPagamentoSemana || contrato.valorSemanal == null) continue;
     if (diaPagamentoParaDow(contrato.diaPagamentoSemana) !== hojeDow) continue;
 
@@ -279,7 +327,7 @@ function listarAtrasados(hoje: string, ctx: CobrancasDbContext): DashboardRecebi
         d.rastreameDataIso,
         d.dataAutuacao,
       );
-      if (!venc || !vencimentoSemanalElegivelCobranca(venc, hoje)) continue;
+      if (!venc || !vencimentoSemanalElegivelCobrancaSafe(venc, hoje)) continue;
       if (vistos.has(d.id)) continue;
       vistos.add(d.id);
 
@@ -305,10 +353,8 @@ function somaCategoria(categoria: string, ctx: CobrancasDbContext): number {
     ctx.clienteDespesas
       .filter(
         (d) =>
-          despesaAberta(d) &&
-          (d.categoria ?? "") === categoria &&
-          veiculoAtivo(d.veiculoId, ctx.veiculos) &&
-          clienteAtivo(d.condutorId, ctx.clientes),
+          despesaElegivelTotaisDashboard(d, ctx) &&
+          (d.categoria ?? "") === categoria,
       )
       .reduce((s, d) => s + (Number(d.valorMulta) || 0), 0),
   );
@@ -319,11 +365,9 @@ function totalSemanalAberto(ctx: CobrancasDbContext): number {
     ctx.clienteDespesas
       .filter(
         (d) =>
-          despesaAberta(d) &&
+          despesaElegivelTotaisDashboard(d, ctx) &&
           d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
-          !isJurosMultaSemanalDescricao(d.descricao ?? "") &&
-          veiculoAtivo(d.veiculoId, ctx.veiculos) &&
-          clienteAtivo(d.condutorId, ctx.clientes),
+          !isJurosMultaSemanalDescricao(d.descricao ?? ""),
       )
       .reduce((s, d) => s + (Number(d.valorMulta) || 0), 0),
   );
@@ -361,8 +405,5 @@ export function despesaClienteAbertaDashboard(
   d: ClienteDespesaRegistro,
   ctx: CobrancasDbContext,
 ): boolean {
-  if (!despesaAberta(d)) return false;
-  if (!veiculoAtivo(d.veiculoId, ctx.veiculos)) return false;
-  if (d.condutorId && !clienteAtivo(d.condutorId, ctx.clientes)) return false;
-  return true;
+  return despesaElegivelTotaisDashboard(d, ctx);
 }
