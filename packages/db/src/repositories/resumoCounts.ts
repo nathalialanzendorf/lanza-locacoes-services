@@ -95,10 +95,7 @@ export async function queryResumoCountsFromSql(): Promise<ResumoCounts> {
             SELECT 1
             FROM lanza.contratos c
             WHERE ${CONTRATO_ATIVO_SQL}
-              AND (
-                c.veiculo_id = v.id
-                OR lower(regexp_replace(c.placa, '[^a-zA-Z0-9]', '', 'g')) = v.placa_norm
-              )
+              AND c.veiculo_id = v.id
           )
       ) AS veiculos_locados,
 
