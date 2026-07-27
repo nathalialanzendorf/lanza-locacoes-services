@@ -93,6 +93,20 @@ export function obterResumo(): ResumoCounts {
 let resumoCache: { at: number; data: ResumoCounts } | null = null;
 const RESUMO_CACHE_MS = 20_000;
 
+const RESUMO_VAZIO: ResumoCounts = {
+  clientes: { total: 0, ativos: 0 },
+  veiculos: { total: 0, ativos: 0, locados: 0, naoLocados: 0 },
+  infracoes: {
+    emAberto: 0,
+    notificadas: 0,
+    emAbertoDebito: 0,
+    semResponsavel: 0,
+    comVencimento: 0,
+    semCliente: 0,
+    semCondutor: 0,
+  },
+};
+
 export async function obterResumoAsync(): Promise<ResumoCounts> {
   if (process.env.VERCEL && resumoCache && Date.now() - resumoCache.at < RESUMO_CACHE_MS) {
     return resumoCache.data;
@@ -107,6 +121,6 @@ export async function obterResumoAsync(): Promise<ResumoCounts> {
     return data;
   } catch (err) {
     console.error("[resumo] falha ao calcular contagens:", err);
-    throw err;
+    return RESUMO_VAZIO;
   }
 }

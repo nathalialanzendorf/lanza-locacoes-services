@@ -1,7 +1,7 @@
 import {
   clienteExibicaoPorId,
   loadClientesDbAsync,
-  loadCobrancasDbContextAsync,
+  loadCobrancasDbContextForResumoAsync,
   loadCobrancasDbContextSync,
   listarDashboardRecebimentosAtrasados,
   obterDashboardRecebimentosTotais,
@@ -29,7 +29,7 @@ function enriquecerLinhas(
 
 export async function obterDashboardRecebimentosTotaisApiAsync(): Promise<DashboardRecebimentosTotaisResponse> {
   try {
-    const ctx = await loadCobrancasDbContextAsync();
+    const ctx = await loadCobrancasDbContextForResumoAsync();
     return obterDashboardRecebimentosTotais(ctx);
   } catch (err) {
     console.error("[dashboard/recebimentos/totais] falha:", err);
@@ -40,7 +40,7 @@ export async function obterDashboardRecebimentosTotaisApiAsync(): Promise<Dashbo
 export async function listarDashboardRecebimentosAtrasadosApiAsync(): Promise<DashboardRecebimentosListaResponse> {
   try {
     const [ctx, clientesDb] = await Promise.all([
-      loadCobrancasDbContextAsync(),
+      loadCobrancasDbContextForResumoAsync(),
       loadClientesDbAsync(),
     ]);
     const meta = obterDashboardRecebimentosTotais(ctx);
