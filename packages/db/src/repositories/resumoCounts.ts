@@ -38,6 +38,8 @@ export type ResumoCounts = {
   clientes: { total: number; ativos: number };
   veiculos: { total: number; ativos: number; locados: number; naoLocados: number };
   contratos: { total: number; ativos: number; vencidos: number; aVencer: number };
+  despesasCliente: { emAberto: number; valorEmAberto: number };
+  despesasParceiro: { emAberto: number; valorEmAberto: number };
   infracoes: {
     emAberto: number;
     notificadas: number;
@@ -59,6 +61,10 @@ type ResumoCountsRow = {
   contratos_ativos: number;
   contratos_vencidos: number;
   contratos_a_vencer: number;
+  despesas_cliente_em_aberto: number;
+  despesas_cliente_valor: number;
+  despesas_parceiro_em_aberto: number;
+  despesas_parceiro_valor: number;
   infracoes_em_aberto: number;
   infracoes_notificadas: number;
   infracoes_debito: number;
@@ -68,6 +74,11 @@ type ResumoCountsRow = {
 function toInt(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+function toMoney(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
 function mapRow(row: ResumoCountsRow): ResumoCounts {
@@ -89,6 +100,14 @@ function mapRow(row: ResumoCountsRow): ResumoCounts {
       ativos: toInt(row.contratos_ativos),
       vencidos: toInt(row.contratos_vencidos),
       aVencer: toInt(row.contratos_a_vencer),
+    },
+    despesasCliente: {
+      emAberto: toInt(row.despesas_cliente_em_aberto),
+      valorEmAberto: toMoney(row.despesas_cliente_valor),
+    },
+    despesasParceiro: {
+      emAberto: toInt(row.despesas_parceiro_em_aberto),
+      valorEmAberto: toMoney(row.despesas_parceiro_valor),
     },
     infracoes: {
       emAberto: toInt(row.infracoes_em_aberto),
@@ -144,6 +163,29 @@ export async function queryResumoCountsFromSql(): Promise<ResumoCounts> {
           AND ${CONTRATO_FIM_PREVISTO_DATE_SQL}
             <= (now() AT TIME ZONE 'America/Sao_Paulo')::date + ${PROXIMO_VENCER_DIAS}
       ) AS contratos_a_vencer,
+
+      (
+        SELECT COUNT(*)::int
+        FROM lanza.cliente_despesas cd
+        WHERE (cd.ativo IS DISTINCT FROM false)
+          AND (cd.paga IS NOT TRUE)
+      ) AS despesas_cliente_em_aberto,
+      (
+        SELECT COALESCE(SUM(cd.valor_multa), 0)
+        FROM lanza.cliente_despesas cd
+        WHERE (cd.ativo IS DISTINCT FROM false)
+          AND (cd.paga IS NOT TRUE)
+      ) AS despesas_cliente_valor,
+      (
+        SELECT COUNT(*)::int
+        FROM lanza.parceiro_despesas pd
+        WHERE pd.baixa IS NULL OR btrim(pd.baixa) = ''
+      ) AS despesas_parceiro_em_aberto,
+      (
+        SELECT COALESCE(SUM(pd.valor), 0)
+        FROM lanza.parceiro_despesas pd
+        WHERE pd.baixa IS NULL OR btrim(pd.baixa) = ''
+      ) AS despesas_parceiro_valor,
 
       (
         SELECT COUNT(*)::int

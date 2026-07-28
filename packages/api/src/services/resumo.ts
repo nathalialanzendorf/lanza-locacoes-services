@@ -6,6 +6,11 @@ import {
   loadContratosDb,
   loadInfracoesDb,
   loadVeiculosDb,
+  loadClienteDespesasDb,
+  loadParceiroDespesasDb,
+  isClienteDespesaAtiva,
+  type ClienteDespesaRegistro,
+  type ParceiroDespesaRegistro,
   type ClienteRegistro,
   type ContratoRegistro,
   type InfracaoRegistro,
@@ -43,11 +48,29 @@ function infracaoSemResponsavel(i: { condutorId?: string | null }): boolean {
   return !Boolean(String(i.condutorId ?? "").trim());
 }
 
+function totaisDespesasCliente(despesas: ClienteDespesaRegistro[]) {
+  const abertas = despesas.filter((d) => isClienteDespesaAtiva(d) && d.paga !== true);
+  return {
+    emAberto: abertas.length,
+    valorEmAberto: Math.round(abertas.reduce((s, d) => s + (Number(d.valorMulta) || 0), 0) * 100) / 100,
+  };
+}
+
+function totaisDespesasParceiro(despesas: ParceiroDespesaRegistro[]) {
+  const abertas = despesas.filter((d) => !String(d.baixa ?? "").trim());
+  return {
+    emAberto: abertas.length,
+    valorEmAberto: Math.round(abertas.reduce((s, d) => s + (Number(d.valor) || 0), 0) * 100) / 100,
+  };
+}
+
 function montarResumoFromStores(
   clientes: ClienteRegistro[],
   veiculos: VeiculoRegistro[],
   contratos: ContratoRegistro[],
   infracoes: InfracaoRegistro[],
+  clienteDespesas: ClienteDespesaRegistro[],
+  parceiroDespesas: ParceiroDespesaRegistro[],
 ): ResumoCounts {
   const clientesAtivos = clientes.filter(isClienteAtivo);
   const veiculosAtivos = veiculos.filter(isVeiculoAtivo);
@@ -76,6 +99,8 @@ function montarResumoFromStores(
       vencidos: vencimento.vencidos.length,
       aVencer: vencimento.aVencer.length,
     },
+    despesasCliente: totaisDespesasCliente(clienteDespesas),
+    despesasParceiro: totaisDespesasParceiro(parceiroDespesas),
     infracoes: {
       emAberto: infracoesAbertas.length,
       notificadas: infracoesNotificadas.length,
@@ -95,6 +120,8 @@ export function obterResumo(): ResumoCounts {
     loadVeiculosDb().veiculos,
     loadContratosDb().contratos,
     loadInfracoesDb().infracoes,
+    loadClienteDespesasDb().clienteDespesas,
+    loadParceiroDespesasDb().parceiroDespesas,
   );
 }
 
@@ -105,6 +132,8 @@ const RESUMO_VAZIO: ResumoCounts = {
   clientes: { total: 0, ativos: 0 },
   veiculos: { total: 0, ativos: 0, locados: 0, naoLocados: 0 },
   contratos: { total: 0, ativos: 0, vencidos: 0, aVencer: 0 },
+  despesasCliente: { emAberto: 0, valorEmAberto: 0 },
+  despesasParceiro: { emAberto: 0, valorEmAberto: 0 },
   infracoes: {
     emAberto: 0,
     notificadas: 0,

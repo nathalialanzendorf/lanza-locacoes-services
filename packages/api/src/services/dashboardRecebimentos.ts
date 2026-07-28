@@ -37,6 +37,9 @@ function enriquecerLinhas(
   }));
 }
 
+let recebimentosCache: { at: number; data: DashboardRecebimentos } | null = null;
+const RECEBIMENTOS_CACHE_MS = 20_000;
+
 async function carregarDashboardRecebimentosEnriquecido(): Promise<DashboardRecebimentos> {
   const [ctx, clientesDb] = await Promise.all([
     loadCobrancasDbContextForResumoAsync(),
@@ -52,8 +55,13 @@ async function carregarDashboardRecebimentosEnriquecido(): Promise<DashboardRece
 
 /** Payload completo — vence hoje, atrasados e totais numa única consulta. */
 export async function obterDashboardRecebimentosApiAsync(): Promise<DashboardRecebimentos> {
+  if (process.env.VERCEL && recebimentosCache && Date.now() - recebimentosCache.at < RECEBIMENTOS_CACHE_MS) {
+    return recebimentosCache.data;
+  }
   try {
-    return await carregarDashboardRecebimentosEnriquecido();
+    const data = await carregarDashboardRecebimentosEnriquecido();
+    if (process.env.VERCEL) recebimentosCache = { at: Date.now(), data };
+    return data;
   } catch (err) {
     console.error("[dashboard/recebimentos] falha:", err);
     return RECEBIMENTOS_VAZIO;
