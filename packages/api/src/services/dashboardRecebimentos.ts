@@ -1,11 +1,8 @@
 import {
-  clienteExibicaoPorId,
-  loadClientesDbAsync,
   loadCobrancasDbContextForResumoAsync,
   loadCobrancasDbContextSync,
   obterDashboardRecebimentos,
   obterDashboardRecebimentosTotais,
-  type DashboardRecebimentoLinha,
   type DashboardRecebimentos,
   type DashboardRecebimentosListaResponse,
   type DashboardRecebimentosTotaisResponse,
@@ -14,52 +11,30 @@ import {
 const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
   dataReferenciaBr: "—",
   tituloPagamentoSemanal: "Pagamento semanal",
-  venceHoje: [],
-  atrasados: [],
-  totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
+  totais: { semanal: 0, caucao: 0, renegociacao: 0 },
 };
 
 const TOTAIS_VAZIO: DashboardRecebimentosTotaisResponse = {
   dataReferenciaBr: RECEBIMENTOS_VAZIO.dataReferenciaBr,
   tituloPagamentoSemanal: RECEBIMENTOS_VAZIO.tituloPagamentoSemanal,
   totais: RECEBIMENTOS_VAZIO.totais,
-  contagens: { venceHoje: 0, atrasados: 0 },
-  venceHoje: [],
 };
-
-function enriquecerLinhas(
-  linhas: DashboardRecebimentoLinha[],
-  clientes: Awaited<ReturnType<typeof loadClientesDbAsync>>["clientes"],
-): DashboardRecebimentoLinha[] {
-  return linhas.map((l) => ({
-    ...l,
-    clienteNome: clienteExibicaoPorId(clientes, l.clienteId, l.clienteNome),
-  }));
-}
 
 let recebimentosCache: { at: number; data: DashboardRecebimentos } | null = null;
 const RECEBIMENTOS_CACHE_MS = 20_000;
 
-async function carregarDashboardRecebimentosEnriquecido(): Promise<DashboardRecebimentos> {
-  const [ctx, clientesDb] = await Promise.all([
-    loadCobrancasDbContextForResumoAsync(),
-    loadClientesDbAsync(),
-  ]);
-  const data = obterDashboardRecebimentos(ctx);
-  return {
-    ...data,
-    venceHoje: enriquecerLinhas(data.venceHoje, clientesDb.clientes),
-    atrasados: enriquecerLinhas(data.atrasados, clientesDb.clientes),
-  };
+async function carregarDashboardRecebimentos(): Promise<DashboardRecebimentos> {
+  const ctx = await loadCobrancasDbContextForResumoAsync();
+  return obterDashboardRecebimentos(ctx);
 }
 
-/** Payload completo — vence hoje, atrasados e totais numa única consulta. */
+/** Totais nominal — semanal, caução e renegociação em aberto. */
 export async function obterDashboardRecebimentosApiAsync(): Promise<DashboardRecebimentos> {
   if (process.env.VERCEL && recebimentosCache && Date.now() - recebimentosCache.at < RECEBIMENTOS_CACHE_MS) {
     return recebimentosCache.data;
   }
   try {
-    const data = await carregarDashboardRecebimentosEnriquecido();
+    const data = await carregarDashboardRecebimentos();
     if (process.env.VERCEL) recebimentosCache = { at: Date.now(), data };
     return data;
   } catch (err) {
@@ -71,16 +46,11 @@ export async function obterDashboardRecebimentosApiAsync(): Promise<DashboardRec
 /** @deprecated Preferir obterDashboardRecebimentosApiAsync */
 export async function obterDashboardRecebimentosTotaisApiAsync(): Promise<DashboardRecebimentosTotaisResponse> {
   try {
-    const data = await carregarDashboardRecebimentosEnriquecido();
+    const data = await carregarDashboardRecebimentos();
     return {
       dataReferenciaBr: data.dataReferenciaBr,
       tituloPagamentoSemanal: data.tituloPagamentoSemanal,
       totais: data.totais,
-      contagens: {
-        venceHoje: data.venceHoje.length,
-        atrasados: data.atrasados.length,
-      },
-      venceHoje: data.venceHoje,
     };
   } catch (err) {
     console.error("[dashboard/recebimentos/totais] falha:", err);
@@ -88,14 +58,14 @@ export async function obterDashboardRecebimentosTotaisApiAsync(): Promise<Dashbo
   }
 }
 
-/** @deprecated Preferir obterDashboardRecebimentosApiAsync */
+/** @deprecated Listagem em atraso/vence hoje via GET /api/despesas no dashboard */
 export async function listarDashboardRecebimentosAtrasadosApiAsync(): Promise<DashboardRecebimentosListaResponse> {
   try {
-    const data = await carregarDashboardRecebimentosEnriquecido();
+    const data = await carregarDashboardRecebimentos();
     return {
       dataReferenciaBr: data.dataReferenciaBr,
       tituloPagamentoSemanal: data.tituloPagamentoSemanal,
-      items: data.atrasados,
+      items: [],
     };
   } catch (err) {
     console.error("[dashboard/recebimentos/atrasados] falha:", err);
@@ -107,8 +77,7 @@ export async function listarDashboardRecebimentosAtrasadosApiAsync(): Promise<Da
 export function obterDashboardRecebimentosTotaisApi(): DashboardRecebimentosTotaisResponse {
   try {
     const ctx = loadCobrancasDbContextSync();
-    const meta = obterDashboardRecebimentosTotais(ctx);
-    return meta;
+    return obterDashboardRecebimentosTotais(ctx);
   } catch (err) {
     console.error("[dashboard/recebimentos/totais] falha:", err);
     return TOTAIS_VAZIO;

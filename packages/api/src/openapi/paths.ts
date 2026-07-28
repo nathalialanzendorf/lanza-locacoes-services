@@ -449,7 +449,7 @@ function pathsInfracoes(): OpenApiPaths {
 function pathsRecebimentos(): OpenApiPaths {
   return {
     "/api/dashboard/recebimentos": pathItem({
-      get: op("get", "Dashboard", "Recebimentos — vence hoje, atrasados e totais", {
+      get: op("get", "Dashboard", "Totais de recebimentos (semanal, caução, renegociação)", {
         operationId: "dashboardRecebimentos",
       }),
     }),
