@@ -448,21 +448,6 @@ function pathsInfracoes(): OpenApiPaths {
 
 function pathsRecebimentos(): OpenApiPaths {
   return {
-    "/api/dashboard/recebimentos": pathItem({
-      get: op("get", "Dashboard", "Totais de recebimentos (semanal, caução, renegociação)", {
-        operationId: "dashboardRecebimentos",
-      }),
-    }),
-    "/api/dashboard/recebimentos/totais": pathItem({
-      get: op("get", "Dashboard", "Totais de recebimentos (atraso, semanal, caução)", {
-        operationId: "dashboardRecebimentosTotais",
-      }),
-    }),
-    "/api/dashboard/recebimentos/atrasados": pathItem({
-      get: op("get", "Dashboard", "Listagem — recebimentos em atraso", {
-        operationId: "dashboardRecebimentosAtrasados",
-      }),
-    }),
     "/api/recebimentos/plano": pathItem({
       post: op("post", "Recebimentos", "Montar plano de baixa (unitário ou lote)", {
         operationId: "planoRecebimento",
