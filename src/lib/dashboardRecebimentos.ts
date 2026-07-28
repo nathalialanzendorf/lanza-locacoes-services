@@ -61,6 +61,8 @@ export type DashboardRecebimentosTotaisResponse = {
   tituloPagamentoSemanal: string;
   totais: DashboardRecebimentosTotais;
   contagens: { venceHoje: number; atrasados: number };
+  /** Linhas de pagamento semanal com vencimento na data de referência. */
+  venceHoje: DashboardRecebimentoLinha[];
 };
 
 export type DashboardRecebimentosListaResponse = {
@@ -422,6 +424,7 @@ export function obterDashboardRecebimentosTotais(
 
   return {
     ...meta,
+    venceHoje,
     totais: {
       venceHoje: round2(venceHoje.reduce((s, l) => s + l.valor, 0)),
       atrasado: round2(atrasados.reduce((s, l) => s + l.valor, 0)),

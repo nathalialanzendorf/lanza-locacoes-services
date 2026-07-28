@@ -3,18 +3,28 @@ import {
   loadClientesDbAsync,
   loadCobrancasDbContextForResumoAsync,
   loadCobrancasDbContextSync,
-  listarDashboardRecebimentosAtrasados,
+  obterDashboardRecebimentos,
   obterDashboardRecebimentosTotais,
   type DashboardRecebimentoLinha,
+  type DashboardRecebimentos,
   type DashboardRecebimentosListaResponse,
   type DashboardRecebimentosTotaisResponse,
 } from "../lib-imports.js";
 
-const TOTAIS_VAZIO: DashboardRecebimentosTotaisResponse = {
+const RECEBIMENTOS_VAZIO: DashboardRecebimentos = {
   dataReferenciaBr: "—",
   tituloPagamentoSemanal: "Pagamento semanal",
+  venceHoje: [],
+  atrasados: [],
   totais: { venceHoje: 0, atrasado: 0, semanal: 0, caucao: 0, renegociacao: 0 },
+};
+
+const TOTAIS_VAZIO: DashboardRecebimentosTotaisResponse = {
+  dataReferenciaBr: RECEBIMENTOS_VAZIO.dataReferenciaBr,
+  tituloPagamentoSemanal: RECEBIMENTOS_VAZIO.tituloPagamentoSemanal,
+  totais: RECEBIMENTOS_VAZIO.totais,
   contagens: { venceHoje: 0, atrasados: 0 },
+  venceHoje: [],
 };
 
 function enriquecerLinhas(
@@ -27,26 +37,57 @@ function enriquecerLinhas(
   }));
 }
 
+async function carregarDashboardRecebimentosEnriquecido(): Promise<DashboardRecebimentos> {
+  const [ctx, clientesDb] = await Promise.all([
+    loadCobrancasDbContextForResumoAsync(),
+    loadClientesDbAsync(),
+  ]);
+  const data = obterDashboardRecebimentos(ctx);
+  return {
+    ...data,
+    venceHoje: enriquecerLinhas(data.venceHoje, clientesDb.clientes),
+    atrasados: enriquecerLinhas(data.atrasados, clientesDb.clientes),
+  };
+}
+
+/** Payload completo — vence hoje, atrasados e totais numa única consulta. */
+export async function obterDashboardRecebimentosApiAsync(): Promise<DashboardRecebimentos> {
+  try {
+    return await carregarDashboardRecebimentosEnriquecido();
+  } catch (err) {
+    console.error("[dashboard/recebimentos] falha:", err);
+    return RECEBIMENTOS_VAZIO;
+  }
+}
+
+/** @deprecated Preferir obterDashboardRecebimentosApiAsync */
 export async function obterDashboardRecebimentosTotaisApiAsync(): Promise<DashboardRecebimentosTotaisResponse> {
   try {
-    const ctx = await loadCobrancasDbContextForResumoAsync();
-    return obterDashboardRecebimentosTotais(ctx);
+    const data = await carregarDashboardRecebimentosEnriquecido();
+    return {
+      dataReferenciaBr: data.dataReferenciaBr,
+      tituloPagamentoSemanal: data.tituloPagamentoSemanal,
+      totais: data.totais,
+      contagens: {
+        venceHoje: data.venceHoje.length,
+        atrasados: data.atrasados.length,
+      },
+      venceHoje: data.venceHoje,
+    };
   } catch (err) {
     console.error("[dashboard/recebimentos/totais] falha:", err);
     return TOTAIS_VAZIO;
   }
 }
 
+/** @deprecated Preferir obterDashboardRecebimentosApiAsync */
 export async function listarDashboardRecebimentosAtrasadosApiAsync(): Promise<DashboardRecebimentosListaResponse> {
   try {
-    const [ctx, clientesDb] = await Promise.all([
-      loadCobrancasDbContextForResumoAsync(),
-      loadClientesDbAsync(),
-    ]);
-    const meta = obterDashboardRecebimentosTotais(ctx);
+    const data = await carregarDashboardRecebimentosEnriquecido();
     return {
-      dataReferenciaBr: meta.dataReferenciaBr,
-      items: enriquecerLinhas(listarDashboardRecebimentosAtrasados(ctx), clientesDb.clientes),
+      dataReferenciaBr: data.dataReferenciaBr,
+      tituloPagamentoSemanal: data.tituloPagamentoSemanal,
+      items: data.atrasados,
     };
   } catch (err) {
     console.error("[dashboard/recebimentos/atrasados] falha:", err);
@@ -58,7 +99,8 @@ export async function listarDashboardRecebimentosAtrasadosApiAsync(): Promise<Da
 export function obterDashboardRecebimentosTotaisApi(): DashboardRecebimentosTotaisResponse {
   try {
     const ctx = loadCobrancasDbContextSync();
-    return obterDashboardRecebimentosTotais(ctx);
+    const meta = obterDashboardRecebimentosTotais(ctx);
+    return meta;
   } catch (err) {
     console.error("[dashboard/recebimentos/totais] falha:", err);
     return TOTAIS_VAZIO;
