@@ -6,6 +6,20 @@ const CONTRATO_ATIVO_SQL = `
   AND (c.data_encerramento IS NULL OR btrim(c.data_encerramento) = '')
 `;
 
+/** Dias até o fim previsto para marcar como “a vencer” (alinhado ao dashboard). */
+const PROXIMO_VENCER_DIAS = 14;
+
+/** Parse de data_fim_prevista (DD/MM/AAAA ou ISO) para date. */
+const CONTRATO_FIM_PREVISTO_DATE_SQL = `
+  CASE
+    WHEN btrim(c.data_fim_prevista) ~ '^\\d{2}/\\d{2}/\\d{4}$'
+      THEN to_date(btrim(c.data_fim_prevista), 'DD/MM/YYYY')
+    WHEN btrim(c.data_fim_prevista) ~ '^\\d{4}-\\d{2}-\\d{2}$'
+      THEN btrim(c.data_fim_prevista)::date
+    ELSE NULL
+  END
+`;
+
 /** Veículo ativo no cadastro da frota de locação (widget de frota). */
 const VEICULO_FROTA_LOCACAO_SQL = `v.ativo IS TRUE AND v.tipo_frota = 'locacao'`;
 
@@ -23,6 +37,7 @@ const INFRACAO_ABERTA_SQL = `
 export type ResumoCounts = {
   clientes: { total: number; ativos: number };
   veiculos: { total: number; ativos: number; locados: number; naoLocados: number };
+  contratos: { total: number; ativos: number; vencidos: number; aVencer: number };
   infracoes: {
     emAberto: number;
     notificadas: number;
@@ -40,6 +55,10 @@ type ResumoCountsRow = {
   veiculos_total: number;
   veiculos_ativos: number;
   veiculos_locados: number;
+  contratos_total: number;
+  contratos_ativos: number;
+  contratos_vencidos: number;
+  contratos_a_vencer: number;
   infracoes_em_aberto: number;
   infracoes_notificadas: number;
   infracoes_debito: number;
@@ -64,6 +83,12 @@ function mapRow(row: ResumoCountsRow): ResumoCounts {
       ativos: veiculosAtivos,
       locados: veiculosLocados,
       naoLocados: Math.max(0, veiculosAtivos - veiculosLocados),
+    },
+    contratos: {
+      total: toInt(row.contratos_total),
+      ativos: toInt(row.contratos_ativos),
+      vencidos: toInt(row.contratos_vencidos),
+      aVencer: toInt(row.contratos_a_vencer),
     },
     infracoes: {
       emAberto: toInt(row.infracoes_em_aberto),
@@ -98,6 +123,27 @@ export async function queryResumoCountsFromSql(): Promise<ResumoCounts> {
               AND c.veiculo_id = v.id
           )
       ) AS veiculos_locados,
+
+      (SELECT COUNT(*)::int FROM lanza.contratos) AS contratos_total,
+      (
+        SELECT COUNT(*)::int
+        FROM lanza.contratos c
+        WHERE ${CONTRATO_ATIVO_SQL}
+      ) AS contratos_ativos,
+      (
+        SELECT COUNT(*)::int
+        FROM lanza.contratos c
+        WHERE ${CONTRATO_ATIVO_SQL}
+          AND ${CONTRATO_FIM_PREVISTO_DATE_SQL} < (now() AT TIME ZONE 'America/Sao_Paulo')::date
+      ) AS contratos_vencidos,
+      (
+        SELECT COUNT(*)::int
+        FROM lanza.contratos c
+        WHERE ${CONTRATO_ATIVO_SQL}
+          AND ${CONTRATO_FIM_PREVISTO_DATE_SQL} >= (now() AT TIME ZONE 'America/Sao_Paulo')::date
+          AND ${CONTRATO_FIM_PREVISTO_DATE_SQL}
+            <= (now() AT TIME ZONE 'America/Sao_Paulo')::date + ${PROXIMO_VENCER_DIAS}
+      ) AS contratos_a_vencer,
 
       (
         SELECT COUNT(*)::int

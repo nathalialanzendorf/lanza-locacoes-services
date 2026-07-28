@@ -12,6 +12,7 @@ import {
   type VeiculoRegistro,
   contratoAtivoOperacional,
   contratoVinculadoVeiculo,
+  listarContratosVencimentoDashboard,
 } from "../lib-imports.js";
 
 function infracaoEmAberto(i: {
@@ -59,6 +60,7 @@ function montarResumoFromStores(
   const infracoesNotificadas = infracoesAbertas.filter(infracaoNotificada);
   const infracoesEmAbertoDebito = infracoesAbertas.filter(infracaoEmAbertoDebito);
   const infracoesSemResponsavel = infracoesAbertas.filter(infracaoSemResponsavel);
+  const vencimento = listarContratosVencimentoDashboard(contratos);
 
   return {
     clientes: { total: clientes.length, ativos: clientesAtivos.length },
@@ -67,6 +69,12 @@ function montarResumoFromStores(
       ativos: veiculosAtivos.length,
       locados: veiculosLocados.length,
       naoLocados: veiculosAtivos.length - veiculosLocados.length,
+    },
+    contratos: {
+      total: contratos.length,
+      ativos: contratosAtivos.length,
+      vencidos: vencimento.vencidos.length,
+      aVencer: vencimento.aVencer.length,
     },
     infracoes: {
       emAberto: infracoesAbertas.length,
@@ -96,6 +104,7 @@ const RESUMO_CACHE_MS = 20_000;
 const RESUMO_VAZIO: ResumoCounts = {
   clientes: { total: 0, ativos: 0 },
   veiculos: { total: 0, ativos: 0, locados: 0, naoLocados: 0 },
+  contratos: { total: 0, ativos: 0, vencidos: 0, aVencer: 0 },
   infracoes: {
     emAberto: 0,
     notificadas: 0,
