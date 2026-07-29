@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, updateClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
 import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -645,6 +645,16 @@ function resolvePlacaVeiculoCadastro(
   const veiculo = findVeiculoInDb({ veiculos: catalog }, veiculoIdRaw);
   if (veiculo?.placa?.trim()) return formatPlacaHyphen(veiculo.placa);
   return formatPlacaHyphen(veiculoIdRaw);
+}
+
+/** Preserva UUID; placa legada continua normalizada para persistência SQL. */
+function resolveVeiculoIdFromDespesaPatch(
+  veiculoIdRaw: string,
+  veiculos?: VeiculoRegistro[],
+): string {
+  const raw = String(veiculoIdRaw).trim();
+  if (isEntityUuid(raw)) return raw;
+  return resolvePlacaVeiculoCadastro(raw, veiculos);
 }
 
 function dataEventoContratoMs(dataBr: string): number | null {
@@ -1541,7 +1551,9 @@ export async function editarClienteDespesa(
     m.rastreameRastreavelKey = patch.rastreameRastreavelKey;
   }
   if (patch.rastreameDataIso !== undefined) m.rastreameDataIso = patch.rastreameDataIso;
-  if (patch.veiculoId !== undefined) m.veiculoId = resolvePlacaVeiculoCadastro(patch.veiculoId);
+  if (patch.veiculoId !== undefined) {
+    m.veiculoId = resolveVeiculoIdFromDespesaPatch(patch.veiculoId);
+  }
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
   if (m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)) {
@@ -1682,7 +1694,7 @@ function applyClienteDespesaPatch(
   }
   if (patch.rastreameDataIso !== undefined) m.rastreameDataIso = patch.rastreameDataIso;
   if (patch.veiculoId !== undefined) {
-    m.veiculoId = resolvePlacaVeiculoCadastro(patch.veiculoId, veiculos);
+    m.veiculoId = resolveVeiculoIdFromDespesaPatch(patch.veiculoId, veiculos);
   }
   if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
@@ -1851,7 +1863,7 @@ async function editarClienteDespesaRelational(
   }
 
   const persistOpts = persistOptsClienteDespesa(m);
-  await upsertClienteDespesaRowToSql(m as unknown as Record<string, unknown>, persistOpts);
+  await updateClienteDespesaRowToSql(m as unknown as Record<string, unknown>, persistOpts);
   if (proximaParcela) {
     await upsertClienteDespesaRowToSql(
       proximaParcela as unknown as Record<string, unknown>,
