@@ -29,6 +29,12 @@ export type CobrancasScopedContextInput = {
   despesaId?: string | null;
   /** @deprecated prefer veiculoId */
   placa?: string | null;
+  /** Só despesas em aberto (baixa / recebimentos). */
+  emAberto?: boolean;
+  /** Contrato do par cliente+veículo (AND) em vez de OR — baixa unitária. */
+  contratoPar?: boolean;
+  /** Despesas abertas do veículo; atribuição ao cliente fica em memória. */
+  despesasPorVeiculo?: boolean;
 };
 
 /** @deprecated use CobrancasScopedContextInput */
@@ -188,8 +194,13 @@ export async function loadCobrancasScopedDbContextAsync(
 
   const sqlFilter = {
     ativo: true as const,
-    ...(clienteId ? { clienteId } : {}),
-    ...(veiculoId ? { veiculoId } : {}),
+    ...(input.emAberto === true ? { emAberto: true as const } : {}),
+    ...(input.despesasPorVeiculo === true && veiculoId
+      ? { veiculoId }
+      : {
+          ...(clienteId ? { clienteId } : {}),
+          ...(veiculoId ? { veiculoId } : {}),
+        }),
   };
 
   logFlowStep(flowRoute, 6, "queryClienteDespesasFromSql + despesa alvo");
@@ -223,6 +234,9 @@ export async function loadCobrancasScopedDbContextAsync(
     queryContratosFromSql({
       ...(clienteId ? { clienteId } : {}),
       ...(veiculoIds.length > 0 ? { veiculoIds } : {}),
+      ...(input.contratoPar === true && clienteId && veiculoIds.length === 1
+        ? { contratoPar: true }
+        : {}),
     }),
   ]);
 

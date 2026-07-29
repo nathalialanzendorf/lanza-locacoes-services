@@ -225,10 +225,11 @@ function vencimentosSemanalAbertosCliente(clienteId: string, placaOuVeiculoId?: 
   const placaFiltro = placaOuVeiculoId?.trim()
     ? resolvePlacaReferencia(placaOuVeiculoId)
     : null;
+  const atribuicaoCtx = atribuicaoDespesaCtx();
   const vencs = clienteDespesasList()
     .filter(
       (d) =>
-        d.condutorId === clienteId &&
+        despesaAtribuidaACliente(d, clienteId, 90, atribuicaoCtx) &&
         d.ativo !== false &&
         d.paga !== true &&
         d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
@@ -880,6 +881,15 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   };
 }
 
+function enrichBaixaPlanoScope(scope: CobrancasScopedContextInput): CobrancasScopedContextInput {
+  return {
+    ...scope,
+    emAberto: true,
+    contratoPar: true,
+    despesasPorVeiculo: Boolean(scope.veiculoId?.trim() || scope.placa?.trim()),
+  };
+}
+
 export async function withBaixaPlanoDbContext<T>(
   fn: () => T | Promise<T>,
   scope?: CobrancasScopedContextInput,
@@ -888,7 +898,7 @@ export async function withBaixaPlanoDbContext<T>(
   resetSqlSeq();
   logFlowStep(flowRoute, 0, "início withBaixaPlanoDbContext");
   _baixaPlanoCtx = scope
-    ? await loadBaixaPlanoDbContextAsync(scope, flowRoute)
+    ? await loadBaixaPlanoDbContextAsync(enrichBaixaPlanoScope(scope), flowRoute)
     : await loadCobrancasDbContextAsync();
   setCobrancasRuntimeCtx(_baixaPlanoCtx);
   try {
@@ -946,13 +956,15 @@ export async function montarPlanoBaixaAsync(
   resetSqlSeq();
   logFlowStep(flowRoute, 0, "início montarPlanoBaixaAsync");
   _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(
-    normalizeBaixaScopeInput({
-      clienteId: input.clienteId,
-      clienteQuery: input.clienteQuery,
-      veiculoId: input.veiculoId,
-      despesaId: input.despesaId,
-      placa: input.placa,
-    }),
+    enrichBaixaPlanoScope(
+      normalizeBaixaScopeInput({
+        clienteId: input.clienteId,
+        clienteQuery: input.clienteQuery,
+        veiculoId: input.veiculoId,
+        despesaId: input.despesaId,
+        placa: input.placa,
+      }),
+    ),
     flowRoute,
   );
   setCobrancasRuntimeCtx(_baixaPlanoCtx);

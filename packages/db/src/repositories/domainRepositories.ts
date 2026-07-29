@@ -200,6 +200,8 @@ export type ContratosSqlFilter = {
   veiculoId?: string;
   /** Contratos de qualquer um destes veículos (atribuição por data do evento). */
   veiculoIds?: string[];
+  /** clienteId + veículo no mesmo contrato (AND) — baixa unitária. */
+  contratoPar?: boolean;
 };
 
 /** Listagem filtrada no Postgres (carrega snapshots só dos contratos retornados). */
@@ -247,7 +249,8 @@ export async function queryContratosFromSql(
   if (scopeParts.length === 1) {
     where.push(scopeParts[0]!);
   } else if (scopeParts.length > 1) {
-    where.push(`(${scopeParts.join(" OR ")})`);
+    const join = filter.contratoPar === true ? " AND " : " OR ";
+    where.push(`(${scopeParts.join(join)})`);
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
