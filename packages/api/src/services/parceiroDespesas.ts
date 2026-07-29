@@ -80,6 +80,24 @@ function enriquecerParceiroDespesa(
   };
 }
 
+function vencimentoParceiroSortMs(vencimentoBr: string | null | undefined): number {
+  const m = String(vencimentoBr ?? "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return 0;
+  const [, dd, mm, yyyy] = m;
+  return Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
+}
+
+function ordenarParceiroDespesasPorVencimentoDesc(
+  items: ParceiroDespesaListagem[],
+): ParceiroDespesaListagem[] {
+  return [...items].sort((a, b) => {
+    const ta = vencimentoParceiroSortMs(a.vencimentoBr);
+    const tb = vencimentoParceiroSortMs(b.vencimentoBr);
+    if (ta !== tb) return tb - ta;
+    return (b.id ?? "").localeCompare(a.id ?? "", "pt-BR");
+  });
+}
+
 export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = {}) {
   let items: ParceiroDespesaRegistro[];
   let veiculos: VeiculoRegistro[];
@@ -165,9 +183,10 @@ export async function listarParceiroDespesas(opts: ListarParceiroDespesasOpts = 
     );
   }
 
+  const enriquecidas = items.map((d) => enriquecerParceiroDespesa(d, veiculos));
   return {
-    total: items.length,
-    items: items.map((d) => enriquecerParceiroDespesa(d, veiculos)),
+    total: enriquecidas.length,
+    items: ordenarParceiroDespesasPorVencimentoDesc(enriquecidas),
   };
 }
 
