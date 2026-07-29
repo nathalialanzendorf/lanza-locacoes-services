@@ -1148,6 +1148,17 @@ const CLIENTE_DESPESA_UPSERT_SQL = `
       origem = EXCLUDED.origem,
       atualizado_em = now()`;
 
+/** Parâmetros do UPDATE (sem cadastrado_em); opcionalmente sem infracao_id. */
+function clienteDespesaRowUpdateSqlParams(
+  d: Record<string, unknown>,
+  meta: ClienteDespesaPersistMeta,
+  opts?: PersistClienteDespesaSqlOpts,
+): unknown[] {
+  const params = clienteDespesaRowSqlParams(d, meta).slice(0, 40);
+  if (!opts?.skipInfracaoLookup) return params;
+  return [...params.slice(0, 37), ...params.slice(38)];
+}
+
 /** UPDATE de uma linha existente (sem INSERT / ON CONFLICT). */
 export async function updateClienteDespesaRowToSql(
   d: Record<string, unknown>,
@@ -1156,7 +1167,10 @@ export async function updateClienteDespesaRowToSql(
   const meta = await resolveClienteDespesaPersistMeta(d, opts);
   if (!meta) return;
 
-  const infracaoSet = opts?.skipInfracaoLookup ? "" : "infracao_id = $38,";
+  const skipInfracao = opts?.skipInfracaoLookup === true;
+  const infracaoSet = skipInfracao ? "" : "infracao_id = $38,";
+  const ativoParam = skipInfracao ? "$38" : "$39";
+  const origemParam = skipInfracao ? "$39" : "$40";
 
   await pgQuery(
     `UPDATE lanza.cliente_despesas SET
@@ -1197,11 +1211,11 @@ export async function updateClienteDespesaRowToSql(
       detran_auto_infracao = $36,
       pdf_arquivo = $37,
       ${infracaoSet}
-      ativo = $39,
-      origem = $40,
+      ativo = ${ativoParam},
+      origem = ${origemParam},
       atualizado_em = now()
     WHERE id = $1`,
-    clienteDespesaRowSqlParams(d, meta),
+    clienteDespesaRowUpdateSqlParams(d, meta, opts),
     "updateClienteDespesaRow",
   );
 }
