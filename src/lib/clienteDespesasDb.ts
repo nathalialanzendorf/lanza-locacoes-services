@@ -36,7 +36,7 @@ import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
 import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
-import { removerParceiroDespesaPorOrigem } from "./parceiroDespesasDb.js";
+import { removerParceiroDespesaPorOrigemAsync } from "./parceiroDespesasDb.js";
 import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -1222,10 +1222,13 @@ export async function confirmarCondutorClienteDespesa(
     m.revisarManual = false;
     m.revisarMotivo = null;
     m.atualizadoEm = nowIso();
-    removerParceiroDespesaPorOrigem(
+    await removerParceiroDespesaPorOrigemAsync(
       origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
     );
-    await persistClienteDespesasRowsAsync([m]);
+    await updateClienteDespesaRowToSql(
+      m as unknown as Record<string, unknown>,
+      persistOptsClienteDespesa(m),
+    );
     const [synced] = await pushAposPersistir([m], opts);
     return synced ?? m;
   }

@@ -117,6 +117,7 @@ export {
   saveParceiroDespesasToSql,
   upsertParceiroDespesaToSql,
   deleteParceiroDespesaFromSql,
+  deleteParceiroDespesaByOrigemFromSql,
   queryParceiroDespesasFromSql,
   type ParceiroDespesasSqlFilter,
   loadTriagensFromSql,

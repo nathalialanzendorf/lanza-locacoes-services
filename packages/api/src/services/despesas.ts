@@ -378,11 +378,7 @@ export async function confirmarClienteDespesa(
   clienteId?: string | null,
   opts?: SyncOpts,
 ) {
-  let autoInfracao = idOuAuto;
-  const porId = await findClienteDespesaByIdAsync(idOuAuto);
-  if (porId) autoInfracao = porId.autoInfracao;
-
-  const item = await confirmarCondutorClienteDespesa(autoInfracao, clienteId, {
+  const item = await confirmarCondutorClienteDespesa(idOuAuto, clienteId, {
     syncRastreame: false,
   });
   if (!item) {

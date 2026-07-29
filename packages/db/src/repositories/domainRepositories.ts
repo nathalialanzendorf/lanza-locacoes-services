@@ -1426,6 +1426,14 @@ export async function deleteParceiroDespesaFromSql(id: string): Promise<boolean>
   return (r.rowCount ?? 0) > 0;
 }
 
+/** Remove espelhos parceiro pelo campo origem (ex.: pedágio sem locatário). */
+export async function deleteParceiroDespesaByOrigemFromSql(origem: string): Promise<boolean> {
+  const key = origem.trim();
+  if (!key) return false;
+  const r = await pgWriteQuery(`DELETE FROM lanza.parceiro_despesas WHERE origem = $1`, [key]);
+  return (r.rowCount ?? 0) > 0;
+}
+
 export async function saveParceiroDespesasToSql(db: ParceiroDespesasDbShape): Promise<void> {
   const placaMap = await loadPlacaMap();
   for (const d of db.parceiroDespesas) {

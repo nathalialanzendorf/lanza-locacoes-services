@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadParceiroDespesasFromSql, saveParceiroDespesasToSql, upsertParceiroDespesaToSql, deleteParceiroDespesaFromSql } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadParceiroDespesasFromSql, saveParceiroDespesasToSql, upsertParceiroDespesaToSql, deleteParceiroDespesaFromSql, deleteParceiroDespesaByOrigemFromSql } from "@lanza/db";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
 import { findVeiculoById } from "./veiculosDb.js";
@@ -533,4 +533,13 @@ export function removerParceiroDespesaPorOrigem(origem: string): boolean {
   if (db.parceiroDespesas.length === antes) return false;
   saveParceiroDespesasDb(db);
   return true;
+}
+
+export async function removerParceiroDespesaPorOrigemAsync(origem: string): Promise<boolean> {
+  const key = String(origem).trim();
+  if (!key) return false;
+  if (await useRelationalStore()) {
+    return deleteParceiroDespesaByOrigemFromSql(key);
+  }
+  return removerParceiroDespesaPorOrigem(key);
 }
