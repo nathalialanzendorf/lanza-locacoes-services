@@ -14,6 +14,7 @@ import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./cli
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
 import { isEntityUuid } from "./filtroListagem.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
+import { CategoriaDespesaCliente } from "./domain/index.js";
 
 export type CobrancasDbContext = {
   clienteDespesas: ClienteDespesaRegistro[];
@@ -35,6 +36,8 @@ export type CobrancasScopedContextInput = {
   contratoPar?: boolean;
   /** Despesas abertas do veículo; atribuição ao cliente fica em memória. */
   despesasPorVeiculo?: boolean;
+  /** clienteId + veiculoId + despesaId — contexto mínimo (POST recebimentos/plano). */
+  planoUnitario?: boolean;
 };
 
 /** @deprecated use CobrancasScopedContextInput */
@@ -192,6 +195,61 @@ export async function loadCobrancasScopedDbContextAsync(
     );
   }
 
+  const contratoQueryOpts = {
+    ...(clienteId ? { clienteId } : {}),
+    ...(veiculoId ? { veiculoIds: [veiculoId] } : {}),
+    ...(input.contratoPar === true && clienteId && veiculoId ? { contratoPar: true as const } : {}),
+    ...(input.planoUnitario === true || input.contratoPar === true ? { skipSnapshots: true as const } : {}),
+  };
+
+  if (
+    input.planoUnitario === true &&
+    despesaAlvoRef &&
+    clienteId &&
+    veiculoId
+  ) {
+    logFlowStep(flowRoute, 6, "plano unitário — contexto mínimo");
+    const [rowAlvo, clientes, veiculos, contratos, semanalAtrasado, pagasRecentes] =
+      await Promise.all([
+        queryClienteDespesaByReferenciaFromSql(despesaAlvoRef),
+        loadClientesByIdsFromSql([clienteId]),
+        queryVeiculosByIdsFromSql([veiculoId]),
+        queryContratosFromSql(contratoQueryOpts),
+        queryClienteDespesasFromSql({
+          ativo: true,
+          emAberto: true,
+          veiculoId,
+          categoria: CategoriaDespesaCliente.LocacaoSemanal,
+          descricaoIlike: "ATRASADO",
+        }),
+        queryClienteDespesasFromSql({
+          ativo: true,
+          emAberto: false,
+          clienteId,
+          veiculoId,
+          limit: 20,
+        }),
+      ]);
+
+    let clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
+    for (const row of pagasRecentes) {
+      clienteDespesas = mergeDespesaRows(clienteDespesas, row);
+    }
+
+    logFlowStep(
+      flowRoute,
+      8,
+      `plano unitário pronto (despesas=${clienteDespesas.length} contratos=${contratos.length})`,
+    );
+
+    return {
+      clienteDespesas,
+      clientes: clientes as ClienteRegistro[],
+      veiculos: veiculos as VeiculoRegistro[],
+      contratos: contratos as ContratoRegistro[],
+    };
+  }
+
   const sqlFilter = {
     ativo: true as const,
     ...(input.emAberto === true ? { emAberto: true as const } : {}),
@@ -237,6 +295,7 @@ export async function loadCobrancasScopedDbContextAsync(
       ...(input.contratoPar === true && clienteId && veiculoIds.length === 1
         ? { contratoPar: true }
         : {}),
+      ...(input.planoUnitario === true || input.contratoPar === true ? { skipSnapshots: true } : {}),
     }),
   ]);
 

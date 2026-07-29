@@ -202,6 +202,8 @@ export type ContratosSqlFilter = {
   veiculoIds?: string[];
   /** clienteId + veículo no mesmo contrato (AND) — baixa unitária. */
   contratoPar?: boolean;
+  /** Não carrega snapshots cliente/veículo (baixa — só valor_semanal/diaria). */
+  skipSnapshots?: boolean;
 };
 
 /** Listagem filtrada no Postgres (carrega snapshots só dos contratos retornados). */
@@ -265,7 +267,9 @@ export async function queryContratosFromSql(
   );
 
   const ids = base.rows.map((row) => String(row.id));
-  const { cliByContrato, veiByContrato } = await loadContratoSnapshotsForIds(ids);
+  const { cliByContrato, veiByContrato } = filter.skipSnapshots
+    ? { cliByContrato: new Map<string, Record<string, unknown>>(), veiByContrato: new Map<string, Record<string, unknown>>() }
+    : await loadContratoSnapshotsForIds(ids);
 
   return base.rows.map((row) => {
     const id = String(row.id);
@@ -890,6 +894,10 @@ export type ClienteDespesasSqlFilter = {
   veiculoId?: string;
   emAberto?: boolean;
   ativo?: boolean;
+  categoria?: string;
+  /** Filtro ILIKE em descricao (ex.: ATRASADO). */
+  descricaoIlike?: string;
+  limit?: number;
 };
 
 function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
@@ -970,13 +978,25 @@ export async function queryClienteDespesasFromSql(
     where.push(`cd.veiculo_id::text = $${p++}`);
   }
 
+  if (filter.categoria?.trim()) {
+    params.push(filter.categoria.trim());
+    where.push(`cd.categoria = $${p++}`);
+  }
+
+  if (filter.descricaoIlike?.trim()) {
+    params.push(`%${filter.descricaoIlike.trim()}%`);
+    where.push(`cd.descricao ILIKE $${p++}`);
+  }
+
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const limitSql =
+    filter.limit != null && filter.limit > 0 ? ` LIMIT ${Math.min(filter.limit, 500)}` : "";
   const r = await pgQuery(
     `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
      FROM lanza.cliente_despesas cd
      LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
      ${whereSql}
-     ORDER BY cd.data_autuacao`,
+     ORDER BY cd.data_autuacao${limitSql}`,
     params,
     "queryClienteDespesasFromSql",
   );

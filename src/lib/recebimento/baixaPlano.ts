@@ -643,9 +643,11 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   const valor = input.valor;
   const avisos: string[] = [];
 
-  const abertas = despesasAbertasCliente(cliente.id!, {
-    excluirCategorias: input.excluirCategoriasAuto,
-  });
+  const abertas = input.despesaId?.trim()
+    ? []
+    : despesasAbertasCliente(cliente.id!, {
+        excluirCategorias: input.excluirCategoriasAuto,
+      });
   const alvo = resolverDespesaAlvo(abertas, {
     despesaId: input.despesaId,
     veiculoId: input.veiculoId,
@@ -881,12 +883,22 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   };
 }
 
+function isBaixaPlanoUnitario(scope: CobrancasScopedContextInput): boolean {
+  return (
+    isEntityUuid(scope.despesaId?.trim()) &&
+    isEntityUuid(scope.clienteId?.trim()) &&
+    isEntityUuid(scope.veiculoId?.trim())
+  );
+}
+
 function enrichBaixaPlanoScope(scope: CobrancasScopedContextInput): CobrancasScopedContextInput {
+  const unitario = isBaixaPlanoUnitario(scope);
   return {
     ...scope,
     emAberto: true,
     contratoPar: true,
     despesasPorVeiculo: Boolean(scope.veiculoId?.trim() || scope.placa?.trim()),
+    planoUnitario: unitario,
   };
 }
 
