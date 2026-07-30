@@ -901,13 +901,11 @@ export type ClienteDespesasSqlFilter = {
 };
 
 function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
+  const veiculoId = row.veiculo_id != null ? String(row.veiculo_id) : null;
   return {
     id: String(row.id),
     categoria: row.categoria,
-    veiculoId:
-      row.veiculo_id != null
-        ? String(row.veiculo_id)
-        : (asText(row.veiculo_placa_ref) ?? asText(row.veiculo_placa)),
+    veiculoId,
     autoInfracao: row.auto_infracao,
     titulo: row.titulo,
     descricao: row.descricao,
@@ -1047,8 +1045,7 @@ export type PersistClienteDespesaSqlOpts = {
 
 type ClienteDespesaPersistMeta = {
   id: string;
-  veiculoIdResolved: string | null;
-  placa: string;
+  veiculoIdResolved: string;
   infracaoId: string | null;
 };
 
@@ -1067,7 +1064,11 @@ async function resolveClienteDespesaPersistMeta(
       veiculoIdResolved = await resolveVeiculoIdFromSql({ placa: veiculoRef });
     }
   }
-  const placa = formatPlacaHyphen(veiculoRef || veiculoIdResolved || "");
+  if (!veiculoIdResolved || !isUuid(veiculoIdResolved)) {
+    throw new Error(
+      `Despesa ${id}: veiculoId UUID obrigatório (ref informada: ${veiculoRef || "vazio"}).`,
+    );
+  }
   const auto = asText(d.autoInfracao) ?? id;
 
   let infracaoId: string | null = null;
@@ -1080,20 +1081,19 @@ async function resolveClienteDespesaPersistMeta(
     infracaoId = inf.rows[0]?.id ?? null;
   }
 
-  return { id, veiculoIdResolved, placa, infracaoId };
+  return { id, veiculoIdResolved, infracaoId };
 }
 
 function clienteDespesaRowSqlParams(
   d: Record<string, unknown>,
   meta: ClienteDespesaPersistMeta,
 ): unknown[] {
-  const { id, veiculoIdResolved, placa, infracaoId } = meta;
+  const { id, veiculoIdResolved, infracaoId } = meta;
   const auto = asText(d.autoInfracao) ?? id;
   return [
     id,
     asText(d.categoria),
     veiculoIdResolved,
-    placa,
     auto,
     asText(d.titulo),
     asText(d.descricao) ?? "",
@@ -1136,7 +1136,7 @@ function clienteDespesaRowSqlParams(
 
 const CLIENTE_DESPESA_UPSERT_SQL = `
     INSERT INTO lanza.cliente_despesas (
-      id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
+      id, categoria, veiculo_id, auto_infracao, titulo, descricao, numero_auto,
       local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
       data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
       condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
@@ -1145,11 +1145,10 @@ const CLIENTE_DESPESA_UPSERT_SQL = `
       rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
       origem, cadastrado_em, atualizado_em
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,COALESCE($40::timestamptz, now()), now())
     ON CONFLICT (id) DO UPDATE SET
       categoria = EXCLUDED.categoria,
       veiculo_id = EXCLUDED.veiculo_id,
-      veiculo_placa = EXCLUDED.veiculo_placa,
       auto_infracao = EXCLUDED.auto_infracao,
       titulo = EXCLUDED.titulo,
       descricao = EXCLUDED.descricao,
@@ -1183,9 +1182,9 @@ function clienteDespesaRowUpdateSqlParams(
   meta: ClienteDespesaPersistMeta,
   opts?: PersistClienteDespesaSqlOpts,
 ): unknown[] {
-  const params = clienteDespesaRowSqlParams(d, meta).slice(0, 40);
+  const params = clienteDespesaRowSqlParams(d, meta).slice(0, 39);
   if (!opts?.skipInfracaoLookup) return params;
-  return [...params.slice(0, 37), ...params.slice(38)];
+  return [...params.slice(0, 36), ...params.slice(37)];
 }
 
 /** UPDATE de uma linha existente (sem INSERT / ON CONFLICT). */
@@ -1197,48 +1196,47 @@ export async function updateClienteDespesaRowToSql(
   if (!meta) return;
 
   const skipInfracao = opts?.skipInfracaoLookup === true;
-  const infracaoSet = skipInfracao ? "" : "infracao_id = $38,";
-  const ativoParam = skipInfracao ? "$38" : "$39";
-  const origemParam = skipInfracao ? "$39" : "$40";
+  const infracaoSet = skipInfracao ? "" : "infracao_id = $37,";
+  const ativoParam = skipInfracao ? "$37" : "$38";
+  const origemParam = skipInfracao ? "$38" : "$39";
 
   await pgQuery(
     `UPDATE lanza.cliente_despesas SET
       categoria = $2,
       veiculo_id = $3,
-      veiculo_placa = $4,
-      auto_infracao = $5,
-      titulo = $6,
-      descricao = $7,
-      numero_auto = $8,
-      local_infracao = $9,
-      data_autuacao = $10,
-      valor_multa = $11,
-      situacao = $12,
-      limite_defesa = $13,
-      data_limite_defesa = $14,
-      data_vencimento_original = $15,
-      convertida_em_debito = $16,
-      condutor_id = $17,
-      condutor_confirmado = $18,
-      condutor_contrato = $19,
-      condutor_nao_identificado = $20,
-      debito_parceiro_confirmado = $21,
-      debito_parceiro_id = $22,
-      revisar_manual = $23,
-      revisar_motivo = $24,
-      paga = $25,
-      paga_em = $26,
-      quitada_detran = $27,
-      status_infracao = $28,
-      status_detran = $29,
-      rastreame_id = $30,
-      rastreame_motorista_key = $31,
-      rastreame_rastreavel_key = $32,
-      rastreame_data_iso = $33,
-      rastreame_tipo = $34,
-      rastreame_sync_em = $35,
-      detran_auto_infracao = $36,
-      pdf_arquivo = $37,
+      auto_infracao = $4,
+      titulo = $5,
+      descricao = $6,
+      numero_auto = $7,
+      local_infracao = $8,
+      data_autuacao = $9,
+      valor_multa = $10,
+      situacao = $11,
+      limite_defesa = $12,
+      data_limite_defesa = $13,
+      data_vencimento_original = $14,
+      convertida_em_debito = $15,
+      condutor_id = $16,
+      condutor_confirmado = $17,
+      condutor_contrato = $18,
+      condutor_nao_identificado = $19,
+      debito_parceiro_confirmado = $20,
+      debito_parceiro_id = $21,
+      revisar_manual = $22,
+      revisar_motivo = $23,
+      paga = $24,
+      paga_em = $25,
+      quitada_detran = $26,
+      status_infracao = $27,
+      status_detran = $28,
+      rastreame_id = $29,
+      rastreame_motorista_key = $30,
+      rastreame_rastreavel_key = $31,
+      rastreame_data_iso = $32,
+      rastreame_tipo = $33,
+      rastreame_sync_em = $34,
+      detran_auto_infracao = $35,
+      pdf_arquivo = $36,
       ${infracaoSet}
       ativo = ${ativoParam},
       origem = ${origemParam},
@@ -1259,7 +1257,7 @@ export async function insertClienteDespesaRowToSql(
 
   await pgQuery(
     `INSERT INTO lanza.cliente_despesas (
-      id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
+      id, categoria, veiculo_id, auto_infracao, titulo, descricao, numero_auto,
       local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
       data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
       condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
@@ -1268,7 +1266,7 @@ export async function insertClienteDespesaRowToSql(
       rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
       origem, cadastrado_em, atualizado_em
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())`,
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,COALESCE($40::timestamptz, now()), now())`,
     clienteDespesaRowSqlParams(d, meta),
     "insertClienteDespesaRow",
   );
