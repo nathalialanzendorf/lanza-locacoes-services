@@ -186,10 +186,9 @@ function correspondeAlvoExplicito(d: ClienteDespesaRegistro, alvoId: string): bo
   const key = alvoId.trim();
   if (!key) return false;
   const keyLower = key.toLowerCase();
-  return (
-    d.id === key ||
-    d.autoInfracao.trim().toLowerCase() === keyLower
-  );
+  if (d.id === key) return true;
+  const auto = String(d.autoInfracao ?? "").trim();
+  return auto.toLowerCase() === keyLower;
 }
 
 function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null {
@@ -510,19 +509,22 @@ function resolverDespesaAlvo(
   const veiculoRef = opts.veiculoId?.trim() || opts.placa?.trim() || "";
   const alvoId = opts.despesaId?.trim();
   if (alvoId) {
-    const alvo =
+    const candidato =
+      clienteDespesasList().find((d) => correspondeAlvoExplicito(d, alvoId)) ??
       abertas.find((d) => correspondeAlvoExplicito(d, alvoId)) ??
-      clienteDespesasList().find(
-        (d) => correspondeAlvoExplicito(d, alvoId) && despesaEmAberto(d),
-      ) ??
       null;
-    if (!alvo) {
-      throw new Error(`Despesa em aberto não encontrada: ${alvoId}.`);
+    if (!candidato) {
+      throw new Error(`Despesa não encontrada: ${alvoId}.`);
     }
-    if (veiculoRef && !despesaVeiculoRefIgual(alvo, veiculoRef)) {
+    if (!despesaEmAberto(candidato)) {
+      throw new Error(
+        `Despesa ${alvoId} não está em aberto (${candidato.paga ? "já quitada" : "inativa"}).`,
+      );
+    }
+    if (veiculoRef && !despesaVeiculoRefIgual(candidato, veiculoRef)) {
       throw new Error(`Despesa ${alvoId} não pertence ao veículo informado.`);
     }
-    return alvo;
+    return candidato;
   }
 
   const pool = veiculoRef
@@ -887,7 +889,7 @@ function isBaixaPlanoUnitario(scope: CobrancasScopedContextInput): boolean {
   return (
     isEntityUuid(scope.despesaId?.trim()) &&
     isEntityUuid(scope.clienteId?.trim()) &&
-    isEntityUuid(scope.veiculoId?.trim())
+    (isEntityUuid(scope.veiculoId?.trim()) || Boolean(scope.placa?.trim()))
   );
 }
 

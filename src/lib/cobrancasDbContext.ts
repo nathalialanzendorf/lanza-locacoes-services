@@ -177,14 +177,16 @@ export async function loadCobrancasScopedDbContextAsync(
   }
 
   let rowAlvoPrefetch: Record<string, unknown> | null = null;
-  if (!clienteId && !veiculoId && despesaAlvoRef) {
-    logFlowStep(flowRoute, 4, "queryClienteDespesaByReferenciaFromSql (prefetch)");
+  if ((!clienteId || !veiculoId) && despesaAlvoRef) {
+    logFlowStep(flowRoute, 4, "queryClienteDespesaByReferenciaFromSql (prefetch escopo)");
     rowAlvoPrefetch = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
     if (rowAlvoPrefetch) {
-      const condutorId = String(rowAlvoPrefetch.condutor_id ?? "").trim();
-      if (isEntityUuid(condutorId)) clienteId = condutorId;
-      const vid = String(rowAlvoPrefetch.veiculo_id ?? "").trim();
-      if (isEntityUuid(vid)) veiculoId = vid;
+      const condutorId = String(
+        rowAlvoPrefetch.condutorId ?? rowAlvoPrefetch.condutor_id ?? "",
+      ).trim();
+      if (!clienteId && isEntityUuid(condutorId)) clienteId = condutorId;
+      const vid = String(rowAlvoPrefetch.veiculoId ?? rowAlvoPrefetch.veiculo_id ?? "").trim();
+      if (!veiculoId && isEntityUuid(vid)) veiculoId = vid;
     }
   }
 
@@ -202,38 +204,65 @@ export async function loadCobrancasScopedDbContextAsync(
     ...(input.planoUnitario === true || input.contratoPar === true ? { skipSnapshots: true as const } : {}),
   };
 
-  if (
-    input.planoUnitario === true &&
-    despesaAlvoRef &&
-    clienteId &&
-    veiculoId
-  ) {
-    logFlowStep(flowRoute, 6, "plano unitário — contexto mínimo");
-    const [rowAlvo, clientes, veiculos, contratos, semanalAtrasado, pagasRecentes] =
-      await Promise.all([
-        queryClienteDespesaByReferenciaFromSql(despesaAlvoRef),
-        loadClientesByIdsFromSql([clienteId]),
-        queryVeiculosByIdsFromSql([veiculoId]),
-        queryContratosFromSql(contratoQueryOpts),
-        queryClienteDespesasFromSql({
-          ativo: true,
-          emAberto: true,
-          veiculoId,
-          categoria: CategoriaDespesaCliente.LocacaoSemanal,
-          descricaoIlike: "ATRASADO",
-        }),
-        queryClienteDespesasFromSql({
-          ativo: true,
-          emAberto: false,
-          clienteId,
-          veiculoId,
-          limit: 20,
-        }),
-      ]);
+  const despesaExplicita = Boolean(input.despesaId?.trim());
 
-    let clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
-    for (const row of pagasRecentes) {
-      clienteDespesas = mergeDespesaRows(clienteDespesas, row);
+  if (despesaExplicita && despesaAlvoRef && clienteId && veiculoId) {
+    logFlowStep(flowRoute, 6, "plano unitário — contexto mínimo");
+    const [rowAlvo, clientes, veiculos] = await Promise.all([
+      rowAlvoPrefetch
+        ? Promise.resolve(rowAlvoPrefetch)
+        : queryClienteDespesaByReferenciaFromSql(despesaAlvoRef),
+      loadClientesByIdsFromSql([clienteId]),
+      queryVeiculosByIdsFromSql([veiculoId]),
+    ]);
+
+    if (!rowAlvo) {
+      throw new Error(`Despesa não encontrada: ${despesaAlvoRef}.`);
+    }
+    if (!clientes.length) {
+      throw new Error(`Cliente não encontrado: ${clienteId}.`);
+    }
+    if (!veiculos.length) {
+      throw new Error(`Veículo não encontrado: ${veiculoId}.`);
+    }
+
+    const alvoRow = rowAlvo as ClienteDespesaRegistro;
+    const veiculoDespesa = veiculoIdFromDespesaRow(alvoRow);
+    if (veiculoDespesa && veiculoDespesa !== veiculoId) {
+      throw new Error(`Despesa ${despesaAlvoRef} não pertence ao veículo informado.`);
+    }
+    if (alvoRow.paga === true) {
+      throw new Error(`Despesa ${despesaAlvoRef} já está quitada.`);
+    }
+    if (alvoRow.ativo === false) {
+      throw new Error(`Despesa ${despesaAlvoRef} está inativa.`);
+    }
+
+    const precisaCalculoSemanal =
+      alvoRow.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
+      /ATRASADO/i.test(String(alvoRow.descricao ?? ""));
+
+    let contratos: Record<string, unknown>[] = [];
+    let clienteDespesas = mergeDespesaRows([], rowAlvo);
+
+    if (precisaCalculoSemanal) {
+      let contratosResult = await queryContratosFromSql(contratoQueryOpts);
+      if (!contratosResult.length && input.contratoPar === true) {
+        contratosResult = await queryContratosFromSql({
+          ...(clienteId ? { clienteId } : {}),
+          veiculoIds: [veiculoId],
+          skipSnapshots: true,
+        });
+      }
+      const semanalAtrasado = await queryClienteDespesasFromSql({
+        ativo: true,
+        emAberto: true,
+        veiculoId,
+        categoria: CategoriaDespesaCliente.LocacaoSemanal,
+        descricaoIlike: "ATRASADO",
+      });
+      contratos = contratosResult;
+      clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
     }
 
     logFlowStep(
@@ -274,7 +303,7 @@ export async function loadCobrancasScopedDbContextAsync(
   const clienteDespesas = mergeDespesaRows(rows, rowAlvo);
 
   if (!clienteId && rowAlvo) {
-    const condutorId = String(rowAlvo.condutor_id ?? "").trim();
+    const condutorId = String(rowAlvo.condutorId ?? rowAlvo.condutor_id ?? "").trim();
     if (isEntityUuid(condutorId)) clienteId = condutorId;
   }
 
