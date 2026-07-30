@@ -170,11 +170,12 @@ function despesaPlacaIgual(d: ClienteDespesaRegistro, placa: string): boolean {
 function despesaVeiculoRefIgual(d: ClienteDespesaRegistro, veiculoRef: string): boolean {
   if (!veiculoRef.trim()) return true;
   const ref = veiculoRef.trim();
-  if (d.veiculoId === ref) return true;
+  const dVeiculo = String(d.veiculoId ?? "").trim();
+  if (dVeiculo && dVeiculo.toLowerCase() === ref.toLowerCase()) return true;
   const vRef = findVeiculoPorReferencia(ref);
-  const vDesp = findVeiculoPorReferencia(String(d.veiculoId ?? ""));
-  if (vRef?.id && vDesp?.id && vRef.id === vDesp.id) return true;
-  if (vRef?.id && d.veiculoId === vRef.id) return true;
+  const vDesp = findVeiculoPorReferencia(dVeiculo);
+  if (vRef?.id && vDesp?.id && vRef.id.toLowerCase() === vDesp.id.toLowerCase()) return true;
+  if (vRef?.id && dVeiculo.toLowerCase() === vRef.id.toLowerCase()) return true;
   return despesaPlacaIgual(d, ref);
 }
 
@@ -186,7 +187,7 @@ function correspondeAlvoExplicito(d: ClienteDespesaRegistro, alvoId: string): bo
   const key = alvoId.trim();
   if (!key) return false;
   const keyLower = key.toLowerCase();
-  if (d.id === key) return true;
+  if (String(d.id ?? "").trim().toLowerCase() === keyLower) return true;
   const auto = String(d.autoInfracao ?? "").trim();
   return auto.toLowerCase() === keyLower;
 }
@@ -521,9 +522,6 @@ function resolverDespesaAlvo(
         `Despesa ${alvoId} não está em aberto (${candidato.paga ? "já quitada" : "inativa"}).`,
       );
     }
-    if (veiculoRef && !despesaVeiculoRefIgual(candidato, veiculoRef)) {
-      throw new Error(`Despesa ${alvoId} não pertence ao veículo informado.`);
-    }
     return candidato;
   }
 
@@ -657,6 +655,10 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
     valor,
     dataRecebimentoBr: dataBr,
   });
+
+  if (input.despesaId?.trim() && !alvo) {
+    throw new Error(`Despesa não encontrada: ${input.despesaId.trim()}.`);
+  }
 
   if (!alvo) {
     return {

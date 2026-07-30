@@ -76,8 +76,8 @@ function mergeDespesaRows(
 ): ClienteDespesaRegistro[] {
   const rows = [...base];
   if (extra) {
-    const id = String(extra.id ?? "");
-    if (!rows.some((r) => String(r.id ?? "") === id)) {
+    const id = String(extra.id ?? "").trim().toLowerCase();
+    if (id && !rows.some((r) => String(r.id ?? "").trim().toLowerCase() === id)) {
       rows.push(extra);
     }
   }
@@ -177,7 +177,7 @@ export async function loadCobrancasScopedDbContextAsync(
   }
 
   let rowAlvoPrefetch: Record<string, unknown> | null = null;
-  if ((!clienteId || !veiculoId) && despesaAlvoRef) {
+  if (despesaAlvoRef) {
     logFlowStep(flowRoute, 4, "queryClienteDespesaByReferenciaFromSql (prefetch escopo)");
     rowAlvoPrefetch = await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef);
     if (rowAlvoPrefetch) {
@@ -186,7 +186,10 @@ export async function loadCobrancasScopedDbContextAsync(
       ).trim();
       if (!clienteId && isEntityUuid(condutorId)) clienteId = condutorId;
       const vid = String(rowAlvoPrefetch.veiculoId ?? rowAlvoPrefetch.veiculo_id ?? "").trim();
-      if (!veiculoId && isEntityUuid(vid)) veiculoId = vid;
+      if (!veiculoId) {
+        if (isEntityUuid(vid)) veiculoId = vid;
+        else if (vid) veiculoId = await resolveVeiculoIdFromSql({ placa: vid });
+      }
     }
   }
 
@@ -206,14 +209,14 @@ export async function loadCobrancasScopedDbContextAsync(
 
   const despesaExplicita = Boolean(input.despesaId?.trim());
 
-  if (despesaExplicita && despesaAlvoRef && clienteId && veiculoId) {
+  if (despesaExplicita && despesaAlvoRef && clienteId && (veiculoId || rowAlvoPrefetch)) {
     logFlowStep(flowRoute, 6, "plano unitário — contexto mínimo");
     const [rowAlvo, clientes, veiculos] = await Promise.all([
       rowAlvoPrefetch
         ? Promise.resolve(rowAlvoPrefetch)
         : queryClienteDespesaByReferenciaFromSql(despesaAlvoRef),
       loadClientesByIdsFromSql([clienteId]),
-      queryVeiculosByIdsFromSql([veiculoId]),
+      veiculoId ? queryVeiculosByIdsFromSql([veiculoId]) : Promise.resolve([]),
     ]);
 
     if (!rowAlvo) {
@@ -222,15 +225,11 @@ export async function loadCobrancasScopedDbContextAsync(
     if (!clientes.length) {
       throw new Error(`Cliente não encontrado: ${clienteId}.`);
     }
-    if (!veiculos.length) {
+    if (veiculoId && !veiculos.length) {
       throw new Error(`Veículo não encontrado: ${veiculoId}.`);
     }
 
     const alvoRow = rowAlvo as ClienteDespesaRegistro;
-    const veiculoDespesa = veiculoIdFromDespesaRow(alvoRow);
-    if (veiculoDespesa && veiculoDespesa !== veiculoId) {
-      throw new Error(`Despesa ${despesaAlvoRef} não pertence ao veículo informado.`);
-    }
     if (alvoRow.paga === true) {
       throw new Error(`Despesa ${despesaAlvoRef} já está quitada.`);
     }
@@ -245,7 +244,7 @@ export async function loadCobrancasScopedDbContextAsync(
     let contratos: Record<string, unknown>[] = [];
     let clienteDespesas = mergeDespesaRows([], rowAlvo);
 
-    if (precisaCalculoSemanal) {
+    if (precisaCalculoSemanal && veiculoId) {
       let contratosResult = await queryContratosFromSql(contratoQueryOpts);
       if (!contratosResult.length && input.contratoPar === true) {
         contratosResult = await queryContratosFromSql({
