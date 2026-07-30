@@ -1009,15 +1009,21 @@ export async function queryClienteDespesaByReferenciaFromSql(
 ): Promise<Record<string, unknown> | null> {
   const key = referencia.trim();
   if (!key) return null;
+  const byId = isUuid(key);
   const r = await pgQuery(
-    `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
-     FROM lanza.cliente_despesas cd
-     LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
-     WHERE lower(trim(cd.auto_infracao)) = lower(trim($1))
-        OR cd.id::text = $1
-     LIMIT 1`,
+    byId
+      ? `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
+         FROM lanza.cliente_despesas cd
+         LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
+         WHERE cd.id::text = $1
+         LIMIT 1`
+      : `SELECT cd.*, v.placa AS veiculo_placa_ref, v.cliente_vinculado_id
+         FROM lanza.cliente_despesas cd
+         LEFT JOIN lanza.veiculos v ON v.id = cd.veiculo_id
+         WHERE lower(trim(cd.auto_infracao)) = lower(trim($1))
+         LIMIT 1`,
     [key],
-    "queryClienteDespesaByReferenciaFromSql",
+    byId ? "queryClienteDespesaByReferenciaFromSql/byId" : "queryClienteDespesaByReferenciaFromSql/byAuto",
   );
   const row = r.rows[0];
   if (!row) return null;

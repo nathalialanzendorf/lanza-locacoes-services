@@ -341,4 +341,107 @@ export async function loadCobrancasScopedDbContextAsync(
   };
 }
 
+/** Contexto mínimo para POST /api/recebimentos/plano (despesa + cliente explícitos). */
+export async function loadPlanoBaixaCtxDireto(input: {
+  clienteId: string;
+  despesaId: string;
+  veiculoId?: string | null;
+  placa?: string | null;
+  flowRoute?: string;
+}): Promise<CobrancasDbContext> {
+  const flowRoute = input.flowRoute ?? "POST /api/recebimentos/plano";
+  const clienteId = input.clienteId.trim();
+  const despesaId = input.despesaId.trim();
+  if (!isEntityUuid(clienteId)) {
+    throw new Error(`Cliente id inválido: ${clienteId}.`);
+  }
+  if (!despesaId) {
+    throw new Error("despesaId é obrigatório.");
+  }
+
+  logFlowStep(flowRoute, 5, "plano direto — despesa + cliente + veículo");
+  let veiculoId =
+    input.veiculoId?.trim() && isEntityUuid(input.veiculoId.trim())
+      ? input.veiculoId.trim()
+      : null;
+
+  const [rowAlvo, clientes, veiculoIdFromPlaca] = await Promise.all([
+    queryClienteDespesaByReferenciaFromSql(despesaId),
+    loadClientesByIdsFromSql([clienteId]),
+    !veiculoId && input.placa?.trim()
+      ? resolveVeiculoIdFromSql({ placa: input.placa })
+      : Promise.resolve<string | null>(veiculoId),
+  ]);
+
+  if (!veiculoId) veiculoId = veiculoIdFromPlaca;
+
+  if (!rowAlvo) {
+    throw new Error(`Despesa não encontrada: ${despesaId}.`);
+  }
+  if (!clientes.length) {
+    throw new Error(`Cliente não encontrado: ${clienteId}.`);
+  }
+
+  const alvoRow = rowAlvo as ClienteDespesaRegistro;
+  if (!veiculoId) {
+    const vid = String(alvoRow.veiculoId ?? "").trim();
+    if (isEntityUuid(vid)) veiculoId = vid;
+    else if (vid) veiculoId = await resolveVeiculoIdFromSql({ placa: vid });
+  }
+
+  const veiculos = veiculoId ? await queryVeiculosByIdsFromSql([veiculoId]) : [];
+
+  if (alvoRow.paga === true) {
+    throw new Error(`Despesa ${despesaId} já está quitada.`);
+  }
+  if (alvoRow.ativo === false) {
+    throw new Error(`Despesa ${despesaId} está inativa.`);
+  }
+
+  const precisaCalculoSemanal =
+    alvoRow.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
+    /ATRASADO/i.test(String(alvoRow.descricao ?? ""));
+
+  let contratos: Record<string, unknown>[] = [];
+  let clienteDespesas = mergeDespesaRows([], rowAlvo);
+
+  if (precisaCalculoSemanal && veiculoId) {
+    let contratosResult = await queryContratosFromSql({
+      clienteId,
+      veiculoIds: [veiculoId],
+      contratoPar: true,
+      skipSnapshots: true,
+    });
+    if (!contratosResult.length) {
+      contratosResult = await queryContratosFromSql({
+        clienteId,
+        veiculoIds: [veiculoId],
+        skipSnapshots: true,
+      });
+    }
+    const semanalAtrasado = await queryClienteDespesasFromSql({
+      ativo: true,
+      emAberto: true,
+      veiculoId,
+      categoria: CategoriaDespesaCliente.LocacaoSemanal,
+      descricaoIlike: "ATRASADO",
+    });
+    contratos = contratosResult;
+    clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
+  }
+
+  logFlowStep(
+    flowRoute,
+    8,
+    `plano direto pronto (despesas=${clienteDespesas.length} contratos=${contratos.length})`,
+  );
+
+  return {
+    clienteDespesas,
+    clientes: clientes as ClienteRegistro[],
+    veiculos: veiculos as VeiculoRegistro[],
+    contratos: contratos as ContratoRegistro[],
+  };
+}
+
 export const loadBaixaPlanoDbContextAsync = loadCobrancasScopedDbContextAsync;

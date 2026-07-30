@@ -12,6 +12,7 @@ import { loadClientesDb, normNomeKey, type ClienteRegistro } from "../clientesDb
 import {
   loadCobrancasDbContextAsync,
   loadBaixaPlanoDbContextAsync,
+  loadPlanoBaixaCtxDireto,
   setCobrancasRuntimeCtx,
   type CobrancasDbContext,
   type CobrancasScopedContextInput,
@@ -971,18 +972,32 @@ export async function montarPlanoBaixaAsync(
   const flowRoute = "POST /api/recebimentos/plano";
   resetSqlSeq();
   logFlowStep(flowRoute, 0, "início montarPlanoBaixaAsync");
-  _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(
-    enrichBaixaPlanoScope(
-      normalizeBaixaScopeInput({
-        clienteId: input.clienteId,
-        clienteQuery: input.clienteQuery,
-        veiculoId: input.veiculoId,
-        despesaId: input.despesaId,
-        placa: input.placa,
-      }),
-    ),
-    flowRoute,
-  );
+
+  const clienteId = input.clienteId?.trim();
+  const despesaId = input.despesaId?.trim();
+  if (clienteId && despesaId && isEntityUuid(clienteId)) {
+    _baixaPlanoCtx = await loadPlanoBaixaCtxDireto({
+      clienteId,
+      despesaId,
+      veiculoId: input.veiculoId,
+      placa: input.placa,
+      flowRoute,
+    });
+  } else {
+    _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(
+      enrichBaixaPlanoScope(
+        normalizeBaixaScopeInput({
+          clienteId: input.clienteId,
+          clienteQuery: input.clienteQuery,
+          veiculoId: input.veiculoId,
+          despesaId: input.despesaId,
+          placa: input.placa,
+        }),
+      ),
+      flowRoute,
+    );
+  }
+
   setCobrancasRuntimeCtx(_baixaPlanoCtx);
   try {
     logFlowStep(flowRoute, 9, "montarPlanoBaixa (memória)");
