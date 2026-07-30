@@ -61,6 +61,7 @@ export {
   useRelationalStore,
   assertRelationalStore,
   skipJsonStoresWrite,
+  warmupPgPool,
   exportJsonBackup,
   loadParceirosFromSql,
   loadVinculosFromSql,

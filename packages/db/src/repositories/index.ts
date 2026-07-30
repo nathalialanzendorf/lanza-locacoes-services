@@ -1,5 +1,10 @@
 export { queryResumoCountsFromSql, type ResumoCounts } from "./resumoCounts.js";
-export { useRelationalStore, assertRelationalStore, skipJsonStoresWrite } from "./relationalConfig.js";
+export {
+  useRelationalStore,
+  assertRelationalStore,
+  skipJsonStoresWrite,
+  warmupPgPool,
+} from "./relationalConfig.js";
 export { exportJsonBackup } from "./jsonExport.js";
 export {
   loadParceirosFromSql,

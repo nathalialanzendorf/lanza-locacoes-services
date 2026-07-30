@@ -37,6 +37,12 @@ export function resetRelationalStoreCache(): void {
   relationalStoreCached = null;
 }
 
+/** Abre uma conexão antes de queries paralelas (evita hang no cold start Vercel/RDS). */
+export async function warmupPgPool(): Promise<void> {
+  if (!(await useRelationalStore())) return;
+  await pgQuery("SELECT 1", undefined, "warmupPgPool");
+}
+
 export function skipJsonStoresWrite(): boolean {
   return process.env.LANZA_DB_READ_LEGACY !== "1" && process.env.LANZA_DB_RELATIONAL !== "0";
 }

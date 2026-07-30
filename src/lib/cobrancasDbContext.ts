@@ -8,6 +8,7 @@ import {
   resolveClienteIdFromSql,
   resolveVeiculoIdFromSql,
   useRelationalStore,
+  warmupPgPool,
 } from "@lanza/db";
 import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
@@ -359,21 +360,19 @@ export async function loadPlanoBaixaCtxDireto(input: {
     throw new Error("despesaId é obrigatório.");
   }
 
-  logFlowStep(flowRoute, 5, "plano direto — despesa + cliente + veículo");
+  logFlowStep(flowRoute, 5, "plano direto — warmup + despesa + cliente + veículo");
+  await warmupPgPool();
+
   let veiculoId =
     input.veiculoId?.trim() && isEntityUuid(input.veiculoId.trim())
       ? input.veiculoId.trim()
       : null;
 
-  const [rowAlvo, clientes, veiculoIdFromPlaca] = await Promise.all([
-    queryClienteDespesaByReferenciaFromSql(despesaId),
-    loadClientesByIdsFromSql([clienteId]),
-    !veiculoId && input.placa?.trim()
-      ? resolveVeiculoIdFromSql({ placa: input.placa })
-      : Promise.resolve<string | null>(veiculoId),
-  ]);
-
-  if (!veiculoId) veiculoId = veiculoIdFromPlaca;
+  const rowAlvo = await queryClienteDespesaByReferenciaFromSql(despesaId);
+  const clientes = await loadClientesByIdsFromSql([clienteId]);
+  if (!veiculoId && input.placa?.trim()) {
+    veiculoId = await resolveVeiculoIdFromSql({ placa: input.placa });
+  }
 
   if (!rowAlvo) {
     throw new Error(`Despesa não encontrada: ${despesaId}.`);
@@ -406,6 +405,7 @@ export async function loadPlanoBaixaCtxDireto(input: {
   let clienteDespesas = mergeDespesaRows([], rowAlvo);
 
   if (precisaCalculoSemanal && veiculoId) {
+    // despesaId explícito: só a despesa alvo no contexto (evita ILIKE "ATRASADO" em todo o veículo).
     let contratosResult = await queryContratosFromSql({
       clienteId,
       veiculoIds: [veiculoId],
@@ -419,15 +419,8 @@ export async function loadPlanoBaixaCtxDireto(input: {
         skipSnapshots: true,
       });
     }
-    const semanalAtrasado = await queryClienteDespesasFromSql({
-      ativo: true,
-      emAberto: true,
-      veiculoId,
-      categoria: CategoriaDespesaCliente.LocacaoSemanal,
-      descricaoIlike: "ATRASADO",
-    });
     contratos = contratosResult;
-    clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
+    clienteDespesas = mergeDespesaRows([], rowAlvo);
   }
 
   logFlowStep(
