@@ -3,7 +3,8 @@
 CREATE TABLE IF NOT EXISTS lanza.cliente_despesas (
   id UUID PRIMARY KEY,
   categoria TEXT,
-  veiculo_id UUID NOT NULL REFERENCES lanza.veiculos (id) ON DELETE RESTRICT,
+  veiculo_id UUID REFERENCES lanza.veiculos (id) ON DELETE SET NULL,
+  veiculo_placa TEXT NOT NULL,
   auto_infracao TEXT NOT NULL,
   titulo TEXT,
   descricao TEXT NOT NULL,
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS lanza.cliente_despesas (
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS cliente_despesas_veiculo_placa_idx ON lanza.cliente_despesas (veiculo_placa);
 CREATE INDEX IF NOT EXISTS cliente_despesas_veiculo_id_idx ON lanza.cliente_despesas (veiculo_id);
 CREATE INDEX IF NOT EXISTS cliente_despesas_condutor_idx ON lanza.cliente_despesas (condutor_id);
 CREATE INDEX IF NOT EXISTS cliente_despesas_categoria_idx ON lanza.cliente_despesas (categoria);

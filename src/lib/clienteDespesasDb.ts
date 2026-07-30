@@ -190,7 +190,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   id: "uuid",
   categoria:
     "Infração | Locação semanal | Caução | Manutenção | Quebra contrato | Renegociação | Estacionamento | Pedágio | Outros",
-  veiculoId: "uuid → veiculos (FK obrigatório)",
+  veiculoId: "Placa do veículo (ABC-1D23)",
   autoInfracao: "Chave natural (auto DETRAN ou id interno)",
   descricao: "Descrição do débito",
   localInfracao: "Local (infrações) ou vazio",
@@ -637,7 +637,6 @@ async function pushAposPersistir(
   return regs;
 }
 
-/** Resolve placa legível a partir de UUID ou placa (somente exibição / contratos). */
 function resolvePlacaVeiculoCadastro(
   veiculoIdRaw: string,
   veiculos?: VeiculoRegistro[],
@@ -648,17 +647,14 @@ function resolvePlacaVeiculoCadastro(
   return formatPlacaHyphen(veiculoIdRaw);
 }
 
-/** Exige UUID do veículo; placa legada é resolvida na gravação. */
+/** Preserva UUID; placa legada continua normalizada para persistência SQL. */
 function resolveVeiculoIdFromDespesaPatch(
   veiculoIdRaw: string,
   veiculos?: VeiculoRegistro[],
 ): string {
   const raw = String(veiculoIdRaw).trim();
   if (isEntityUuid(raw)) return raw;
-  const catalog = veiculos ?? getCobrancasRuntimeCtx()?.veiculos ?? loadVeiculosDb().veiculos;
-  const veiculo = findVeiculoInDb({ veiculos: catalog }, raw);
-  if (veiculo?.id?.trim()) return veiculo.id.trim();
-  throw new Error(`Veículo não encontrado: ${raw}. Cadastre o veículo antes de vincular a despesa.`);
+  return resolvePlacaVeiculoCadastro(raw, veiculos);
 }
 
 function dataEventoContratoMs(dataBr: string): number | null {
@@ -734,12 +730,7 @@ export async function gravarClienteDespesa(
       : { placa: veiculoIdRaw.trim() };
     const veiculosDb = await loadVeiculosDbAsync(veiculoScope);
     const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
-    if (!veiculo?.id?.trim()) {
-      throw new Error(
-        `Veículo não encontrado: ${veiculoIdRaw}. Cadastre o veículo antes de lançar a despesa.`,
-      );
-    }
-    veiculoId = veiculo.id.trim();
+    veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
   }
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;

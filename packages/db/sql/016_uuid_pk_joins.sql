@@ -7,7 +7,7 @@ COMMENT ON SCHEMA lanza IS
 
 COMMENT ON COLUMN lanza.contratos.veiculo_id IS 'FK UUID → lanza.veiculos.id (join por PK, não por placa).';
 COMMENT ON COLUMN lanza.contratos.cliente_id IS 'FK UUID → lanza.clientes.id (join por PK, não por CPF).';
-COMMENT ON COLUMN lanza.cliente_despesas.veiculo_id IS 'FK UUID → lanza.veiculos.id (obrigatório).';
+COMMENT ON COLUMN lanza.cliente_despesas.veiculo_id IS 'FK UUID → lanza.veiculos.id';
 COMMENT ON COLUMN lanza.cliente_despesas.condutor_id IS 'FK UUID → lanza.clientes.id';
 COMMENT ON COLUMN lanza.infracoes.veiculo_id IS 'FK UUID → lanza.veiculos.id';
 COMMENT ON COLUMN lanza.infracoes.condutor_id IS 'FK UUID → lanza.clientes.id';

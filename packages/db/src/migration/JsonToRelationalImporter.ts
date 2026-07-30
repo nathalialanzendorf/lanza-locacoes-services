@@ -644,17 +644,13 @@ export class JsonToRelationalImporter {
 
     for (const d of items) {
       const id = asText(d.id) ?? randomUUID();
+      const placa = formatPlacaHyphen(asText(d.veiculoId) ?? "");
       const auto = asText(d.autoInfracao) ?? asText(d.numeroAuto) ?? id;
       const infracaoId = infracaoMap.get(auto.toLowerCase()) ?? null;
-      const veiculoId = resolveVeiculoId(asText(d.veiculoId), this.placaMap, this.warnings);
-      if (!veiculoId) {
-        this.warnings.push(`cliente_despesas ${id}: veículo não resolvido (${asText(d.veiculoId) ?? ""}) — ignorado`);
-        continue;
-      }
 
       await this.pool.query(
         `INSERT INTO lanza.cliente_despesas (
-          id, categoria, veiculo_id, auto_infracao, titulo, descricao, numero_auto,
+          id, categoria, veiculo_id, veiculo_placa, auto_infracao, titulo, descricao, numero_auto,
           local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
           data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
           condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
@@ -664,14 +660,15 @@ export class JsonToRelationalImporter {
           origem, cadastrado_em, atualizado_em
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-          $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
-          COALESCE($40::timestamptz, now()), COALESCE($41::timestamptz, now())
+          $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,
+          COALESCE($41::timestamptz, now()), COALESCE($42::timestamptz, now())
         )
         ON CONFLICT (id) DO UPDATE SET paga = EXCLUDED.paga, situacao = EXCLUDED.situacao, atualizado_em = now()`,
         [
           id,
           asText(d.categoria),
-          veiculoId,
+          resolveVeiculoId(asText(d.veiculoId), this.placaMap, this.warnings),
+          placa,
           auto,
           asText(d.titulo),
           asText(d.descricao) ?? "",
