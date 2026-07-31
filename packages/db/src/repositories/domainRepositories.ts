@@ -901,11 +901,10 @@ export type ClienteDespesasSqlFilter = {
 };
 
 function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
-  const veiculoId = row.veiculo_id != null ? String(row.veiculo_id) : null;
   return {
     id: String(row.id),
     categoria: row.categoria,
-    veiculoId: veiculoId ?? asText(row.veiculo_placa_ref),
+    veiculoId: row.veiculo_id != null ? String(row.veiculo_id) : null,
     autoInfracao: row.auto_infracao,
     titulo: row.titulo,
     descricao: row.descricao,

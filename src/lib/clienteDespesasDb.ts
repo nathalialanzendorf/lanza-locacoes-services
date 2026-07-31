@@ -196,7 +196,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   id: "uuid",
   categoria:
     "Infração | Locação semanal | Caução | Manutenção | Quebra contrato | Renegociação | Estacionamento | Pedágio | Outros",
-  veiculoId: "Placa do veículo (ABC-1D23)",
+  veiculoId: "uuid → veiculos (FK obrigatório)",
   autoInfracao: "Chave natural (auto DETRAN ou id interno)",
   descricao: "Descrição do débito",
   localInfracao: "Local (infrações) ou vazio",

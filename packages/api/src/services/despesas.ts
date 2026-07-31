@@ -20,9 +20,6 @@ import {
   loadContratosDbAsync,
   loadVeiculosDbAsync,
   findVeiculoById,
-  findVeiculoByPlaca,
-  compactPlaca,
-  formatPlacaHyphen,
   formatVeiculoLabel,
   vencimentoClienteDespesaBr,
   type ClienteDespesaInput,
@@ -102,12 +99,9 @@ function pagaEmDespesaBr(d: ClienteDespesaRegistro): string | null {
 }
 
 function veiculoDaDespesaCliente(d: ClienteDespesaRegistro, veiculos: VeiculoRegistro[]) {
-  return (
-    veiculos.find((v) => v.id === d.veiculoId) ??
-    veiculos.find((v) => compactPlaca(v.placa) === compactPlaca(d.veiculoId)) ??
-    findVeiculoById(d.veiculoId) ??
-    findVeiculoByPlaca(d.veiculoId)
-  );
+  const id = String(d.veiculoId ?? "").trim();
+  if (!id) return undefined;
+  return veiculos.find((v) => v.id === id) ?? findVeiculoById(id);
 }
 
 function clienteNomeDespesa(d: ClienteDespesaRegistro, clientes: ClienteRegistro[]): string | null {
@@ -138,7 +132,7 @@ function enriquecerDespesaCliente(
   catalogo: DespesasCatalogo,
 ): DespesaClienteListagem {
   const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
-  const placa = veiculo?.placa ?? formatPlacaHyphen(d.veiculoId);
+  const placa = veiculo?.placa ?? null;
   return {
     ...d,
     placa,
@@ -163,11 +157,7 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
   );
 
   if (veiculoIdFiltro) {
-    items = items.filter((d) => {
-      if (d.veiculoId === veiculoIdFiltro) return true;
-      const veiculo = veiculoDaDespesaCliente(d, catalogo.veiculos);
-      return veiculo?.id === veiculoIdFiltro;
-    });
+    items = items.filter((d) => d.veiculoId === veiculoIdFiltro);
   }
 
   if (opts.categoria?.trim()) {
