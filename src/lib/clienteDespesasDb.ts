@@ -653,14 +653,17 @@ function resolvePlacaVeiculoCadastro(
   return formatPlacaHyphen(veiculoIdRaw);
 }
 
-/** Preserva UUID; placa legada continua normalizada para persistência SQL. */
+/** Exige UUID do veículo; placa legada é resolvida na gravação. */
 function resolveVeiculoIdFromDespesaPatch(
   veiculoIdRaw: string,
   veiculos?: VeiculoRegistro[],
 ): string {
   const raw = String(veiculoIdRaw).trim();
   if (isEntityUuid(raw)) return raw;
-  return resolvePlacaVeiculoCadastro(raw, veiculos);
+  const catalog = veiculos ?? getCobrancasRuntimeCtx()?.veiculos ?? loadVeiculosDb().veiculos;
+  const veiculo = findVeiculoInDb({ veiculos: catalog }, raw);
+  if (veiculo?.id?.trim()) return veiculo.id.trim();
+  throw new Error(`Veículo não encontrado: ${raw}. Cadastre o veículo antes de vincular a despesa.`);
 }
 
 function dataEventoContratoMs(dataBr: string): number | null {
@@ -736,7 +739,12 @@ export async function gravarClienteDespesa(
       : { placa: veiculoIdRaw.trim() };
     const veiculosDb = await loadVeiculosDbAsync(veiculoScope);
     const veiculo = findVeiculoInDb(veiculosDb, veiculoIdRaw);
-    veiculoId = veiculo?.id ?? resolvePlacaVeiculoCadastro(veiculoIdRaw, veiculosDb.veiculos);
+    if (!veiculo?.id?.trim()) {
+      throw new Error(
+        `Veículo não encontrado: ${veiculoIdRaw}. Cadastre o veículo antes de lançar a despesa.`,
+      );
+    }
+    veiculoId = veiculo.id.trim();
   }
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;
