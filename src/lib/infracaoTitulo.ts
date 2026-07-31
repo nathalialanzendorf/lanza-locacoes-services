@@ -89,8 +89,7 @@ export function normalizarCamposInfracaoCliente(args: {
       descricao: rastreame,
     };
   }
-  const situacao = String(args.situacao ?? "").trim().toLowerCase();
-  const emAberto = args.paga !== true && situacao !== "registrado";
+  const emAberto = args.paga !== true;
   return {
     titulo: detran,
     descricao: descricaoInfracaoCliente(detran, args.dataAutuacao, args.numeroAuto, { emAberto }),
@@ -348,13 +347,9 @@ export type RotuloGastoInput = {
   quitadaDetran?: boolean;
 };
 
-/** Débito em aberto para cobrança (espelho Gastos Gerais / Rastreame). */
+/** Dinheiro ainda não recebido na Lanza (`paga` é a fonte de verdade). */
 export function gastoClienteEmAberto(reg: RotuloGastoInput): boolean {
-  if (reg.paga === true) return false;
-  const info = String(reg.descricao ?? "").trim();
-  if (/^CR[EÉ]DITO\b/i.test(info) || /^D[EÉ]BITO\b/i.test(info)) return true;
-  if (/ATRASADO|ATRSAD/i.test(info)) return true;
-  return reg.situacao === "Em aberto";
+  return reg.paga !== true;
 }
 
 /** Rótulo de infração em relatórios e cobranças — usa `descricao` (padrão Multa tipo - data). */

@@ -8,6 +8,8 @@ import path from "node:path";
 import {
   isCategoriaManutencao,
   isClienteDespesaAtiva,
+  isClienteDespesaEmAberto,
+  isLocacaoSemanalEmAberto,
   despesaAtribuidaACliente,
   isInfracaoTransito,
   isInfracaoSemDataAutuacao,
@@ -181,11 +183,7 @@ function fmtDataBr(iso: string | null | undefined): string | null {
 
 function despesaAberta(d: ClienteDespesaRegistro): boolean {
   if (isInfracaoTransito(d)) return false;
-  return (
-    isClienteDespesaAtiva(d) &&
-    d.paga !== true &&
-    (d.situacao === "Em aberto" || !d.paga)
-  );
+  return isClienteDespesaAtiva(d) && isClienteDespesaEmAberto(d);
 }
 
 /** Todas as infrações do escopo para listagem (qualquer status DETRAN). */
@@ -781,8 +779,7 @@ function vencimentosAtrasadoSemanal(
   const vencimentos: string[] = [];
 
   for (const d of despesas) {
-    if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
-    if (!/ATRASADO/i.test(d.descricao ?? "")) continue;
+    if (!isLocacaoSemanalEmAberto(d)) continue;
     if (compactPlaca(d.veiculoId) !== placaKey) continue;
     if (clienteId && !despesaDoCliente(d, clienteId)) continue;
 

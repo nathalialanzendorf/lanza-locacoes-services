@@ -956,10 +956,10 @@ export async function queryClienteDespesasFromSql(
   const where: string[] = [];
   let p = 1;
 
-  if (filter.ativo === true) {
-    where.push("(cd.ativo IS DISTINCT FROM false)");
-  } else if (filter.ativo === false) {
+  if (filter.ativo === false) {
     where.push("(cd.ativo = false)");
+  } else {
+    where.push("(cd.ativo IS DISTINCT FROM false)");
   }
 
   if (filter.emAberto === true) {
@@ -1003,9 +1003,15 @@ export async function queryClienteDespesasFromSql(
   return r.rows.map((row) => mapClienteDespesaRow(row as Record<string, unknown>));
 }
 
+export type QueryClienteDespesaByReferenciaOpts = {
+  /** Inclui registros legados com ativo=false (soft delete antigo). */
+  includeInativas?: boolean;
+};
+
 /** Busca despesa por auto_infracao ou id (Postgres). */
 export async function queryClienteDespesaByReferenciaFromSql(
   referencia: string,
+  opts?: QueryClienteDespesaByReferenciaOpts,
 ): Promise<Record<string, unknown> | null> {
   const key = referencia.trim();
   if (!key) return null;
@@ -1027,7 +1033,14 @@ export async function queryClienteDespesaByReferenciaFromSql(
   );
   const row = r.rows[0];
   if (!row) return null;
+  if (!opts?.includeInativas && row.ativo === false) return null;
   return mapClienteDespesaRow(row as Record<string, unknown>);
+}
+
+/** Remove uma despesa cliente do Postgres. */
+export async function deleteClienteDespesaFromSql(id: string): Promise<boolean> {
+  const r = await pgWriteQuery(`DELETE FROM lanza.cliente_despesas WHERE id = $1`, [id.trim()]);
+  return (r.rowCount ?? 0) > 0;
 }
 
 export async function loadClienteDespesasFromSql(): Promise<ClienteDespesasDbShape> {

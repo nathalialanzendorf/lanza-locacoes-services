@@ -4,6 +4,8 @@
  */
 import {
   despesaAtribuidaACliente,
+  isClienteDespesaEmAberto,
+  isLocacaoSemanalEmAberto,
   loadClienteDespesasDb,
   type ClienteDespesaPatch,
   type ClienteDespesaRegistro,
@@ -181,7 +183,7 @@ function despesaVeiculoRefIgual(d: ClienteDespesaRegistro, veiculoRef: string): 
 }
 
 function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
-  return d.ativo !== false && d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
+  return isClienteDespesaEmAberto(d);
 }
 
 function correspondeAlvoExplicito(d: ClienteDespesaRegistro, alvoId: string): boolean {
@@ -231,10 +233,8 @@ function vencimentosSemanalAbertosCliente(clienteId: string, placaOuVeiculoId?: 
     .filter(
       (d) =>
         despesaAtribuidaACliente(d, clienteId, 90, atribuicaoCtx) &&
-        d.ativo !== false &&
-        d.paga !== true &&
-        d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
-        /ATRASADO/i.test(d.descricao ?? "") &&
+        isLocacaoSemanalEmAberto(d) &&
+        isPagamentoSemanalDescricao(d.descricao ?? "") &&
         (!placaFiltro || placasIguais(resolvePlacaDespesa(d), placaFiltro)),
     )
     .map((d) => dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao)
@@ -412,9 +412,7 @@ function despesasAbertasCliente(clienteId: string, opts?: { excluirCategorias?: 
     .filter(
       (d) =>
         despesaAtribuidaACliente(d, clienteId, 90, atribuicaoCtx) &&
-        d.ativo !== false &&
-        d.paga !== true &&
-        (d.situacao === "Em aberto" || !d.paga) &&
+        isClienteDespesaEmAberto(d) &&
         !excluir.has(d.categoria ?? ""),
     )
     .sort((a, b) => compararDataBrAsc(a.dataAutuacao, b.dataAutuacao));
@@ -459,9 +457,7 @@ function escolherDespesaAlvo(
   valor: number,
   dataRecebimentoBr: string,
 ): ClienteDespesaRegistro | null {
-  const semanais = abertas.filter(
-    (d) => d.categoria === CategoriaDespesaCliente.LocacaoSemanal && /ATRASADO/i.test(d.descricao),
-  );
+  const semanais = abertas.filter((d) => isLocacaoSemanalEmAberto(d));
   const pool = semanais.length > 0 ? semanais : abertas;
   if (pool.length === 0) return null;
 
@@ -548,7 +544,7 @@ function previewProximaParcela(
   const alvo = stripAtrasadoSemanal(prox.descricao).toLowerCase();
   const dup = clienteDespesasList().some(
     (d) =>
-      d.ativo !== false &&
+      isClienteDespesaEmAberto(d) &&
       d.veiculoId === pago.veiculoId &&
       d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       stripAtrasadoSemanal(d.descricao).toLowerCase() === alvo,
@@ -837,7 +833,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
   }
 
   let calculoSemanalAtraso: CalculoSemanalAtrasoPlano | null = null;
-  if (alvo.categoria === CategoriaDespesaCliente.LocacaoSemanal && /ATRASADO/i.test(alvo.descricao)) {
+  if (isLocacaoSemanalEmAberto(alvo)) {
     calculoSemanalAtraso = montarCalculoSemanalAtrasoPlano({
       clienteId: cliente.id!,
       clienteNome: cliente.nome,

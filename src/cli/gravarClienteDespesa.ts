@@ -131,7 +131,7 @@ export async function main(argv: string[]): Promise<void> {
       console.error("Débito não encontrado:", idOrAuto);
       process.exit(1);
     }
-    console.log(`[OK excluir] ${m.autoInfracao} (ativo=false)`);
+    console.log(`[OK excluir] ${m.autoInfracao} (removido)`);
     printSyncHint(m);
     return;
   }

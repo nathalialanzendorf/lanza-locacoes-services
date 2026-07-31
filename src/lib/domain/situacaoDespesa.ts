@@ -1,4 +1,4 @@
-/** Texto gravado em `situacao` (controle interno / DETRAN). */
+/** Texto descritivo em `situacao` (DETRAN, pedágio, etc.) — não confundir com `paga` (caixa Lanza). */
 export const SituacaoDespesa = {
   EmAberto: "Em aberto",
   Pago: "Pago",

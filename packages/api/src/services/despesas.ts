@@ -12,6 +12,7 @@ import {
   findClienteDespesaByIdAsync,
   gravarClienteDespesa,
   isClienteDespesaAtiva,
+  isClienteDespesaEmAberto,
   loadClienteDespesasDb,
   loadClienteDespesasDbAsync,
   loadClientesDb,
@@ -46,6 +47,7 @@ export type ListarDespesasOpts = {
   categoria?: string;
   competencia?: string;
   emAberto?: boolean;
+  /** @deprecated legado — registros com ativo=false eram soft delete; exclusão agora remove a linha */
   ativo?: boolean;
   semCliente?: boolean;
   /** @deprecated use semCliente */
@@ -66,7 +68,7 @@ type DespesasCatalogo = {
 };
 
 function despesaEmAberto(d: ClienteDespesaRegistro): boolean {
-  return d.paga !== true && (d.situacao === "Em aberto" || !d.paga);
+  return isClienteDespesaEmAberto(d);
 }
 
 

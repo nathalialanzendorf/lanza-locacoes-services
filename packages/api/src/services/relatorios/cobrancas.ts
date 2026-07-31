@@ -39,6 +39,7 @@ import {
   type ClienteDespesaRegistro,
   type ContratoRegistro,
   type ClienteRegistro,
+  isLocacaoSemanalEmAberto,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
 import { hojeBr, resolverClienteFromList, resolverFiltroRelatorioComClientes, resolverFiltroRelatorioAsync, type FiltroRelatorioInput } from "./filtro.js";
@@ -331,8 +332,7 @@ function vencimentosAbertosCliente(
 ): string[] {
   const out = new Set<string>();
   for (const d of clienteDespesas) {
-    if (d.ativo === false || d.paga === true) continue;
-    if (d.categoria !== "Locação semanal" || !/ATRASADO/i.test(d.descricao)) continue;
+    if (!isLocacaoSemanalEmAberto(d)) continue;
     if (d.condutorId !== clienteId) continue;
     if (placa && normPlaca(d.veiculoId) !== normPlaca(placa)) continue;
     const v = dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao;

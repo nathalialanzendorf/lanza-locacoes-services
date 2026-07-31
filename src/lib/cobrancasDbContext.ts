@@ -10,12 +10,11 @@ import {
   useRelationalStore,
   warmupPgPool,
 } from "@lanza/db";
-import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb, loadClienteDespesasDbAsync, isLocacaoSemanalEmAberto, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
 import { isEntityUuid } from "./filtroListagem.js";
 import { loadVeiculosDb, loadVeiculosDbAsync, type VeiculoRegistro } from "./veiculosDb.js";
-import { CategoriaDespesaCliente } from "./domain/index.js";
 
 export type CobrancasDbContext = {
   clienteDespesas: ClienteDespesaRegistro[];
@@ -121,7 +120,7 @@ export function loadCobrancasDbContextSync(): CobrancasDbContext {
 
 export async function loadCobrancasDbContextForResumoAsync(): Promise<CobrancasDbContext> {
   const [clienteDespesasDb, clientesDb, veiculosDb, contratosDb] = await Promise.all([
-    loadClienteDespesasDbAsync({ emAberto: true, ativo: true }),
+    loadClienteDespesasDbAsync({ emAberto: true }),
     loadClientesDbAsync(),
     loadVeiculosDbAsync(),
     loadContratosDbAsync(),
@@ -234,13 +233,8 @@ export async function loadCobrancasScopedDbContextAsync(
     if (alvoRow.paga === true) {
       throw new Error(`Despesa ${despesaAlvoRef} já está quitada.`);
     }
-    if (alvoRow.ativo === false) {
-      throw new Error(`Despesa ${despesaAlvoRef} está inativa.`);
-    }
 
-    const precisaCalculoSemanal =
-      alvoRow.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
-      /ATRASADO/i.test(String(alvoRow.descricao ?? ""));
+    const precisaCalculoSemanal = isLocacaoSemanalEmAberto(alvoRow);
 
     let contratos: Record<string, unknown>[] = [];
     let clienteDespesas = mergeDespesaRows([], rowAlvo);
@@ -254,15 +248,8 @@ export async function loadCobrancasScopedDbContextAsync(
           skipSnapshots: true,
         });
       }
-      const semanalAtrasado = await queryClienteDespesasFromSql({
-        ativo: true,
-        emAberto: true,
-        veiculoId,
-        categoria: CategoriaDespesaCliente.LocacaoSemanal,
-        descricaoIlike: "ATRASADO",
-      });
       contratos = contratosResult;
-      clienteDespesas = mergeDespesaRows(semanalAtrasado, rowAlvo);
+      clienteDespesas = mergeDespesaRows([], rowAlvo);
     }
 
     logFlowStep(
@@ -280,7 +267,6 @@ export async function loadCobrancasScopedDbContextAsync(
   }
 
   const sqlFilter = {
-    ativo: true as const,
     ...(input.emAberto === true ? { emAberto: true as const } : {}),
     ...(input.despesasPorVeiculo === true && veiculoId
       ? { veiculoId }
@@ -393,13 +379,8 @@ export async function loadPlanoBaixaCtxDireto(input: {
   if (alvoRow.paga === true) {
     throw new Error(`Despesa ${despesaId} já está quitada.`);
   }
-  if (alvoRow.ativo === false) {
-    throw new Error(`Despesa ${despesaId} está inativa.`);
-  }
 
-  const precisaCalculoSemanal =
-    alvoRow.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
-    /ATRASADO/i.test(String(alvoRow.descricao ?? ""));
+  const precisaCalculoSemanal = isLocacaoSemanalEmAberto(alvoRow);
 
   let contratos: Record<string, unknown>[] = [];
   let clienteDespesas = mergeDespesaRows([], rowAlvo);

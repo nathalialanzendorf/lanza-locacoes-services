@@ -7,7 +7,7 @@ import path from "node:path";
 
 import {
   comprovanteDetranParaPush,
-  editarClienteDespesa,
+  excluirClienteDespesa,
   extrairDetranAutoComprovante,
   isSyncRastreameEligible,
   loadClienteDespesasDb,
@@ -155,10 +155,9 @@ export function categoriaFromGasto(tipo: string | null, info: string): string {
 export function isGastoEmAberto(info: string): boolean {
   const t = String(info ?? "").trim();
   if (t.startsWith("[NEGOCIADO")) return false;
-  // Débitos/créditos lançados sem tag ATRASADO (ex.: "CRÉDITO 3 diárias…" ou legado DÉBITO).
   if (/^CR[EÉ]DITO\b/i.test(t) || /^D[EÉ]BITO\b/i.test(t)) return true;
-  // Rastreame ocasionalmente grava "ATRSADO" (typo) em vez de "ATRASADO".
-  return /ATRASADO|ATRSAD/i.test(t);
+  if (/pago|quitad|recebido/i.test(t)) return false;
+  return true;
 }
 
 function situacaoFromGasto(info: string, emAberto: boolean): string {
@@ -323,9 +322,9 @@ export async function pullRecebimentosFromRastreame(
       );
       if (local && local.ativo !== false) {
         if (opts.dryRun) {
-          console.log(`[pull dry-run] inativar local RAST-${id} (inativo no Rastreame)`);
+          console.log(`[pull dry-run] excluir local RAST-${id} (inativo no Rastreame)`);
         } else {
-          await editarClienteDespesa(local.id, { ativo: false }, { syncRastreame: false });
+          await excluirClienteDespesa(local.id, { syncRastreame: false });
         }
         result.atualizados++;
       } else {

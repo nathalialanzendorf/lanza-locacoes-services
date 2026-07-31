@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, upsertClienteDespesaRowToSql, updateClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
+import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, deleteClienteDespesaFromSql, upsertClienteDespesaRowToSql, updateClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
 import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -77,6 +77,10 @@ export type ClienteDespesaRegistro = {
   localInfracao: string;
   dataAutuacao: string;
   valorMulta: number;
+  /**
+   * Status externo ou descritivo (DETRAN, pedágio, estacionamento, etc.).
+   * Não indica recebimento na conta Lanza — use `paga` para isso.
+   */
   situacao: string;
   /** Espelho legado: autuação → dataLimiteDefesa; débito → dataVencimentoOriginal. */
   limiteDefesa: string;
@@ -99,7 +103,9 @@ export type ClienteDespesaRegistro = {
   revisarManual?: boolean;
   /** Motivo da revisão manual (texto curto). */
   revisarMotivo?: string | null;
+  /** true = dinheiro recebido na conta Lanza (baixa/recebimento registrado). */
   paga?: boolean;
+  /** Data/hora ISO do recebimento na Lanza. */
   pagaEm?: string | null;
   quitadaDetran?: boolean;
   /** Status bruto do DETRAN: Advertida | Paga | Notificada | Justificada. */
@@ -126,7 +132,7 @@ export type ClienteDespesaRegistro = {
   detranAutoInfracao?: string | null;
   /** Caminho do PDF da notificação/auto (absoluto ou relativo a documentosRaiz). */
   pdfArquivo?: string | null;
-  /** false = excluído (soft delete); não entra em acertos. */
+  /** false = excluída (soft delete interno); não é status operacional de cobrança. */
   ativo?: boolean;
   cadastradoEm: string;
   atualizadoEm: string;
@@ -224,7 +230,7 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   rastreameSyncEm: "ISO 8601 — última sync com Rastreame",
   detranAutoInfracao: "Auto DETRAN (campo comprovante do Rastreame; ex. J008087450)",
   pdfArquivo: "Caminho do PDF da infração (pasta Débitos do contrato ou veículo)",
-  ativo: "boolean — false = excluído (default true)",
+  ativo: "legado — exclusão remove o registro; listagem oculta ativo=false antigos",
 };
 
 function parseValor(v: number | string): number {
@@ -1058,14 +1064,14 @@ export async function sincronizarClienteDespesa(
   const manterDescricaoCobranca =
     isCategoriaInfracao(categoria) &&
     (m.rastreameId != null ||
-      /ATRASADO/i.test(m.descricao ?? "") ||
+      isClienteDespesaEmAberto(m) ||
       pareceTituloMulta(m.descricao ?? ""));
   const tituloDetran = isCategoriaInfracao(categoria) ? descricaoDetran : "";
   const tituloMudou = isCategoriaInfracao(categoria) && tituloDetran && (m.titulo ?? "") !== tituloDetran;
   const descricaoPadrao =
     isCategoriaInfracao(categoria) && tituloDetran && !manterDescricaoCobranca
       ? descricaoInfracaoCliente(tituloDetran, dataFinal, input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao, {
-          emAberto: !quitadaFinal && m.paga !== true && String(input.situacao ?? m.situacao ?? "").trim().toLowerCase() !== "registrado",
+          emAberto: !quitadaFinal && m.paga !== true,
         })
       : null;
   const descricaoMudou = descricaoPadrao !== null && (m.descricao ?? "") !== descricaoPadrao;
@@ -1426,11 +1432,32 @@ export function parseRastreameIdFromAuto(autoInfracao: string): string | null {
 }
 
 export function isClienteDespesaAtiva(r: ClienteDespesaRegistro): boolean {
-  return r.ativo !== false;
+  return !isClienteDespesaExcluida(r);
+}
+
+/** Em aberto = dinheiro ainda não entrou no caixa (`paga` é a única fonte de verdade). */
+export function isClienteDespesaEmAberto(
+  r: Pick<ClienteDespesaRegistro, "paga">,
+): boolean {
+  return r.paga !== true;
+}
+
+/** Quitada na Lanza (recebimento registrado na nossa conta). */
+export function isClienteDespesaPaga(r: Pick<ClienteDespesaRegistro, "paga">): boolean {
+  return r.paga === true;
+}
+
+/** Registro legado com soft delete (ativo=false) — novas exclusões removem a linha. */
+export function isClienteDespesaExcluida(r: Pick<ClienteDespesaRegistro, "ativo">): boolean {
+  return r.ativo === false;
+}
+
+export function isLocacaoSemanalEmAberto(d: ClienteDespesaRegistro): boolean {
+  return d.categoria === CategoriaDespesaCliente.LocacaoSemanal && isClienteDespesaEmAberto(d);
 }
 
 /**
- * Inativa espelho cliente de infração (ex.: débito passou a parceiro-despesas
+ * Remove espelho cliente de infração (ex.: débito passou a parceiro-despesas
  * por ausência de locatário na data da autuação).
  */
 export function inativarEspelhoClienteInfracao(numeroAuto: string): boolean {
@@ -1440,11 +1467,8 @@ export function inativarEspelhoClienteInfracao(numeroAuto: string): boolean {
     (m) => m.autoInfracao.trim().toUpperCase() === key,
   );
   if (idx < 0) return false;
-  const m = db.clienteDespesas[idx]!;
-  if (m.ativo === false) return false;
-  m.ativo = false;
-  m.atualizadoEm = nowIso();
-  db.clienteDespesas[idx] = m;
+  db.clienteDespesas.splice(idx, 1);
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
   saveClienteDespesasDb(db);
   return true;
 }
@@ -1499,7 +1523,6 @@ export type ClienteDespesaPatch = Partial<
     | "rastreameDataIso"
     | "rastreameTipo"
     | "veiculoId"
-    | "ativo"
   >
 >;
 
@@ -1557,7 +1580,6 @@ export async function editarClienteDespesa(
   if (patch.veiculoId !== undefined) {
     m.veiculoId = resolveVeiculoIdFromDespesaPatch(patch.veiculoId);
   }
-  if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
   if (m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)) {
     const normalized = normalizarBaixaSemanal({
@@ -1699,7 +1721,6 @@ function applyClienteDespesaPatch(
   if (patch.veiculoId !== undefined) {
     m.veiculoId = resolveVeiculoIdFromDespesaPatch(patch.veiculoId, veiculos);
   }
-  if (patch.ativo !== undefined) m.ativo = patch.ativo;
 
   if (m.categoria === CategoriaDespesaCliente.LocacaoSemanal && isPagamentoSemanalDescricao(m.descricao)) {
     const normalized = normalizarBaixaSemanal({
@@ -1935,12 +1956,52 @@ function criarProximaParcelaSemanalSeNecessario(
   return registro;
 }
 
+async function findClienteDespesaForDelete(key: string): Promise<ClienteDespesaRegistro | null> {
+  const trimmed = key.trim();
+  const fromCtx = findClienteDespesaInRuntimeCtx(trimmed);
+  if (fromCtx) return { ...fromCtx };
+  if (await useRelationalStore()) {
+    const row = await queryClienteDespesaByReferenciaFromSql(trimmed, { includeInativas: true });
+    return row ? (row as ClienteDespesaRegistro) : null;
+  }
+  const db = loadClienteDespesasDb();
+  const ku = trimmed.toUpperCase();
+  return (
+    db.clienteDespesas.find((m) => m.id === trimmed) ??
+    db.clienteDespesas.find((m) => m.autoInfracao.trim().toUpperCase() === ku) ??
+    null
+  );
+}
+
 export async function excluirClienteDespesa(
   idOrAuto: string,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<ClienteDespesaRegistro | null> {
-  const r = await editarClienteDespesa(idOrAuto, { ativo: false }, opts);
-  return r?.registro ?? null;
+  const reg = await findClienteDespesaForDelete(idOrAuto);
+  if (!reg) return null;
+
+  if (opts?.syncRastreame !== false && reg.rastreameId != null && String(reg.rastreameId).trim() !== "") {
+    try {
+      const { excluirGasto } = await import("./rastreame/gasto.js");
+      await excluirGasto(reg.rastreameId);
+    } catch {
+      /* Rastreame indisponível — exclusão local segue */
+    }
+  }
+
+  if (await useRelationalStore()) {
+    const ok = await deleteClienteDespesaFromSql(reg.id);
+    if (!ok) return null;
+    return reg;
+  }
+
+  const db = loadClienteDespesasDb();
+  const idx = db.clienteDespesas.findIndex((m) => m.id === reg.id);
+  if (idx < 0) return null;
+  db.clienteDespesas.splice(idx, 1);
+  db.atualizadoEm = new Date().toISOString().slice(0, 10);
+  saveClienteDespesasDb(db);
+  return reg;
 }
 
 export type UpsertRecebimentoRastreameInput = {

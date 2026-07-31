@@ -4,6 +4,8 @@
 import {
   isCategoriaManutencao,
   isClienteDespesaAtiva,
+  isClienteDespesaEmAberto,
+  isLocacaoSemanalEmAberto,
   inferirCondutorIdDespesaPorData,
   isInfracaoSemDataAutuacao,
   loadClienteDespesasDb,
@@ -105,11 +107,7 @@ function clientesAtivos(ctx?: CobrancasDbContext) {
 }
 
 function despesaAberta(d: ClienteDespesaRegistro): boolean {
-  return (
-    isClienteDespesaAtiva(d) &&
-    d.paga !== true &&
-    (d.situacao === "Em aberto" || !d.paga)
-  );
+  return isClienteDespesaAtiva(d) && isClienteDespesaEmAberto(d);
 }
 
 export function despesaNaSituacao(
@@ -186,8 +184,7 @@ function despesaRenegociacaoEncerrada(
   d: ClienteDespesaRegistro,
   contratos: ContratoRegistro[],
 ): boolean {
-  if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) return false;
-  if (!/ATRASADO/i.test(d.descricao ?? "")) return false;
+  if (!isLocacaoSemanalEmAberto(d)) return false;
   const placa = placaHyphenVeiculoRef(d.veiculoId);
   const clienteId = d.condutorId ?? inferirCondutorIdDespesaPorData(d);
   if (!clienteId) return false;
@@ -321,7 +318,7 @@ function semanalAtrasoObsoleto(
     if (other.paga !== true) continue;
 
     const desc = other.descricao ?? "";
-    if (/ATRASADO/i.test(desc)) continue;
+    if (isJurosMultaSemanalDescricao(desc)) continue;
     if (/\[NEGOCIADO/i.test(desc)) continue;
 
     const vencOther = vencimentoDespesaSemanalBr(
@@ -463,7 +460,6 @@ function filtrarPagamentoSemanal(
     if (!despesaNoPeriodo(d, filtro ?? {})) continue;
     if (d.categoria !== CategoriaDespesaCliente.LocacaoSemanal) continue;
     if (situacao === "em_aberto") {
-      if (!/ATRASADO/i.test(d.descricao)) continue;
       const vencSemanal = vencimentoDespesaSemanalBr(
         d.descricao ?? "",
         d.rastreameDataIso,

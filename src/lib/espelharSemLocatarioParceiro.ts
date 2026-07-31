@@ -1,14 +1,13 @@
 /**
  * Infrações e pedágios sem locatário → parceiro-despesas.json (custo do dono).
- * Espelho em cliente-despesas é inativado; cobrança de locatário não se aplica.
+ * Espelho em cliente-despesas é removido; cobrança de locatário não se aplica.
  */
 import {
   categoriaInfereCondutor,
-  inativarEspelhoClienteInfracao,
+  excluirClienteDespesa,
   isClienteDespesaAtiva,
   isInfracaoTransito,
   loadClienteDespesasDb,
-  saveClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
@@ -105,20 +104,11 @@ export function despesaCobravelLocatario(d: ClienteDespesaRegistro): boolean {
   return true;
 }
 
-function inativarClienteDespesa(d: ClienteDespesaRegistro): void {
-  const db = loadClienteDespesasDb();
-  const idx = db.clienteDespesas.findIndex((x) => x.id === d.id);
-  if (idx < 0 || db.clienteDespesas[idx]!.ativo === false) return;
-  db.clienteDespesas[idx]!.ativo = false;
-  db.clienteDespesas[idx]!.atualizadoEm = new Date().toISOString();
-  saveClienteDespesasDb(db);
-}
-
 export function espelharInfracaoParceiro(
   reg: InfracaoRegistro,
 ): GravarParceiroDespesaResult | null {
   if (!infracaoDeveEspelharParceiroDespesa(reg)) return null;
-  inativarEspelhoClienteInfracao(reg.numeroAuto);
+  void excluirClienteDespesa(reg.numeroAuto, { syncRastreame: false });
   return sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg));
 }
 
@@ -131,9 +121,9 @@ export function espelharClienteDespesaSemLocatario(
     : parceiroDespesaInputFromPedagioSemLocatario(d);
   const r = sincronizarParceiroDespesa(input);
   if (isInfracaoTransito(d)) {
-    inativarEspelhoClienteInfracao(d.autoInfracao);
+    void excluirClienteDespesa(d.autoInfracao, { syncRastreame: false });
   } else {
-    inativarClienteDespesa(d);
+    void excluirClienteDespesa(d.id, { syncRastreame: false });
   }
   return r;
 }

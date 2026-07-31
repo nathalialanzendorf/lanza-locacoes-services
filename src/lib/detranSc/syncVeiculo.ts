@@ -8,7 +8,7 @@ import { REPO_ROOT } from "../repoRoot.js";
 import {
   sincronizarClienteDespesa,
   atualizarPdfArquivoInfracao,
-  inativarEspelhoClienteInfracao,
+  excluirClienteDespesa,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
 import {
@@ -174,7 +174,7 @@ async function espelharDebitoInfracao(
   }
 
   if (infracaoDeveEspelharParceiroDespesa(reg)) {
-    inativarEspelhoClienteInfracao(reg.numeroAuto);
+    await excluirClienteDespesa(reg.numeroAuto, { syncRastreame: false });
     const parceiroDespesa = sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg));
     return {
       clienteDespesa: null,

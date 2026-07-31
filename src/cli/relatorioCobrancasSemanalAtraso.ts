@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { compararDataBrAsc } from "../lib/contratoExtrair.js";
-import { loadClienteDespesasDb } from "../lib/clienteDespesasDb.js";
+import { loadClienteDespesasDb, isLocacaoSemanalEmAberto } from "../lib/clienteDespesasDb.js";
 import { loadContratosDb } from "../lib/contratosDb.js";
 import { dataVencimentoSemanalBr } from "../lib/pagamentoSemanal.js";
 import {
@@ -15,7 +15,7 @@ import {
 } from "../lib/pagamentoSemanalCobranca.js";
 import { parseDataBr, resolverCliente } from "../lib/recebimento/baixaPlano.js";
 import { REPO_ROOT } from "../lib/repoRoot.js";
-import { StatusContrato, CategoriaDespesaCliente } from "../lib/domain/index.js";
+import { StatusContrato } from "../lib/domain/index.js";
 
 function getOpt(argv: string[], nome: string): string | undefined {
   const i = argv.indexOf(nome);
@@ -83,10 +83,7 @@ function vencimentosAbertosCliente(clienteId: string, placa?: string): string[] 
     .filter(
       (d) =>
         d.condutorId === clienteId &&
-        d.ativo !== false &&
-        d.paga !== true &&
-        d.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
-        /ATRASADO/i.test(d.descricao) &&
+        isLocacaoSemanalEmAberto(d) &&
         (!placa || normPlaca(d.veiculoId) === normPlaca(placa)),
     )
     .map((d) => dataVencimentoSemanalBr(d.descricao, d.rastreameDataIso) ?? d.dataAutuacao)
