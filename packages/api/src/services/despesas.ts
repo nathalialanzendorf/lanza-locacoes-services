@@ -19,6 +19,8 @@ import {
   gravarClienteDespesa,
   isClienteDespesaAtiva,
   isClienteDespesaEmAberto,
+  isClienteDespesaPaga,
+  isClienteDespesaBaixada,
   loadClienteDespesasDb,
   loadClienteDespesasDbAsync,
   loadClientesDb,
@@ -50,6 +52,8 @@ export type ListarDespesasOpts = {
   categoria?: string;
   competencia?: string;
   emAberto?: boolean;
+  /** Filtro canónico: em_aberto | pago | baixado. */
+  statusCobranca?: "em_aberto" | "pago" | "baixado";
   /** @deprecated legado — registros com ativo=false eram soft delete; exclusão agora remove a linha */
   ativo?: boolean;
   semCliente?: boolean;
@@ -188,7 +192,13 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
     items = items.filter((d) => !isClienteDespesaAtiva(d));
   }
 
-  if (opts.emAberto === true) {
+  if (opts.statusCobranca === "em_aberto") {
+    items = items.filter(despesaEmAberto);
+  } else if (opts.statusCobranca === "pago") {
+    items = items.filter(isClienteDespesaPaga);
+  } else if (opts.statusCobranca === "baixado") {
+    items = items.filter(isClienteDespesaBaixada);
+  } else if (opts.emAberto === true) {
     items = items.filter(despesaEmAberto);
   } else if (opts.emAberto === false) {
     items = items.filter((d) => !despesaEmAberto(d));
@@ -236,7 +246,8 @@ async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<Desp
     const despesas = (await queryClienteDespesasFromSql({
       clienteId,
       veiculoId,
-      emAberto: opts.emAberto,
+      emAberto: opts.statusCobranca ? undefined : opts.emAberto,
+      statusCobranca: opts.statusCobranca,
       ativo: opts.ativo,
     })) as ClienteDespesaRegistro[];
     const veiculoIds = [
@@ -422,6 +433,7 @@ export function patchParaInput(
     categoria: patch.categoria ?? defaults?.categoria,
     titulo: patch.titulo ?? defaults?.titulo,
     paga: patch.paga ?? defaults?.paga,
+    statusCobranca: patch.statusCobranca ?? defaults?.statusCobranca,
     pagaEm: patch.pagaEm ?? defaults?.pagaEm,
     rastreameMotoristaKey: patch.rastreameMotoristaKey ?? defaults?.rastreameMotoristaKey,
     rastreameRastreavelKey: patch.rastreameRastreavelKey ?? defaults?.rastreameRastreavelKey,

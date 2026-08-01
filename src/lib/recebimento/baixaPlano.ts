@@ -767,6 +767,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
         condutorId: escopoClienteId,
         veiculoId: alvo.veiculoId,
         paga: true,
+        statusCobranca: "pago",
         pagaEm: pagaEmIso,
         rastreameDataIso: pagaEmIso,
         situacao: "Registrado",
@@ -789,6 +790,7 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       condutorId: escopoClienteId,
       veiculoId: escopoVeiculoId,
       paga: true,
+      statusCobranca: "pago",
       pagaEm: pagaEmIso,
       situacao: "Registrado",
     };

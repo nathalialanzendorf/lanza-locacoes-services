@@ -17,6 +17,8 @@ import {
   isInfracaoSemDataAutuacao,
   isCategoriaManutencao,
   isClienteDespesaAtiva,
+  isClienteDespesaEmAberto,
+  isClienteDespesaPaga,
   isInfracaoTransito,
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
@@ -324,7 +326,7 @@ function expandirRenegociacoesPlanoFaltante(
     if (!parsed) continue;
 
     const cur = planos.get(parsed.total) ?? { maxPago: 0, valorParcela: 0 };
-    if (m.paga === true) {
+    if (isClienteDespesaPaga(m)) {
       cur.maxPago = Math.max(cur.maxPago, parsed.numero);
     }
     if (m.valorMulta > 0 && m.rastreameTipo === "DOCUMENTACAO") {
@@ -332,7 +334,7 @@ function expandirRenegociacoesPlanoFaltante(
     } else if (m.valorMulta > 0 && cur.valorParcela <= 0) {
       cur.valorParcela = m.valorMulta;
     }
-    if (m.paga !== true) {
+    if (isClienteDespesaEmAberto(m)) {
       cur.ref = m;
     }
     planos.set(parsed.total, cur);
@@ -408,7 +410,7 @@ function coletarDebitosAbertosDb(
 
   for (const m of db.clienteDespesas) {
     if (!isClienteDespesaAtiva(m)) continue;
-    if (m.paga === true) continue;
+    if (!isClienteDespesaEmAberto(m)) continue;
     if (isInfracaoTransito(m) && infracaoExcluidaAcerto(m, pagasAutoSet)) continue;
     if (!despesaDoContrato(m, contrato, clienteId, incluirTodas)) continue;
     const da = parseDataBr(m.dataAutuacao);
@@ -496,7 +498,7 @@ function inferirSemanasPagasDoDb(
   const limite = addDays(startOfDay(encerramento), 7);
   const pagasNoPeriodo = clienteDespesasEnc().filter((m) => {
     if (!isClienteDespesaAtiva(m)) return false;
-    if (m.paga !== true) return false;
+    if (!isClienteDespesaPaga(m)) return false;
     if ((m.categoria ?? "") !== CategoriaDespesaCliente.LocacaoSemanal) return false;
     if (m.condutorId !== clienteId) return false;
     const da = parseDataBr(m.dataAutuacao);
@@ -709,7 +711,7 @@ export function calcularEncerramentoContrato(input: EncerramentoInput): Encerram
   const manutencoes = db.clienteDespesas.filter((m) => {
     if (!isClienteDespesaAtiva(m)) return false;
     if (!isCategoriaManutencao(m.categoria)) return false;
-    if (m.paga === true) return false;
+    if (!isClienteDespesaEmAberto(m)) return false;
     if (pagasAutoSet.has(m.autoInfracao.trim().toUpperCase())) return false;
     if (incluirInfracoesCliente && clienteId && m.condutorId === clienteId) {
       return true;

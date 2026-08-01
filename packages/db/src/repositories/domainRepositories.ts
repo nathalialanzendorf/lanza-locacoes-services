@@ -894,6 +894,8 @@ export type ClienteDespesasSqlFilter = {
   /** UUID do veículo (placa deve ser resolvida na camada de listagem). */
   veiculoId?: string;
   emAberto?: boolean;
+  /** Filtro canónico: em_aberto | pago | baixado. */
+  statusCobranca?: "em_aberto" | "pago" | "baixado";
   ativo?: boolean;
   categoria?: string;
   /** Filtro ILIKE em descricao (ex.: ATRASADO). */
@@ -927,6 +929,14 @@ function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unkn
     revisarManual: row.revisar_manual === true,
     revisarMotivo: row.revisar_motivo,
     paga: row.paga === true,
+    statusCobranca:
+      row.status_cobranca === "pago" ||
+      row.status_cobranca === "baixado" ||
+      row.status_cobranca === "em_aberto"
+        ? row.status_cobranca
+        : row.paga === true
+          ? "pago"
+          : "em_aberto",
     pagaEm: rowIso(row.paga_em),
     quitadaDetran: row.quitada_detran === true,
     statusInfracao: row.status_infracao,
@@ -960,10 +970,22 @@ export async function queryClienteDespesasFromSql(
     where.push("(cd.ativo IS DISTINCT FROM false)");
   }
 
-  if (filter.emAberto === true) {
-    where.push("(cd.paga IS NOT TRUE)");
+  if (filter.statusCobranca === "em_aberto") {
+    where.push(
+      `(COALESCE(cd.status_cobranca, CASE WHEN cd.paga THEN 'pago' ELSE 'em_aberto' END) = 'em_aberto')`,
+    );
+  } else if (filter.statusCobranca === "pago") {
+    where.push(
+      `(COALESCE(cd.status_cobranca, CASE WHEN cd.paga THEN 'pago' ELSE 'em_aberto' END) = 'pago')`,
+    );
+  } else if (filter.statusCobranca === "baixado") {
+    where.push(`(cd.status_cobranca = 'baixado')`);
+  } else if (filter.emAberto === true) {
+    where.push(
+      `(cd.paga IS NOT TRUE AND COALESCE(cd.status_cobranca, 'em_aberto') <> 'baixado')`,
+    );
   } else if (filter.emAberto === false) {
-    where.push("(cd.paga = true)");
+    where.push(`(cd.paga = true OR cd.status_cobranca = 'pago')`);
   }
 
   if (filter.clienteId?.trim() && isUuid(filter.clienteId.trim())) {
@@ -1127,8 +1149,13 @@ function clienteDespesaRowSqlParams(
     isUuid(asText(d.debitoParceiroId)) ? d.debitoParceiroId : null,
     asBool(d.revisarManual, false),
     asText(d.revisarMotivo),
-    asBool(d.paga, false),
+    asBool(d.paga, false) || asText(d.statusCobranca) === "pago",
     parseIsoOrDataBr(asText(d.pagaEm)),
+    (() => {
+      const s = asText(d.statusCobranca);
+      if (s === "pago" || s === "baixado" || s === "em_aberto") return s;
+      return asBool(d.paga, false) ? "pago" : "em_aberto";
+    })(),
     asBool(d.quitadaDetran, false),
     asText(d.statusInfracao),
     asText(d.statusDetran),
@@ -1153,12 +1180,12 @@ const CLIENTE_DESPESA_UPSERT_SQL = `
       local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
       data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
       condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
-      revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
+      revisar_manual, revisar_motivo, paga, paga_em, status_cobranca, quitada_detran, status_infracao, status_detran,
       rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
       rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
       origem, cadastrado_em, atualizado_em
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,COALESCE($40::timestamptz, now()), now())
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())
     ON CONFLICT (id) DO UPDATE SET
       categoria = EXCLUDED.categoria,
       veiculo_id = EXCLUDED.veiculo_id,
@@ -1178,6 +1205,7 @@ const CLIENTE_DESPESA_UPSERT_SQL = `
       revisar_manual = EXCLUDED.revisar_manual,
       paga = EXCLUDED.paga,
       paga_em = EXCLUDED.paga_em,
+      status_cobranca = EXCLUDED.status_cobranca,
       quitada_detran = EXCLUDED.quitada_detran,
       rastreame_id = EXCLUDED.rastreame_id,
       rastreame_motorista_key = EXCLUDED.rastreame_motorista_key,
@@ -1195,9 +1223,9 @@ function clienteDespesaRowUpdateSqlParams(
   meta: ClienteDespesaPersistMeta,
   opts?: PersistClienteDespesaSqlOpts,
 ): unknown[] {
-  const params = clienteDespesaRowSqlParams(d, meta).slice(0, 39);
+  const params = clienteDespesaRowSqlParams(d, meta).slice(0, 40);
   if (!opts?.skipInfracaoLookup) return params;
-  return [...params.slice(0, 36), ...params.slice(37)];
+  return [...params.slice(0, 37), ...params.slice(38)];
 }
 
 /** UPDATE de uma linha existente (sem INSERT / ON CONFLICT). */
@@ -1209,9 +1237,9 @@ export async function updateClienteDespesaRowToSql(
   if (!meta) return;
 
   const skipInfracao = opts?.skipInfracaoLookup === true;
-  const infracaoSet = skipInfracao ? "" : "infracao_id = $37,";
-  const ativoParam = skipInfracao ? "$37" : "$38";
-  const origemParam = skipInfracao ? "$38" : "$39";
+  const infracaoSet = skipInfracao ? "" : "infracao_id = $38,";
+  const ativoParam = skipInfracao ? "$38" : "$39";
+  const origemParam = skipInfracao ? "$39" : "$40";
 
   await pgQuery(
     `UPDATE lanza.cliente_despesas SET
@@ -1239,17 +1267,18 @@ export async function updateClienteDespesaRowToSql(
       revisar_motivo = $23,
       paga = $24,
       paga_em = $25,
-      quitada_detran = $26,
-      status_infracao = $27,
-      status_detran = $28,
-      rastreame_id = $29,
-      rastreame_motorista_key = $30,
-      rastreame_rastreavel_key = $31,
-      rastreame_data_iso = $32,
-      rastreame_tipo = $33,
-      rastreame_sync_em = $34,
-      detran_auto_infracao = $35,
-      pdf_arquivo = $36,
+      status_cobranca = $26,
+      quitada_detran = $27,
+      status_infracao = $28,
+      status_detran = $29,
+      rastreame_id = $30,
+      rastreame_motorista_key = $31,
+      rastreame_rastreavel_key = $32,
+      rastreame_data_iso = $33,
+      rastreame_tipo = $34,
+      rastreame_sync_em = $35,
+      detran_auto_infracao = $36,
+      pdf_arquivo = $37,
       ${infracaoSet}
       ativo = ${ativoParam},
       origem = ${origemParam},
@@ -1274,12 +1303,12 @@ export async function insertClienteDespesaRowToSql(
       local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
       data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
       condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
-      revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
+      revisar_manual, revisar_motivo, paga, paga_em, status_cobranca, quitada_detran, status_infracao, status_detran,
       rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
       rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
       origem, cadastrado_em, atualizado_em
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,COALESCE($40::timestamptz, now()), now())`,
+      $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,COALESCE($41::timestamptz, now()), now())`,
     clienteDespesaRowSqlParams(d, meta),
     "insertClienteDespesaRow",
   );

@@ -660,16 +660,20 @@ export class JsonToRelationalImporter {
           local_infracao, data_autuacao, valor_multa, situacao, limite_defesa, data_limite_defesa,
           data_vencimento_original, convertida_em_debito, condutor_id, condutor_confirmado,
           condutor_contrato, condutor_nao_identificado, debito_parceiro_confirmado, debito_parceiro_id,
-          revisar_manual, revisar_motivo, paga, paga_em, quitada_detran, status_infracao, status_detran,
+          revisar_manual, revisar_motivo, paga, paga_em, status_cobranca, quitada_detran, status_infracao, status_detran,
           rastreame_id, rastreame_motorista_key, rastreame_rastreavel_key, rastreame_data_iso,
           rastreame_tipo, rastreame_sync_em, detran_auto_infracao, pdf_arquivo, infracao_id, ativo,
           origem, cadastrado_em, atualizado_em
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,
-          $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
-          COALESCE($40::timestamptz, now()), COALESCE($41::timestamptz, now())
+          $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,
+          COALESCE($41::timestamptz, now()), COALESCE($42::timestamptz, now())
         )
-        ON CONFLICT (id) DO UPDATE SET paga = EXCLUDED.paga, situacao = EXCLUDED.situacao, atualizado_em = now()`,
+        ON CONFLICT (id) DO UPDATE SET
+          paga = EXCLUDED.paga,
+          status_cobranca = EXCLUDED.status_cobranca,
+          situacao = EXCLUDED.situacao,
+          atualizado_em = now()`,
         [
           id,
           asText(d.categoria),
@@ -696,6 +700,11 @@ export class JsonToRelationalImporter {
           asText(d.revisarMotivo),
           asBool(d.paga, false),
           parseIso(asText(d.pagaEm)),
+          asText(d.statusCobranca) === "baixado"
+            ? "baixado"
+            : asBool(d.paga, false) || asText(d.statusCobranca) === "pago"
+              ? "pago"
+              : "em_aberto",
           asBool(d.quitadaDetran, false),
           asText(d.statusInfracao),
           asText(d.statusDetran),

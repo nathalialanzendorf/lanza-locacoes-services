@@ -1,7 +1,8 @@
-/** Texto descritivo em `situacao` (DETRAN, pedágio, etc.) — não confundir com `paga` (caixa Lanza). */
+/** Texto descritivo em `situacao` (DETRAN, pedágio, etc.) — não confundir com `paga` / `statusCobranca` (caixa Lanza). */
 export const SituacaoDespesa = {
   EmAberto: "Em aberto",
   Pago: "Pago",
+  Baixado: "Baixado",
   Registrado: "Registrado",
   Notificada: "Notificada",
 } as const;

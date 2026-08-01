@@ -71,6 +71,7 @@ export {
   isClienteDespesaAtiva,
   isClienteDespesaEmAberto,
   isClienteDespesaPaga,
+  isClienteDespesaBaixada,
   isLocacaoSemanalEmAberto,
   despesaAtribuidaACliente,
   gravarClienteDespesa,

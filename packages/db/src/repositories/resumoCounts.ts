@@ -169,12 +169,14 @@ export async function queryResumoCountsFromSql(): Promise<ResumoCounts> {
         FROM lanza.cliente_despesas cd
         WHERE (cd.ativo IS DISTINCT FROM false)
           AND (cd.paga IS NOT TRUE)
+          AND COALESCE(cd.status_cobranca, 'em_aberto') <> 'baixado'
       ) AS despesas_cliente_em_aberto,
       (
         SELECT COALESCE(SUM(cd.valor_multa), 0)
         FROM lanza.cliente_despesas cd
         WHERE (cd.ativo IS DISTINCT FROM false)
           AND (cd.paga IS NOT TRUE)
+          AND COALESCE(cd.status_cobranca, 'em_aberto') <> 'baixado'
       ) AS despesas_cliente_valor,
       (
         SELECT COUNT(*)::int

@@ -20,8 +20,12 @@ export {
 export { SituacaoDespesa, type SituacaoDespesaValor } from "./situacaoDespesa.js";
 
 export {
+  StatusCobrancaDespesa,
   StatusDespesaFiltro,
   camposStatusDespesaDeCadastro,
+  isStatusCobrancaDespesaValor,
+  resolverStatusCobranca,
+  type StatusCobrancaDespesaValor,
   type StatusDespesaFiltroValor,
   type StatusDespesaCadastro,
 } from "./statusDespesa.js";

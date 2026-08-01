@@ -106,6 +106,12 @@ export type ClienteDespesaRegistro = {
   revisarMotivo?: string | null;
   /** true = dinheiro recebido na conta Lanza (baixa/recebimento registrado). */
   paga?: boolean;
+  /**
+   * Status de cobrança Lanza: em_aberto | pago | baixado.
+   * `baixado` = quitado sem caixa (ex.: descontado do caução no encerramento).
+   * Preferir este campo; `paga` permanece sincronizado (pago ↔ paga=true).
+   */
+  statusCobranca?: "em_aberto" | "pago" | "baixado";
   /** Data/hora ISO do recebimento na Lanza. */
   pagaEm?: string | null;
   quitadaDetran?: boolean;
@@ -165,6 +171,8 @@ export type ClienteDespesaInput = {
    */
   statusDetran?: string;
   paga?: boolean;
+  /** em_aberto | pago | baixado — preferir sobre `paga` ao gravar. */
+  statusCobranca?: "em_aberto" | "pago" | "baixado";
   pagaEm?: string | null;
   rastreameId?: string | number | null;
   rastreameMotoristaKey?: string | null;
@@ -215,7 +223,8 @@ const DEFAULT_SCHEMA: Record<string, string> = {
   condutorNaoIdentificado: "boolean — sem locatário na autuação (espelho em parceiro-despesas, não cliente)",
   revisarManual: "boolean — true se precisa revisão manual (ex.: infração sem data de autuação)",
   revisarMotivo: "Motivo curto da revisão manual",
-  paga: "boolean — quitada pelo locatário (default false)",
+  paga: "boolean — quitada em caixa (sincronizado com statusCobranca=pago)",
+  statusCobranca: "em_aberto | pago | baixado (baixado = ex. descontado do caução)",
   pagaEm: "DD/MM/AAAA — quando foi paga (opcional)",
   quitadaDetran: "boolean — quitada no DETRAN (só infrações); não cobrar locatário",
   statusInfracao: "string — status DETRAN: Advertida | Paga | Notificada | Justificada",
@@ -875,6 +884,14 @@ export async function gravarClienteDespesa(
         ? null
         : pagaEmInputToIso(input.pagaEm) ?? String(input.pagaEm).trim();
   }
+  sincronizarStatusCobranca(registro, {
+    paga: input.paga,
+    statusCobranca: input.statusCobranca,
+    pagaEm: input.pagaEm,
+  });
+  if (registro.statusCobranca == null) {
+    registro.statusCobranca = registro.paga === true ? "pago" : "em_aberto";
+  }
   if (input.rastreameId != null) registro.rastreameId = input.rastreameId;
   if (input.rastreameMotoristaKey != null) {
     registro.rastreameMotoristaKey = input.rastreameMotoristaKey;
@@ -1449,16 +1466,58 @@ export function isClienteDespesaAtiva(r: ClienteDespesaRegistro): boolean {
   return !isClienteDespesaExcluida(r);
 }
 
-/** Em aberto = dinheiro ainda não entrou no caixa (`paga` é a única fonte de verdade). */
+function statusCobrancaDeRegistro(
+  r: Pick<ClienteDespesaRegistro, "paga" | "statusCobranca">,
+): "em_aberto" | "pago" | "baixado" {
+  const s = String(r.statusCobranca ?? "").trim();
+  if (s === "baixado" || s === "pago" || s === "em_aberto") return s;
+  return r.paga === true ? "pago" : "em_aberto";
+}
+
+/** Em aberto = ainda devido à Lanza (não pago e não baixado via caução/acerto). */
 export function isClienteDespesaEmAberto(
-  r: Pick<ClienteDespesaRegistro, "paga">,
+  r: Pick<ClienteDespesaRegistro, "paga" | "statusCobranca">,
 ): boolean {
-  return r.paga !== true;
+  return statusCobrancaDeRegistro(r) === "em_aberto";
 }
 
 /** Quitada na Lanza (recebimento registrado na nossa conta). */
-export function isClienteDespesaPaga(r: Pick<ClienteDespesaRegistro, "paga">): boolean {
-  return r.paga === true;
+export function isClienteDespesaPaga(
+  r: Pick<ClienteDespesaRegistro, "paga" | "statusCobranca">,
+): boolean {
+  return statusCobrancaDeRegistro(r) === "pago";
+}
+
+/** Quitada sem caixa (ex.: descontada do caução no encerramento). */
+export function isClienteDespesaBaixada(
+  r: Pick<ClienteDespesaRegistro, "paga" | "statusCobranca">,
+): boolean {
+  return statusCobrancaDeRegistro(r) === "baixado";
+}
+
+/** Mantém `paga` ↔ `statusCobranca` coerentes após patch. */
+function sincronizarStatusCobranca(
+  m: ClienteDespesaRegistro,
+  patch: Pick<ClienteDespesaPatch, "paga" | "statusCobranca" | "pagaEm">,
+): void {
+  if (patch.statusCobranca !== undefined) {
+    const s = String(patch.statusCobranca).trim();
+    if (s === "pago" || s === "baixado" || s === "em_aberto") {
+      m.statusCobranca = s;
+    }
+    m.paga = m.statusCobranca === "pago";
+    if (m.statusCobranca !== "pago" && patch.pagaEm === undefined) {
+      m.pagaEm = null;
+    }
+    return;
+  }
+  if (patch.paga !== undefined) {
+    if (patch.paga === true) {
+      m.statusCobranca = "pago";
+    } else if (m.statusCobranca !== "baixado") {
+      m.statusCobranca = "em_aberto";
+    }
+  }
 }
 
 /** Registro legado com soft delete (ativo=false) — novas exclusões removem a linha. */
@@ -1531,6 +1590,7 @@ export type ClienteDespesaPatch = Partial<
     | "condutorConfirmado"
     | "condutorNaoIdentificado"
     | "paga"
+    | "statusCobranca"
     | "pagaEm"
     | "rastreameMotoristaKey"
     | "rastreameRastreavelKey"
@@ -1589,6 +1649,7 @@ export async function editarClienteDespesa(
         ? null
         : pagaEmInputToIso(patch.pagaEm) ?? String(patch.pagaEm).trim();
   }
+  sincronizarStatusCobranca(m, patch);
   if (patch.rastreameMotoristaKey !== undefined) {
     m.rastreameMotoristaKey = patch.rastreameMotoristaKey;
   }
@@ -1737,6 +1798,7 @@ function applyClienteDespesaPatch(
         ? null
         : pagaEmInputToIso(patch.pagaEm) ?? String(patch.pagaEm).trim();
   }
+  sincronizarStatusCobranca(m, patch);
   if (patch.rastreameMotoristaKey !== undefined) {
     m.rastreameMotoristaKey = patch.rastreameMotoristaKey;
   }
@@ -1849,6 +1911,7 @@ function buildProximaParcelaSemanalRegistro(
     condutorConfirmado: pago.condutorConfirmado,
     condutorContrato: pago.condutorContrato,
     paga: false,
+    statusCobranca: "em_aberto",
     pagaEm: null,
     rastreameMotoristaKey: pago.rastreameMotoristaKey ?? null,
     rastreameRastreavelKey: pago.rastreameRastreavelKey ?? null,
@@ -1984,6 +2047,7 @@ function criarProximaParcelaSemanalSeNecessario(
     condutorConfirmado: pago.condutorConfirmado,
     condutorContrato: pago.condutorContrato,
     paga: false,
+    statusCobranca: "em_aberto",
     pagaEm: null,
     rastreameMotoristaKey: pago.rastreameMotoristaKey ?? null,
     rastreameRastreavelKey: pago.rastreameRastreavelKey ?? null,

@@ -42,6 +42,13 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       const ativo = parseAtivoQuery(ctx.query.get("ativo"));
       const emAberto = parseEmAbertoQuery(ctx.query.get("emAberto"));
+      const statusCobrancaRaw = (ctx.query.get("statusCobranca") ?? "").trim();
+      const statusCobranca =
+        statusCobrancaRaw === "em_aberto" ||
+        statusCobrancaRaw === "pago" ||
+        statusCobrancaRaw === "baixado"
+          ? statusCobrancaRaw
+          : undefined;
       const semCondutor = parseAtivoQuery(ctx.query.get("semCondutor"));
       const semCliente = parseAtivoQuery(ctx.query.get("semCliente"));
 
@@ -50,6 +57,12 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
       }
       if (ctx.query.has("emAberto") && emAberto === undefined) {
         return badRequest(ctx, 'Query "emAberto" inválida — use true ou false');
+      }
+      if (ctx.query.has("statusCobranca") && !statusCobranca) {
+        return badRequest(
+          ctx,
+          'Query "statusCobranca" inválida — use em_aberto, pago ou baixado',
+        );
       }
 
       json(ctx.res, 200, await despesasService.listarDespesasAsync({
@@ -62,6 +75,7 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         dataFinal: ctx.query.get("dataFinal") ?? undefined,
         ativo,
         emAberto,
+        statusCobranca,
         semCliente: semCliente === true || semCondutor === true ? true : undefined,
       }));
     }),
