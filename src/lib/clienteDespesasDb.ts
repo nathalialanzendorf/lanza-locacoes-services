@@ -37,7 +37,7 @@ import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
 import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
-import { removerParceiroDespesaPorOrigemAsync } from "./parceiroDespesasDb.js";
+import { removerParceiroDespesaPorOrigem, removerParceiroDespesaPorOrigemAsync } from "./parceiroDespesasDb.js";
 import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
 import { REPO_ROOT } from "./repoRoot.js";
 
@@ -1248,16 +1248,27 @@ export async function confirmarCondutorClienteDespesa(
   condutorId?: string | null,
   opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
 ): Promise<ClienteDespesaRegistro | null> {
+  const desvincular = condutorId !== undefined && !String(condutorId ?? "").trim();
+  const clienteId =
+    condutorId === undefined ? undefined : String(condutorId ?? "").trim() || null;
+
   if (await useRelationalStore()) {
     const m = await findClienteDespesaByReferenciaAsync(autoInfracao);
     if (!m) return null;
-    if (condutorId !== undefined) m.condutorId = condutorId;
-    m.condutorConfirmado = true;
-    m.condutorNaoIdentificado = false;
-    m.debitoParceiroConfirmado = false;
-    m.debitoParceiroId = null;
-    m.revisarManual = false;
-    m.revisarMotivo = null;
+    if (desvincular) {
+      // Sem cliente = desvincular e reabrir confirmação (cliente ou parceiro).
+      reabrirConfirmacaoResponsavel(m);
+      m.revisarManual = false;
+      m.revisarMotivo = null;
+    } else {
+      if (clienteId !== undefined) m.condutorId = clienteId;
+      m.condutorConfirmado = true;
+      m.condutorNaoIdentificado = false;
+      m.debitoParceiroConfirmado = false;
+      m.debitoParceiroId = null;
+      m.revisarManual = false;
+      m.revisarMotivo = null;
+    }
     m.atualizadoEm = nowIso();
     await removerParceiroDespesaPorOrigemAsync(
       origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
@@ -1276,13 +1287,19 @@ export async function confirmarCondutorClienteDespesa(
   if (idx < 0) return null;
 
   const m = db.clienteDespesas[idx]!;
-  if (condutorId !== undefined) m.condutorId = condutorId;
-  m.condutorConfirmado = true;
-  m.condutorNaoIdentificado = false;
-  m.debitoParceiroConfirmado = false;
-  m.debitoParceiroId = null;
-  m.revisarManual = false;
-  m.revisarMotivo = null;
+  if (desvincular) {
+    reabrirConfirmacaoResponsavel(m);
+    m.revisarManual = false;
+    m.revisarMotivo = null;
+  } else {
+    if (clienteId !== undefined) m.condutorId = clienteId;
+    m.condutorConfirmado = true;
+    m.condutorNaoIdentificado = false;
+    m.debitoParceiroConfirmado = false;
+    m.debitoParceiroId = null;
+    m.revisarManual = false;
+    m.revisarMotivo = null;
+  }
   m.atualizadoEm = nowIso();
   removerParceiroDespesaPorOrigem(
     origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
@@ -1637,7 +1654,7 @@ export async function editarClienteDespesa(
   if (patch.dataVencimentoOriginal !== undefined) {
     m.dataVencimentoOriginal = String(patch.dataVencimentoOriginal).trim();
   }
-  if (patch.condutorId !== undefined) m.condutorId = patch.condutorId;
+  const reabriuResponsavel = aplicarCondutorIdPatch(m, patch);
   if (patch.condutorConfirmado !== undefined) m.condutorConfirmado = patch.condutorConfirmado;
   if (patch.condutorNaoIdentificado !== undefined) {
     m.condutorNaoIdentificado = patch.condutorNaoIdentificado;
@@ -1676,6 +1693,12 @@ export async function editarClienteDespesa(
 
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
+
+  if (reabriuResponsavel) {
+    removerParceiroDespesaPorOrigem(
+      origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
+    );
+  }
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
@@ -1770,6 +1793,38 @@ function valorParcelaSemanalContrato(veiculoId: string): number | null {
   return contrato?.valorSemanal ?? null;
 }
 
+/**
+ * Remove vínculo de responsável e reabre a confirmação (cliente ou parceiro).
+ * Usado ao limpar o cliente da despesa.
+ */
+function reabrirConfirmacaoResponsavel(m: ClienteDespesaRegistro): void {
+  m.condutorId = null;
+  m.condutorConfirmado = false;
+  m.condutorNaoIdentificado = false;
+  m.condutorContrato = null;
+  m.debitoParceiroConfirmado = false;
+  m.debitoParceiroId = null;
+}
+
+/** Aplica `condutorId` do patch; limpar (null/vazio) reabre confirmação. Retorna true se reabriu. */
+function aplicarCondutorIdPatch(m: ClienteDespesaRegistro, patch: ClienteDespesaPatch): boolean {
+  if (patch.condutorId === undefined) return false;
+  const next =
+    patch.condutorId == null ? null : String(patch.condutorId).trim() || null;
+  const anterior = m.condutorId?.trim() || null;
+  if (!next) {
+    // Só reabre se havia cliente vinculado — evita desfazer confirmação de parceiro ao gravar outros campos.
+    if (anterior) {
+      reabrirConfirmacaoResponsavel(m);
+      return true;
+    }
+    m.condutorId = null;
+    return false;
+  }
+  m.condutorId = next;
+  return false;
+}
+
 function applyClienteDespesaPatch(
   m: ClienteDespesaRegistro,
   patch: ClienteDespesaPatch,
@@ -1786,7 +1841,7 @@ function applyClienteDespesaPatch(
   if (patch.dataVencimentoOriginal !== undefined) {
     m.dataVencimentoOriginal = String(patch.dataVencimentoOriginal).trim();
   }
-  if (patch.condutorId !== undefined) m.condutorId = patch.condutorId;
+  aplicarCondutorIdPatch(m, patch);
   if (patch.condutorConfirmado !== undefined) m.condutorConfirmado = patch.condutorConfirmado;
   if (patch.condutorNaoIdentificado !== undefined) {
     m.condutorNaoIdentificado = patch.condutorNaoIdentificado;
@@ -1961,7 +2016,14 @@ async function editarClienteDespesaRelational(
       ? dataVencimentoSemanalBr(m.descricao, m.rastreameDataIso) ?? m.dataAutuacao
       : m.dataAutuacao;
 
+  const reabriuResponsavel = patch.condutorId !== undefined && !(String(patch.condutorId ?? "").trim());
   applyClienteDespesaPatch(m, patch, veiculos);
+
+  if (reabriuResponsavel) {
+    await removerParceiroDespesaPorOrigemAsync(
+      origemParceiroPedagioSemLocatario(m.veiculoId, m.autoInfracao),
+    );
+  }
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
