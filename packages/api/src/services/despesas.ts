@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 
-import { queryClienteDespesasFromSql, queryContratosFromSql, resolveVeiculoIdFromSql, useRelationalStore } from "@lanza/db";
+import {
+  queryClienteDespesasFromSql,
+  queryContratosFromSql,
+  resolveVeiculoIdFromSql,
+  useRelationalStore,
+  warmupPgPool,
+} from "@lanza/db";
 import {
   confirmarCondutorClienteDespesa,
   confirmarDebitoParceiroDespesa,
@@ -223,6 +229,7 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
 async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<DespesasCatalogo> {
   const clienteId = opts.clienteId?.trim();
   if (await useRelationalStore()) {
+    await warmupPgPool();
     const veiculoId =
       opts.veiculoId?.trim() ||
       (opts.placa?.trim() ? (await resolveVeiculoIdFromSql({ placa: opts.placa })) ?? undefined : undefined);
@@ -240,16 +247,15 @@ async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<Desp
       ),
     ];
     if (veiculoId) veiculoIds.push(veiculoId);
-    const [enriquecimento, contratos] = await Promise.all([
-      loadCatalogoEnriquecimentoDespesas(despesas, {
-        clienteIds: clienteId ? [clienteId] : undefined,
-        veiculoIds: veiculoIds.length ? [...new Set(veiculoIds)] : undefined,
-      }),
-      queryContratosFromSql({
-        ...(clienteId ? { clienteId } : {}),
-        ...(veiculoIds.length ? { veiculoIds: [...new Set(veiculoIds)] } : {}),
-      }),
-    ]);
+    const enriquecimento = await loadCatalogoEnriquecimentoDespesas(despesas, {
+      clienteIds: clienteId ? [clienteId] : undefined,
+      veiculoIds: veiculoIds.length ? [...new Set(veiculoIds)] : undefined,
+    });
+    const contratos = await queryContratosFromSql({
+      ...(clienteId ? { clienteId } : {}),
+      ...(veiculoIds.length ? { veiculoIds: [...new Set(veiculoIds)] } : {}),
+      skipSnapshots: true,
+    });
     return {
       despesas,
       clientes: enriquecimento.clientes,

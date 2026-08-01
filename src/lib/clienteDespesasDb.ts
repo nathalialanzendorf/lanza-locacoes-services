@@ -1686,13 +1686,15 @@ function vencimentoSemanalParaBaixa(
 }
 
 function valorParcelaSemanalContrato(veiculoId: string): number | null {
-  const placa = formatPlacaHyphen(veiculoId);
+  const ref = veiculoId.trim();
   const contratos = getCobrancasRuntimeCtx()?.contratos ?? loadContratosDb().contratos;
-  const contrato = contratos.find(
-    (c) =>
-      c.status === StatusContrato.Ativo &&
-      formatPlacaHyphen(c.veiculoId ?? c.placa ?? "") === placa,
-  );
+  const placaNorm = isEntityUuid(ref) ? null : formatPlacaHyphen(ref);
+  const contrato = contratos.find((c) => {
+    if (c.status !== StatusContrato.Ativo) return false;
+    const cVid = String(c.veiculoId ?? "").trim();
+    if (isEntityUuid(ref) && isEntityUuid(cVid)) return cVid === ref;
+    return formatPlacaHyphen(c.veiculoId ?? c.placa ?? "") === (placaNorm ?? formatPlacaHyphen(ref));
+  });
   return contrato?.valorSemanal ?? null;
 }
 
@@ -1798,7 +1800,11 @@ async function despesaSemanalDescricaoDuplicadaAsync(
     ? veiculoId
     : resolveVeiculoIdListagem({ placa: veiculoId }, getCobrancasRuntimeCtx()?.veiculos);
   if (!veiculoUuid) return false;
-  const rows = (await queryClienteDespesasFromSql({ veiculoId: veiculoUuid, ativo: true })) as ClienteDespesaRegistro[];
+  const rows = (await queryClienteDespesasFromSql({
+    veiculoId: veiculoUuid,
+    ativo: true,
+    emAberto: true,
+  })) as ClienteDespesaRegistro[];
   return rows.some(
     (d) =>
       d.categoria === CategoriaDespesaCliente.LocacaoSemanal && normDescSemanal(String(d.descricao ?? "")) === descricaoNorm,

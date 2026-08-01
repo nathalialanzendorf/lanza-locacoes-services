@@ -910,9 +910,24 @@ export async function withBaixaPlanoDbContext<T>(
 ): Promise<T> {
   resetSqlSeq();
   logFlowStep(flowRoute, 0, "início withBaixaPlanoDbContext");
-  _baixaPlanoCtx = scope
-    ? await loadBaixaPlanoDbContextAsync(enrichBaixaPlanoScope(scope), flowRoute)
-    : await loadCobrancasDbContextAsync();
+  if (scope) {
+    const enriched = enrichBaixaPlanoScope(scope);
+    const clienteId = enriched.clienteId?.trim();
+    const despesaId = enriched.despesaId?.trim();
+    if (clienteId && despesaId && isEntityUuid(clienteId)) {
+      _baixaPlanoCtx = await loadPlanoBaixaCtxDireto({
+        clienteId,
+        despesaId,
+        veiculoId: enriched.veiculoId,
+        placa: enriched.placa,
+        flowRoute,
+      });
+    } else {
+      _baixaPlanoCtx = await loadBaixaPlanoDbContextAsync(enriched, flowRoute);
+    }
+  } else {
+    _baixaPlanoCtx = await loadCobrancasDbContextAsync();
+  }
   setCobrancasRuntimeCtx(_baixaPlanoCtx);
   try {
     return await fn();

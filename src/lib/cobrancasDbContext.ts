@@ -159,6 +159,8 @@ export async function loadCobrancasScopedDbContextAsync(
     return loadCobrancasDbContextAsync();
   }
 
+  await warmupPgPool();
+
   const despesaAlvoRef = input.despesaId?.trim() || null;
 
   let clienteId = input.clienteId?.trim() && isEntityUuid(input.clienteId.trim()) ? input.clienteId.trim() : null;
@@ -211,13 +213,9 @@ export async function loadCobrancasScopedDbContextAsync(
 
   if (despesaExplicita && despesaAlvoRef && clienteId && (veiculoId || rowAlvoPrefetch)) {
     logFlowStep(flowRoute, 6, "plano unitário — contexto mínimo");
-    const [rowAlvo, clientes, veiculos] = await Promise.all([
-      rowAlvoPrefetch
-        ? Promise.resolve(rowAlvoPrefetch)
-        : queryClienteDespesaByReferenciaFromSql(despesaAlvoRef),
-      loadClientesByIdsFromSql([clienteId]),
-      veiculoId ? queryVeiculosByIdsFromSql([veiculoId]) : Promise.resolve([]),
-    ]);
+    const rowAlvo = rowAlvoPrefetch ?? (await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef));
+    const clientes = await loadClientesByIdsFromSql([clienteId]);
+    const veiculos = veiculoId ? await queryVeiculosByIdsFromSql([veiculoId]) : [];
 
     if (!rowAlvo) {
       throw new Error(`Despesa não encontrada: ${despesaAlvoRef}.`);
@@ -277,14 +275,10 @@ export async function loadCobrancasScopedDbContextAsync(
   };
 
   logFlowStep(flowRoute, 6, "queryClienteDespesasFromSql + despesa alvo");
-  const [rows, rowAlvo] = await Promise.all([
-    queryClienteDespesasFromSql(sqlFilter),
-    rowAlvoPrefetch
-      ? Promise.resolve(rowAlvoPrefetch)
-      : despesaAlvoRef
-        ? queryClienteDespesaByReferenciaFromSql(despesaAlvoRef)
-        : Promise.resolve(null),
-  ]);
+  const rows = await queryClienteDespesasFromSql(sqlFilter);
+  const rowAlvo =
+    rowAlvoPrefetch ??
+    (despesaAlvoRef ? await queryClienteDespesaByReferenciaFromSql(despesaAlvoRef) : null);
 
   const clienteDespesas = mergeDespesaRows(rows, rowAlvo);
 
@@ -301,18 +295,17 @@ export async function loadCobrancasScopedDbContextAsync(
     7,
     `loadClientes/veiculos/contratos (clientes=${clienteIds.length} veiculos=${veiculoIds.length})`,
   );
-  const [clientes, veiculos, contratos] = await Promise.all([
-    clienteIds.length > 0 ? loadClientesByIdsFromSql(clienteIds) : Promise.resolve([]),
-    veiculoIds.length > 0 ? queryVeiculosByIdsFromSql(veiculoIds) : Promise.resolve([]),
-    queryContratosFromSql({
-      ...(clienteId ? { clienteId } : {}),
-      ...(veiculoIds.length > 0 ? { veiculoIds } : {}),
-      ...(input.contratoPar === true && clienteId && veiculoIds.length === 1
-        ? { contratoPar: true }
-        : {}),
-      ...(input.planoUnitario === true || input.contratoPar === true ? { skipSnapshots: true } : {}),
-    }),
-  ]);
+  const clientes =
+    clienteIds.length > 0 ? await loadClientesByIdsFromSql(clienteIds) : [];
+  const veiculos = veiculoIds.length > 0 ? await queryVeiculosByIdsFromSql(veiculoIds) : [];
+  const contratos = await queryContratosFromSql({
+    ...(clienteId ? { clienteId } : {}),
+    ...(veiculoIds.length > 0 ? { veiculoIds } : {}),
+    ...(input.contratoPar === true && clienteId && veiculoIds.length === 1
+      ? { contratoPar: true }
+      : {}),
+    ...(input.planoUnitario === true || input.contratoPar === true ? { skipSnapshots: true } : {}),
+  });
 
   logFlowStep(
     flowRoute,
