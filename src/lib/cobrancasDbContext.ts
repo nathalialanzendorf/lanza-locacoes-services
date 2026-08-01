@@ -1,4 +1,5 @@
 import {
+  loadClienteByIdBaixaFromSql,
   loadClientesByIdsFromSql,
   logFlowStep,
   queryClienteDespesaByReferenciaFromSql,
@@ -10,7 +11,7 @@ import {
   useRelationalStore,
   warmupPgPool,
 } from "@lanza/db";
-import { loadClienteDespesasDb, loadClienteDespesasDbAsync, isLocacaoSemanalEmAberto, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
 import { isEntityUuid } from "./filtroListagem.js";
@@ -348,16 +349,8 @@ export async function loadPlanoBaixaCtxDireto(input: {
       : null;
 
   const rowAlvo = await queryClienteDespesaByReferenciaFromSql(despesaId);
-  const clientes = await loadClientesByIdsFromSql([clienteId]);
-  if (!veiculoId && input.placa?.trim()) {
-    veiculoId = await resolveVeiculoIdFromSql({ placa: input.placa });
-  }
-
   if (!rowAlvo) {
     throw new Error(`Despesa não encontrada: ${despesaId}.`);
-  }
-  if (!clientes.length) {
-    throw new Error(`Cliente não encontrado: ${clienteId}.`);
   }
 
   const alvoRow = rowAlvo as ClienteDespesaRegistro;
@@ -366,6 +359,14 @@ export async function loadPlanoBaixaCtxDireto(input: {
     if (isEntityUuid(vid)) veiculoId = vid;
     else if (vid) veiculoId = await resolveVeiculoIdFromSql({ placa: vid });
   }
+  if (!veiculoId && input.placa?.trim()) {
+    veiculoId = await resolveVeiculoIdFromSql({ placa: input.placa });
+  }
+
+  const clienteRow = await loadClienteByIdBaixaFromSql(clienteId);
+  if (!clienteRow) {
+    throw new Error(`Cliente não encontrado: ${clienteId}.`);
+  }
 
   const veiculos = veiculoId ? await queryVeiculosByIdsFromSql([veiculoId]) : [];
 
@@ -373,41 +374,19 @@ export async function loadPlanoBaixaCtxDireto(input: {
     throw new Error(`Despesa ${despesaId} já está quitada.`);
   }
 
-  const precisaCalculoSemanal = isLocacaoSemanalEmAberto(alvoRow);
-
-  let contratos: Record<string, unknown>[] = [];
-  let clienteDespesas = mergeDespesaRows([], rowAlvo);
-
-  if (precisaCalculoSemanal && veiculoId) {
-    // despesaId explícito: só a despesa alvo no contexto (evita ILIKE "ATRASADO" em todo o veículo).
-    let contratosResult = await queryContratosFromSql({
-      clienteId,
-      veiculoIds: [veiculoId],
-      contratoPar: true,
-      skipSnapshots: true,
-    });
-    if (!contratosResult.length) {
-      contratosResult = await queryContratosFromSql({
-        clienteId,
-        veiculoIds: [veiculoId],
-        skipSnapshots: true,
-      });
-    }
-    contratos = contratosResult;
-    clienteDespesas = mergeDespesaRows([], rowAlvo);
-  }
+  const clienteDespesas = mergeDespesaRows([], rowAlvo);
 
   logFlowStep(
     flowRoute,
     8,
-    `plano direto pronto (despesas=${clienteDespesas.length} contratos=${contratos.length})`,
+    `plano direto pronto (despesas=${clienteDespesas.length} contratos=0)`,
   );
 
   return {
     clienteDespesas,
-    clientes: clientes as ClienteRegistro[],
+    clientes: [clienteRow as ClienteRegistro],
     veiculos: veiculos as VeiculoRegistro[],
-    contratos: contratos as ContratoRegistro[],
+    contratos: [],
   };
 }
 

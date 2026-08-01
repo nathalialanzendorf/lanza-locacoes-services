@@ -205,12 +205,14 @@ function findVeiculoByRastreameKeyLocal(key: string | number): VeiculoDb | null 
 }
 
 function contratoAtivoVeiculo(veiculoId: string, clienteId: string) {
-  const p = compactPlaca(resolvePlacaReferencia(veiculoId));
-  const list = contratosList().filter(
-    (c) => c.status === StatusContrato.Ativo && compactPlaca(c.placa ?? "") === p,
-  );
-  const par = list.find((c) => c.clienteId === clienteId);
-  if (par) return par;
+  const ref = veiculoId.trim();
+  const placaNorm = compactPlaca(resolvePlacaReferencia(ref));
+  const list = contratosList().filter((c) => {
+    if (c.status !== StatusContrato.Ativo || c.clienteId !== clienteId) return false;
+    const cVid = String(c.veiculoId ?? "").trim();
+    if (isEntityUuid(ref) && isEntityUuid(cVid)) return cVid === ref;
+    return compactPlaca(c.placa ?? "") === placaNorm;
+  });
   list.sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0));
   return list[0] ?? null;
 }

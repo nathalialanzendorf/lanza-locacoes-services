@@ -22,6 +22,7 @@ export {
   upsertVeiculoToSql,
   loadClientesFromSql,
   loadClientesByIdsFromSql,
+  loadClienteByIdBaixaFromSql,
   queryClientesFromSql,
   resolveClienteIdFromSql,
   resolveVeiculoIdFromSql,

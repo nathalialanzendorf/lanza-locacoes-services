@@ -31,6 +31,9 @@ export const LANZA_PRODUCTION_AWS_REGION = "us-east-1";
 /** Timeout ao obter conexão do pool PostgreSQL (ms) — menor que 10s. */
 export const PG_CONNECTION_TIMEOUT_MS = 8_000;
 
+/** Cancela queries SQL que excederem este tempo (ms) — evita hang indefinido no RDS. */
+export const PG_STATEMENT_TIMEOUT_MS = 25_000;
+
 /** Defaults RDS/OIDC na Vercel — desactivar com LANZA_DB_BACKEND=file. */
 export function vercelPostgresDefaultsEnabled(): boolean {
   if (!process.env.VERCEL) return false;

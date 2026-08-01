@@ -558,23 +558,35 @@ export async function queryVeiculosFromSql(filter: VeiculosSqlFilter = {}): Prom
   return r.rows.map((row) => rowToVeiculo(row as Record<string, unknown>));
 }
 
+/** Cliente mínimo para baixa/recebimento (sem endereço — 1 query). */
+export async function loadClienteByIdBaixaFromSql(id: string): Promise<ClienteRow | null> {
+  const key = id.trim();
+  if (!isUuid(key)) return null;
+  const r = await pgQuery(
+    "SELECT id, nome, cpf, rg, telefone, email FROM lanza.clientes WHERE id::text = $1 LIMIT 1",
+    [key],
+    "loadClienteByIdBaixaFromSql",
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return buildClienteRowFromSql(row as Record<string, unknown>, undefined);
+}
+
 /** Clientes por UUID (sem carregar catálogo inteiro). */
 export async function loadClientesByIdsFromSql(ids: string[]): Promise<ClienteRow[]> {
   const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => isUuid(id)))];
   if (unique.length === 0) return [];
 
-  const [base, endR] = await Promise.all([
-    pgQuery(
-      "SELECT * FROM lanza.clientes WHERE id::text = ANY($1::text[]) ORDER BY nome",
-      [unique],
-      "loadClientesByIdsFromSql/clientes",
-    ),
-    pgQuery(
-      "SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])",
-      [unique],
-      "loadClientesByIdsFromSql/enderecos",
-    ),
-  ]);
+  const base = await pgQuery(
+    "SELECT * FROM lanza.clientes WHERE id::text = ANY($1::text[]) ORDER BY nome",
+    [unique],
+    "loadClientesByIdsFromSql/clientes",
+  );
+  const endR = await pgQuery(
+    "SELECT * FROM lanza.cliente_enderecos WHERE cliente_id::text = ANY($1::text[])",
+    [unique],
+    "loadClientesByIdsFromSql/enderecos",
+  );
   const endByCliente = new Map(endR.rows.map((row) => [String(row.cliente_id), row]));
   return base.rows.map((row) =>
     buildClienteRowFromSql(row as Record<string, unknown>, endByCliente.get(String(row.id))),

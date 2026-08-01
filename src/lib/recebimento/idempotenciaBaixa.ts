@@ -5,6 +5,7 @@ import {
   loadClienteDespesasDb,
   type ClienteDespesaRegistro,
 } from "../clienteDespesasDb.js";
+import { getDbBackend } from "@lanza/db";
 import { stripAtrasadoSemanal } from "../pagamentoSemanal.js";
 
 export type IdempotenciaStatus =
@@ -63,7 +64,9 @@ function resumoRegistro(d: ClienteDespesaRegistro): IdempotenciaBaixa["registroE
 function listarDespesasIdempotencia(
   despesas?: ClienteDespesaRegistro[],
 ): ClienteDespesaRegistro[] {
-  return despesas ?? loadClienteDespesasDb().clienteDespesas;
+  if (despesas) return despesas;
+  if (getDbBackend() !== "file") return [];
+  return loadClienteDespesasDb().clienteDespesas;
 }
 
 /** PIX / pagamento já lançado como quitado para este motorista. */
