@@ -30,6 +30,21 @@ export function parseIso(value: string | null | undefined): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+/** ISO ou DD/MM/AAAA[( HH:MM)] → TIMESTAMPTZ ISO (uso em `paga_em`). */
+export function parseIsoOrDataBr(value: string | null | undefined): string | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const br = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (br) {
+    const hh = Number(br[4] ?? 12);
+    const mm = Number(br[5] ?? 0);
+    const ss = Number(br[6] ?? 0);
+    const d = new Date(Number(br[3]), Number(br[2]) - 1, Number(br[1]), hh, mm, ss, 0);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return parseIso(raw);
+}
+
 export function asBool(value: unknown, defaultValue = false): boolean {
   if (value === true || value === false) return value;
   if (value === "true") return true;

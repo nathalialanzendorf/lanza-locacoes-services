@@ -1,4 +1,5 @@
 import { SituacaoDespesa, type SituacaoDespesaValor } from "./situacaoDespesa.js";
+import { hojeBr, pagaEmInputToIso } from "../dataBr.js";
 
 /** Valor interno de filtro/cadastro (UI). */
 export const StatusDespesaFiltro = {
@@ -19,10 +20,11 @@ export function camposStatusDespesaDeCadastro(
   pagaEmAtual?: string | null,
 ): { paga: boolean; situacao: SituacaoDespesaValor; pagaEm: string | null } {
   if (status === StatusDespesaFiltro.Pago) {
+    const br = pagaEmAtual?.trim() || hojeBr();
     return {
       paga: true,
       situacao: SituacaoDespesa.Pago,
-      pagaEm: pagaEmAtual?.trim() || new Date().toLocaleDateString("pt-BR"),
+      pagaEm: pagaEmInputToIso(br),
     };
   }
   return { paga: false, situacao: SituacaoDespesa.EmAberto, pagaEm: null };

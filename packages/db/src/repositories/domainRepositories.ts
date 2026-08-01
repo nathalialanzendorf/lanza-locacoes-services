@@ -12,6 +12,7 @@ import {
   isUuid,
   normCpf,
   parseIso,
+  parseIsoOrDataBr,
 } from "../migration/relationalUtils.js";
 
 async function loadPlacaMap(): Promise<Map<string, string>> {
@@ -1127,7 +1128,7 @@ function clienteDespesaRowSqlParams(
     asBool(d.revisarManual, false),
     asText(d.revisarMotivo),
     asBool(d.paga, false),
-    parseIso(asText(d.pagaEm)),
+    parseIsoOrDataBr(asText(d.pagaEm)),
     asBool(d.quitadaDetran, false),
     asText(d.statusInfracao),
     asText(d.statusDetran),

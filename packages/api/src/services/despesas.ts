@@ -357,8 +357,9 @@ export async function atualizarDespesa(
   if (!r) {
     throw new HttpError(404, "Despesa não encontrada");
   }
+  const item = await obterDespesaAsync(idOrAuto);
   return {
-    data: r.registro,
+    data: item ?? r.registro,
     proximaParcela: r.proximaParcela ?? null,
   };
 }

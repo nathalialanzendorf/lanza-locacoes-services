@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 import { jsonDocumentExists, loadJsonDocument, loadJsonDocumentForApi, saveJsonDocument, saveJsonDocumentAsync, useRelationalStore, assertRelationalStore, loadClienteDespesasFromSql, queryClienteDespesasFromSql, queryClienteDespesaByReferenciaFromSql, deleteClienteDespesaFromSql, upsertClienteDespesaRowToSql, updateClienteDespesaRowToSql, saveClienteDespesasToSql, type ClienteDespesasSqlFilter, type PersistClienteDespesaSqlOpts } from "@lanza/db";
+import { pagaEmInputToIso } from "./dataBr.js";
 import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
@@ -868,7 +869,12 @@ export async function gravarClienteDespesa(
   if (input.convertidaEmDebito === false) registro.convertidaEmDebito = false;
   if (input.paga === true) registro.paga = true;
   if (input.paga === false) registro.paga = false;
-  if (input.pagaEm !== undefined) registro.pagaEm = input.pagaEm;
+  if (input.pagaEm !== undefined) {
+    registro.pagaEm =
+      input.pagaEm == null || input.pagaEm === ""
+        ? null
+        : pagaEmInputToIso(input.pagaEm) ?? String(input.pagaEm).trim();
+  }
   if (input.rastreameId != null) registro.rastreameId = input.rastreameId;
   if (input.rastreameMotoristaKey != null) {
     registro.rastreameMotoristaKey = input.rastreameMotoristaKey;
@@ -1577,7 +1583,12 @@ export async function editarClienteDespesa(
     m.condutorNaoIdentificado = patch.condutorNaoIdentificado;
   }
   if (patch.paga !== undefined) m.paga = patch.paga;
-  if (patch.pagaEm !== undefined) m.pagaEm = patch.pagaEm;
+  if (patch.pagaEm !== undefined) {
+    m.pagaEm =
+      patch.pagaEm == null || patch.pagaEm === ""
+        ? null
+        : pagaEmInputToIso(patch.pagaEm) ?? String(patch.pagaEm).trim();
+  }
   if (patch.rastreameMotoristaKey !== undefined) {
     m.rastreameMotoristaKey = patch.rastreameMotoristaKey;
   }
@@ -1720,7 +1731,12 @@ function applyClienteDespesaPatch(
     m.condutorNaoIdentificado = patch.condutorNaoIdentificado;
   }
   if (patch.paga !== undefined) m.paga = patch.paga;
-  if (patch.pagaEm !== undefined) m.pagaEm = patch.pagaEm;
+  if (patch.pagaEm !== undefined) {
+    m.pagaEm =
+      patch.pagaEm == null || patch.pagaEm === ""
+        ? null
+        : pagaEmInputToIso(patch.pagaEm) ?? String(patch.pagaEm).trim();
+  }
   if (patch.rastreameMotoristaKey !== undefined) {
     m.rastreameMotoristaKey = patch.rastreameMotoristaKey;
   }
@@ -1896,7 +1912,7 @@ async function editarClienteDespesaRelational(
       m,
       descricaoAntes,
       vencimentoAntes,
-      valorParcelaSemanalContrato(m.veiculoId) ?? undefined,
+      m.valorMulta,
     );
   }
 
@@ -1909,14 +1925,26 @@ async function editarClienteDespesaRelational(
     );
   }
 
+  const fresh =
+    (await queryClienteDespesaByReferenciaFromSql(m.id)) ??
+    (await queryClienteDespesaByReferenciaFromSql(m.autoInfracao));
+  const registro = (fresh ?? m) as ClienteDespesaRegistro;
+  let proximaSync = proximaParcela;
+  if (proximaParcela) {
+    const freshProx =
+      (await queryClienteDespesaByReferenciaFromSql(proximaParcela.id)) ??
+      (await queryClienteDespesaByReferenciaFromSql(proximaParcela.autoInfracao));
+    if (freshProx) proximaSync = freshProx as ClienteDespesaRegistro;
+  }
+
   const synced = await pushAposPersistir(
-    proximaParcela ? [m, proximaParcela] : [m],
+    proximaSync ? [registro, proximaSync] : [registro],
     opts,
   );
 
   return {
     registro: synced[0]!,
-    proximaParcela: proximaParcela ? synced[1] ?? null : null,
+    proximaParcela: proximaSync ? synced[1] ?? null : null,
   };
 }
 

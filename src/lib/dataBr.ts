@@ -62,6 +62,35 @@ function parseDataBrDia(s: string): Date | null {
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
+/** Converte data de pagamento (DD/MM/AAAA ou ISO) para TIMESTAMPTZ ISO (meio-dia BR). */
+export function pagaEmInputToIso(value: string | null | undefined): string | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const brHora = raw.match(/^(\d{1,2}\/\d{1,2}\/\d{4})(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?$/);
+  if (brHora) {
+    const [, data, hora] = brHora;
+    const [hh = "12", mm = "00"] = (hora ?? "12:00").split(":");
+    const m = data!.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    return new Date(
+      Number(m[3]),
+      Number(m[2]) - 1,
+      Number(m[1]),
+      Number(hh),
+      Number(mm),
+      0,
+      0,
+    ).toISOString();
+  }
+  const d = parseDataBrOuIsoDia(raw);
+  if (!d) {
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  d.setHours(12, 0, 0, 0);
+  return d.toISOString();
+}
+
 /** Extrai o dia civil de strings DD/MM/AAAA ou ISO (YYYY-MM-DD…). */
 export function parseDataBrOuIsoDia(s: string): Date | null {
   const br = parseDataBrDia(s);

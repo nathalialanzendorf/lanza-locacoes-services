@@ -17,6 +17,7 @@ const JUROS_DESC_RE =
   /^(?:ATRASADO\s*[-–—]?\s*)?Juros e multa\s*-\s*Pagamento semanal\s+(Segunda|Ter[cç]a|Quarta|Quinta|Sexta|S[aá]bado|Domingo)\s+(\d{1,2})\s*$/i;
 
 import { diaPagamentoParaDow, parseDataBrToDate } from "./caucaoParcelas.js";
+import { pagaEmInputToIso } from "./dataBr.js";
 import { DOW_JS, DOW_JS_LABELS } from "./domain/diasSemana.js";
 
 export type PagamentoSemanalParsed = {
@@ -277,10 +278,11 @@ export function normalizarBaixaSemanal(patch: {
   out.descricao = stripAtrasadoSemanal(out.descricao ?? "");
 
   if (out.pagaEm) {
-    const d = new Date(out.pagaEm);
-    if (!Number.isNaN(d.getTime())) {
-      out.dataAutuacao = isoToDataHoraBrRecife(out.pagaEm);
-      out.rastreameDataIso = d.toISOString();
+    const pagaEmIso = pagaEmInputToIso(out.pagaEm);
+    if (pagaEmIso) {
+      out.pagaEm = pagaEmIso;
+      out.dataAutuacao = isoToDataHoraBrRecife(pagaEmIso);
+      out.rastreameDataIso = pagaEmIso;
     }
   } else if (out.dataAutuacao) {
     out.rastreameDataIso =
