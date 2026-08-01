@@ -226,7 +226,7 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
 
   if (opts.dataInicial?.trim() || opts.dataFinal?.trim()) {
     items = items.filter((d) =>
-      dataStringNoPeriodo(d.dataAutuacao, {
+      dataStringNoPeriodo(vencimentoClienteDespesaBr(d), {
         dataInicial: opts.dataInicial,
         dataFinal: opts.dataFinal,
       }),
