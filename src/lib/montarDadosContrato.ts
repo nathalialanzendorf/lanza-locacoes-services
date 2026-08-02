@@ -88,7 +88,12 @@ export type MontarContratoDbInput = {
   hora?: string;
   diaPagamento?: string;
   cnhArquivo?: string;
+  /** Valor da diária (atraso / contrato diária). Default 120. */
   diaria?: number;
+  /** Valor mensal (contrato mensal). */
+  mensal?: number;
+  /** Modalidade: semanal | diaria | mensal. Default semanal. */
+  tipoContrato?: "semanal" | "diaria" | "mensal";
   template?: string;
   contratosDir?: string;
   /** Saldo de caução em aberto (cláusula 3.3 — modo com datas). */
@@ -475,11 +480,14 @@ function montarDadosContratoCore(
   const dias = periodoParaDias(input.periodo, input.dias);
   const parcelamento = resolverParcelamentoContrato(input);
 
+  const tipoContrato = input.tipoContrato ?? TipoContrato.Semanal;
+
   return {
     template: input.template ?? DEFAULT_TEMPLATE,
     contratosDir: resolverContratosDir(veiculo, input.contratosDir),
     cnhArquivo: input.cnhArquivo,
     diaPagamento: input.diaPagamento ?? "todos os sábados",
+    tipoContrato,
     cliente: {
       id: cliente.id,
       nome: cliente.nome,
@@ -505,6 +513,7 @@ function montarDadosContratoCore(
       semana: input.semana,
       caucao: input.caucao,
       diaria: input.diaria ?? 120,
+      ...(input.mensal != null ? { mensal: input.mensal } : {}),
     },
     cnhCategoria:
     strField(
@@ -536,6 +545,13 @@ export async function montarDadosContratoFromDbAsync(
 }
 
 /** Monta campos do contrato a partir dos dados do formulário (sem ler .docx). */
+function parseDiaPagamentoMesTexto(texto: string): number | null {
+  const m = texto.trim().match(/(?:^|\b)dia\s+(\d{1,2})\b/i) ?? texto.trim().match(/^(\d{1,2})$/);
+  if (!m) return null;
+  const n = Number.parseInt(m[1]!, 10);
+  return Number.isFinite(n) && n >= 1 && n <= 31 ? n : null;
+}
+
 export function dadosParaContratoExtraido(
   dados: GerarContratoDados,
   pastaContrato?: string,
@@ -558,7 +574,12 @@ export function dadosParaContratoExtraido(
   const dfimExplicit = dados.prazo.fim?.trim() ? parseDataBr(dados.prazo.fim.trim()) : null;
   const dfim = dfimExplicit ?? addDays(diniComHora, dados.prazo.dias);
   const nomeArq = resolverNomeArquivoContrato(dados.cliente.nome);
+  const tipoContrato = dados.tipoContrato ?? TipoContrato.Semanal;
   const diaPag = dados.diaPagamento ?? "todos os sábados";
+  const diaMes =
+    tipoContrato === TipoContrato.Mensal ? parseDiaPagamentoMesTexto(diaPag) : null;
+  const semana = dados.valores.semana;
+  const mensal = dados.valores.mensal;
   return {
     pastaContrato: pasta,
     docx: path.join(pasta, `${nomeArq}.docx`),
@@ -571,12 +592,12 @@ export function dadosParaContratoExtraido(
     fim: dfim,
     horaInicio: fmtHoraBr(diniComHora),
     prazoDias: dados.prazo.dias,
-    tipoContrato: TipoContrato.Semanal,
-    diaPagamentoSemana: diaPag,
-    diaPagamentoMes: null,
+    tipoContrato,
+    diaPagamentoSemana: tipoContrato === TipoContrato.Mensal ? null : diaPag,
+    diaPagamentoMes: diaMes,
     diaPagamentoTexto: diaPag,
-    valorSemanal: dados.valores.semana,
-    valorMensal: null,
+    valorSemanal: semana > 0 ? semana : null,
+    valorMensal: mensal != null && mensal > 0 ? mensal : null,
     valorDiaria: dados.valores.diaria ?? null,
     valorCaucao: dados.valores.caucao,
   };

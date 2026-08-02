@@ -126,6 +126,9 @@ function montarInputFromRegistro(reg: ContratoRegistro): MontarContratoDbInput {
     clienteNome: reg.clienteNome,
     semana: reg.valorSemanal ?? 0,
     caucao: reg.valorCaucao ?? 0,
+    diaria: reg.valorDiaria ?? undefined,
+    mensal: reg.valorMensal ?? undefined,
+    tipoContrato: reg.tipoContrato,
     inicio: reg.dataInicio,
     hora: reg.horaInicio ?? "18:00",
     dias: reg.prazoDias ?? undefined,
@@ -377,7 +380,9 @@ export type ContratoAtualizarInput = {
   diaPagamentoSemana?: string | null;
   diaPagamentoMes?: number | null;
   diaPagamentoTexto?: string | null;
-  valorSemanal?: number;
+  valorSemanal?: number | null;
+  valorMensal?: number | null;
+  valorDiaria?: number | null;
   valorCaucao?: number;
   contratoAssinado?: {
     nomeArquivo: string;
@@ -402,6 +407,8 @@ export async function atualizarContrato(id: string, input: ContratoAtualizarInpu
       diaPagamentoMes: input.diaPagamentoMes,
       diaPagamentoTexto: input.diaPagamentoTexto,
       valorSemanal: input.valorSemanal,
+      valorMensal: input.valorMensal,
+      valorDiaria: input.valorDiaria,
       valorCaucao: input.valorCaucao,
     };
 

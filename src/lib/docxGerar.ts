@@ -483,7 +483,9 @@ export type GerarContratoDados = {
   };
   veiculo: Record<string, string> & { id?: string };
   prazo: { dias: number; inicio: string; hora?: string; fim?: string };
-  valores: { semana: number; caucao: number; diaria?: number };
+  valores: { semana: number; caucao: number; diaria?: number; mensal?: number };
+  /** Modalidade de cobrança persistida no registro (semanal | diaria | mensal). */
+  tipoContrato?: "semanal" | "diaria" | "mensal";
   cnhCategoria?: string;
   diaPagamento?: string;
   /** Texto extra na cláusula 3.3 — saldo de caução em aberto com datas. */

@@ -11,8 +11,17 @@ function useRelationalAdapter(): boolean {
   return getDbBackend() !== "file";
 }
 
+/** Vercel/serverless: Atomics.wait + I/O async = deadlock do event loop. */
+function isVercelRuntime(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
 export function jsonDocumentExists(filePath: string): boolean {
   const storeName = storeNameFromPath(filePath);
+  // Na Vercel nunca usar awaitSync — bloqueia o event loop e a Promise Postgres nunca resolve.
+  if (isVercelRuntime()) {
+    return getJsonDocumentAdapter().exists(storeName, filePath);
+  }
   if (useRelationalAdapter()) {
     const data = awaitSync(getJsonDocumentAdapter().loadAsync(storeName, filePath));
     return data != null;
@@ -22,6 +31,11 @@ export function jsonDocumentExists(filePath: string): boolean {
 
 export function loadJsonDocument<T>(filePath: string): T {
   const storeName = storeNameFromPath(filePath);
+  if (isVercelRuntime() && useRelationalAdapter()) {
+    throw new Error(
+      `loadJsonDocument("${storeName}") síncrono na Vercel deadlocks — use loadJsonDocumentForApi/loadAsync`,
+    );
+  }
   if (useRelationalAdapter()) {
     const data = awaitSync(getJsonDocumentAdapter().loadAsync<T>(storeName, filePath));
     if (data == null) {
@@ -54,6 +68,13 @@ export function saveJsonDocument(
   const storeName = storeNameFromPath(filePath);
   const adapter = getJsonDocumentAdapter();
   const payload = data as Record<string, unknown>;
+  if (isVercelRuntime() && useRelationalAdapter()) {
+    void adapter.saveAsync(storeName, filePath, payload, options).catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[lanza/db] Falha ao gravar ${storeName} (async Vercel): ${msg}`);
+    });
+    return;
+  }
   if (useRelationalAdapter()) {
     awaitSync(adapter.saveAsync(storeName, filePath, payload, options));
     return;

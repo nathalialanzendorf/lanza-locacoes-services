@@ -363,6 +363,9 @@ export {
   montarUrlFipe,
   resolverFipeVeiculo,
   sincronizarFipeVeiculos,
+  consultarPlacaFipeBrasil,
+  fipeFieldsFromPlacaFipeBrasil,
+  urlPlacaFipeBrasil,
   type FipeSyncProgress,
   type FipeSyncResult,
   type SincronizarFipeOpts,
@@ -391,6 +394,7 @@ export {
   saveTriagemDb,
   saveTriagemDbAsync,
   ultimaTriagemPorCpf,
+  ultimaTriagemPorCpfAsync,
   type TriagemRegistro,
 } from "../../../src/lib/analiseCadastro/triagemDb.js";
 

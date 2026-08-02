@@ -55,6 +55,13 @@ export class DualJsonDocumentAdapter implements JsonDocumentAdapter {
     options?: SaveJsonDocumentOptions,
   ): void {
     if (skipJsonStoresWrite()) {
+      // Na Vercel, awaitSync + Postgres deadlocks o event loop.
+      if (isVercelRuntime()) {
+        void this.postgres.saveAsync(storeName, filePath, data, options).catch((err) => {
+          logMirrorError("PostgreSQL", storeName, err);
+        });
+        return;
+      }
       awaitSync(this.postgres.saveAsync(storeName, filePath, data, options));
       return;
     }

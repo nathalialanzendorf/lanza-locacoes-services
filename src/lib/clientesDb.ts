@@ -24,7 +24,11 @@ import { clientesScopeFromFilter } from "./scopedCatalogo.js";
 
 import { normCpfKey, type ClienteImportado } from "./rastreame/mapMotoristaCliente.js";
 import { REPO_ROOT } from "./repoRoot.js";
-import { ultimaTriagemPorCpf, type TriagemRegistro } from "./analiseCadastro/triagemDb.js";
+import {
+  ultimaTriagemPorCpf,
+  ultimaTriagemPorCpfAsync,
+  type TriagemRegistro,
+} from "./analiseCadastro/triagemDb.js";
 
 export const DB_CLIENTES = path.join(REPO_ROOT, "database", "clientes.json");
 
@@ -403,14 +407,27 @@ export async function registrarAnaliseCadastroNoClienteAsync(
 /**
  * Se o cliente ainda não tem `analiseCadastro` e existe uma análise no histórico
  * para o seu CPF, herda automaticamente (caso "analisar antes de cadastrar").
+ * Síncrono — só para CLI/local. Na Vercel use {@link herdarAnaliseCadastroAsync}.
  */
 function herdarAnaliseCadastro(c: ClienteRegistro): void {
+  // Sync path com Postgres na Vercel deadlocks (awaitSync + event loop).
+  if (process.env.VERCEL) return;
   if (c.analiseCadastro != null) return;
   if (!c.cpf) return;
   const ult = ultimaTriagemPorCpf(String(c.cpf));
   if (!ult) return;
   c.analiseCadastro = analiseClienteDeRegistro(ult);
   // Se a última análise reprovou (não passou), nasce/permanece inativo.
+  if (c.analiseCadastro.aprovado === false) c.ativo = false;
+}
+
+/** Herança de análise via Postgres async — seguro na Vercel. */
+async function herdarAnaliseCadastroAsync(c: ClienteRegistro): Promise<void> {
+  if (c.analiseCadastro != null) return;
+  if (!c.cpf) return;
+  const ult = await ultimaTriagemPorCpfAsync(String(c.cpf));
+  if (!ult) return;
+  c.analiseCadastro = analiseClienteDeRegistro(ult);
   if (c.analiseCadastro.aprovado === false) c.ativo = false;
 }
 
@@ -596,12 +613,14 @@ export async function gravarClienteAsync(
   if (await useRelationalStore()) {
     const db = await loadClientesDbParaGravar(cliente);
     const r = applyGravarCliente(db, cliente);
+    await herdarAnaliseCadastroAsync(r.registro);
     await upsertClienteToSql(r.registro as unknown as Record<string, unknown>);
     return r;
   }
 
   const db = loadClientesDb();
   const r = applyGravarCliente(db, cliente);
+  await herdarAnaliseCadastroAsync(r.registro);
   saveClientesDb(db);
   return r;
 }

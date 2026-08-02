@@ -136,7 +136,8 @@ export async function atualizarClienteAsync(
     throw new HttpError(404, "Cliente não encontrado");
   }
   await espelharClienteRastreame(item);
-  return findClienteById(item.id) ?? item;
+  // Não usar findClienteById (sync/loadClientesDb) — deadlocks na Vercel com Postgres.
+  return (await obterClienteAsync(item.id)) ?? item;
 }
 
 export async function removerClienteAsync(idOuCpf: string): Promise<ClienteRegistro> {
@@ -145,5 +146,5 @@ export async function removerClienteAsync(idOuCpf: string): Promise<ClienteRegis
     throw new HttpError(404, "Cliente não encontrado");
   }
   await espelharClienteRastreame(item);
-  return findClienteById(item.id) ?? item;
+  return (await obterClienteAsync(item.id)) ?? item;
 }

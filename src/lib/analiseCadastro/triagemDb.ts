@@ -331,3 +331,9 @@ export function ultimaTriagemPorCpf(cpf: string): TriagemRegistro | null {
   const lista = listarTriagens({ cpf });
   return lista[0] ?? null;
 }
+
+/** Versão async — preferir em rotas HTTP/Vercel (evita awaitSync/deadlock). */
+export async function ultimaTriagemPorCpfAsync(cpf: string): Promise<TriagemRegistro | null> {
+  const lista = await listarTriagensAsync({ cpf });
+  return lista[0] ?? null;
+}

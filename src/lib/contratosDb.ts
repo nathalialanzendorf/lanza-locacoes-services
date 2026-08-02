@@ -819,6 +819,8 @@ export type AtualizarContratoDbPatch = Partial<
     | "diaPagamentoMes"
     | "diaPagamentoTexto"
     | "valorSemanal"
+    | "valorMensal"
+    | "valorDiaria"
     | "valorCaucao"
     | "contratoAssinadoStorageKey"
     | "contratoAssinadoNome"
