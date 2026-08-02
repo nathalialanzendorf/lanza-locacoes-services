@@ -19,6 +19,7 @@ export type JobProgress = {
     fipeValor?: string;
     fipeReferencia?: string;
     fipe?: string;
+    fonte?: "parallelum" | "placafipebrasil";
     erro?: string;
   }>;
 };

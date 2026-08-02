@@ -1,6 +1,6 @@
 /**
  * Sync FIPE → PostgreSQL (`lanza.veiculo_fipe`).
- * Não usa `database/veiculos.json`.
+ * Sem marca/ano: fallback https://placafipebrasil.com.br/placa-fipe/{PLACA}
  */
 import { assertRelationalStore } from "@lanza/db";
 import {
@@ -11,6 +11,11 @@ import {
 } from "../veiculosDb.js";
 import { placasIguais } from "../placa.js";
 import { listarMarcas } from "./consulta.js";
+import {
+  consultarPlacaFipeBrasil,
+  fipeFieldsFromPlacaFipeBrasil,
+  urlPlacaFipeBrasil,
+} from "./placaFipeBrasil.js";
 import { resolverFipeVeiculo } from "./resolverVeiculo.js";
 
 export type FipeSyncResultadoLinha = {
@@ -23,6 +28,7 @@ export type FipeSyncResultadoLinha = {
   fipeValor?: string;
   fipeReferencia?: string;
   fipe?: string;
+  fonte?: "parallelum" | "placafipebrasil";
   erro?: string;
 };
 
@@ -32,14 +38,11 @@ export type FipeSyncProgress = {
   percent: number;
   sucesso: number;
   falhas: number;
-  /** Resultados acumulados (para exibir em tela durante o job). */
   resultados: FipeSyncResultadoLinha[];
 };
 
 export type SincronizarFipeOpts = {
-  /** Uma placa (ou id). Inclui inativos. */
   placa?: string;
-  /** Só veículos sem FIPE (ativos e inativos). */
   faltantes?: boolean;
   onProgress?: (p: FipeSyncProgress) => void;
 };
@@ -69,10 +72,41 @@ function emitProgress(
   });
 }
 
-/**
- * Consulta a Tabela FIPE e grava em PostgreSQL para a frota (ou uma placa).
- * Inclui veículos ativos e inativos. Exige backend relacional.
- */
+function temMarcaAno(v: VeiculoRegistro): boolean {
+  const marcaModelo =
+    String(v.marcaModelo ?? "").trim() ||
+    [v.marca, v.modelo].filter(Boolean).join("/");
+  const ano = String(v.anoModelo ?? "").trim() || (v.ano != null ? String(v.ano) : "");
+  return Boolean(marcaModelo) && Boolean(ano);
+}
+
+async function resolverFipeComFallback(
+  v: VeiculoRegistro,
+  brands: Awaited<ReturnType<typeof listarMarcas>>,
+) {
+  if (temMarcaAno(v)) {
+    try {
+      const upd = await resolverFipeVeiculo(v, brands);
+      return { upd, fonte: "parallelum" as const, scraped: null as null };
+    } catch {
+      /* fallback */
+    }
+  }
+  const scraped = await consultarPlacaFipeBrasil(v.placa);
+  const upd = {
+    ...fipeFieldsFromPlacaFipeBrasil(scraped),
+    ...(scraped.marcaModelo && !String(v.marcaModelo ?? "").trim()
+      ? { marcaModelo: scraped.marcaModelo }
+      : {}),
+    ...(scraped.anoModelo && !String(v.anoModelo ?? "").trim()
+      ? { anoModelo: scraped.anoModelo }
+      : {}),
+    ...(scraped.marca && !String(v.marca ?? "").trim() ? { marca: scraped.marca } : {}),
+    ...(scraped.modelo && !String(v.modelo ?? "").trim() ? { modelo: scraped.modelo } : {}),
+  };
+  return { upd, fonte: "placafipebrasil" as const, scraped };
+}
+
 export async function sincronizarFipeVeiculos(
   opts: SincronizarFipeOpts = {},
 ): Promise<FipeSyncResult> {
@@ -108,21 +142,29 @@ export async function sincronizarFipeVeiculos(
       anoModelo: v.anoModelo ?? (v.ano != null ? String(v.ano) : undefined),
     };
     try {
-      const upd = await resolverFipeVeiculo(v, brands);
+      const { upd, fonte, scraped } = await resolverFipeComFallback(v, brands);
       await editarVeiculoAsync(v.id, upd);
       resultados.push({
         ...base,
+        marcaModelo: scraped?.marcaModelo ?? base.marcaModelo,
+        anoModelo: scraped?.anoModelo ?? base.anoModelo,
         ok: true,
         fipeCodigo: upd.fipeCodigo,
         fipeModelo: upd.fipeModelo,
         fipeValor: upd.fipeValor,
         fipeReferencia: upd.fipeReferencia,
-        fipe: upd.fipe,
+        fipe: upd.fipe ?? (fonte === "placafipebrasil" ? urlPlacaFipeBrasil(v.placa) : undefined),
+        fonte,
       });
       sucesso++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      resultados.push({ ...base, ok: false, erro: msg });
+      resultados.push({
+        ...base,
+        ok: false,
+        erro: msg,
+        fipe: urlPlacaFipeBrasil(v.placa),
+      });
       falhas++;
     }
     emitProgress(opts.onProgress, total, sucesso + falhas, sucesso, falhas, resultados);

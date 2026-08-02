@@ -9,6 +9,9 @@ import {
   placasIguais,
   resolverFipeVeiculo,
   sincronizarFipeVeiculos,
+  consultarPlacaFipeBrasil,
+  fipeFieldsFromPlacaFipeBrasil,
+  urlPlacaFipeBrasil,
   type FipeSyncProgress,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -82,6 +85,28 @@ export type ConsultarFipeInput = {
   persist?: boolean;
 };
 
+async function fipePorPlacaFipeBrasil(placa: string) {
+  const scraped = await consultarPlacaFipeBrasil(placa);
+  return {
+    data: {
+      placa,
+      marcaModelo: scraped.marcaModelo,
+      anoModelo: scraped.anoModelo,
+      marca: scraped.marca,
+      modelo: scraped.modelo,
+      cor: scraped.cor,
+    },
+    fipe: {
+      ...fipeFieldsFromPlacaFipeBrasil(scraped),
+      fonte: "placafipebrasil" as const,
+      url: scraped.url,
+      opcoes: scraped.opcoes,
+    },
+    fonte: "placafipebrasil" as const,
+    url: scraped.url,
+  };
+}
+
 export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
   const placa = input.placa?.trim();
   if (!placa) throw new HttpError(400, "Informe a placa.");
@@ -94,13 +119,43 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
     null;
 
   if (cadastrado) {
-    const fipe = await resolverFipeVeiculo(cadastrado, brands);
-    if (input.persist) {
-      await assertRelationalStore();
-      const data = await editarVeiculoAsync(cadastrado.id, fipe);
-      return { cadastrado: true as const, data, fipe };
+    try {
+      const fipe = await resolverFipeVeiculo(cadastrado, brands);
+      if (input.persist) {
+        await assertRelationalStore();
+        const data = await editarVeiculoAsync(cadastrado.id, fipe);
+        return { cadastrado: true as const, data, fipe, fonte: "parallelum" as const };
+      }
+      return { cadastrado: true as const, data: cadastrado, fipe, fonte: "parallelum" as const };
+    } catch {
+      const scraped = await consultarPlacaFipeBrasil(placa);
+      const fipe = {
+        ...fipeFieldsFromPlacaFipeBrasil(scraped),
+        fonte: "placafipebrasil" as const,
+        url: scraped.url,
+        opcoes: scraped.opcoes,
+      };
+      if (input.persist) {
+        await assertRelationalStore();
+        const data = await editarVeiculoAsync(cadastrado.id, {
+          ...fipeFieldsFromPlacaFipeBrasil(scraped),
+          ...(scraped.marcaModelo && !String(cadastrado.marcaModelo ?? "").trim()
+            ? { marcaModelo: scraped.marcaModelo }
+            : {}),
+          ...(scraped.anoModelo && !String(cadastrado.anoModelo ?? "").trim()
+            ? { anoModelo: scraped.anoModelo }
+            : {}),
+        });
+        return { cadastrado: true as const, data, fipe, fonte: "placafipebrasil" as const, url: scraped.url };
+      }
+      return {
+        cadastrado: true as const,
+        data: { ...cadastrado, marcaModelo: scraped.marcaModelo ?? cadastrado.marcaModelo, anoModelo: scraped.anoModelo ?? cadastrado.anoModelo },
+        fipe,
+        fonte: "placafipebrasil" as const,
+        url: scraped.url,
+      };
     }
-    return { cadastrado: true as const, data: cadastrado, fipe };
   }
 
   const marcaModelo = input.marcaModelo?.trim();
@@ -111,10 +166,16 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
     Boolean(marcaModelo) || (Boolean(marca) && Boolean(anoModelo || ano));
 
   if (!temDadosManual) {
-    throw new HttpError(
-      404,
-      "Veículo não cadastrado. Informe marca/modelo (ex.: VW/GOL) e ano (ex.: 2018/2018).",
-    );
+    try {
+      const r = await fipePorPlacaFipeBrasil(placa);
+      return { cadastrado: false as const, ...r };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new HttpError(
+        404,
+        `${msg} — tente em ${urlPlacaFipeBrasil(placa)} ou informe marca/modelo e ano.`,
+      );
+    }
   }
 
   const data = {
@@ -125,17 +186,34 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
     modelo: input.modelo?.trim(),
     ano,
   };
-  const fipe = await resolverFipeVeiculo(data, brands);
-  return { cadastrado: false as const, data, fipe };
+  try {
+    const fipe = await resolverFipeVeiculo(data, brands);
+    return { cadastrado: false as const, data, fipe, fonte: "parallelum" as const };
+  } catch {
+    const r = await fipePorPlacaFipeBrasil(placa);
+    return { cadastrado: false as const, ...r };
+  }
 }
 
 export async function atualizarFipeVeiculo(idOuPlaca: string) {
   await assertRelationalStore();
+  const r = await sincronizarFipeVeiculos({ placa: idOuPlaca });
+  const linha = r.resultados[0];
+  if (!linha?.ok) {
+    throw new HttpError(400, linha?.erro ?? `Falha ao atualizar FIPE: ${idOuPlaca}`);
+  }
   const v = await resolverVeiculo(idOuPlaca);
-  const brands = await listarMarcas();
-  const upd = await resolverFipeVeiculo(v, brands);
-  const data = await editarVeiculoAsync(v.id, upd);
-  return { data, fipe: upd };
+  return {
+    data: v,
+    fipe: {
+      fipe: linha.fipe,
+      fipeCodigo: linha.fipeCodigo,
+      fipeModelo: linha.fipeModelo,
+      fipeValor: linha.fipeValor,
+      fipeReferencia: linha.fipeReferencia,
+    },
+    fonte: linha.fonte,
+  };
 }
 
 export async function atualizarFipeFrota(onProgress?: (p: FipeSyncProgress) => void) {
