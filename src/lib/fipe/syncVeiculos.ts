@@ -13,12 +13,27 @@ import { placasIguais } from "../placa.js";
 import { listarMarcas } from "./consulta.js";
 import { resolverFipeVeiculo } from "./resolverVeiculo.js";
 
+export type FipeSyncResultadoLinha = {
+  placa: string;
+  marcaModelo?: string;
+  anoModelo?: string;
+  ok: boolean;
+  fipeCodigo?: string;
+  fipeModelo?: string;
+  fipeValor?: string;
+  fipeReferencia?: string;
+  fipe?: string;
+  erro?: string;
+};
+
 export type FipeSyncProgress = {
   total: number;
   done: number;
   percent: number;
   sucesso: number;
   falhas: number;
+  /** Resultados acumulados (para exibir em tela durante o job). */
+  resultados: FipeSyncResultadoLinha[];
 };
 
 export type SincronizarFipeOpts = {
@@ -27,13 +42,6 @@ export type SincronizarFipeOpts = {
   /** Só veículos sem FIPE (ativos e inativos). */
   faltantes?: boolean;
   onProgress?: (p: FipeSyncProgress) => void;
-};
-
-export type FipeSyncResultadoLinha = {
-  placa: string;
-  ok: boolean;
-  fipe?: unknown;
-  erro?: string;
 };
 
 export type FipeSyncResult = {
@@ -49,6 +57,7 @@ function emitProgress(
   done: number,
   sucesso: number,
   falhas: number,
+  resultados: FipeSyncResultadoLinha[],
 ): void {
   onProgress?.({
     total,
@@ -56,6 +65,7 @@ function emitProgress(
     percent: total === 0 ? 100 : Math.round((done / total) * 100),
     sucesso,
     falhas,
+    resultados,
   });
 }
 
@@ -89,20 +99,33 @@ export async function sincronizarFipeVeiculos(
   let sucesso = 0;
   let falhas = 0;
 
-  emitProgress(opts.onProgress, total, 0, 0, 0);
+  emitProgress(opts.onProgress, total, 0, 0, 0, resultados);
 
   for (const v of veiculos) {
+    const base = {
+      placa: v.placa,
+      marcaModelo: v.marcaModelo ?? ([v.marca, v.modelo].filter(Boolean).join("/") || undefined),
+      anoModelo: v.anoModelo ?? (v.ano != null ? String(v.ano) : undefined),
+    };
     try {
       const upd = await resolverFipeVeiculo(v, brands);
       await editarVeiculoAsync(v.id, upd);
-      resultados.push({ placa: v.placa, ok: true, fipe: upd });
+      resultados.push({
+        ...base,
+        ok: true,
+        fipeCodigo: upd.fipeCodigo,
+        fipeModelo: upd.fipeModelo,
+        fipeValor: upd.fipeValor,
+        fipeReferencia: upd.fipeReferencia,
+        fipe: upd.fipe,
+      });
       sucesso++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      resultados.push({ placa: v.placa, ok: false, erro: msg });
+      resultados.push({ ...base, ok: false, erro: msg });
       falhas++;
     }
-    emitProgress(opts.onProgress, total, sucesso + falhas, sucesso, falhas);
+    emitProgress(opts.onProgress, total, sucesso + falhas, sucesso, falhas, resultados);
   }
 
   return { total, sucesso, falhas, resultados };

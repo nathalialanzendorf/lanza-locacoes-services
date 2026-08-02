@@ -8,6 +8,19 @@ export type JobProgress = {
   percent: number;
   sucesso: number;
   falhas: number;
+  /** Linhas por veículo (sync FIPE). */
+  resultados?: Array<{
+    placa: string;
+    marcaModelo?: string;
+    anoModelo?: string;
+    ok: boolean;
+    fipeCodigo?: string;
+    fipeModelo?: string;
+    fipeValor?: string;
+    fipeReferencia?: string;
+    fipe?: string;
+    erro?: string;
+  }>;
 };
 
 export type SyncJob = {
