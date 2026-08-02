@@ -1,17 +1,18 @@
 import {
   consultarValor,
   editarVeiculoAsync,
-  isVeiculoAtivo,
   listarAnos,
   listarMarcas,
   listarModelos,
-  loadVeiculosDb,
   loadVeiculosDbAsync,
   montarUrlFipe,
   placasIguais,
   resolverFipeVeiculo,
+  sincronizarFipeVeiculos,
+  type FipeSyncProgress,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import { assertRelationalStore } from "@lanza/db";
 
 export async function listarMarcasFipe(filtro?: string) {
   const brands = await listarMarcas();
@@ -77,7 +78,7 @@ export type ConsultarFipeInput = {
   marca?: string;
   modelo?: string;
   ano?: number;
-  /** Grava em veiculos.json se o veículo já estiver cadastrado (default false). */
+  /** Grava em PostgreSQL (`lanza.veiculo_fipe`) se o veículo já estiver cadastrado. */
   persist?: boolean;
 };
 
@@ -95,6 +96,7 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
   if (cadastrado) {
     const fipe = await resolverFipeVeiculo(cadastrado, brands);
     if (input.persist) {
+      await assertRelationalStore();
       const data = await editarVeiculoAsync(cadastrado.id, fipe);
       return { cadastrado: true as const, data, fipe };
     }
@@ -128,6 +130,7 @@ export async function consultarFipeVeiculo(input: ConsultarFipeInput) {
 }
 
 export async function atualizarFipeVeiculo(idOuPlaca: string) {
+  await assertRelationalStore();
   const v = await resolverVeiculo(idOuPlaca);
   const brands = await listarMarcas();
   const upd = await resolverFipeVeiculo(v, brands);
@@ -135,26 +138,10 @@ export async function atualizarFipeVeiculo(idOuPlaca: string) {
   return { data, fipe: upd };
 }
 
-export async function atualizarFipeFrota() {
-  const brands = await listarMarcas();
-  const veiculos = (await loadVeiculosDbAsync({ comFipe: true })).veiculos.filter(isVeiculoAtivo);
-  const resultados: Array<{ placa: string; ok: boolean; fipe?: unknown; erro?: string }> = [];
+export async function atualizarFipeFrota(onProgress?: (p: FipeSyncProgress) => void) {
+  return sincronizarFipeVeiculos({ onProgress });
+}
 
-  for (const v of veiculos) {
-    try {
-      const upd = await resolverFipeVeiculo(v, brands);
-      await editarVeiculoAsync(v.id, upd);
-      resultados.push({ placa: v.placa, ok: true, fipe: upd });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      resultados.push({ placa: v.placa, ok: false, erro: msg });
-    }
-  }
-
-  return {
-    total: veiculos.length,
-    sucesso: resultados.filter((r) => r.ok).length,
-    falhas: resultados.filter((r) => !r.ok).length,
-    resultados,
-  };
+export async function atualizarFipeFaltantes(onProgress?: (p: FipeSyncProgress) => void) {
+  return sincronizarFipeVeiculos({ faltantes: true, onProgress });
 }

@@ -2,6 +2,14 @@ import crypto from "node:crypto";
 
 export type JobStatus = "pending" | "running" | "completed" | "failed";
 
+export type JobProgress = {
+  total: number;
+  done: number;
+  percent: number;
+  sucesso: number;
+  falhas: number;
+};
+
 export type SyncJob = {
   id: string;
   sync: string;
@@ -12,6 +20,7 @@ export type SyncJob = {
   input: unknown;
   result?: unknown;
   error?: string;
+  progress?: JobProgress;
 };
 
 const jobs = new Map<string, SyncJob>();
@@ -56,6 +65,12 @@ export function markJobRunning(id: string): void {
   if (!job) return;
   job.status = "running";
   job.startedAt = new Date().toISOString();
+}
+
+export function updateJobProgress(id: string, progress: JobProgress): void {
+  const job = jobs.get(id);
+  if (!job) return;
+  job.progress = progress;
 }
 
 export function markJobCompleted(id: string, result: unknown): void {

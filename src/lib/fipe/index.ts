@@ -8,3 +8,4 @@
 export * from "./client.js";
 export * from "./consulta.js";
 export * from "./resolverVeiculo.js";
+export * from "./syncVeiculos.js";

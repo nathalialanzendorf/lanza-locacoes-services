@@ -362,6 +362,10 @@ export {
   consultarValor,
   montarUrlFipe,
   resolverFipeVeiculo,
+  sincronizarFipeVeiculos,
+  type FipeSyncProgress,
+  type FipeSyncResult,
+  type SincronizarFipeOpts,
 } from "../../../src/lib/fipe/index.js";
 
 export {

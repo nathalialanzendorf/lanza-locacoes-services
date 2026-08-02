@@ -36,10 +36,10 @@ import {
   sincronizarVeiculoDetranRs,
   syncMotoristas,
   syncRastreaveis,
-  preencherFipeFaltante,
   syncRecebimentos,
   ufRegistroDaPlaca,
   type DetranRsConsultaVeiculo,
+  type FipeSyncProgress,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
 import * as fipeService from "../fipe.js";
@@ -64,8 +64,10 @@ export type SyncRecebimentosOpts = SyncRastreameOpts & {
 export type SyncRastreaveisOpts = SyncRastreameOpts;
 
 export type SyncFipeOpts = SyncBaseOpts & {
-  /** Só veículos ativos sem FIPE (default API: frota ativa completa). */
+  /** Só veículos sem FIPE (não reconsulta quem já tem). */
   faltantes?: boolean;
+  /** Progresso do job async (não serializar no input do job). */
+  onProgress?: (p: FipeSyncProgress) => void;
 };
 
 export type SyncDetranScOpts = SyncBaseOpts & {
@@ -164,9 +166,9 @@ async function runFipe(opts: SyncFipeOpts) {
     return fipeService.atualizarFipeVeiculo(opts.placa.trim());
   }
   if (opts.faltantes) {
-    return preencherFipeFaltante({ dryRun: opts.dryRun });
+    return fipeService.atualizarFipeFaltantes(opts.onProgress);
   }
-  return fipeService.atualizarFipeFrota();
+  return fipeService.atualizarFipeFrota(opts.onProgress);
 }
 
 async function runRecebimentos(opts: SyncRecebimentosOpts) {

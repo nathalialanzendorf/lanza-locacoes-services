@@ -6,18 +6,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { loadJsonDocument } from "@lanza/db";
-import { listarMarcas, resolverFipeVeiculo } from "../fipe/index.js";
+import { sincronizarFipeVeiculos } from "../fipe/index.js";
 import { compactPlaca, formatPlacaHyphen, placasIguais } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { rastreameEspelhoGlobal } from "../rastreameEspelhoConfig.js";
 import {
-  aplicarFipeVeiculo,
   editarVeiculo,
   isSyncRastreameEligible,
   isVeiculoAtivo,
   loadVeiculosDb,
   marcarVeiculoRastreameSyncOk,
-  precisaFipe,
   type UpsertRastreavelInput,
   type VeiculoRegistro,
   upsertVeiculoFromRastreame,
@@ -376,50 +374,28 @@ export async function pushRastreaveisToRastreame(
 }
 
 /**
- * Resolve FIPE (tool `src/lib/fipe`) para veículos sem dados FIPE — tipicamente
- * os recém-importados do Rastreame. Idempotente: uma vez preenchido, é ignorado.
+ * Resolve FIPE para veículos sem dados FIPE e grava no PostgreSQL.
+ * Inclui ativos e inativos. Idempotente: quem já tem FIPE é ignorado com `--faltantes`.
  */
 export async function preencherFipeFaltante(
   opts: SyncRastreaveisOpts = {},
 ): Promise<SyncRastreaveisResult["fipe"]> {
   const result = { atualizados: 0, ignorados: 0, erros: [] as string[] };
-  const db = loadVeiculosDb();
-  // Veículos inativos não recebem consultas externas (FIPE) — ver regra em
-  // .cursor/rules/lanza-tools.mdc ("Veículos inativos").
-  const pendentes = db.veiculos.filter((v) => isVeiculoAtivo(v) && precisaFipe(v));
-  if (pendentes.length === 0) return result;
 
   if (opts.dryRun) {
-    for (const v of pendentes) {
-      console.log(`[fipe dry-run] resolveria ${v.placa} (${v.marca ?? v.marcaModelo ?? "?"})`);
-    }
-    result.atualizados = pendentes.length;
+    console.warn("[aviso] dry-run em preencherFipeFaltante: simulação sem gravação não lista mais o JSON; use sync-fipe.");
     return result;
   }
 
-  let brands: Awaited<ReturnType<typeof listarMarcas>>;
   try {
-    brands = await listarMarcas();
+    const r = await sincronizarFipeVeiculos({ faltantes: true });
+    result.atualizados = r.sucesso;
+    result.ignorados = r.falhas;
+    for (const linha of r.resultados.filter((x) => !x.ok)) {
+      result.erros.push(`${linha.placa}: ${linha.erro}`);
+    }
   } catch (e) {
     result.erros.push(`FIPE indisponível: ${e instanceof Error ? e.message : String(e)}`);
-    return result;
-  }
-
-  for (const v of pendentes) {
-    try {
-      const r = await resolverFipeVeiculo(v, brands);
-      aplicarFipeVeiculo(v.id, {
-        fipe: r.fipe,
-        fipeCodigo: r.fipeCodigo,
-        fipeModelo: r.fipeModelo,
-        fipeValor: r.fipeValor,
-        fipeReferencia: r.fipeReferencia,
-      });
-      result.atualizados++;
-    } catch (e) {
-      result.ignorados++;
-      result.erros.push(`${v.placa}: ${e instanceof Error ? e.message : String(e)}`);
-    }
   }
 
   return result;

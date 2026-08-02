@@ -451,24 +451,21 @@ export function precisaFipe(v: VeiculoRegistro): boolean {
 }
 
 /**
- * Grava os campos FIPE de um veículo. Enriquecimento local (não vai ao
- * Rastreame): `atualizadoEm` e `rastreameSyncEm` ficam iguais para não acionar
- * o guard "local mais recente" no próximo pull.
+ * Grava os campos FIPE de um veículo no PostgreSQL.
+ * @deprecated Prefira `editarVeiculoAsync` ou `sincronizarFipeVeiculos`.
  */
 export function aplicarFipeVeiculo(id: string, fipe: FipeFields): VeiculoRegistro | null {
-  const db = loadVeiculosDb();
-  const idx = db.veiculos.findIndex((v) => v.id === id);
-  if (idx < 0) return null;
-  const v = db.veiculos[idx]!;
-  for (const [k, val] of Object.entries(fipe)) {
-    if (val != null) (v as Record<string, unknown>)[k] = val;
-  }
-  const ts = nowIso();
-  v.atualizadoEm = ts;
-  v.rastreameSyncEm = ts;
-  db.veiculos[idx] = v;
-  saveVeiculosDb(db);
-  return v;
+  throw new Error(
+    "aplicarFipeVeiculo (JSON) foi desactivado. Use editarVeiculoAsync ou sincronizarFipeVeiculos.",
+  );
+}
+
+/** Grava campos FIPE no PostgreSQL (`lanza.veiculo_fipe`). */
+export async function aplicarFipeVeiculoAsync(
+  id: string,
+  fipe: FipeFields,
+): Promise<VeiculoRegistro | null> {
+  return editarVeiculoAsync(id, fipe);
 }
 
 export function marcarVeiculoRastreameSyncOk(

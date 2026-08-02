@@ -8,7 +8,7 @@ import {
   type RouteDef,
 } from "../http.js";
 import { metaSync, normalizarSyncId } from "../services/sync/catalog.js";
-import { createJob, getJob, listJobs, runJobAsync } from "../services/sync/jobs.js";
+import { createJob, getJob, listJobs, runJobAsync, updateJobProgress } from "../services/sync/jobs.js";
 import {
   executarSync,
   executarSyncCompleto,
@@ -124,7 +124,14 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
 
       if (asyncMode) {
         const job = createJob(syncId, input);
-        runJobAsync(job.id, () => executarSync(syncId, input));
+        runJobAsync(job.id, () =>
+          executarSync(syncId, {
+            ...input,
+            ...(syncId === "fipe"
+              ? { onProgress: (p) => updateJobProgress(job.id, p) }
+              : {}),
+          }),
+        );
         json(ctx.res, 202, { jobId: job.id, status: job.status, sync: syncId });
         return;
       }

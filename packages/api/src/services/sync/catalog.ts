@@ -129,10 +129,10 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
   {
     id: "fipe",
     rotulo: "Tabela FIPE",
-    destino: "veiculos.json",
+    destino: "PostgreSQL (lanza.veiculo_fipe)",
     interativo: false,
     direcao: "buscar",
-    nota: "Separado do sync Rastreame; só veículos ativos",
+    nota: "Atualiza FIPE de todos os veículos da base (ativos e inativos)",
   },
   {
     id: "recebimentos",
