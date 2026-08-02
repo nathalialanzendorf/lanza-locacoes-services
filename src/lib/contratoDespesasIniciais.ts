@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 import {
-  gerarDatasParcelasCaucao,
+  gerarDatasParcelasPorTipo,
   infoCaucaoEntrada,
   infoParcelaCaucao,
 } from "./caucaoParcelas.js";
@@ -201,7 +201,11 @@ export async function gerarDespesasIniciaisContratoAsync(
     }
   } else if (dados.caucaoSemanalParcelado) {
     const cp = dados.caucaoSemanalParcelado;
-    const datas = gerarDatasParcelasCaucao(inicioBr, cp.parcelas, diaPagamento);
+    const datas = gerarDatasParcelasPorTipo(inicioBr, cp.parcelas, {
+      tipoContrato: dados.tipoContrato ?? reg.tipoContrato,
+      diaPagamento,
+      diaPagamentoMes: reg.diaPagamentoMes,
+    });
     for (let i = 0; i < cp.parcelas; i++) {
       const n = i + 1;
       caucaoParcelas.push(
@@ -237,7 +241,14 @@ export async function gerarDespesasIniciaisContratoAsync(
       semana = r.registro;
       proximaSemana = r.proximaParcela;
     }
-    const datas = gerarDatasParcelasCaucao(inicioBr, sp.parcelas, diaPagamento);
+    const datas =
+      sp.datas && sp.datas.length === sp.parcelas
+        ? sp.datas
+        : gerarDatasParcelasPorTipo(inicioBr, sp.parcelas, {
+            tipoContrato: dados.tipoContrato ?? reg.tipoContrato,
+            diaPagamento,
+            diaPagamentoMes: reg.diaPagamentoMes,
+          });
     for (let i = 0; i < sp.parcelas; i++) {
       const n = i + 1;
       semanaParcelas.push(

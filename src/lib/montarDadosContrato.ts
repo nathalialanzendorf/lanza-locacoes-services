@@ -20,7 +20,7 @@ import {
   type GerarContratoDados,
   type SemanaParcelas,
 } from "./docxGerar.js";
-import { gerarDatasParcelasCaucao } from "./caucaoParcelas.js";
+import { gerarDatasParcelasPorTipo } from "./caucaoParcelas.js";
 import { defaultContratosDir } from "./lanzaPaths.js";
 import { formatPlacaHyphen, placasIguais } from "./placa.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -106,12 +106,14 @@ export type MontarContratoDbInput = {
   caucaoDatas?: string;
   caucaoParcelas?: CaucaoParcelas;
   caucaoSemanalParcelado?: CaucaoSemanalParcelado;
-  /** Entrada da 1ª semana na retirada (cláusula 3.2). */
+  /** Entrada da 1ª semana/período na retirada (cláusula 3.2). */
   semanaEntrada?: number;
-  /** Semanas restantes do parcelamento semanal (cláusula 3.2). */
+  /** Parcelas restantes do parcelamento do 1º período (cláusula 3.2). */
   semanaParcelasN?: number;
-  /** Valor adicional por semana no parcelamento (cláusula 3.2). */
+  /** Valor adicional por parcela no parcelamento (cláusula 3.2). */
   semanaValorParcela?: number;
+  /** Datas DD/MM/AAAA das parcelas do 1º período (vírgula), opcional. */
+  semanaDatas?: string;
   semanaParcelas?: SemanaParcelas;
   assinatura?: { cidade?: string; estado?: string; data?: string };
 };
@@ -402,10 +404,13 @@ export function resolverParcelamentoContrato(input: MontarContratoDbInput): {
       }
       const datas = input.caucaoDatas
         ? parseDatasLista(input.caucaoDatas)
-        : gerarDatasParcelasCaucao(
+        : gerarDatasParcelasPorTipo(
             input.inicio?.trim() || fmtDataBr(new Date()),
             parcelas,
-            input.diaPagamento,
+            {
+              tipoContrato: input.tipoContrato,
+              diaPagamento: input.diaPagamento,
+            },
           );
       if (datas.length !== parcelas) {
         throw new Error(
@@ -439,7 +444,8 @@ export function resolverParcelamentoContrato(input: MontarContratoDbInput): {
   } else if (
     input.semanaEntrada != null ||
     input.semanaParcelasN != null ||
-    input.semanaValorParcela != null
+    input.semanaValorParcela != null ||
+    input.semanaDatas
   ) {
     if (
       input.semanaEntrada == null ||
@@ -452,15 +458,38 @@ export function resolverParcelamentoContrato(input: MontarContratoDbInput): {
     }
     const restante = round2(input.semanaParcelasN * input.semanaValorParcela);
     const total = round2(input.semanaEntrada + restante);
-    if (Math.abs(total - input.semana) > 0.01) {
+    const valorBase =
+      input.tipoContrato === "mensal"
+        ? (input.mensal ?? input.semana)
+        : input.tipoContrato === "diaria"
+          ? (input.diaria ?? input.semana)
+          : input.semana;
+    if (Math.abs(total - valorBase) > 0.01) {
       throw new Error(
-        `Parcelamento semanal: entrada + parcelas (${total}) difere de --semana (${input.semana}).`,
+        `Parcelamento do período: entrada + parcelas (${total}) difere do valor base (${valorBase}).`,
       );
     }
+    const datas = input.semanaDatas
+      ? parseDatasLista(input.semanaDatas)
+      : gerarDatasParcelasPorTipo(
+          input.inicio?.trim() || fmtDataBr(new Date()),
+          input.semanaParcelasN,
+          {
+            tipoContrato: input.tipoContrato,
+            diaPagamento: input.diaPagamento,
+          },
+        );
+    if (datas.length !== input.semanaParcelasN) {
+      throw new Error(
+        `semanaDatas (${datas.length}) deve ter ${input.semanaParcelasN} data(s), igual a semanaParcelasN.`,
+      );
+    }
+    for (const d of datas) validarDataBr(d);
     out.semanaParcelas = {
       valorEntrada: input.semanaEntrada,
       parcelas: input.semanaParcelasN,
       valorParcela: input.semanaValorParcela,
+      datas,
     };
   }
 

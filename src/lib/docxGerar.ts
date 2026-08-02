@@ -464,11 +464,13 @@ export type CaucaoSemanalParcelado = {
   valorParcela: number;
 };
 
-/** Primeira semana parcial na retirada; restante diluído nas próximas semanas (cláusula 3.2). */
+/** Primeira semana/período parcial na retirada; restante diluído nas próximas parcelas (cláusula 3.2). */
 export type SemanaParcelas = {
   valorEntrada: number;
   parcelas: number;
   valorParcela: number;
+  /** Datas de vencimento das parcelas restantes (DD/MM/AAAA). */
+  datas?: string[];
 };
 
 export type GerarContratoDados = {
@@ -538,8 +540,10 @@ function buildCaucaoSemanalParceladoText(cp: CaucaoSemanalParcelado): string {
 
 function buildSemanaParcelasText(sp: SemanaParcelas): string {
   const restante = Math.round(sp.parcelas * sp.valorParcela * 100) / 100;
+  const datasSuffix =
+    sp.datas && sp.datas.length > 0 ? ` nos dias ${formatDatasLista(sp.datas)}` : "";
   return (
-    ` no valor de R$${brl(sp.valorEntrada)} (${cap(valorExtenso(sp.valorEntrada))}) e o restante deverá ser pago juntamente com as próximas ${sp.parcelas} (${parcelasExtensoFem(sp.parcelas)}) semanas no valor de R$${brl(sp.valorParcela)} (${cap(valorExtenso(sp.valorParcela))}), totalizando R$${brl(restante)} (${cap(valorExtenso(restante))}).`
+    ` no valor de R$${brl(sp.valorEntrada)} (${cap(valorExtenso(sp.valorEntrada))}) e o restante deverá ser pago juntamente com as próximas ${sp.parcelas} (${parcelasExtensoFem(sp.parcelas)}) semanas no valor de R$${brl(sp.valorParcela)} (${cap(valorExtenso(sp.valorParcela))}), totalizando R$${brl(restante)} (${cap(valorExtenso(restante))})${datasSuffix}.`
   );
 }
 
