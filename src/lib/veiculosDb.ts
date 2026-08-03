@@ -71,6 +71,11 @@ export type VeiculoRegistro = {
    */
   particular?: boolean;
   origem?: string;
+  /** Tarifas padrão de locação cadastradas no veículo. */
+  valorSemanal?: number | null;
+  valorMensal?: number | null;
+  valorDiaria?: number | null;
+  valorCaucao?: number | null;
   [key: string]: unknown;
 };
 
@@ -224,6 +229,10 @@ export type VeiculoPatch = Partial<
     | "tipoFrota"
     | "particular"
     | "origem"
+    | "valorSemanal"
+    | "valorMensal"
+    | "valorDiaria"
+    | "valorCaucao"
   >
 >;
 

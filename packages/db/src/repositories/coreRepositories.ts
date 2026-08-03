@@ -191,6 +191,10 @@ function rowToVeiculo(r: Record<string, unknown>): VeiculoRow {
     particular: r.particular === true,
     origem: r.origem ?? undefined,
     atualizadoEm: r.atualizado_em ?? undefined,
+    valorSemanal: r.valor_semanal != null ? Number(r.valor_semanal) : undefined,
+    valorMensal: r.valor_mensal != null ? Number(r.valor_mensal) : undefined,
+    valorDiaria: r.valor_diaria != null ? Number(r.valor_diaria) : undefined,
+    valorCaucao: r.valor_caucao != null ? Number(r.valor_caucao) : undefined,
   };
 
   const crlvJson = crlvFieldsToJson(r);
@@ -270,12 +274,15 @@ export async function upsertVeiculoToSql(v: Record<string, unknown>): Promise<vo
         id, placa, placa_norm, marca_modelo, marca, modelo, ano_modelo, ano, chassi, renavam, cor,
         combustivel, categoria, tipo, licenca_ima, vencimento_documento, uf_registro,
         rastreame_rastreavel_key, rastreame_label, rastreame_sync_em,
-        cliente_vinculado_id, inicio_locacoes, ativo, particular, tipo_frota, origem, atualizado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,now())
+        cliente_vinculado_id, inicio_locacoes, ativo, particular, tipo_frota, origem,
+        valor_semanal, valor_mensal, valor_diaria, valor_caucao, atualizado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,now())
       ON CONFLICT (id) DO UPDATE SET
         placa = EXCLUDED.placa, placa_norm = EXCLUDED.placa_norm, ativo = EXCLUDED.ativo,
         particular = EXCLUDED.particular, tipo_frota = EXCLUDED.tipo_frota,
-        cliente_vinculado_id = EXCLUDED.cliente_vinculado_id, rastreame_label = EXCLUDED.rastreame_label, atualizado_em = now()`,
+        cliente_vinculado_id = EXCLUDED.cliente_vinculado_id, rastreame_label = EXCLUDED.rastreame_label,
+        valor_semanal = EXCLUDED.valor_semanal, valor_mensal = EXCLUDED.valor_mensal,
+        valor_diaria = EXCLUDED.valor_diaria, valor_caucao = EXCLUDED.valor_caucao, atualizado_em = now()`,
     [
       v.id,
       placa,
@@ -303,6 +310,10 @@ export async function upsertVeiculoToSql(v: Record<string, unknown>): Promise<vo
       particular,
       tipoFrota,
       v.origem ?? null,
+      typeof v.valorSemanal === "number" ? v.valorSemanal : null,
+      typeof v.valorMensal === "number" ? v.valorMensal : null,
+      typeof v.valorDiaria === "number" ? v.valorDiaria : null,
+      typeof v.valorCaucao === "number" ? v.valorCaucao : null,
     ],
   );
 
