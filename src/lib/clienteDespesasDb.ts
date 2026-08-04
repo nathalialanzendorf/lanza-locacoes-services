@@ -8,7 +8,7 @@ import { getCobrancasRuntimeCtx } from "./cobrancasDbContext.js";
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import {
   isCategoriaInfracao,
-  pareceTituloMulta,
+  pareceDescricaoInfracaoCobranca,
   stripAtrasado,
   normalizarCamposInfracaoCliente,
   descricaoInfracaoCliente,
@@ -71,7 +71,7 @@ export type ClienteDespesaRegistro = {
   autoInfracao: string;
   /** Texto cru do DETRAN (ex.: "TRANSITAR EM VEL SUPERIOR À MÁXIMA…"). */
   titulo?: string;
-  /** Rótulo de cobrança (ex.: "ATRASADO Multa velocidade - 30/03/2026 09:40"). */
+  /** Rótulo de cobrança (ex.: "Pagamento infração velocidade - 30/03/2026 09:40"). */
   descricao: string;
   /** Número do auto DETRAN — igual a `autoInfracao`; vínculo autuação ↔ débito. */
   numeroAuto?: string;
@@ -533,7 +533,7 @@ export type GravarClienteDespesaResult = {
   registro: ClienteDespesaRegistro;
   aviso: string | null;
   duplicado: boolean;
-  /** Próxima parcela semanal ATRASADO criada automaticamente na baixa. */
+  /** Próxima parcela semanal criada automaticamente na baixa. */
   proximaParcela?: ClienteDespesaRegistro | null;
 };
 
@@ -1090,20 +1090,18 @@ export async function sincronizarClienteDespesa(
   const desejaConfirmar = quitadaFinal && !m.condutorConfirmado;
   const flagRevisarMudou = !!m.revisarManual !== desejaRevisar;
 
-  // Infração: titulo = DETRAN; descricao = padrão Multa {tipo} - {data}.
+  // Infração: titulo = DETRAN; descricao = Pagamento infração {tipo} {data}.
   const descricaoDetran = String(input.descricao ?? "").trim();
   const manterDescricaoCobranca =
     isCategoriaInfracao(categoria) &&
     (m.rastreameId != null ||
       isClienteDespesaEmAberto(m) ||
-      pareceTituloMulta(m.descricao ?? ""));
+      pareceDescricaoInfracaoCobranca(m.descricao ?? ""));
   const tituloDetran = isCategoriaInfracao(categoria) ? descricaoDetran : "";
   const tituloMudou = isCategoriaInfracao(categoria) && tituloDetran && (m.titulo ?? "") !== tituloDetran;
   const descricaoPadrao =
     isCategoriaInfracao(categoria) && tituloDetran && !manterDescricaoCobranca
-      ? descricaoInfracaoCliente(tituloDetran, dataFinal, input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao, {
-          emAberto: !quitadaFinal && m.paga !== true,
-        })
+      ? descricaoInfracaoCliente(tituloDetran, dataFinal, input.numeroAuto ?? input.autoInfracao ?? m.numeroAuto ?? m.autoInfracao)
       : null;
   const descricaoMudou = descricaoPadrao !== null && (m.descricao ?? "") !== descricaoPadrao;
 
@@ -1782,7 +1780,9 @@ function vencimentoSemanalParaBaixa(
 
 function valorParcelaSemanalContrato(veiculoId: string): number | null {
   const ref = veiculoId.trim();
-  const contratos = getCobrancasRuntimeCtx()?.contratos ?? loadContratosDb().contratos;
+  const fromCtx = getCobrancasRuntimeCtx()?.contratos;
+  // Se o runtime ctx existe (mesmo vazio), não cair no load síncrono (deadlock no Postgres).
+  const contratos = fromCtx != null ? fromCtx : loadContratosDb().contratos;
   const placaNorm = isEntityUuid(ref) ? null : formatPlacaHyphen(ref);
   const contrato = contratos.find((c) => {
     if (c.status !== StatusContrato.Ativo) return false;
@@ -2033,11 +2033,12 @@ async function editarClienteDespesaRelational(
     m.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(descricaoAntes)
   ) {
+    // Sempre o valor semanal do contrato — não o residual da despesa quitada.
     proximaParcela = await criarProximaParcelaSemanalRelational(
       m,
       descricaoAntes,
       vencimentoAntes,
-      m.valorMulta,
+      valorParcelaSemanalContrato(m.veiculoId) ?? undefined,
     );
   }
 
@@ -2316,7 +2317,9 @@ export function upsertRecebimentoFromRastreame(
           numeroAuto: autoKey,
           paga: input.paga,
           situacao: input.situacao,
-          descricaoRastreame: /^(ATRASADO\s+)?Multa\s/i.test(input.descricao) ? input.descricao : null,
+          descricaoRastreame: pareceDescricaoInfracaoCobranca(input.descricao)
+            ? input.descricao
+            : null,
         })
       : null;
     const registro: ClienteDespesaRegistro = {
@@ -2365,7 +2368,7 @@ export function upsertRecebimentoFromRastreame(
     return { registro: m, aviso: "local mais recente — pull ignorado", acao: "sem_alteracao" };
   }
 
-  // Infração: `titulo` curto + `descricao` = info do Rastreame (com ATRASADO se em aberto).
+  // Infração: `titulo` = DETRAN; `descricao` = padrão de cobrança (Pagamento infração …).
   const tituloInput = isInfra ? input.titulo?.trim() || stripAtrasado(input.descricao) : undefined;
   const changed =
     (isInfra ? (m.titulo ?? "") !== (tituloInput ?? "") : m.descricao !== input.descricao) ||

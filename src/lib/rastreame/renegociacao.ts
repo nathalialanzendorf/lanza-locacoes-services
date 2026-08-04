@@ -107,7 +107,7 @@ export function infoMarcadaNegociada(info: string, codigo: string): string {
 }
 
 export function infoParcelaRenegociacao(numero: number, totalParcelas: number): string {
-  return `ATRASADO Pagamento negociação - ${numero}x${totalParcelas}`;
+  return `Pagamento renegociação ${numero}x${totalParcelas}`;
 }
 
 export function filtrarDebitosAbertos(

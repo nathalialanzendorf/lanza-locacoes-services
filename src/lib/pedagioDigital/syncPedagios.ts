@@ -65,9 +65,8 @@ function formatarDataHoraBr(p: PassagemPedagio): string | null {
 }
 
 /** Título/cobrança do pedágio — espelho do campo `info` no Rastreame. */
-export function descricaoPedagio(dataHoraBr: string, emAberto = true): string {
-  const base = `Pagamento pedágio ${dataHoraBr}`;
-  return emAberto ? `ATRASADO ${base}` : base;
+export function descricaoPedagio(dataHoraBr: string, _emAberto = true): string {
+  return `Pagamento pedágio ${dataHoraBr}`;
 }
 
 const RE_PEDAGIO_LEGADO =

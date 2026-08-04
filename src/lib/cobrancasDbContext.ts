@@ -11,7 +11,12 @@ import {
   useRelationalStore,
   warmupPgPool,
 } from "@lanza/db";
-import { loadClienteDespesasDb, loadClienteDespesasDbAsync, type ClienteDespesaRegistro } from "./clienteDespesasDb.js";
+import {
+  isLocacaoSemanalEmAberto,
+  loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
+  type ClienteDespesaRegistro,
+} from "./clienteDespesasDb.js";
 import { loadClientesDb, loadClientesDbAsync, type ClienteRegistro } from "./clientesDb.js";
 import { loadContratosDb, loadContratosDbAsync, type ContratoRegistro } from "./contratosDb.js";
 import { isEntityUuid } from "./filtroListagem.js";
@@ -376,17 +381,36 @@ export async function loadPlanoBaixaCtxDireto(input: {
 
   const clienteDespesas = mergeDespesaRows([], rowAlvo);
 
+  // Contrato do par: necessário para valor semanal da próxima parcela (não usar residual).
+  let contratos: ContratoRegistro[] = [];
+  if (veiculoId) {
+    let contratosResult = await queryContratosFromSql({
+      clienteId,
+      veiculoIds: [veiculoId],
+      contratoPar: true,
+      skipSnapshots: true,
+    });
+    if (!contratosResult.length) {
+      contratosResult = await queryContratosFromSql({
+        clienteId,
+        veiculoIds: [veiculoId],
+        skipSnapshots: true,
+      });
+    }
+    contratos = contratosResult as ContratoRegistro[];
+  }
+
   logFlowStep(
     flowRoute,
     8,
-    `plano direto pronto (despesas=${clienteDespesas.length} contratos=0)`,
+    `plano direto pronto (despesas=${clienteDespesas.length} contratos=${contratos.length})`,
   );
 
   return {
     clienteDespesas,
     clientes: [clienteRow as ClienteRegistro],
     veiculos: veiculos as VeiculoRegistro[],
-    contratos: [],
+    contratos,
   };
 }
 

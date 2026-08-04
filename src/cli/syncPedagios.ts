@@ -36,7 +36,7 @@ export async function main(argv: string[]): Promise<void> {
       console.log(`sync-pedagios [--placa PLACA] [--dry-run] [--json arquivo.json] [--normalizar-titulos]
 
 Grava as passagens EM ABERTO do pedagiodigital.com em database/cliente-despesas.json
-(categoria "Pedágio"); título: ATRASADO Pagamento pedágio dd/mm/aaaa HH:mm.
+(categoria "Pedágio"); título: Pagamento pedágio dd/mm/aaaa HH:mm.
 Ao final (ou com --normalizar-titulos), faz push para o Rastreame via sync-gastos-gerais.
 
 API: GET /bff/api/Passagem/list-logado?placas=P1,P2,... (uma chamada para toda a frota).

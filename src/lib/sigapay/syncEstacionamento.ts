@@ -58,9 +58,8 @@ function formatarDataHoraBr(a: AvisoEstacionamento): string | null {
 }
 
 /** Título/cobrança do ACT SigaPay. */
-export function descricaoEstacionamento(dataHoraBr: string, emAberto = true): string {
-  const base = `Estacionamento rotativo ${dataHoraBr}`;
-  return emAberto ? `ATRASADO ${base}` : base;
+export function descricaoEstacionamento(dataHoraBr: string, _emAberto = true): string {
+  return `Pagamento estacionamento ${dataHoraBr}`;
 }
 
 async function aplicarAviso(

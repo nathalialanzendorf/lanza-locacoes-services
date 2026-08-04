@@ -530,6 +530,18 @@ function resolverDespesaAlvo(
   return escolherDespesaAlvo(pool, opts.valor, opts.dataRecebimentoBr);
 }
 
+/** Valor da próxima semana: contrato ativo/encerrado, nunca o residual da despesa quitada. */
+function valorProximaParcelaSemanal(
+  veiculoId: string,
+  clienteId: string,
+  fallback: number,
+): number {
+  const contrato = contratoReferenciaSemanalAtraso(veiculoId, clienteId);
+  const v = contrato?.valorSemanal;
+  if (v != null && Number.isFinite(v) && v > 0) return v;
+  return fallback;
+}
+
 function previewProximaParcela(
   pago: ClienteDespesaRegistro,
   descricaoAntes: string,
@@ -779,7 +791,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       comprovanteRastreame: input.comprovante ?? null,
       origemExterna: input.origemExterna,
     });
-    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido, escopoClienteId);
+    const valorProxima = valorProximaParcelaSemanal(
+      alvo.veiculoId,
+      escopoClienteId,
+      valorDevido,
+    );
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorProxima, escopoClienteId);
     if (prox) {
       prox.num = 3;
       linhas.push(prox);
@@ -813,7 +830,12 @@ export function montarPlanoBaixa(input: MontarPlanoBaixaInput): PlanoBaixaRecebi
       origemExterna: input.origemExterna,
     });
 
-    const prox = previewProximaParcela(alvo, descricaoAntes, valorDevido, escopoClienteId);
+    const valorProxima = valorProximaParcelaSemanal(
+      alvo.veiculoId,
+      escopoClienteId,
+      valorDevido,
+    );
+    const prox = previewProximaParcela(alvo, descricaoAntes, valorProxima, escopoClienteId);
     if (prox) {
       prox.num = 2;
       linhas.push(prox);

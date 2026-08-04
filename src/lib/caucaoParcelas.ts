@@ -8,13 +8,9 @@
 export function infoParcelaCaucao(
   parcelaAtual: number,
   totalParcelas: number,
-  opts?: { atrasado?: boolean },
+  _opts?: { atrasado?: boolean },
 ): string {
-  const suffix = `${parcelaAtual}x${totalParcelas}`;
-  if (opts?.atrasado === false) {
-    return `Pagamento caução - ${suffix}`;
-  }
-  return `ATRASADO Pagamento caução - ${suffix}`;
+  return `Pagamento caução - ${parcelaAtual}x${totalParcelas}`;
 }
 
 /** Entrada única na retirada (sem parcelamento). */

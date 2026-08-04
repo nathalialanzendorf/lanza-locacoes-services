@@ -41,7 +41,7 @@ function infoEDataPadraoParaSemana(inicio: Date): { info: string; dataIso: strin
     `${y}-${pad2(m)}-${pad2(day)}T23:59:00-03:00`,
   ).toISOString();
   return {
-    info: `ATRASADO - Pagamento semanal - Segunda ${day}`,
+    info: `Pagamento semanal - Segunda ${pad2(day)}`,
     dataIso,
   };
 }

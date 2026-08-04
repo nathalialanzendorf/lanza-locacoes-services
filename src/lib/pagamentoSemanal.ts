@@ -1,8 +1,9 @@
 /**
  * Regras de data para "Pagamento semanal - {DiaSemana} {DD}".
  *
- * - Em aberto (ATRASADO): `dataAutuacao` = vencimento (dia DD do mês, 23:59).
+ * - Em aberto: `dataAutuacao` = vencimento (dia DD do mês, 23:59).
  * - Quitado: `dataAutuacao` = data real do pagamento (não o vencimento).
+ * - Descrição sem prefixo ATRASADO (atraso fica no status/vencimento).
  */
 
 const DESC_RE =
@@ -208,31 +209,27 @@ export function montarDescricaoPrimeiraSemanalContrato(
 export function infoParcelaPrimeiraSemana(
   parcelaAtual: number,
   totalParcelas: number,
-  opts?: { atrasado?: boolean },
+  _opts?: { atrasado?: boolean },
 ): string {
-  const suffix = `${parcelaAtual}x${totalParcelas}`;
-  if (opts?.atrasado === false) {
-    return `Pagamento 1ª semana - ${suffix}`;
-  }
-  return `ATRASADO Pagamento 1ª semana - ${suffix}`;
+  return `Pagamento 1ª semana - ${parcelaAtual}x${totalParcelas}`;
 }
 
+/** @deprecated Preferir `montarDescricaoSemanal` — sem prefixo ATRASADO. */
 export function montarDescricaoAtrasadoSemanal(
   parsed: PagamentoSemanalParsed,
   diaMes: number,
 ): string {
-  return `ATRASADO Pagamento semanal - ${parsed.diaSemanaLabel} ${diaMes}`;
+  return montarDescricaoSemanal(parsed, diaMes);
 }
 
 /** Multa de atraso (juros) vinculada à parcela semanal — fonte única do título. */
 export function montarDescricaoMultaAtrasoSemanal(
   diasAtraso: number,
   parsed: PagamentoSemanalParsed,
-  opts?: { atrasado?: boolean },
+  _opts?: { atrasado?: boolean },
 ): string {
-  const prefix = opts?.atrasado !== false ? "ATRASADO " : "";
   const diasLabel = diasAtraso === 1 ? "dia" : "dias";
-  return `${prefix}Multa atraso (${diasAtraso} ${diasLabel}) pagamento semanal - ${parsed.diaSemanaLabel} ${pad2(parsed.diaMes)}`;
+  return `Multa atraso (${diasAtraso} ${diasLabel}) pagamento semanal - ${parsed.diaSemanaLabel} ${pad2(parsed.diaMes)}`;
 }
 
 /** Próxima parcela (+7 dias) a partir da descrição e vencimento atual. */
@@ -263,7 +260,7 @@ export function stripAtrasadoSemanal(descricao: string): string {
     .trim();
 }
 
-/** Normaliza baixa integral de pagamento semanal (remove ATRASADO, data = pagamento). */
+/** Normaliza baixa integral de pagamento semanal (remove ATRASADO legado, data = pagamento). */
 export function normalizarBaixaSemanal(patch: {
   descricao?: string;
   dataAutuacao?: string;

@@ -371,7 +371,7 @@ function expandirRenegociacoesPlanoFaltante(
       categoria: CategoriaDespesaCliente.Renegociacao,
       veiculoId: contrato.placa,
       autoInfracao: ref?.autoInfracao ?? `PLANO-${inicioFaltante}x${total}`,
-      descricao: `ATRASADO Pagamento renegociação ${inicioFaltante}x${total} (${qtd} parcelas faltantes)`,
+      descricao: `Pagamento renegociação ${inicioFaltante}x${total} (${qtd} parcelas faltantes)`,
       localInfracao: ref?.localInfracao ?? "",
       dataAutuacao: ref?.dataAutuacao ?? fmtDataBr(new Date()),
       valorMulta: valorTotal,
