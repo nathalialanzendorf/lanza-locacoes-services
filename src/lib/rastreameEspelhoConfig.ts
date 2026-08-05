@@ -15,7 +15,6 @@ export type RastreameEspelhoConfig = {
   origem: "env" | "config" | "default";
   /** Env pode ser alterado só no servidor (Vercel / variáveis de utilizador). */
   editavelViaApi: boolean;
-  /** Integração descontinuada — mantida só por compatibilidade. */
   depreciado: boolean;
 };
 
@@ -36,8 +35,17 @@ function readConfigFile(): Record<string, unknown> {
   }
 }
 
-/** Leitura global — espelhar no Rastreame? Integração descontinuada: sempre desligado. */
+/** Leitura global — espelhar no Rastreame? */
 export function rastreameEspelhoGlobal(): boolean {
+  const envRaw = process.env.LANZA_RASTREAME_ESPELHO?.trim();
+  if (envRaw) {
+    const parsed = parseBoolEnv(envRaw);
+    if (parsed != null) return parsed;
+  }
+
+  const cfg = readConfigFile();
+  if (typeof cfg.rastreameEspelho === "boolean") return cfg.rastreameEspelho;
+
   return false;
 }
 
@@ -51,7 +59,7 @@ function runtimeReadOnly(): boolean {
 }
 
 export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
-  const depreciado = true;
+  const depreciado = false;
   const envRaw = process.env.LANZA_RASTREAME_ESPELHO?.trim();
   if (envRaw && parseBoolEnv(envRaw) != null) {
     return {
@@ -82,10 +90,12 @@ export function obterRastreameEspelhoConfig(): RastreameEspelhoConfig {
 
 /**
  * Resolve se uma operação deve empurrar ao Rastreame.
- * Integração descontinuada — sempre false.
+ * @param perCall false = nunca nesta chamada; true/undefined = segue o global.
  */
-export function resolveSyncRastreame(_perCall?: boolean): boolean {
-  return false;
+export function resolveSyncRastreame(perCall?: boolean): boolean {
+  if (!rastreameEspelhoGlobal()) return false;
+  if (perCall === false) return false;
+  return true;
 }
 
 export function gravarRastreameEspelhoConfig(ativo: boolean): RastreameEspelhoConfig {

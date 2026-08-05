@@ -42,6 +42,7 @@ import {
   isCategoriaEstacionamento,
   resolveVeiculoIdListagem,
   loadCatalogoEnriquecimentoDespesas,
+  resolveSyncRastreame,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
 
@@ -355,7 +356,7 @@ export async function criarDespesa(
   }
 
   const r = await gravarClienteDespesa(veiculoId, input, {
-    syncRastreame: false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
     skipProximaParcela: opts?.skipProximaParcela,
     veiculoId: opts?.veiculoId,
   });
@@ -373,7 +374,7 @@ export async function atualizarDespesa(
   opts?: SyncOpts,
 ) {
   const r = await editarClienteDespesa(idOrAuto, patch, {
-    syncRastreame: false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
     skipProximaParcela: opts?.skipProximaParcela,
   });
   if (!r) {
@@ -387,7 +388,9 @@ export async function atualizarDespesa(
 }
 
 export async function removerDespesa(idOrAuto: string, opts?: SyncOpts) {
-  const item = await excluirClienteDespesa(idOrAuto, { syncRastreame: false });
+  const item = await excluirClienteDespesa(idOrAuto, {
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
+  });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");
   }
@@ -400,7 +403,7 @@ export async function confirmarClienteDespesa(
   opts?: SyncOpts,
 ) {
   const item = await confirmarCondutorClienteDespesa(idOuAuto, clienteId, {
-    syncRastreame: false,
+    syncRastreame: resolveSyncRastreame(opts?.syncRastreame !== false ? undefined : false),
   });
   if (!item) {
     throw new HttpError(404, "Despesa não encontrada");

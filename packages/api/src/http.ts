@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import { resolveSyncRastreame } from "./lib-imports.js";
+
 export type ApiContext = {
   req: IncomingMessage;
   res: ServerResponse;
@@ -151,12 +153,19 @@ export async function readJsonBody<T>(req: IncomingMessage): Promise<T> {
   }
 }
 
-export function parseSyncRastreameQuery(_raw: string | null): boolean {
-  return false;
+export function parseSyncRastreameQuery(raw: string | null): boolean {
+  if (raw == null || raw === "") return resolveSyncRastreame();
+  const v = raw.trim().toLowerCase();
+  const perCall = !(v === "false" || v === "0" || v === "nao" || v === "não");
+  return resolveSyncRastreame(perCall);
 }
 
-export function parseSyncRastreameBody(_value: unknown, _fallback = true): boolean {
-  return false;
+export function parseSyncRastreameBody(value: unknown, fallback = true): boolean {
+  if (value === false) return resolveSyncRastreame(false);
+  if (value === true) return resolveSyncRastreame(true);
+  if (value === undefined) return resolveSyncRastreame(fallback ? undefined : false);
+  if (typeof value === "string") return parseSyncRastreameQuery(value);
+  return resolveSyncRastreame(fallback ? undefined : false);
 }
 
 export function routeAsync(handler: (ctx: ApiContext) => Promise<void>): ApiHandler {
