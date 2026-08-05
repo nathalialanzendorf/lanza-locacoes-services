@@ -394,8 +394,21 @@ export function resolverPastaContratoFromDados(dados: GerarContratoDados): strin
   );
 }
 
+function sanitizarNomeArquivo(base: string): string {
+  return base.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
+}
+
 export function resolverNomeArquivoContrato(nomeCliente: string): string {
-  return `Contrato - ${formatNomeTitulo(nomeCliente)}`;
+  const nome = String(nomeCliente ?? "").trim() || "Cliente";
+  return sanitizarNomeArquivo(`Contrato - ${formatNomeTitulo(nome)}`);
+}
+
+/** Nome de ficheiro para download (Word/PDF): `Contrato - Nome.ext`. */
+export function nomeArquivoContratoComExtensao(
+  nomeCliente: string,
+  ext: "docx" | "pdf",
+): string {
+  return `${resolverNomeArquivoContrato(nomeCliente)}.${ext}`;
 }
 
 /** Nome do locatário no corpo do contrato e assinatura — sempre maiúsculas. */

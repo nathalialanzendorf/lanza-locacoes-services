@@ -43,6 +43,16 @@ export function json(
   res.end(payload);
 }
 
+/** Cabeçalho Content-Disposition com suporte a acentos (filename + filename* UTF-8). */
+export function contentDispositionAttachment(filename: string): string {
+  const safe = filename.replace(/[\r\n"]/g, "_");
+  const ascii = safe
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\x20-\x7E]/g, "_");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
+}
+
 export function handleServiceError(ctx: ApiContext, err: unknown): void {
   if (err instanceof HttpError) {
     json(ctx.res, err.status, { error: err.message });

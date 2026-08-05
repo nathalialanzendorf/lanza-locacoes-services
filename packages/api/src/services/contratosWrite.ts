@@ -13,6 +13,7 @@ import {
   gerarDespesasIniciaisContratoAsync,
   ensurePdfFromDocx,
   montarDadosContratoFromDbAsync,
+  nomeArquivoContratoComExtensao,
   registrarContratoFromDadosAsync,
   validarModoContratoAsync,
   type ContratoRegistro,
@@ -281,6 +282,7 @@ export type GerarDocumentoContratoResult = {
   docx: string;
   pdf: string | null;
   cnh: string | null;
+  clienteNome: string;
 };
 
 /** Gera Word/PDF a partir do registro já gravado no banco. */
@@ -302,6 +304,7 @@ export async function gerarDocumentoContrato(contratoId: string): Promise<GerarD
     docx: gerado.docx,
     pdf: gerado.pdf,
     cnh: gerado.cnh,
+    clienteNome: reg.clienteNome?.trim() || dados.cliente?.nome?.trim() || "",
   };
 }
 
@@ -325,7 +328,10 @@ export function resolverDownloadDocumentoContrato(
     );
   }
   const buffer = fs.readFileSync(filePath);
-  const filename = path.basename(filePath);
+  const filename = nomeArquivoContratoComExtensao(
+    gerado.clienteNome || "Cliente",
+    formato,
+  );
   const contentType =
     formato === "pdf"
       ? "application/pdf"

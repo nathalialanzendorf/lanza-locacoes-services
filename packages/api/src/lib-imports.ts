@@ -502,6 +502,7 @@ export {
 export {
   resolverPastaContratoFromDados,
   resolverNomeArquivoContrato,
+  nomeArquivoContratoComExtensao,
   gerar,
   type GerarContratoDados,
 } from "../../../src/lib/docxGerar.js";

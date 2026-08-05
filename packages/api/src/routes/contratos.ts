@@ -1,6 +1,7 @@
 import {
   badRequest,
   compileRoute,
+  contentDispositionAttachment,
   handleServiceError,
   HttpError,
   json,
@@ -104,7 +105,7 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
         const file = await contratosWrite.downloadContratoAssinado(ctx.params.id);
         ctx.res.statusCode = 200;
         ctx.res.setHeader("Content-Type", file.contentType);
-        ctx.res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+        ctx.res.setHeader("Content-Disposition", contentDispositionAttachment(file.filename));
         ctx.res.end(file.buffer);
       } catch (err) {
         handleServiceError(ctx, err);
@@ -151,7 +152,7 @@ export function registerContratosRoutes(routes: RouteDef[]): void {
           );
           ctx.res.statusCode = 200;
           ctx.res.setHeader("Content-Type", file.contentType);
-          ctx.res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+          ctx.res.setHeader("Content-Disposition", contentDispositionAttachment(file.filename));
           ctx.res.end(file.buffer);
           return;
         }
