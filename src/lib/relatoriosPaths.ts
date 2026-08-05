@@ -3,8 +3,13 @@ import path from "node:path";
 
 import { REPO_ROOT } from "./repoRoot.js";
 
-/** Raiz dos relatórios gerados pelo repo (não confundir com prestação de contas no Dropbox). */
-export const RELATORIOS_DIR = path.join(REPO_ROOT, "relatorios");
+/**
+ * Raiz dos relatórios gerados (não confundir com prestação de contas no Dropbox).
+ * Na Vercel o filesystem do bundle (`/var/task`) é read-only — usar `/tmp`.
+ */
+export const RELATORIOS_DIR = process.env.VERCEL
+  ? path.join("/tmp", "lanza-relatorios")
+  : path.join(REPO_ROOT, "relatorios");
 
 /**
  * Todas as saídas geradas pela CLI ficam sob `relatorios/_tmp/<tipo>/`.
