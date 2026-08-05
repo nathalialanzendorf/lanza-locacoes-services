@@ -642,6 +642,8 @@ export type ClienteDespesaPersistOpts = {
   skipDupCheck?: boolean;
   /** Não consulta semanal duplicada (primeira locação). */
   skipDupSemanal?: boolean;
+  /** Não cria a próxima parcela semanal automaticamente (plano de baixa já traz a linha). */
+  skipProximaParcela?: boolean;
   /** Valor semanal do contrato recém-criado (evita carregar contratos). */
   valorSemanalContrato?: number;
 };
@@ -905,6 +907,7 @@ export async function gravarClienteDespesa(
   if (relational) {
     let proximaParcela: ClienteDespesaRegistro | null = null;
     if (
+      !opts?.skipProximaParcela &&
       input.paga === true &&
       registro.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
       isPagamentoSemanalDescricao(registro.descricao)
@@ -939,6 +942,7 @@ export async function gravarClienteDespesa(
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
+    !opts?.skipProximaParcela &&
     input.paga === true &&
     registro.categoria === CategoriaDespesaCliente.LocacaoSemanal &&
     isPagamentoSemanalDescricao(registro.descricao)
@@ -1618,7 +1622,7 @@ export type ClienteDespesaPatch = Partial<
 export async function editarClienteDespesa(
   idOrAuto: string,
   patch: ClienteDespesaPatch,
-  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame" | "skipProximaParcela">,
 ): Promise<EditarClienteDespesaResult | null> {
   if (await useRelationalStore()) {
     return editarClienteDespesaRelational(idOrAuto, patch, opts);
@@ -1700,6 +1704,7 @@ export async function editarClienteDespesa(
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
+    !opts?.skipProximaParcela &&
     !eraPaga &&
     m.paga === true &&
     m.ativo !== false &&
@@ -2001,7 +2006,7 @@ async function criarProximaParcelaSemanalRelational(
 async function editarClienteDespesaRelational(
   idOrAuto: string,
   patch: ClienteDespesaPatch,
-  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame">,
+  opts?: Pick<ClienteDespesaPersistOpts, "syncRastreame" | "skipProximaParcela">,
 ): Promise<EditarClienteDespesaResult | null> {
   const key = idOrAuto.trim();
   const row = await resolveClienteDespesaForEdit(key);
@@ -2027,6 +2032,7 @@ async function editarClienteDespesaRelational(
 
   let proximaParcela: ClienteDespesaRegistro | null = null;
   if (
+    !opts?.skipProximaParcela &&
     !eraPaga &&
     m.paga === true &&
     m.ativo !== false &&

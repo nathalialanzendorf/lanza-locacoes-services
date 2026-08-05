@@ -65,6 +65,10 @@ export type ListarDespesasOpts = {
 
 export type SyncOpts = {
   syncRastreame?: boolean;
+  /** Plano de baixa já lista a próxima semana — não criar automaticamente. */
+  skipProximaParcela?: boolean;
+  /** UUID do veículo (evita resolver por placa). */
+  veiculoId?: string;
 };
 
 type DespesasCatalogo = {
@@ -350,7 +354,11 @@ export async function criarDespesa(
     throw new HttpError(400, 'Campo "descricao" é obrigatório');
   }
 
-  const r = await gravarClienteDespesa(veiculoId, input, { syncRastreame: false });
+  const r = await gravarClienteDespesa(veiculoId, input, {
+    syncRastreame: false,
+    skipProximaParcela: opts?.skipProximaParcela,
+    veiculoId: opts?.veiculoId,
+  });
   return {
     data: r.registro,
     duplicado: r.duplicado ?? false,
@@ -364,7 +372,10 @@ export async function atualizarDespesa(
   patch: ClienteDespesaPatch,
   opts?: SyncOpts,
 ) {
-  const r = await editarClienteDespesa(idOrAuto, patch, { syncRastreame: false });
+  const r = await editarClienteDespesa(idOrAuto, patch, {
+    syncRastreame: false,
+    skipProximaParcela: opts?.skipProximaParcela,
+  });
   if (!r) {
     throw new HttpError(404, "Despesa não encontrada");
   }
@@ -432,12 +443,14 @@ export function patchParaInput(
     limiteDefesa: String(patch.limiteDefesa ?? defaults?.limiteDefesa ?? "").trim(),
     categoria: patch.categoria ?? defaults?.categoria,
     titulo: patch.titulo ?? defaults?.titulo,
+    condutorId: patch.condutorId ?? defaults?.condutorId,
     paga: patch.paga ?? defaults?.paga,
     statusCobranca: patch.statusCobranca ?? defaults?.statusCobranca,
     pagaEm: patch.pagaEm ?? defaults?.pagaEm,
     rastreameMotoristaKey: patch.rastreameMotoristaKey ?? defaults?.rastreameMotoristaKey,
     rastreameRastreavelKey: patch.rastreameRastreavelKey ?? defaults?.rastreameRastreavelKey,
     rastreameDataIso: patch.rastreameDataIso ?? defaults?.rastreameDataIso,
+    rastreameTipo: patch.rastreameTipo ?? defaults?.rastreameTipo,
     origem: defaults?.origem ?? "api",
   };
 }

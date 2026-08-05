@@ -295,14 +295,26 @@ export function rastreavelLabel(veiculoId: string): string {
 export function resolvePlacaLinhaPlanoBaixa(linha: LinhaPlanoBaixa): string {
   const fromPatch = linha.patch?.veiculoId?.trim();
   if (fromPatch) {
-    const v = findVeiculoLocal(fromPatch);
-    return v?.placa ?? formatPlacaHyphen(fromPatch);
+    const v = findVeiculoPorReferencia(fromPatch);
+    if (v?.placa?.trim()) return formatPlacaHyphen(v.placa);
+    if (isEntityUuid(fromPatch)) {
+      throw new Error(
+        `Veículo ${fromPatch} não está no contexto da baixa — informe placa ou recarregue o plano.`,
+      );
+    }
+    return formatPlacaHyphen(fromPatch);
   }
 
   const fromLinha = linha.veiculoId?.trim();
   if (fromLinha) {
-    const v = findVeiculoLocal(fromLinha);
-    return v?.placa ?? formatPlacaHyphen(fromLinha);
+    const v = findVeiculoPorReferencia(fromLinha);
+    if (v?.placa?.trim()) return formatPlacaHyphen(v.placa);
+    if (isEntityUuid(fromLinha)) {
+      throw new Error(
+        `Veículo ${fromLinha} não está no contexto da baixa — informe placa ou recarregue o plano.`,
+      );
+    }
+    return formatPlacaHyphen(fromLinha);
   }
 
   const rKey = linha.patch?.rastreameRastreavelKey;

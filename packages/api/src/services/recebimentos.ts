@@ -3,6 +3,7 @@ import {
   withBaixaPlanoDbContext,
   mergeBaixaExecScope,
   resolvePlacaLinhaPlanoBaixa,
+  isEntityUuid,
   type LinhaPlanoBaixa,
   type MontarPlanoBaixaInput,
 } from "../lib-imports.js";
@@ -65,7 +66,7 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
     throw new HttpError(400, 'Campo "linhas" é obrigatório e não pode ser vazio');
   }
 
-  const syncOpts = { syncRastreame: false as const };
+  const syncOpts = { syncRastreame: false as const, skipProximaParcela: true as const };
   const resultados: ExecutarBaixaResultado["resultados"] = [];
 
   return withBaixaPlanoDbContext(
@@ -95,9 +96,16 @@ export async function executarBaixa(input: ExecutarBaixaInput): Promise<Executar
       }
 
       if (linha.operacao === "criar") {
-        const veiculoId = resolveVeiculoIdDaLinha(linha);
+        const veiculoUuid =
+          [linha.veiculoId, linha.patch.veiculoId, input.veiculoId]
+            .map((v) => String(v ?? "").trim())
+            .find((v) => isEntityUuid(v)) ?? null;
+        const veiculoId = veiculoUuid ?? resolveVeiculoIdDaLinha(linha);
         const item = despesasService.patchParaInput(linha.patch);
-        const r = await despesasService.criarDespesa(veiculoId, item, syncOpts);
+        const r = await despesasService.criarDespesa(veiculoId, item, {
+          ...syncOpts,
+          ...(veiculoUuid ? { veiculoId: veiculoUuid } : {}),
+        });
         resultados.push({
           num: linha.num,
           operacao: linha.operacao,
