@@ -29,10 +29,20 @@ function persistUserEnv(name: string, value: string): boolean {
 }
 
 export async function statusAuthRastreame() {
+  const hasTokenEnv = Boolean(process.env.RASTREAME_AUTH?.trim());
+  const loginDisponivel = Boolean(process.env.RASTREAME_LOGIN?.trim() && process.env.RASTREAME_SENHA);
   const token = await fetchRastreameToken();
   return {
     configurado: Boolean(token),
-    loginDisponivel: Boolean(process.env.RASTREAME_LOGIN && process.env.RASTREAME_SENHA),
+    loginDisponivel,
+    /** Token em cache (RASTREAME_AUTH) ou obtido via login/senha — não é API key. */
+    metodo: token
+      ? hasTokenEnv
+        ? ("token" as const)
+        : ("login" as const)
+      : loginDisponivel
+        ? ("login_pendente" as const)
+        : null,
   };
 }
 

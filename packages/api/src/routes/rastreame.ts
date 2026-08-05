@@ -9,7 +9,7 @@ import {
 } from "../http.js";
 import * as rastreameService from "../services/rastreame.js";
 
-/** @deprecated Integração Rastreame descontinuada — rotas mantidas só por compatibilidade. */
+/** Rotas de integração com rastreame.com.br (login/senha no servidor — não usa API key). */
 export function registerRastreameRoutes(routes: RouteDef[]): void {
   const auth = compileRoute("/api/rastreame/auth");
   routes.push({
