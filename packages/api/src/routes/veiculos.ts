@@ -39,11 +39,17 @@ export function registerVeiculosRoutes(routes: RouteDef[]): void {
         return;
       }
       const placa = ctx.query.get("placa");
+      const comFipe = parseAtivoQuery(ctx.query.get("comFipe"));
+      if (ctx.query.has("comFipe") && comFipe === undefined) {
+        badRequest(ctx, 'Query "comFipe" inválida — use true ou false');
+        return;
+      }
       json(ctx.res, 200, await veiculosService.listarVeiculosAsync({
         ativo,
         particular,
         tipoFrota: tipoFrotaRaw ? parseTipoVeiculoFrota(tipoFrotaRaw) : undefined,
         placa: placa ?? undefined,
+        comFipe: comFipe === true,
       }));
     }),
   });

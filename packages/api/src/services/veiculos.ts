@@ -60,6 +60,10 @@ export type ListarVeiculosOpts = {
 
   tipoFrota?: TipoVeiculoFrotaValor;
 
+  /** Inclui join com `lanza.veiculo_fipe` (relatório FIPE). */
+
+  comFipe?: boolean;
+
 };
 
 
@@ -115,6 +119,8 @@ export async function listarVeiculosAsync(opts: ListarVeiculosOpts = {}): Promis
     particular: opts.particular,
 
     tipoFrota,
+
+    comFipe: opts.comFipe === true,
 
   });
 
