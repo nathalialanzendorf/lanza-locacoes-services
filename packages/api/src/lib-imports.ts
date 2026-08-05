@@ -287,6 +287,23 @@ export {
 } from "../../../src/lib/detranSc/captureCdp.js";
 
 export {
+  clearSigapaySession,
+} from "../../../src/lib/sigapay/auth.js";
+
+export {
+  clearStoredSigapaySession,
+  obterStatusSigapaySession,
+  saveSigapaySession,
+} from "../../../src/lib/sigapay/sessionStore.js";
+
+export {
+  getSigapayCaptureState,
+  isSigapayCaptureAvailable,
+  startSigapayCapture,
+  stopSigapayCapture,
+} from "../../../src/lib/sigapay/captureCdp.js";
+
+export {
   loadVeiculosParaSync,
   processarRespostaDetranSc,
   sincronizarMultasFrotaDetranSc,

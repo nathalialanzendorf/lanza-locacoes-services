@@ -73,7 +73,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "cliente-despesas.json",
     interativo: true,
     direcao: "buscar",
-    nota: "ACT/avisos Zona Azul; sessão via SIGAPAY_COOKIE+TOKEN ou jsonPath offline",
+    nota: "ACT/avisos Zona Azul; Capturar sessão (bridge) ou SIGAPAY_COOKIE+TOKEN",
   },
   {
     id: "infracoes",

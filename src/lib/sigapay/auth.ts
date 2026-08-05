@@ -1,10 +1,11 @@
 /**
  * Autenticação e headers HTTP para o portal/app SigaPay (Zona Azul Brasil).
  *
- * Override (debug): capturar sessão no DevTools → `SIGAPAY_COOKIE` + `SIGAPAY_TOKEN`
- * (Bearer ou header customizado conforme o endpoint capturado).
+ * Ordem: env (`SIGAPAY_COOKIE`/`TOKEN`) → sessão persistida (Postgres/ficheiro) → cache runtime.
+ * Captura automática: Chrome CDP (local) ou bridge (`npm run sigapay-capture-bridge`).
  */
 import { loadLocalEnv } from "../loadLocalEnv.js";
+import { readStoredSigapaySession } from "./sessionStore.js";
 
 loadLocalEnv();
 
@@ -24,7 +25,7 @@ export const SIGAPAY_API_BASE = (
 const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
 
-export type SigapaySession = { cookie?: string; token?: string };
+export type SigapaySession = { cookie?: string; token?: string; apiBase?: string };
 
 let sessionCache: SigapaySession | null = null;
 
@@ -39,14 +40,30 @@ export function clearSigapaySession(): void {
 function sessionFromEnv(): SigapaySession | null {
   const cookie = process.env.SIGAPAY_COOKIE?.trim();
   const token = process.env.SIGAPAY_TOKEN?.trim();
-  if (cookie || token) return { cookie, token };
+  if (cookie || token) {
+    return {
+      cookie: cookie || undefined,
+      token: token || undefined,
+      apiBase: process.env.SIGAPAY_API_BASE?.trim() || undefined,
+    };
+  }
   return null;
 }
 
-/** Obtém sessão (env > cache). */
+/** Obtém sessão (env > store > cache). */
 export async function getSigapaySession(): Promise<SigapaySession | null> {
   const env = sessionFromEnv();
   if (env) return env;
+
+  const stored = await readStoredSigapaySession();
+  if (stored?.cookie || stored?.token) {
+    return {
+      cookie: stored.cookie,
+      token: stored.token,
+      apiBase: stored.apiBase || undefined,
+    };
+  }
+
   return sessionCache;
 }
 

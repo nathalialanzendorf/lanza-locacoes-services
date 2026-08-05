@@ -187,7 +187,7 @@ export async function listarAvisosLote(
   const session = await import("./auth.js").then((m) => m.getSigapaySession());
   if (!session?.cookie && !session?.token) {
     throw new Error(
-      "SigaPay sem sessão: defina SIGAPAY_COOKIE + SIGAPAY_TOKEN (DevTools) ou use sync --json arquivo.json offline.",
+      "SigaPay sem sessão: configure SIGAPAY_COOKIE e SIGAPAY_TOKEN (capturados no DevTools, logado no portal) nas variáveis de ambiente da API.",
     );
   }
 

@@ -2,20 +2,31 @@
 
 Integração com o portal/app **SigaPay** (Zona Azul Brasil) para sincronizar ACT/avisos de irregularidade em `cliente-despesas.json`, com inferência e confirmação manual de responsável (igual pedágios e infrações).
 
+## Captura de sessão (produção / Vercel)
+
+A API na Vercel **não abre Chrome**. No PC do operador:
+
+```powershell
+cd lanza-locacoes-services
+npm run sigapay-capture-bridge
+```
+
+Na app (Syncs › SigaPay) clique **Capturar sessão** — o bridge abre o portal, captura cookie/token e grava em `lanza.portal_sessions` na API remota.
+
 ## Variáveis de ambiente
 
 | Variável | Descrição |
 |----------|-----------|
 | `SIGAPAY_ORIGIN` | Origin (default `https://sigapay.com.br`) |
 | `SIGAPAY_API_BASE` | Base da API (default `{ORIGIN}/api`) — **ajuste após capturar no DevTools** |
-| `SIGAPAY_COOKIE` | Header `cookie` capturado no DevTools |
-| `SIGAPAY_TOKEN` | Bearer ou token de sessão |
+| `SIGAPAY_COOKIE` | Header `cookie` (override; opcional se usar store/captura) |
+| `SIGAPAY_TOKEN` | Bearer ou token de sessão (override; opcional se usar store/captura) |
 | `SIGAPAY_EXTRA_HEADERS` | JSON opcional com headers extras |
 | `SIGAPAY_PATH_AVISOS` | Path listagem ACT (default `/Aviso/list-logado`) |
 | `SIGAPAY_PATH_PLACAS` | Paths GET placas, separados por vírgula |
 | `SIGAPAY_TLS_INSECURE` | `1` se interceção TLS local |
 
-## Modo offline (recomendado até confirmar endpoints)
+## Modo offline (alternativa)
 
 1. Logado no portal/app SigaPay, abra DevTools → Network.
 2. Localize a resposta com ACT/avisos das placas da frota.

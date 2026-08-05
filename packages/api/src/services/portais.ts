@@ -1,13 +1,21 @@
 import { HttpError } from "../http.js";
 import {
   clearDetranScRuntimeSession,
+  clearSigapaySession,
   clearStoredDetranScSession,
+  clearStoredSigapaySession,
   getDetranScCaptureState,
+  getSigapayCaptureState,
   isDetranScCaptureAvailable,
+  isSigapayCaptureAvailable,
   obterStatusDetranScSession,
+  obterStatusSigapaySession,
   saveDetranScSession,
+  saveSigapaySession,
   startDetranScCapture,
+  startSigapayCapture,
   stopDetranScCapture,
+  stopSigapayCapture,
 } from "../lib-imports.js";
 
 export async function statusDetranScSessao() {
@@ -66,4 +74,57 @@ export async function iniciarCapturaDetranSc() {
 
 export async function pararCapturaDetranSc() {
   return stopDetranScCapture();
+}
+
+export async function statusSigapaySessao() {
+  return obterStatusSigapaySession();
+}
+
+export async function gravarSigapaySessao(body: {
+  cookie?: string;
+  token?: string;
+  apiBase?: string | null;
+}) {
+  try {
+    const saved = await saveSigapaySession({
+      cookie: body.cookie,
+      token: body.token,
+      apiBase: body.apiBase ?? null,
+    });
+    clearSigapaySession();
+    const status = await obterStatusSigapaySession();
+    return {
+      ok: true,
+      updatedAt: saved.updatedAt,
+      ...status,
+    };
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function removerSigapaySessao() {
+  await clearStoredSigapaySession();
+  clearSigapaySession();
+  return { ok: true, configured: false };
+}
+
+export function statusCapturaSigapay() {
+  return {
+    ...getSigapayCaptureState(),
+  };
+}
+
+export async function iniciarCapturaSigapay() {
+  if (!isSigapayCaptureAvailable()) {
+    throw new HttpError(
+      501,
+      "Captura automática indisponível neste servidor (Vercel). Rode `npm run sigapay-capture-bridge` no Windows e clique de novo no botão.",
+    );
+  }
+  return startSigapayCapture();
+}
+
+export async function pararCapturaSigapay() {
+  return stopSigapayCapture();
 }

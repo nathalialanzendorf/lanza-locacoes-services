@@ -10,7 +10,7 @@ export class SigapayAuthError extends Error {
   status: number;
   constructor(status: number, detail = "") {
     super(
-      `SigaPay sessão inválida (HTTP ${status}). Recapture SIGAPAY_COOKIE + SIGAPAY_TOKEN no DevTools (logado no portal/app).${detail ? ` ${detail}` : ""}`,
+      `SigaPay sessão inválida (HTTP ${status}). Use Syncs › SigaPay › Capturar sessão (bridge local) ou configure SIGAPAY_COOKIE/TOKEN.${detail ? ` ${detail}` : ""}`,
     );
     this.name = "SigapayAuthError";
     this.status = status;

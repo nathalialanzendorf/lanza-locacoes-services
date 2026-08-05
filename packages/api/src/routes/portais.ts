@@ -104,4 +104,99 @@ export function registerPortaisRoutes(routes: RouteDef[]): void {
       }
     }),
   });
+
+  const sigapaySessao = compileRoute("/api/portais/sigapay/sessao");
+
+  routes.push({
+    method: "GET",
+    pattern: sigapaySessao.regex,
+    paramNames: sigapaySessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const data = await portaisService.statusSigapaySessao();
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  routes.push({
+    method: "PUT",
+    pattern: sigapaySessao.regex,
+    paramNames: sigapaySessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          cookie?: string;
+          token?: string;
+          apiBase?: string | null;
+        }>(ctx.req);
+        const data = await portaisService.gravarSigapaySessao(body);
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  routes.push({
+    method: "DELETE",
+    pattern: sigapaySessao.regex,
+    paramNames: sigapaySessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const status = await portaisService.statusSigapaySessao();
+        if (status.origem === "env") {
+          return badRequest(
+            ctx,
+            "Sessão SigaPay controlada por variáveis de ambiente no servidor — remova SIGAPAY_COOKIE/SIGAPAY_TOKEN para usar o store.",
+          );
+        }
+        const data = await portaisService.removerSigapaySessao();
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const sigapayCaptura = compileRoute("/api/portais/sigapay/captura");
+
+  routes.push({
+    method: "GET",
+    pattern: sigapayCaptura.regex,
+    paramNames: sigapayCaptura.paramNames,
+    handler: (ctx) => {
+      json(ctx.res, 200, { data: portaisService.statusCapturaSigapay() });
+    },
+  });
+
+  routes.push({
+    method: "POST",
+    pattern: sigapayCaptura.regex,
+    paramNames: sigapayCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const data = await portaisService.iniciarCapturaSigapay();
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  routes.push({
+    method: "DELETE",
+    pattern: sigapayCaptura.regex,
+    paramNames: sigapayCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const data = await portaisService.pararCapturaSigapay();
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
 }

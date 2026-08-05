@@ -55,6 +55,13 @@ export function resolveCorsOrigin(requestOrigin: string | undefined): string | n
   ) {
     return requestOrigin;
   }
+  // Snippet de captura no Console do SigaPay (Syncs › SigaPay).
+  if (
+    requestOrigin &&
+    /^https:\/\/([\w-]+\.)?(sigapay\.com\.br|zonaazulbrasil\.com\.br)$/i.test(requestOrigin)
+  ) {
+    return requestOrigin;
+  }
   return allowed[0] ?? null;
 }
 
