@@ -1,8 +1,11 @@
 /**
  * Captura passiva (CDP) do token Rastreame a partir de Chrome REAL.
- * O operador faz login em rastreame.com.br — sem automação Playwright.
+ * O operador faz login em rastreame.com.br - sem automacao Playwright.
  *
- * Captura accessToken da resposta POST /auth/rest/login*
+ * Captura accessToken via:
+ *   1) header X-r2f-auth em pedidos autenticados (mais fiavel)
+ *   2) corpo JSON do POST /auth/rest/login*
+ *   3) fallback API com RASTREAME_LOGIN + RASTREAME_SENHA
  *
  * Uso: npx tsx scripts/capturarRastreameCdp.ts
  */
@@ -12,6 +15,8 @@ import os from "node:os";
 import path from "node:path";
 
 import WebSocket from "ws";
+
+import { loginRastreame } from "../src/lib/rastreame/auth.js";
 
 const PORT = Number(process.env.RASTREAME_CDP_PORT ?? "9226");
 const PORTAL = "https://rastreame.com.br/";
@@ -32,6 +37,15 @@ const CHROME_CANDS = [
 
 const cap: { token?: string; authFormat?: string; rawAuthLen?: number } = {};
 let okPrinted = false;
+
+type CdpMsg = {
+  id?: number;
+  method?: string;
+  params?: Record<string, unknown>;
+  result?: { body?: string; base64Encoded?: boolean };
+  error?: { message?: string };
+  sessionId?: string;
+};
 
 function molde(decoded: string): string {
   let s = decoded;
@@ -78,7 +92,7 @@ async function esperarDevtools(): Promise<string> {
     if (url) return url;
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error("DevTools não respondeu na porta de depuração.");
+  throw new Error("DevTools nao respondeu na porta de depuracao.");
 }
 
 function lerHeader(headers: Record<string, string>, nome: string): string | undefined {
@@ -89,8 +103,30 @@ function lerHeader(headers: Record<string, string>, nome: string): string | unde
   return undefined;
 }
 
+function tratarLoginBody(body: string): void {
+  try {
+    const data = JSON.parse(body) as { accessToken?: string; token?: string };
+    const token = data?.accessToken ?? data?.token;
+    if (token) {
+      cap.token = token;
+      persist();
+    }
+  } catch {
+    /* nao-JSON */
+  }
+}
+
 function tratarRequest(url: string, headers: Record<string, string>): void {
-  if (!url.includes(LOGIN_HOST) || !/\/auth\/rest\/login/i.test(url)) return;
+  if (!url.includes(LOGIN_HOST)) return;
+
+  const tokenHeader = lerHeader(headers, "x-r2f-auth");
+  if (tokenHeader?.trim()) {
+    cap.token = tokenHeader.trim();
+    persist();
+    return;
+  }
+
+  if (!/\/auth\/rest\/login/i.test(url)) return;
   const auth = lerHeader(headers, "authorization");
   if (!auth) return;
   cap.rawAuthLen = auth.length;
@@ -103,19 +139,20 @@ function tratarRequest(url: string, headers: Record<string, string>): void {
   persist();
 }
 
-function tratarLoginBody(body: string): void {
-  try {
-    const data = JSON.parse(body) as { accessToken?: string };
-    if (data?.accessToken) {
-      cap.token = data.accessToken;
-      persist();
-    }
-  } catch {
-    /* não-JSON */
+async function fallbackLoginApi(): Promise<void> {
+  if (cap.token || !LOGIN || !SENHA) return;
+  console.log("CDP nao capturou token - tentando login via API (RASTREAME_LOGIN/SENHA)...");
+  const token = await loginRastreame();
+  if (token) {
+    cap.token = token;
+    persist();
+    console.log(`CAPTURA_OK token=${token.length}c origem=api file=${OUT_FILE}`);
   }
 }
 
 async function main(): Promise<void> {
+  if (fs.existsSync(OUT_FILE)) fs.rmSync(OUT_FILE, { force: true });
+
   let wsUrl = await devtoolsUp();
   if (!wsUrl) {
     fs.mkdirSync(USER_DATA_DIR, { recursive: true });
@@ -134,11 +171,13 @@ async function main(): Promise<void> {
     wsUrl = await esperarDevtools();
   }
 
-  console.log("Chrome (janela dedicada) aberto. Faça login no rastreame.com.br.");
+  console.log("Chrome (janela dedicada) aberto. Faca login no rastreame.com.br.");
   if (LOGIN) {
-    console.log(`Use RASTREAME_LOGIN=${LOGIN} (já no env) — preencha manualmente na janela se preciso.`);
+    console.log(`RASTREAME_LOGIN=${LOGIN} no env - preencha a senha na janela se preciso.`);
   }
-  console.log("Capturo o accessToken do login. Feche o Chrome ao terminar.");
+  console.log(
+    "Capturo o token do login (X-r2f-auth ou resposta JSON). Aguarde o portal carregar apos entrar.",
+  );
 
   const pendingLogin = new Map<string, { sessionId?: string }>();
   const responseBodyIds = new Map<number, string>();
@@ -157,15 +196,9 @@ async function main(): Promise<void> {
   });
 
   ws.on("message", (data: WebSocket.RawData) => {
-    let msg: {
-      id?: number;
-      method?: string;
-      params?: Record<string, unknown>;
-      result?: { body?: string; base64Encoded?: boolean };
-      sessionId?: string;
-    };
+    let msg: CdpMsg;
     try {
-      msg = JSON.parse(data.toString());
+      msg = JSON.parse(data.toString()) as CdpMsg;
     } catch {
       return;
     }
@@ -194,8 +227,8 @@ async function main(): Promise<void> {
 
     if (msg.method === "Network.loadingFinished") {
       const requestId = msg.params?.requestId as string | undefined;
+      const sessionId = msg.sessionId ?? pendingLogin.get(requestId ?? "")?.sessionId;
       if (requestId && pendingLogin.has(requestId)) {
-        const { sessionId } = pendingLogin.get(requestId)!;
         pendingLogin.delete(requestId);
         const id = send("Network.getResponseBody", { requestId }, sessionId);
         responseBodyIds.set(id, requestId);
@@ -205,6 +238,7 @@ async function main(): Promise<void> {
 
     if (msg.id && responseBodyIds.has(msg.id)) {
       responseBodyIds.delete(msg.id);
+      if (msg.error) return;
       let body = msg.result?.body ?? "";
       if (msg.result?.base64Encoded) {
         body = Buffer.from(body, "base64").toString("utf8");
@@ -215,19 +249,27 @@ async function main(): Promise<void> {
 
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, TIMEOUT_MS);
+    let devtoolsFails = 0;
     const poll = setInterval(() => {
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Token capturado — pode fechar o Chrome.");
+        console.log("Token capturado - pode fechar o Chrome.");
         resolve();
         return;
       }
-      fetch(`http://127.0.0.1:${PORT}/json/version`).catch(() => {
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve();
-      });
+      fetch(`http://127.0.0.1:${PORT}/json/version`)
+        .then((r) => {
+          if (r.ok) devtoolsFails = 0;
+        })
+        .catch(() => {
+          devtoolsFails++;
+          if (devtoolsFails >= 3) {
+            clearInterval(poll);
+            clearTimeout(timer);
+            resolve();
+          }
+        });
     }, 1500);
   });
 
@@ -236,7 +278,11 @@ async function main(): Promise<void> {
   } catch {
     /* ignore */
   }
-  console.log(`FIM. token=${cap.token ? "OK" : "não capturado"} authFormat=${cap.authFormat ?? "?"}`);
+
+  await fallbackLoginApi();
+
+  console.log(`FIM. token=${cap.token ? "OK" : "nao capturado"} authFormat=${cap.authFormat ?? "?"}`);
+  if (!cap.token) process.exit(1);
 }
 
 main().catch((e) => {

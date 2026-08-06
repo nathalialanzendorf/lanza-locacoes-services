@@ -89,11 +89,23 @@ function lerHeader(headers: Record<string, string>, nome: string): string | unde
   return undefined;
 }
 
+function csrfFromCookie(cookie: string): string {
+  for (const part of cookie.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq <= 0) continue;
+    const name = part.slice(0, eq).trim();
+    const value = part.slice(eq + 1).trim();
+    if (name === "bff-csrf" || name === "XSRF-TOKEN") return value;
+  }
+  return "";
+}
+
 function tratarRequest(url: string, headers: Record<string, string>): void {
-  if (!url.includes(API_HOST) || !url.includes("/bff/")) return;
+  if (!url.includes(API_HOST)) return;
   const cookie = lerHeader(headers, "cookie");
-  const csrf = lerHeader(headers, "x-csrf-token");
-  if (!cookie?.includes("bff_sid") || !csrf) return;
+  if (!cookie?.includes("bff_sid")) return;
+  const csrf = lerHeader(headers, "x-csrf-token") || csrfFromCookie(cookie);
+  if (!csrf) return;
   cap.cookie = cookie;
   cap.csrf = csrf;
   persist();
@@ -151,19 +163,27 @@ async function main(): Promise<void> {
 
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, TIMEOUT_MS);
+    let devtoolsFails = 0;
     const poll = setInterval(() => {
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Sessão capturada (cookie + CSRF) — pode fechar o Chrome.");
+        console.log("Sessao capturada (cookie + CSRF) - pode fechar o Chrome.");
         resolve();
         return;
       }
-      fetch(`http://127.0.0.1:${PORT}/json/version`).catch(() => {
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve();
-      });
+      fetch(`http://127.0.0.1:${PORT}/json/version`)
+        .then((r) => {
+          if (r.ok) devtoolsFails = 0;
+        })
+        .catch(() => {
+          devtoolsFails++;
+          if (devtoolsFails >= 3) {
+            clearInterval(poll);
+            clearTimeout(timer);
+            resolve();
+          }
+        });
     }, 1500);
   });
 
