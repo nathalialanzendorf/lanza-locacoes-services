@@ -44,20 +44,17 @@ O portal **não tem captcha próprio**: o acesso é **só via gov.br** (Login Ci
 O gov.br aceita o **certificado digital** por mTLS, **dispensando reCAPTCHA/2FA**. É o caminho mais robusto e **não precisa de nenhuma credencial em texto**.
 
 ```powershell
-# Caminho mais simples — usa o certificado JÁ INSTALADO no Windows (nada a fornecer):
+# Recomendado — Chrome real via CDP (captura passiva da rede):
 .\scripts\login-detran-rs.ps1
-#   → o Chrome abre, vai ao login por certificado e pede para você SELECIONAR
-#     o certificado (e o PIN, se for token A3). Pronto.
 
-# Opcional — a partir de um arquivo .pfx (login 100% sem cliques):
+# Com .pfx (importa certificado para o Windows):
 .\scripts\login-detran-rs.ps1 -Pfx "C:\caminho\certificado.pfx" -PfxPass "<senha-pfx>"
-.\scripts\login-detran-rs.ps1          # reaproveita o .pfx já guardado
 
-# Forçar o certificado do Windows (default; útil em rede com interceção TLS / ECONNRESET):
-.\scripts\login-detran-rs.ps1 -OsCert
+# Perfil corrompido / login gov.br falhou:
+.\scripts\login-detran-rs.ps1 -Fresh
 ```
 
-Abre um Chrome real, conduz o gov.br até o **login por certificado** e captura `Bearer` + `X-User-Id`. Com `.pfx`, o certificado é apresentado automaticamente (mTLS) e o `.pfx` legado é modernizado em memória pelo **openssl do Git** (`C:\Program Files\Git\mingw64\bin\openssl.exe`); sem openssl, usa o `.pfx` original. Sem `.pfx`, usa o certificado do **repositório do Windows** (você seleciona uma vez no diálogo do Chrome).
+Abre **Chrome real** (não Playwright), você faz login gov.br (certificado ou CPF/senha) e o script captura `Bearer` + `X-User-Id` da rede quando o portal carrega a frota.
 
 ### Fallback CPF/senha (você resolve o captcha)
 
@@ -65,7 +62,7 @@ Abre um Chrome real, conduz o gov.br até o **login por certificado** e captura 
 .\scripts\login-detran-rs.ps1 -Cpf "<cpf>" -Senha "<senha>"
 ```
 
-Auto-preenche CPF/senha e **pausa para você resolver o reCAPTCHA/2FA**. Use `-Manual` para fazer o login todo à mão. O token dura algumas horas; ao expirar (`HTTP 401`), rode de novo.
+Auto-preenche CPF/senha no browser (manual) e captura o token. Use `-Fresh` se a sessão gov.br falhar. O token dura algumas horas; ao expirar (`HTTP 401`), rode de novo.
 
 ### Captura manual (DevTools)
 

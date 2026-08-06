@@ -48,9 +48,12 @@ Defina as credenciais nas variáveis de ambiente do utilizador — **não** em `
 .\scripts\login-pedagio.ps1 -Cpf "<cpf>" -Senha "<senha>"
 # Depois (reaproveita credenciais já guardadas):
 .\scripts\login-pedagio.ps1
+
+# Perfil corrompido / reCAPTCHA falhou:
+.\scripts\login-pedagio.ps1 -Fresh
 ```
 
-Grava `PEDAGIO_DIGITAL_COOKIE` + `PEDAGIO_DIGITAL_CSRF` e cacheia em `.cache/pedagio-digital/`.
+Grava `PEDAGIO_DIGITAL_COOKIE` + `PEDAGIO_DIGITAL_CSRF` e cacheia em `.cache/pedagio-digital/` (Chrome real via CDP — você resolve o reCAPTCHA na janela).
 
 Alternativa manual:
 

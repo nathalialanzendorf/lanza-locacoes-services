@@ -50,13 +50,15 @@ do gasto no Rastreame (Gastos Gerais). Usar este de-para ao gravar/listar/espelh
 | `RASTREAME_TLS_INSECURE=1` | Só diagnóstico TLS — pode ir no `.env` (não é credencial). |
 
 ```powershell
-[Environment]::SetEnvironmentVariable("RASTREAME_AUTH", "<token>", "User")
-# ou
+# Recomendado — Chrome real via CDP (login manual + captura do token):
+.\scripts\login-rastreame.ps1 -Login "<email>" -Senha "<senha>"
+.\scripts\login-rastreame.ps1
+
+# Alternativa manual (colar token do DevTools):
 .\scripts\set-rastreame-auth-user-env.ps1 -Token "<token>"
 ```
 
-**Login automático** (com `RASTREAME_LOGIN` + `RASTREAME_SENHA` definidos): obtém o JWT e
-opcionalmente grava-o em `RASTREAME_AUTH` (utilizador):
+**Login via CLI** (headless/API, sem browser):
 
 ```powershell
 npx tsx src/run.ts rastreame login          # mostra o token
