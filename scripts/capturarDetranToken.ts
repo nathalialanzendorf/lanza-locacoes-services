@@ -6,7 +6,7 @@
  *   - X-App-Version               -> DETRAN_SC_APP_VERSION
  * e salva o JSON de cada `resposta-consulta` por placa (para sync offline).
  *
- * Uso: npx tsx scripts/capturarDetranToken.ts
+ * Uso: npx tsx scripts/capturarDetranToken.ts [--os-cert] [--manual]
  * O JWT é escrito num ficheiro temporário do SO (fora do Dropbox); o PowerShell
  * depois lê-o para definir as variáveis de ambiente e apaga-o.
  */
@@ -15,12 +15,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { chromium, type Browser } from "playwright-core";
+import { chromium, type Browser, type Page } from "playwright-core";
 
 const API_HOST = "backend.detran.sc.gov.br";
 const PORTAL = "https://servicos.detran.sc.gov.br/";
 const AUTH_FILE = path.join(os.tmpdir(), "detran_capture.json");
 const RESP_DIR = path.resolve("relatorios/_tmp/detran_respostas");
+const TIMEOUT_MS = 15 * 60 * 1000;
 
 // Certificado A1 (.pfx) para apresentação automática no desafio TLS do gov.br.
 // Caminho + senha vêm SEMPRE das variáveis de ambiente do utilizador (nunca do repo).
@@ -93,6 +94,10 @@ function persistAuth(): void {
   }
 }
 
+function captured(): boolean {
+  return Boolean(cap.auth && cap.empresa);
+}
+
 async function launch(): Promise<Browser> {
   for (const channel of ["chrome", "msedge"]) {
     try {
@@ -104,17 +109,29 @@ async function launch(): Promise<Browser> {
   return chromium.launch({ headless: false });
 }
 
-/** Tenta avançar o fluxo do gov.br clicando nos elementos prováveis (resiliente). */
-async function avancarGovBr(page: import("playwright-core").Page, captured: () => boolean): Promise<void> {
+/** Avança o fluxo gov.br até o handshake mTLS / formulário de certificado. */
+async function avancarGovBrCertificado(page: Page): Promise<void> {
   const padroes = [
     /entrar com gov\.br/i,
+    /gov\.br/i,
     /seu certificado digital/i,
     /certificado digital/i,
     /^entrar$/i,
+    /continuar/i,
   ];
+  let avisoCaptcha = false;
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline && !captured()) {
-    if (/certificado\.sso\.acesso\.gov\.br/.test(page.url())) break; // handshake do cert em curso
+    const url = page.url();
+    if (/certificado\.sso\.acesso\.gov\.br/.test(url)) {
+      if (!avisoCaptcha) {
+        avisoCaptcha = true;
+        console.log(
+          "No gov.br (certificado): selecione o certificado A1 e resolva o hCaptcha se aparecer — depois consulte um veículo no portal.",
+        );
+      }
+      break;
+    }
     for (const re of padroes) {
       for (const role of ["button", "link"] as const) {
         try {
@@ -134,31 +151,38 @@ async function avancarGovBr(page: import("playwright-core").Page, captured: () =
 
 async function main(): Promise<void> {
   fs.mkdirSync(RESP_DIR, { recursive: true });
+  const manual = process.argv.includes("--manual");
+  const osCert = process.argv.includes("--os-cert");
+
   const browser = await launch();
   // Modo "os": NÃO usa o client-certificate do Playwright (que faz um proxy TLS
   // interno e dá `read ECONNRESET` nesta rede). Em vez disso, o Chrome nativo
   // apresenta o certificado do repositório do Windows (TLS tratado pelo browser).
-  const osCert = process.argv.includes("--os-cert");
   let clientCertificates:
     | { origin: string; pfxPath: string; passphrase: string }[]
     | undefined;
+  const temPfx = !!(PFX_PATH && fs.existsSync(PFX_PATH));
+  const usaCertificado = !manual;
+
   if (osCert) {
-    console.log("Modo certificado do SO: o Chrome usará o certificado do repositório do Windows (sem proxy do Playwright).");
-  } else if (PFX_PATH && fs.existsSync(PFX_PATH)) {
-    const pfxUsavel = prepararPfxModerno(PFX_PATH, PFX_PASS);
+    console.log(
+      "Modo certificado do SO: o Chrome usará o certificado do repositório do Windows (sem proxy do Playwright).",
+    );
+  } else if (temPfx) {
+    const pfxUsavel = prepararPfxModerno(PFX_PATH!, PFX_PASS);
     clientCertificates = CERT_ORIGINS.map((origin) => ({
       origin,
       pfxPath: pfxUsavel,
       passphrase: PFX_PASS,
     }));
   } else if (PFX_PATH) {
-    console.error(`AVISO: .pfx não encontrado em ${PFX_PATH} — seguindo com login manual.`);
-  } else {
-    console.error(
-      "AVISO: defina DETRAN_PFX_PATH e DETRAN_PFX_PASS nas variáveis de ambiente do utilizador para login automático.",
-    );
+    console.error(`AVISO: .pfx não encontrado em ${PFX_PATH} — usando certificado do Windows.`);
   }
+
   const ctx = await browser.newContext({ ignoreHTTPSErrors: true, clientCertificates });
+  await ctx.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+  });
   const page = await ctx.newPage();
 
   ctx.on("request", (req) => {
@@ -179,8 +203,12 @@ async function main(): Promise<void> {
     if (!url.includes(API_HOST) || !/\/veiculo\/resposta-consulta\?/.test(url)) return;
     try {
       const txt = await res.text();
-      const data = JSON.parse(txt) as Record<string, any>;
-      const placa = String(data?.placa ?? data?.veiculo?.placa ?? "")
+      const data = JSON.parse(txt) as Record<string, unknown>;
+      const placa = String(
+        (data?.placa as string | undefined) ??
+          ((data?.veiculo as Record<string, unknown> | undefined)?.placa as string | undefined) ??
+          "",
+      )
         .replace(/\W/g, "")
         .toUpperCase();
       if (placa) {
@@ -194,38 +222,55 @@ async function main(): Promise<void> {
   });
 
   await page.goto(PORTAL, { waitUntil: "domcontentloaded" }).catch(() => {});
-  console.log(
-    clientCertificates
-      ? "Navegador aberto com certificado A1 embarcado. Automatizando login gov.br..."
-      : "Navegador aberto. Faça login com o certificado A1 (gov.br) e consulte os veículos.",
-  );
+
+  if (manual) {
+    console.log("Modo manual: faça login gov.br e consulte os veículos; eu capturo automaticamente.");
+  } else if (usaCertificado) {
+    console.log(
+      clientCertificates
+        ? "Navegador aberto com certificado A1 embarcado (.pfx). Automatizando login gov.br..."
+        : "Navegador aberto. Vou ao login por certificado; SELECIONE o certificado quando o Chrome pedir.",
+    );
+    await avancarGovBrCertificado(page).catch(() => {});
+    if (!captured()) {
+      console.log(
+        "Se ainda não entrou: selecione o certificado, resolva o hCaptcha (se aparecer) e consulte um veículo — a captura segue ativa.",
+      );
+    }
+  }
   console.log("Ao terminar, FECHE a janela do navegador para finalizar (timeout: 15 min).");
 
-  const manual = process.argv.includes("--manual");
-  if (clientCertificates && !manual) {
-    await avancarGovBr(page, () => !!cap.auth).catch(() => {});
-    if (!cap.auth) {
-      console.log("Login automático não concluiu sozinho — finalize/clique manualmente na janela; a captura segue ativa.");
-    }
-  } else if (manual) {
-    console.log("Modo manual: clique no login gov.br e consulte os veículos; eu capturo automaticamente.");
-  }
-
   await new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, 15 * 60 * 1000);
+    const timer = setTimeout(resolve, TIMEOUT_MS);
     browser.on("disconnected", () => {
       clearTimeout(timer);
       resolve();
     });
+    const poll = setInterval(() => {
+      if (captured()) {
+        clearInterval(poll);
+        clearTimeout(timer);
+        resolve();
+      }
+    }, 1500);
   });
 
   await browser.close().catch(() => {});
   for (const f of tmpParaLimpar) fs.rmSync(f, { force: true });
   const respostas = fs.existsSync(RESP_DIR) ? fs.readdirSync(RESP_DIR).filter((f) => f.endsWith(".json")) : [];
-  console.log(`FIM. token=${cap.auth ? "OK" : "não capturado"} | veículos salvos: ${respostas.length}`);
+  console.log(
+    `FIM. token=${cap.auth ? "OK" : "não capturado"} | empresa=${cap.empresa ? "OK" : "não capturado"} | veículos salvos: ${respostas.length}`,
+  );
 }
 
 main().catch((e) => {
-  console.error(e);
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/ECONNRESET|client-certificate/i.test(msg)) {
+    console.error(
+      "Falha mTLS do Playwright (ECONNRESET). Rode com certificado do Windows: .\\scripts\\login-detran-sc.ps1 -OsCert",
+    );
+  } else {
+    console.error(e);
+  }
   process.exit(1);
 });

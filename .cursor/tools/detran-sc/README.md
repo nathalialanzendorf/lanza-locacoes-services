@@ -21,7 +21,26 @@ Referência API: [reference.md](reference.md)
 
 Defina `DETRAN_SC_AUTH` e `DETRAN_SC_EMPRESA` nas variáveis de ambiente do utilizador — **não** em `.env`.
 
+**Login assistido (Windows):** `.\scripts\login-detran-sc.ps1` — abre **Chrome real via CDP** (não
+Playwright), grava `DETRAN_SC_*` após login gov.br. O gov.br exige **hCaptcha** no login por
+certificado; se o captcha falhar, o POST devolve **HTTP 302** de volta ao login (não é bug do script).
+
+```powershell
+# Recomendado (Chrome real — hCaptcha funciona):
+.\scripts\login-detran-sc.ps1
+
+# Se aparecer ECONNRESET/302 com Playwright:
+.\scripts\login-detran-sc.ps1   # padrao ja e CDP; evite -Playwright
+```
+
 Token expira (~5 h). **Nunca** versionar no Git.
+
+**Login gov.br (certificado):** o POST para `certificado.sso.acesso.gov.br/login?client_id=acesso.ciasc.sc.gov.br`
+inclui `operation=login-certificate` e um **`h-captcha-response`** — mesmo no fluxo por certificado
+A1. Não dá para replicar só com `curl` (OAuth incompleto + cookies de sessão/WAF). Use o navegador via
+`.\scripts\login-detran-sc.ps1`. Se **400** ou **302** repetidos: `.\scripts\login-detran-sc.ps1 -Fresh`
+(limpa o perfil Chrome dedicado). **Sempre** comece em `servicos.detran.sc.gov.br`, não abra
+`sso.acesso.gov.br/login?client_id=...` directamente.
 
 **Captcha** (Cloudflare Turnstile): o `requisitar-consulta` exige um token `c` no modo
 `execute` com o `action` certo (`consulta_dossie_veiculo`) — o backend valida o action.

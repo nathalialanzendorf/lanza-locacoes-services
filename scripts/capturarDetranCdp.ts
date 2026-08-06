@@ -54,6 +54,10 @@ function persist(): void {
   }
 }
 
+function captured(): boolean {
+  return Boolean(cap.auth && cap.empresa);
+}
+
 function acharChrome(): string {
   for (const c of CHROME_CANDS) if (fs.existsSync(c)) return c;
   return "chrome";
@@ -143,6 +147,9 @@ async function main(): Promise<void> {
     wsUrl = await esperarDevtools();
   }
   console.log("Chrome (janela dedicada) aberto. Faça login com o certificado A1 e consulte os veículos.");
+  console.log(
+    "O gov.br exige hCaptcha no login por certificado. Resolva o captcha na janela — se falhar, o POST devolve 302 de volta ao login (não é bug do script).",
+  );
   console.log("O captcha funciona porque NÃO é automatizado. Feche essa janela para finalizar (timeout 15 min).");
 
   const ws = new WebSocket(wsUrl);
@@ -175,13 +182,20 @@ async function main(): Promise<void> {
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, 15 * 60 * 1000);
     const poll = setInterval(() => {
-      // Encerra quando o Edge fechar (DevTools deixa de responder).
+      if (captured()) {
+        clearInterval(poll);
+        clearTimeout(timer);
+        console.log("Sessão capturada (auth + empresa) — pode fechar o Chrome.");
+        resolve();
+        return;
+      }
+      // Encerra quando o Chrome fechar (DevTools deixa de responder).
       fetch(`http://127.0.0.1:${PORT}/json/version`).catch(() => {
         clearInterval(poll);
         clearTimeout(timer);
         resolve();
       });
-    }, 4000);
+    }, 1500);
   });
 
   try {

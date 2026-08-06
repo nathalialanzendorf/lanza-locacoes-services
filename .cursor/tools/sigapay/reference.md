@@ -2,7 +2,18 @@
 
 Integração com o portal/app **SigaPay** (Zona Azul Brasil) para sincronizar ACT/avisos de irregularidade em `cliente-despesas.json`, com inferência e confirmação manual de responsável (igual pedágios e infrações).
 
-## Captura de sessão (produção / Vercel)
+## Captura de sessão
+
+### Login assistido (Windows, local)
+
+```powershell
+cd lanza-locacoes-services
+.\scripts\login-sigapay.ps1
+```
+
+Abre o Chrome no portal SigaPay via CDP, captura `cookie`/`token` da rede e grava nas variáveis de ambiente do utilizador (`SIGAPAY_COOKIE`, `SIGAPAY_TOKEN`, `SIGAPAY_API_BASE`). Faça login e abra avisos/placas antes de fechar o Chrome.
+
+### Produção / Vercel
 
 A API na Vercel **não abre Chrome**. No PC do operador:
 

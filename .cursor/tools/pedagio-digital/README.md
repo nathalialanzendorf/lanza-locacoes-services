@@ -41,12 +41,22 @@ Credenciais por **CPF + senha**; a tool faz login e mantém a sessão (cookie `b
 
 Defina as credenciais nas variáveis de ambiente do utilizador — **não** em `.env`. **Nunca** versionar no Git.
 
+**Login assistido (Windows, recomendado):**
+
+```powershell
+# 1ª vez (guarda CPF/senha + captura sessão):
+.\scripts\login-pedagio.ps1 -Cpf "<cpf>" -Senha "<senha>"
+# Depois (reaproveita credenciais já guardadas):
+.\scripts\login-pedagio.ps1
+```
+
+Grava `PEDAGIO_DIGITAL_COOKIE` + `PEDAGIO_DIGITAL_CSRF` e cacheia em `.cache/pedagio-digital/`.
+
+Alternativa manual:
+
 ```powershell
 [Environment]::SetEnvironmentVariable("PEDAGIO_DIGITAL_LOGIN", "<cpf>", "User")
 [Environment]::SetEnvironmentVariable("PEDAGIO_DIGITAL_SENHA", "<senha>", "User")
-# uso recorrente (recomendado): capturar sessão logada
-[Environment]::SetEnvironmentVariable("PEDAGIO_DIGITAL_COOKIE", "<cookie completo>", "User")
-[Environment]::SetEnvironmentVariable("PEDAGIO_DIGITAL_CSRF", "<x-csrf-token>", "User")
 # feche e reabra o terminal / Cursor para aplicar
 ```
 
