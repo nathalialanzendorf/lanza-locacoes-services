@@ -1,4 +1,4 @@
-# Login assistido no DETRAN RS via gov.br: abre Chrome REAL via CDP (nao Playwright),
+﻿# Login assistido no DETRAN RS via gov.br: abre Chrome REAL via CDP (nao Playwright),
 # voce faz login e grava DETRAN_RS_AUTH + DETRAN_RS_USER_ID no env do utilizador.
 #
 #   .\scripts\login-detran-rs.ps1
@@ -7,7 +7,7 @@
 #   .\scripts\login-detran-rs.ps1 -Fresh
 #   .\scripts\login-detran-rs.ps1 -Playwright   # legado
 #
-# As credenciais NAO vao para `.env` nem para o Git — so para variaveis do utilizador.
+# As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 param(
   [string]$Pfx,
@@ -65,7 +65,7 @@ try {
     $scriptArgs = @("tsx", "scripts/capturarDetranRsToken.ts", "--os-cert")
     if ($Manual) { $scriptArgs += "--manual" }
   } else {
-    Write-Host "Abrindo Chrome real (CDP) — faca login gov.br e carregue a frota no portal."
+    Write-Host "Abrindo Chrome real (CDP) - faca login gov.br e carregue a frota no portal."
     $scriptArgs = @("tsx", "scripts/capturarDetranRsCdp.ts")
   }
 

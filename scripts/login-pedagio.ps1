@@ -1,4 +1,4 @@
-# Login assistido no Pedagio Digital (pedagiodigital.com): abre Chrome REAL via CDP,
+﻿# Login assistido no Pedagio Digital (pedagiodigital.com): abre Chrome REAL via CDP,
 # voce faz login (CPF/senha + reCAPTCHA) e grava PEDAGIO_DIGITAL_COOKIE + CSRf.
 #
 #   .\scripts\login-pedagio.ps1 -Cpf "<cpf>" -Senha "<senha>"
@@ -6,7 +6,7 @@
 #   .\scripts\login-pedagio.ps1 -Fresh
 #   .\scripts\login-pedagio.ps1 -Playwright   # legado (Playwright)
 #
-# As credenciais NAO vao para `.env` nem para o Git — so para variaveis do utilizador.
+# As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 param(
   [string]$Cpf,
@@ -52,7 +52,7 @@ try {
     }
     $data = Get-Content $sessionFile -Raw | ConvertFrom-Json
   } else {
-    Write-Host "Abrindo Chrome real (CDP) — faca login e resolva o reCAPTCHA na janela."
+    Write-Host "Abrindo Chrome real (CDP) - faca login e resolva o reCAPTCHA na janela."
     & npx tsx scripts/capturarPedagioCdp.ts
     if (-not (Test-Path $captureFile)) {
       Write-Error "Captura nao gerou sessao. Concluiu login e carregou as placas?"

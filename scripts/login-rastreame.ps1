@@ -1,4 +1,4 @@
-# Login assistido no Rastreame (rastreame.com.br): abre Chrome REAL via CDP,
+﻿# Login assistido no Rastreame (rastreame.com.br): abre Chrome REAL via CDP,
 # voce faz login e grava RASTREAME_AUTH no env do utilizador.
 #
 #   .\scripts\login-rastreame.ps1 -Login "<email>" -Senha "<senha>"
@@ -6,7 +6,7 @@
 #   .\scripts\login-rastreame.ps1 -Fresh
 #   .\scripts\login-rastreame.ps1 -Playwright   # legado
 #
-# As credenciais NAO vao para `.env` nem para o Git — so para variaveis do utilizador.
+# As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 param(
   [string]$Login,
@@ -45,7 +45,7 @@ try {
     Write-Host "Modo Playwright (legado)."
     & npx tsx scripts/capturarRastreameLogin.ts
   } else {
-    Write-Host "Abrindo Chrome real (CDP) — faca login no rastreame.com.br."
+    Write-Host "Abrindo Chrome real (CDP) - faca login no rastreame.com.br."
     & npx tsx scripts/capturarRastreameCdp.ts
   }
 } finally {

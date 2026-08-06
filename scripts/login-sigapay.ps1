@@ -1,11 +1,11 @@
-# Login assistido no SigaPay (sigapay.com.br): abre Chrome via CDP, captura
+﻿# Login assistido no SigaPay (sigapay.com.br): abre Chrome via CDP, captura
 # cookie/token da rede e grava nas variaveis de ambiente do utilizador:
 # SIGAPAY_COOKIE, SIGAPAY_TOKEN e (se capturado) SIGAPAY_API_BASE.
 #
 #   .\scripts\login-sigapay.ps1
 #
 # Depois de logar, abra avisos/placas no portal para a captura automatica.
-# As credenciais NAO vao para `.env` nem para o Git — so para variaveis do utilizador.
+# As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot

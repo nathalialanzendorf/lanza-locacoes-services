@@ -1,9 +1,9 @@
-# Login assistido no DETRAN SC (servicos.detran.sc.gov.br): abre Chrome REAL via CDP
+﻿# Login assistido no DETRAN SC (servicos.detran.sc.gov.br): abre Chrome REAL via CDP
 # (nao Playwright), faz login gov.br com certificado A1 + hCaptcha e grava nas
 # variaveis de ambiente do utilizador: DETRAN_SC_AUTH, DETRAN_SC_EMPRESA e
 # (se capturado) DETRAN_SC_APP_VERSION.
 #
-# Por defeito usa capturarDetranCdp.ts — o gov.br exige hCaptcha no login por
+# Por defeito usa capturarDetranCdp.ts - o gov.br exige hCaptcha no login por
 # certificado; navegador automatizado (Playwright) costuma falhar com 302/ECONNRESET.
 #
 #   # Recomendado (Chrome real):
@@ -12,13 +12,13 @@
 #   # 1a vez com .pfx (importa para o Windows + auto-selecao no Chrome):
 #   .\scripts\login-detran-sc.ps1 -Pfx "C:\caminho\certificado.pfx" -PfxPass "<senha>"
 #
-#   # Perfil Chrome corrompido / 400 ou 302 repetidos — limpa sessao gov.br:
+#   # Perfil Chrome corrompido / 400 ou 302 repetidos - limpa sessao gov.br:
 #   .\scripts\login-detran-sc.ps1 -Fresh
 #
 # Para varrer a frota com Turnstile automatico apos o login, use:
 #   npx tsx scripts/detranSolver.ts
 #
-# As credenciais NAO vao para `.env` nem para o Git — so para variaveis do utilizador.
+# As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 param(
   [string]$Pfx,
@@ -61,11 +61,11 @@ try {
   }
 
   if ($Playwright) {
-    Write-Host "Modo Playwright (legado) — prefira o padrao CDP se hCaptcha/302 falhar."
+    Write-Host "Modo Playwright (legado) - prefira o padrao CDP se hCaptcha/302 falhar."
     $scriptArgs = @("tsx", "scripts/capturarDetranToken.ts", "--os-cert")
     if ($Manual) { $scriptArgs += "--manual" }
   } else {
-    Write-Host "Abrindo Chrome real (CDP) — resolva o hCaptcha no login por certificado."
+    Write-Host "Abrindo Chrome real (CDP) - resolva o hCaptcha no login por certificado."
     $scriptArgs = @("tsx", "scripts/capturarDetranCdp.ts")
   }
 
@@ -77,7 +77,7 @@ try {
 if (-not (Test-Path $captureFile)) {
   Write-Error @"
 Captura nao gerou token (ficheiro ausente).
-Se viu HTTP 302 no gov.br: o hCaptcha provavelmente falhou — tente de novo no Chrome real.
+Se viu HTTP 302 no gov.br: o hCaptcha provavelmente falhou - tente de novo no Chrome real.
 Se viu HTTP 400: nao use curl; entre pelo portal servicos.detran.sc.gov.br ou rode com -Fresh.
 Consulte um veiculo no portal antes de fechar a janela.
 "@

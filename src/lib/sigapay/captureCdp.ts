@@ -305,18 +305,24 @@ export async function startSigapayCapture(
       }
     }, CAPTURE_TIMEOUT_MS);
 
+    let devtoolsFails = 0;
     pollTimer = setInterval(() => {
-      fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`).catch(() => {
-        if (state.status === "waiting") {
-          state = {
-            status: "error",
-            available: true,
-            message: "Chrome fechado antes da captura.",
-            startedAt: state.startedAt,
-          };
-          void stopSigapayCapture(false);
-        }
-      });
+      fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`)
+        .then((r) => {
+          if (r.ok) devtoolsFails = 0;
+        })
+        .catch(() => {
+          devtoolsFails++;
+          if (devtoolsFails >= 3 && state.status === "waiting") {
+            state = {
+              status: "error",
+              available: true,
+              message: "Chrome fechado antes da captura.",
+              startedAt: state.startedAt,
+            };
+            void stopSigapayCapture(false);
+          }
+        });
     }, 4000);
   } catch (err) {
     state = {
