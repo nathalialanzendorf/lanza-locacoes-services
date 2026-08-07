@@ -78,17 +78,15 @@ export function registerPedagioRoutes(routes: RouteDef[]): void {
     pattern: passagens.regex,
     paramNames: passagens.paramNames,
     handler: routeAsync(async (ctx) => {
-      const placaQ = ctx.query.get("placa");
-      if (!placaQ) return badRequest(ctx, 'Query "placa" é obrigatória');
+      const placaQ = ctx.query.get("placa")?.trim() || undefined;
       const statusRaw = ctx.query.get("status") ?? "aberto";
       if (!STATUS_VALIDOS.has(statusRaw)) {
         return badRequest(ctx, 'Query "status" inválida — use aberto, pago ou todos');
       }
       try {
-        const data = await pedagioService.listarPassagensPlaca(
-          placaQ,
-          statusRaw as PassagemStatus,
-        );
+        const data = placaQ
+          ? await pedagioService.listarPassagensPlaca(placaQ, statusRaw as PassagemStatus)
+          : await pedagioService.listarPassagensFrota(statusRaw as PassagemStatus);
         json(ctx.res, 200, data);
       } catch (err) {
         handleServiceError(ctx, err);

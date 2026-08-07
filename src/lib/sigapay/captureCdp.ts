@@ -1,5 +1,6 @@
 /**
  * Captura passiva da sessão SigaPay via Chrome real + CDP (Network).
+ * Liga-se a cada aba (não ao browser root) para evitar "Debugger is paused".
  * Grava cookie/token automaticamente (store local ou callback para API remota).
  */
 import { spawn, type ChildProcess } from "node:child_process";
@@ -9,6 +10,7 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
+import { cdpKeepOpen, fecharChromeCdp } from "../cdp/fecharChromeCdp.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { clearSigapaySession, SIGAPAY_ORIGIN } from "./auth.js";
 import { saveSigapaySession } from "./sessionStore.js";
@@ -16,6 +18,8 @@ import { saveSigapaySession } from "./sessionStore.js";
 const DEBUG_PORT = Number(process.env.SIGAPAY_CDP_PORT ?? "9224");
 const PORTAL = SIGAPAY_ORIGIN;
 const CAPTURE_TIMEOUT_MS = 15 * 60 * 1000;
+const keepChromeOpen =
+  cdpKeepOpen() || process.env.SIGAPAY_CDP_KEEP_OPEN === "1";
 
 const PROFILE_DIR =
   process.env.SIGAPAY_CHROME_PROFILE?.trim() ||
@@ -26,6 +30,13 @@ const CHROME_CANDS = [
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
   path.join(os.homedir(), "AppData/Local/Google/Chrome/Application/chrome.exe"),
 ];
+
+type TabTarget = {
+  id: string;
+  type: string;
+  url: string;
+  webSocketDebuggerUrl?: string;
+};
 
 export type SigapayCaptureStatus =
   | "idle"
@@ -56,12 +67,13 @@ export type SigapayCaptureStartOpts = {
 type Cap = SigapayCapturedSession;
 
 let state: SigapayCaptureState = { status: "idle", available: isSigapayCaptureAvailable() };
-let ws: WebSocket | null = null;
 let chromeChild: ChildProcess | null = null;
 let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let cap: Cap = {};
 let persistFn: SigapayCaptureStartOpts["persist"] | null = null;
+let persisting = false;
+const pageSockets = new Map<string, WebSocket>();
 
 export function isSigapayCaptureAvailable(): boolean {
   if (process.env.VERCEL) return false;
@@ -103,23 +115,29 @@ function sessaoCompleta(c: Cap): boolean {
   return Boolean(c.cookie?.trim() || c.token?.trim());
 }
 
-async function devtoolsUp(): Promise<string | undefined> {
+async function devtoolsUp(): Promise<boolean> {
   try {
     const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`);
-    if (r.ok) {
-      const j = (await r.json()) as { webSocketDebuggerUrl?: string };
-      return j.webSocketDebuggerUrl;
-    }
+    return r.ok;
   } catch {
-    /* offline */
+    return false;
   }
-  return undefined;
 }
 
-async function esperarDevtools(): Promise<string> {
+async function listarAbas(): Promise<TabTarget[]> {
+  try {
+    const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/list`);
+    if (!r.ok) return [];
+    const tabs = (await r.json()) as TabTarget[];
+    return tabs.filter((t) => t.type === "page" && t.webSocketDebuggerUrl);
+  } catch {
+    return [];
+  }
+}
+
+async function esperarDevtools(): Promise<void> {
   for (let i = 0; i < 60; i++) {
-    const url = await devtoolsUp();
-    if (url) return url;
+    if (await devtoolsUp()) return;
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error("Chrome DevTools não respondeu — verifique se o Chrome está instalado.");
@@ -136,8 +154,21 @@ function cleanupTimers(): void {
   }
 }
 
+function fecharSockets(): void {
+  for (const socket of pageSockets.values()) {
+    try {
+      socket.close();
+    } catch {
+      /* ignore */
+    }
+  }
+  pageSockets.clear();
+}
+
 async function persistCapture(): Promise<void> {
+  if (persisting || state.status === "captured") return;
   if (!sessaoCompleta(cap)) return;
+  persisting = true;
 
   const session: SigapayCapturedSession = {
     cookie: cap.cookie,
@@ -145,23 +176,36 @@ async function persistCapture(): Promise<void> {
     apiBase: cap.apiBase ?? null,
   };
 
-  if (persistFn) {
-    await persistFn(session);
-  } else {
-    await saveSigapaySession(session);
-  }
-  clearSigapaySession();
+  try {
+    if (persistFn) {
+      await persistFn(session);
+    } else {
+      await saveSigapaySession(session);
+    }
+    clearSigapaySession();
 
-  state = {
-    status: "captured",
-    available: isSigapayCaptureAvailable(),
-    message: persistFn
-      ? "Sessão SigaPay capturada e enviada para a API remota."
-      : "Sessão SigaPay capturada e guardada automaticamente.",
-    startedAt: state.startedAt,
-    capturedAt: new Date().toISOString(),
-  };
-  await stopSigapayCapture(false);
+    state = {
+      status: "captured",
+      available: isSigapayCaptureAvailable(),
+      message: persistFn
+        ? "Sessão SigaPay capturada e enviada para a API remota."
+        : "Sessão SigaPay capturada e guardada automaticamente.",
+      startedAt: state.startedAt,
+      capturedAt: new Date().toISOString(),
+    };
+    fecharSockets();
+    await fecharChromeCdp(DEBUG_PORT, keepChromeOpen);
+    await stopSigapayCapture(false);
+  } catch (err) {
+    persisting = false;
+    state = {
+      status: "error",
+      available: isSigapayCaptureAvailable(),
+      message: err instanceof Error ? err.message : String(err),
+      startedAt: state.startedAt,
+    };
+    throw err;
+  }
 }
 
 function tratarRequest(url: string, headers: Record<string, string>): void {
@@ -187,30 +231,20 @@ function tratarRequest(url: string, headers: Record<string, string>): void {
     Boolean(auth);
 
   if (looksApi && sessaoCompleta(cap)) {
-    void persistCapture().catch((err) => {
-      state = {
-        status: "error",
-        available: isSigapayCaptureAvailable(),
-        message: err instanceof Error ? err.message : String(err),
-        startedAt: state.startedAt,
-      };
-    });
+    void persistCapture().catch(() => {});
   }
 }
 
-function attachNetworkListener(socket: WebSocket): void {
+function anexarAba(tab: TabTarget): void {
+  const wsUrl = tab.webSocketDebuggerUrl!;
+  if (pageSockets.has(wsUrl)) return;
+
+  const socket = new WebSocket(wsUrl);
+  pageSockets.set(wsUrl, socket);
   let msgId = 1;
-  const send = (method: string, params: Record<string, unknown> = {}, sessionId?: string) => {
-    socket.send(JSON.stringify({ id: msgId++, method, params, sessionId }));
-  };
 
   socket.on("open", () => {
-    send("Target.setAutoAttach", {
-      autoAttach: true,
-      waitForDebuggerOnStart: false,
-      flatten: true,
-    });
-    send("Network.enable");
+    socket.send(JSON.stringify({ id: msgId++, method: "Network.enable", params: {} }));
   });
 
   socket.on("message", (data: WebSocket.RawData) => {
@@ -220,14 +254,67 @@ function attachNetworkListener(socket: WebSocket): void {
     } catch {
       return;
     }
-    if (msg.method === "Target.attachedToTarget") {
-      const sid = msg.params?.sessionId as string | undefined;
-      if (sid) send("Network.enable", {}, sid);
-    } else if (msg.method === "Network.requestWillBeSent") {
+    if (msg.method === "Network.requestWillBeSent") {
       const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
       if (req?.url) tratarRequest(req.url, req.headers ?? {});
     }
   });
+
+  socket.on("close", () => {
+    pageSockets.delete(wsUrl);
+  });
+
+  socket.on("error", () => {
+    pageSockets.delete(wsUrl);
+  });
+}
+
+async function anexarTodasAbas(): Promise<void> {
+  for (const tab of await listarAbas()) {
+    anexarAba(tab);
+  }
+}
+
+async function navegarPrimeiraAba(url: string): Promise<void> {
+  const tabs = await listarAbas();
+  const tab = tabs.find((t) => t.url && t.url !== "about:blank") ?? tabs[0];
+  if (!tab?.webSocketDebuggerUrl) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const socket = new WebSocket(tab.webSocketDebuggerUrl!);
+    socket.on("open", () => {
+      socket.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url } }));
+    });
+    socket.on("error", reject);
+    setTimeout(() => {
+      try {
+        socket.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, 800);
+  });
+}
+
+async function abrirChrome(): Promise<void> {
+  fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  chromeChild = spawn(
+    acharChrome(),
+    [
+      `--remote-debugging-port=${DEBUG_PORT}`,
+      "--remote-allow-origins=*",
+      `--user-data-dir=${PROFILE_DIR}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-popup-blocking",
+      PORTAL,
+    ],
+    { detached: true, stdio: "ignore" },
+  );
+  chromeChild.unref();
+  await esperarDevtools();
+  await new Promise((r) => setTimeout(r, 800));
 }
 
 export async function startSigapayCapture(
@@ -248,8 +335,10 @@ export async function startSigapayCapture(
   }
 
   cap = {};
+  persisting = false;
   persistFn = opts?.persist ?? null;
   cleanupTimers();
+  fecharSockets();
 
   state = {
     status: "starting",
@@ -259,33 +348,21 @@ export async function startSigapayCapture(
   };
 
   try {
-    let wsUrl = await devtoolsUp();
-    if (!wsUrl) {
-      fs.mkdirSync(PROFILE_DIR, { recursive: true });
-      const chrome = acharChrome();
-      chromeChild = spawn(
-        chrome,
-        [
-          `--remote-debugging-port=${DEBUG_PORT}`,
-          `--user-data-dir=${PROFILE_DIR}`,
-          "--no-first-run",
-          "--no-default-browser-check",
-          PORTAL,
-        ],
-        { detached: true, stdio: "ignore" },
-      );
-      chromeChild.unref();
-      wsUrl = await esperarDevtools();
+    const jaAberto = await devtoolsUp();
+    if (!jaAberto) {
+      await abrirChrome();
+    } else {
+      await navegarPrimeiraAba(PORTAL);
+      await new Promise((r) => setTimeout(r, 500));
     }
 
-    ws = new WebSocket(wsUrl);
-    attachNetworkListener(ws);
+    await anexarTodasAbas();
 
     state = {
       status: "waiting",
       available: true,
       message:
-        "Chrome aberto. Faça login no SigaPay e abra avisos/placas — a sessão será capturada sozinha.",
+        "Chrome aberto. Faça login no SigaPay e abra avisos/placas — ao capturar, o Chrome fecha sozinho.",
       startedAt: state.startedAt,
     };
 
@@ -307,6 +384,7 @@ export async function startSigapayCapture(
 
     let devtoolsFails = 0;
     pollTimer = setInterval(() => {
+      void anexarTodasAbas();
       fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`)
         .then((r) => {
           if (r.ok) devtoolsFails = 0;
@@ -323,7 +401,7 @@ export async function startSigapayCapture(
             void stopSigapayCapture(false);
           }
         });
-    }, 4000);
+    }, 1500);
   } catch (err) {
     state = {
       status: "error",
@@ -340,12 +418,7 @@ export async function startSigapayCapture(
 export async function stopSigapayCapture(resetIdle = true): Promise<SigapayCaptureState> {
   cleanupTimers();
   persistFn = null;
-  try {
-    ws?.close();
-  } catch {
-    /* ignore */
-  }
-  ws = null;
+  fecharSockets();
   chromeChild = null;
 
   if (resetIdle && state.status !== "captured") {

@@ -4,10 +4,12 @@ import {
   findVeiculoByPlaca,
   formatPlacaHyphen,
   listarPassagens,
+  listarPassagensLote,
   listarVeiculosPedagio,
   loadPlacasParaSync,
   placasIguais,
   registrarPlaca,
+  type PassagemPedagio,
   type PassagemStatus,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -87,13 +89,48 @@ export async function excluirVeiculoPortal(placa: string, dryRun = false) {
   return excluirPlacaPorPlaca(placa);
 }
 
+function serializarPassagens(items: PassagemPedagio[]) {
+  return items.map(({ id, placa, dataHoraRaw, dataHoraIso, valor, praca, rodovia, emAberto }) => ({
+    id,
+    placa,
+    dataHoraRaw,
+    dataHoraIso,
+    valor,
+    praca,
+    rodovia,
+    emAberto,
+  }));
+}
+
 export async function listarPassagensPlaca(
   placa: string,
   status: PassagemStatus = "aberto",
 ) {
   if (!placa?.trim()) throw new HttpError(400, "Placa obrigatória");
   const items = await listarPassagens(placa, { status });
-  return { placa: formatPlacaHyphen(placa), status, total: items.length, items };
+  return {
+    placa: formatPlacaHyphen(placa),
+    status,
+    total: items.length,
+    items: serializarPassagens(items),
+  };
+}
+
+export async function listarPassagensFrota(
+  status: PassagemStatus = "aberto",
+  placaFiltro?: string,
+) {
+  const todasPlacas = loadPlacasParaSync();
+  const placas = placaFiltro?.trim()
+    ? todasPlacas.filter((p) => placasIguais(p, placaFiltro))
+    : todasPlacas;
+  const items = placas.length ? await listarPassagensLote(placas, { status }) : [];
+  return {
+    placas: placas.map(formatPlacaHyphen),
+    status,
+    total: items.length,
+    items: serializarPassagens(items),
+  };
 }
 
 export async function conferirPlacasPortal(registrar = false) {

@@ -641,6 +641,8 @@ export {
 
 export {
   listarPassagens,
+  listarPassagensLote,
+  type PassagemPedagio,
   type PassagemStatus,
 } from "../../../src/lib/pedagioDigital/passagens.js";
 

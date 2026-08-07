@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   });
 
   console.error(
-    "Chrome aberto. Faça login no SigaPay e abra avisos/placas — aguardando captura…",
+    "Chrome aberto. Faça login no SigaPay e abra avisos/placas — ao capturar, o Chrome fecha sozinho.",
   );
 
   const deadline = Date.now() + 15 * 60 * 1000;
