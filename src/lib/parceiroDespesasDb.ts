@@ -383,10 +383,11 @@ function sincronizarParceiroDespesaOnDb(
 
 export function sincronizarParceiroDespesa(
   input: ParceiroDespesaInput,
+  opts?: { dryRun?: boolean },
 ): GravarParceiroDespesaResult {
   const db = loadParceiroDespesasDb();
   const result = sincronizarParceiroDespesaOnDb(db, input);
-  if (result.acao !== "sem_alteracao") saveParceiroDespesasDb(db);
+  if (!opts?.dryRun && result.acao !== "sem_alteracao") saveParceiroDespesasDb(db);
   return result;
 }
 
@@ -521,6 +522,14 @@ export function marcarParceiroDespesaRastreameSync(
   if (fields.hash !== undefined) reg.rastreameHash = fields.hash;
   reg.rastreameSyncEm = new Date().toISOString();
   saveParceiroDespesasDb(db);
+}
+
+/** Localiza despesa parceiro pela origem exacta (antes de remover no espelho DETRAN). */
+export function findParceiroDespesaPorOrigem(origem: string): ParceiroDespesaRegistro | null {
+  const key = String(origem).trim();
+  if (!key) return null;
+  const db = loadParceiroDespesasDb();
+  return db.parceiroDespesas.find((d) => d.origem === key) ?? null;
 }
 
 /** Remove espelho parceiro (ex.: multa promovida a cliente-despesas após identificar locatário). */

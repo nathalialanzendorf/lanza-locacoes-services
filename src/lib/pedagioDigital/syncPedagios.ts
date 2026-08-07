@@ -10,9 +10,15 @@ import {
   loadClienteDespesasDb,
   saveClienteDespesasDb,
   sincronizarClienteDespesa,
+  simularSincronizarClienteDespesa,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import {
+  linhaFromClienteDespesa,
+  pushIgnorado,
+  type SyncAlteracaoLinha,
+} from "../sync/syncAlteracoes.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { CATEGORIA_PEDAGIO, isCategoriaPedagio, normalizarCategoriaPedagioNoDb } from "../pedagioCategoria.js";
 import { PedagioAuthError } from "./client.js";
@@ -31,6 +37,7 @@ export type SyncPedagiosResult = {
   semAlteracao: number;
   ignorados: number;
   avisos: string[];
+  alteracoes: SyncAlteracaoLinha[];
 };
 
 const fmtSP = new Intl.DateTimeFormat("pt-BR", {
@@ -135,32 +142,19 @@ async function aplicarPassagem(
   const descricao = descricaoPedagio(dataHoraBr, true);
 
   if (dryRun) {
-    return {
-      result: {
-        registro: {
-          id: "(dry-run)",
-          categoria: CATEGORIA_PEDAGIO,
-          veiculoId: formatPlacaHyphen(placa),
-          autoInfracao,
-          descricao,
-          localInfracao: localPassagem(p),
-          dataAutuacao: dataHoraBr,
-          valorMulta: p.valor,
-          situacao: "Em aberto",
-          limiteDefesa: "",
-          condutorId: null,
-          condutorConfirmado: false,
-          condutorContrato: null,
-          rastreameTipo: "PEDAGIO",
-          cadastradoEm: "",
-          atualizadoEm: "",
-          origem: "pedagio-digital",
-        },
-        acao: "novo",
-        aviso: null,
-      },
-      aviso: null,
-    };
+    const r = simularSincronizarClienteDespesa(placa, {
+      autoInfracao,
+      descricao,
+      localInfracao: localPassagem(p),
+      dataAutuacao: dataHoraBr,
+      valorMulta: p.valor,
+      situacao: "Em aberto",
+      limiteDefesa: "",
+      categoria: CATEGORIA_PEDAGIO,
+      origem: "pedagio-digital",
+      rastreameTipo: "PEDAGIO",
+    });
+    return { result: r, aviso: r.aviso };
   }
 
   const r = await sincronizarClienteDespesa(placa, {
@@ -191,18 +185,32 @@ export async function processarPassagens(
     semAlteracao: 0,
     ignorados: 0,
     avisos: [],
+    alteracoes: [],
   };
 
   for (const p of filtrarStatus(passagens, "aberto")) {
     const { result: r, aviso } = await aplicarPassagem(placa, p, opts?.dryRun === true);
     if (!r) {
       result.ignorados++;
-      if (aviso) result.avisos.push(aviso);
+      if (aviso) {
+        result.avisos.push(aviso);
+        pushIgnorado(result.alteracoes, formatPlacaHyphen(placa), "pedagio", `PED-${p.id}`, aviso);
+      }
       continue;
     }
     if (r.acao === "novo") result.novos++;
     else if (r.acao === "atualizado") result.atualizados++;
     else result.semAlteracao++;
+    result.alteracoes.push(
+      linhaFromClienteDespesa(
+        formatPlacaHyphen(placa),
+        "pedagio",
+        r.registro,
+        r.acao,
+        aviso ?? r.aviso,
+        `PED-${p.id}`,
+      ),
+    );
     if (aviso) result.avisos.push(`${r.registro.autoInfracao}: ${aviso}`);
   }
 
@@ -390,6 +398,7 @@ export async function sincronizarPedagiosFrota(opts?: {
       semAlteracao: 0,
       ignorados: 0,
       avisos: [msg],
+      alteracoes: [],
     }));
   }
 

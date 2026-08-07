@@ -9,6 +9,9 @@ import {
   sincronizarClienteDespesa,
   atualizarPdfArquivoInfracao,
   excluirClienteDespesa,
+  loadClienteDespesasDb,
+  simularSincronizarClienteDespesa,
+  type ClienteDespesaRegistro,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
 import {
@@ -28,6 +31,7 @@ import { caminhoRelativoPdfSalvo, localizarPdfInfracaoExistente, salvarPdfInfrac
 import {
   sincronizarParceiroDespesa,
   removerParceiroDespesaPorOrigem,
+  findParceiroDespesaPorOrigem,
   type GravarParceiroDespesaResult,
 } from "../parceiroDespesasDb.js";
 import { consultarVeiculoDetranSc, consultarVeiculoDetranScComTicket, consultarVeiculoDetranScPorTicket, extrairTicketConsultaDetranSc } from "./consulta.js";
@@ -35,6 +39,10 @@ import { indexarRawInfracoesDetranSc } from "./indexRawInfracoes.js";
 import { extrairMultasDetranSc } from "./mapInfracoes.js";
 import { baixarPdfsInfracaoDetranSc } from "./pdfInfracao.js";
 import type { DetranScMultaNormalizada } from "./types.js";
+import {
+  acaoParaStatusSync,
+  type SyncAlteracaoLinha,
+} from "./syncAlteracoes.js";
 
 export type VeiculoFrota = {
   placa: string;
@@ -66,6 +74,8 @@ export type SyncVeiculoResult = {
   /** Tentativas de PDF sem sucesso. */
   pdfsFalha: number;
   avisos: string[];
+  /** Detalhe por registro para a UI de sync (cadastrado / alterado / excluído / …). */
+  alteracoes: SyncAlteracaoLinha[];
 };
 
 function loadVeiculosFrota(placaFiltro?: string): VeiculoFrota[] {
@@ -91,7 +101,69 @@ type EspelhoInfracaoResult = {
   parceiroDespesa: GravarParceiroDespesaResult | null;
   /** Registro usado para PDF (cliente ou infração canônica). */
   pdfRegistro: SincronizarClienteDespesaResult["registro"];
+  alteracoes: SyncAlteracaoLinha[];
 };
+
+function linhaInfracao(
+  placa: string,
+  m: DetranScMultaNormalizada,
+  acao: string,
+  aviso?: string | null,
+): SyncAlteracaoLinha {
+  return {
+    placa: formatPlacaHyphen(placa),
+    entidade: "infracao",
+    referencia: m.autoInfracao,
+    descricao: m.descricao,
+    valor: m.valorMulta,
+    data: m.dataAutuacao || null,
+    status: acaoParaStatusSync(acao),
+    aviso: aviso ?? null,
+  };
+}
+
+function linhaCobranca(
+  placa: string,
+  reg: ClienteDespesaRegistro,
+  acao: string,
+  aviso?: string | null,
+): SyncAlteracaoLinha {
+  return {
+    placa: formatPlacaHyphen(placa),
+    entidade: "cobranca",
+    referencia: reg.autoInfracao || reg.id,
+    descricao: reg.descricao || reg.titulo || "",
+    valor: reg.valorMulta ?? null,
+    data: reg.dataAutuacao || null,
+    status: acaoParaStatusSync(acao),
+    aviso: aviso ?? null,
+  };
+}
+
+function buscarClienteDespesaPorAuto(numeroAuto: string): ClienteDespesaRegistro | null {
+  const key = numeroAuto.trim().toUpperCase();
+  if (!key) return null;
+  const db = loadClienteDespesasDb();
+  return db.clienteDespesas.find((m) => m.autoInfracao.trim().toUpperCase() === key) ?? null;
+}
+
+function linhaParceiro(
+  placa: string,
+  reg: GravarParceiroDespesaResult["registro"],
+  acao: string,
+  aviso?: string | null,
+): SyncAlteracaoLinha {
+  return {
+    placa: formatPlacaHyphen(placa),
+    entidade: "despesa_parceiro",
+    referencia: reg.origem || reg.id,
+    descricao: reg.descricao || reg.categoria,
+    valor: reg.valor ?? null,
+    data: reg.data || null,
+    status: acaoParaStatusSync(acao),
+    aviso: aviso ?? null,
+  };
+}
 
 function registroPdfFromInfracao(reg: InfracaoRegistro): SincronizarClienteDespesaResult["registro"] {
   return {
@@ -135,58 +207,86 @@ async function espelharDebitoInfracao(
   if (opts?.dryRun === true) {
     const pdfRegistro = registroPdfFromInfracao({
       ...reg,
-      id: "(dry-run)",
+      id: reg.id || "(dry-run)",
     });
+    const alteracoes: SyncAlteracaoLinha[] = [];
+
     if (infracaoDeveEspelharParceiroDespesa(reg)) {
-      const parceiroInput = parceiroDespesaInputFromInfracao(reg);
+      const excluido = buscarClienteDespesaPorAuto(reg.numeroAuto);
+      if (excluido) {
+        alteracoes.push({
+          ...linhaCobranca(placa, excluido, "sem_alteracao"),
+          status: "excluido",
+        });
+      }
+      const parceiroDespesa = sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg), {
+        dryRun: true,
+      });
+      alteracoes.push(
+        linhaParceiro(placa, parceiroDespesa.registro, parceiroDespesa.acao, parceiroDespesa.aviso),
+      );
       return {
         clienteDespesa: null,
-        parceiroDespesa: {
-          registro: {
-            id: "(dry-run)",
-            veiculoId: formatPlacaHyphen(placa),
-            placa: formatPlacaHyphen(placa),
-            categoria: parceiroInput.categoria,
-            descricao: parceiroInput.descricao,
-            data: parceiroInput.data,
-            valor: Number(parceiroInput.valor) || 0,
-            competencia: parceiroInput.competencia ?? "",
-            origem: parceiroInput.origem ?? "",
-          },
-          aviso: null,
-          acao: "novo",
-        },
+        parceiroDespesa,
         pdfRegistro,
+        alteracoes,
       };
     }
     if (infracaoDeveEspelharClienteDespesa(reg)) {
+      const origemParceiro = origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto);
+      const parceiroAntigo = findParceiroDespesaPorOrigem(origemParceiro);
+      if (parceiroAntigo) {
+        alteracoes.push({
+          ...linhaParceiro(placa, parceiroAntigo, "sem_alteracao"),
+          status: "excluido",
+        });
+      }
+      const clienteDespesa = simularSincronizarClienteDespesa(
+        placa,
+        clienteDespesaInputFromInfracao(reg),
+      );
+      alteracoes.push(
+        linhaCobranca(placa, clienteDespesa.registro, clienteDespesa.acao, clienteDespesa.aviso),
+      );
       return {
-        clienteDespesa: {
-          registro: pdfRegistro,
-          aviso: null,
-          acao: "novo",
-        },
+        clienteDespesa,
         parceiroDespesa: null,
-        pdfRegistro,
+        pdfRegistro: clienteDespesa.registro,
+        alteracoes,
       };
     }
-    return { clienteDespesa: null, parceiroDespesa: null, pdfRegistro };
+    return { clienteDespesa: null, parceiroDespesa: null, pdfRegistro, alteracoes };
   }
 
+  const alteracoes: SyncAlteracaoLinha[] = [];
+
   if (infracaoDeveEspelharParceiroDespesa(reg)) {
-    await excluirClienteDespesa(reg.numeroAuto, { syncRastreame: false });
+    const excluido = await excluirClienteDespesa(reg.numeroAuto, { syncRastreame: false });
+    if (excluido) {
+      alteracoes.push({
+        ...linhaCobranca(placa, excluido, "sem_alteracao"),
+        status: "excluido",
+      });
+    }
     const parceiroDespesa = sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg));
+    alteracoes.push(linhaParceiro(placa, parceiroDespesa.registro, parceiroDespesa.acao, parceiroDespesa.aviso));
     return {
       clienteDespesa: null,
       parceiroDespesa,
       pdfRegistro: registroPdfFromInfracao(reg),
+      alteracoes,
     };
   }
 
   if (infracaoDeveEspelharClienteDespesa(reg)) {
-    removerParceiroDespesaPorOrigem(
-      origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto),
-    );
+    const origemParceiro = origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto);
+    const parceiroAntigo = findParceiroDespesaPorOrigem(origemParceiro);
+    if (parceiroAntigo && removerParceiroDespesaPorOrigem(origemParceiro)) {
+      alteracoes.push({
+        ...linhaParceiro(placa, parceiroAntigo, "sem_alteracao"),
+        status: "excluido",
+      });
+    }
     const clienteDespesa = await sincronizarClienteDespesa(
       placa,
       clienteDespesaInputFromInfracao(reg),
@@ -195,10 +295,14 @@ async function espelharDebitoInfracao(
     if (clienteDespesa.registro.id && clienteDespesa.acao !== "ignorado") {
       vincularClienteDespesaInfracao(m.numeroAuto, clienteDespesa.registro.id);
     }
+    alteracoes.push(
+      linhaCobranca(placa, clienteDespesa.registro, clienteDespesa.acao, clienteDespesa.aviso),
+    );
     return {
       clienteDespesa,
       parceiroDespesa: null,
       pdfRegistro: clienteDespesa.registro,
+      alteracoes,
     };
   }
 
@@ -206,6 +310,7 @@ async function espelharDebitoInfracao(
     clienteDespesa: null,
     parceiroDespesa: null,
     pdfRegistro: registroPdfFromInfracao(reg),
+    alteracoes,
   };
 }
 
@@ -386,13 +491,17 @@ export async function processarRespostaDetranSc(
     pdfsGravados: 0,
     pdfsFalha: 0,
     avisos: [],
+    alteracoes: [],
   };
 
   const all = [...cobraveis, ...historico];
 
   for (const m of all) {
-    const { infracao: infRes, clienteDespesa: r, parceiroDespesa: p, pdfRegistro } =
+    const { infracao: infRes, clienteDespesa: r, parceiroDespesa: p, pdfRegistro, alteracoes: espelhoAlt } =
       await aplicarMulta(placa, m, rawPorAuto, opts);
+
+    result.alteracoes.push(linhaInfracao(placa, m, infRes.acao, infRes.aviso));
+    result.alteracoes.push(...espelhoAlt);
 
     if (infRes.acao === "novo") result.infracoesNovos++;
     else if (infRes.acao === "atualizado") result.infracoesAtualizados++;
@@ -500,6 +609,7 @@ export async function sincronizarMultasFrotaDetranSc(opts?: {
         pdfsGravados: 0,
         pdfsFalha: 0,
         avisos: [e instanceof Error ? e.message : String(e)],
+        alteracoes: [],
       });
     }
     opts?.onProgress?.(i + 1, total, falhasAcum);

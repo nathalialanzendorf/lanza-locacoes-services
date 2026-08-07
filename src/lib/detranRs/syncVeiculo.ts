@@ -3,6 +3,10 @@ import path from "node:path";
 
 import { sincronizarParceiroDespesa } from "../parceiroDespesasDb.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import {
+  acaoParaStatusSync,
+  type SyncAlteracaoLinha,
+} from "../sync/syncAlteracoes.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { consultarVeiculoDetranRs, type DetranRsConsultaVeiculo } from "./consulta.js";
 import {
@@ -20,6 +24,7 @@ export type SyncDetranRsResult = {
   ignorados: number;
   infracoesResumo: number;
   avisos: string[];
+  alteracoes: SyncAlteracaoLinha[];
 };
 
 /** Veículos ATIVOS registrados no RS (ufRegistro === "RS"). */
@@ -65,26 +70,36 @@ export function processarRespostaDetranRs(
     ignorados,
     infracoesResumo: resumo.total,
     avisos: [],
+    alteracoes: [],
   };
 
   for (const d of despesas) {
-    if (dryRun) {
-      result.novos++;
-      continue;
-    }
-    const r = sincronizarParceiroDespesa({
-      placa,
-      categoria: d.categoria,
-      descricao: d.descricao,
-      data: d.data,
-      valor: d.valor,
-      competencia: d.competencia,
-      origem: d.origem,
-    });
+    const r = sincronizarParceiroDespesa(
+      {
+        placa,
+        categoria: d.categoria,
+        descricao: d.descricao,
+        data: d.data,
+        valor: d.valor,
+        competencia: d.competencia,
+        origem: d.origem,
+      },
+      { dryRun },
+    );
     if (r.acao === "novo") result.novos++;
     else if (r.acao === "atualizado") result.atualizados++;
     else result.semAlteracao++;
     if (r.aviso) result.avisos.push(`${d.categoria} ${d.exercicio || d.data}: ${r.aviso}`);
+    result.alteracoes.push({
+      placa: formatPlacaHyphen(placa),
+      entidade: "detran_rs",
+      referencia: d.origem || `${d.categoria}-${d.exercicio || d.data}`,
+      descricao: d.descricao,
+      valor: d.valor,
+      data: d.data || null,
+      status: acaoParaStatusSync(r.acao),
+      aviso: r.aviso,
+    });
   }
 
   // O endpoint do RS só devolve totais de infração (sem detalhe por multa).
@@ -129,6 +144,7 @@ export async function sincronizarFrotaDetranRs(opts?: {
         ignorados: 0,
         infracoesResumo: 0,
         avisos: [e instanceof Error ? e.message : String(e)],
+        alteracoes: [],
       });
     }
     if (i < veiculos.length - 1) {

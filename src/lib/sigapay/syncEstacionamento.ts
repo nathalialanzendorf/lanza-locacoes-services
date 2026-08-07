@@ -8,10 +8,16 @@ import path from "node:path";
 
 import {
   sincronizarClienteDespesa,
+  simularSincronizarClienteDespesa,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
 import { CATEGORIA_ESTACIONAMENTO, normalizarCategoriaEstacionamentoNoDb } from "../estacionamentoCategoria.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
+import {
+  linhaFromClienteDespesa,
+  pushIgnorado,
+  type SyncAlteracaoLinha,
+} from "../sync/syncAlteracoes.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { loadPlacasParaSync } from "../pedagioDigital/syncPedagios.js";
 import { SigapayAuthError } from "./client.js";
@@ -30,6 +36,7 @@ export type SyncEstacionamentoResult = {
   semAlteracao: number;
   ignorados: number;
   avisos: string[];
+  alteracoes: SyncAlteracaoLinha[];
 };
 
 const fmtSP = new Intl.DateTimeFormat("pt-BR", {
@@ -76,32 +83,19 @@ async function aplicarAviso(
   const descricao = descricaoEstacionamento(dataHoraBr, true);
 
   if (dryRun) {
-    return {
-      result: {
-        registro: {
-          id: "(dry-run)",
-          categoria: CATEGORIA_ESTACIONAMENTO,
-          veiculoId: formatPlacaHyphen(placa),
-          autoInfracao,
-          descricao,
-          localInfracao: a.local ?? "",
-          dataAutuacao: dataHoraBr,
-          valorMulta: a.valor,
-          situacao: "Em aberto",
-          limiteDefesa: "",
-          condutorId: null,
-          condutorConfirmado: false,
-          condutorContrato: null,
-          rastreameTipo: "PEDAGIO",
-          cadastradoEm: "",
-          atualizadoEm: "",
-          origem: "sigapay",
-        },
-        acao: "novo",
-        aviso: null,
-      },
-      aviso: null,
-    };
+    const r = simularSincronizarClienteDespesa(placa, {
+      autoInfracao,
+      descricao,
+      localInfracao: a.local ?? "",
+      dataAutuacao: dataHoraBr,
+      valorMulta: a.valor,
+      situacao: "Em aberto",
+      limiteDefesa: "",
+      categoria: CATEGORIA_ESTACIONAMENTO,
+      origem: "sigapay",
+      rastreameTipo: "PEDAGIO",
+    });
+    return { result: r, aviso: r.aviso };
   }
 
   const r = await sincronizarClienteDespesa(placa, {
@@ -131,18 +125,32 @@ export async function processarAvisos(
     semAlteracao: 0,
     ignorados: 0,
     avisos: [],
+    alteracoes: [],
   };
 
   for (const a of filtrarStatusAviso(avisos, "aberto")) {
     const { result: r, aviso } = await aplicarAviso(placa, a, opts?.dryRun === true);
     if (!r) {
       result.ignorados++;
-      if (aviso) result.avisos.push(aviso);
+      if (aviso) {
+        result.avisos.push(aviso);
+        pushIgnorado(result.alteracoes, formatPlacaHyphen(placa), "estacionamento", `EST-${a.id}`, aviso);
+      }
       continue;
     }
     if (r.acao === "novo") result.novos++;
     else if (r.acao === "atualizado") result.atualizados++;
     else result.semAlteracao++;
+    result.alteracoes.push(
+      linhaFromClienteDespesa(
+        formatPlacaHyphen(placa),
+        "estacionamento",
+        r.registro,
+        r.acao,
+        aviso ?? r.aviso,
+        `EST-${a.id}`,
+      ),
+    );
     if (aviso) result.avisos.push(`${r.registro.autoInfracao}: ${aviso}`);
   }
 
@@ -270,6 +278,7 @@ export async function sincronizarEstacionamentoFrota(opts?: {
       semAlteracao: 0,
       ignorados: 0,
       avisos: [msg],
+      alteracoes: [],
     }));
   }
 

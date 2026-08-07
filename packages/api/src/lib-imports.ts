@@ -304,6 +304,11 @@ export {
 } from "../../../src/lib/sigapay/captureCdp.js";
 
 export {
+  flattenAlteracoesSync,
+  type SyncAlteracaoLinha,
+} from "../../../src/lib/sync/syncAlteracoes.js";
+
+export {
   loadVeiculosParaSync,
   processarRespostaDetranSc,
   sincronizarMultasFrotaDetranSc,

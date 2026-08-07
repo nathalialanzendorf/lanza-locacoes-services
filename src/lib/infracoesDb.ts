@@ -643,32 +643,46 @@ export function sincronizarInfracao(
   const dataFinal = String(input.dataAutuacao ?? "").trim();
 
   if (opts?.dryRun) {
-    return {
-      registro: {
-        id: "(dry-run)",
-        numeroAuto: String(input.numeroAuto).trim(),
-        veiculoId,
-        descricao: String(input.descricao).trim(),
-        dataAutuacao: dataFinal,
-        localInfracao: String(input.localInfracao).trim(),
-        valor: parseValor(input.valorMulta),
-        valorMulta: parseValor(input.valorMulta),
-        situacao: String(input.situacao).trim(),
-        dataLimiteDefesa: String(input.dataLimiteDefesa).trim(),
-        limiteDefesa: String(input.limiteDefesa ?? input.dataLimiteDefesa).trim(),
-        condutorId: null,
-        condutorConfirmado: quitada,
-        condutorContrato: null,
-        quitadaDetran: quitada,
-        statusInfracao: input.statusInfracao,
-        statusDetran: input.statusDetran,
-        origem: input.origem ?? "detran-sc",
-        cadastradoEm: "",
-        atualizadoEm: "",
-      },
-      aviso: null,
-      acao: "novo",
-    };
+    const db = loadInfracoesDb();
+    const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+    if (idx < 0) {
+      return {
+        registro: {
+          id: "(dry-run)",
+          numeroAuto: String(input.numeroAuto).trim(),
+          veiculoId,
+          descricao: String(input.descricao).trim(),
+          dataAutuacao: dataFinal,
+          localInfracao: String(input.localInfracao).trim(),
+          valor: parseValor(input.valorMulta),
+          valorMulta: parseValor(input.valorMulta),
+          situacao: String(input.situacao).trim(),
+          dataLimiteDefesa: String(input.dataLimiteDefesa).trim(),
+          limiteDefesa: String(input.limiteDefesa ?? input.dataLimiteDefesa).trim(),
+          condutorId: null,
+          condutorConfirmado: quitada,
+          condutorContrato: null,
+          quitadaDetran: quitada,
+          statusInfracao: input.statusInfracao,
+          statusDetran: input.statusDetran,
+          origem: input.origem ?? "detran-sc",
+          cadastradoEm: "",
+          atualizadoEm: "",
+        },
+        aviso: null,
+        acao: "novo",
+      };
+    }
+    const reg = db.infracoes[idx]!;
+    const dataInput = String(input.dataAutuacao ?? "").trim();
+    const dataEfetiva = dataInput || String(reg.dataAutuacao ?? "").trim();
+    const semDataValida = !dataEfetiva || !parseDataAutuacao(dataEfetiva);
+    const desejaRevisar = semDataValida && !quitada;
+    const flagRevisarMudou = !!reg.revisarManual !== desejaRevisar;
+    if (!registroChanged(reg, input) && !flagRevisarMudou && !(quitada && !reg.condutorConfirmado)) {
+      return { registro: reg, aviso: null, acao: "sem_alteracao" };
+    }
+    return { registro: reg, aviso: "sync detran-sc (dry-run)", acao: "atualizado" };
   }
 
   const db = loadInfracoesDb();

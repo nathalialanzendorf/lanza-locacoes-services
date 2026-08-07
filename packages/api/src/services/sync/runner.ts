@@ -38,8 +38,10 @@ import {
   syncRastreaveis,
   syncRecebimentos,
   ufRegistroDaPlaca,
+  flattenAlteracoesSync,
   type DetranRsConsultaVeiculo,
   type FipeSyncProgress,
+  type SyncAlteracaoLinha,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
 import * as estacionamentoService from "../estacionamento.js";
@@ -144,6 +146,35 @@ function resumoLista<T extends { novos?: number; atualizados?: number }>(
   return { total: items.length, novos, atualizados, items };
 }
 
+function alteracoesFromFipe(result: {
+  resultados?: Array<{
+    placa: string;
+    ok: boolean;
+    fipeCodigo?: string;
+    fipeModelo?: string;
+    marcaModelo?: string;
+    fipeValor?: string;
+    erro?: string;
+  }>;
+}): SyncAlteracaoLinha[] {
+  const out: SyncAlteracaoLinha[] = [];
+  for (const r of result.resultados ?? []) {
+    const valor = r.fipeValor
+      ? Number(String(r.fipeValor).replace(/[^\d,.-]/g, "").replace(",", ".")) || null
+      : null;
+    out.push({
+      placa: r.placa,
+      entidade: "fipe",
+      referencia: r.fipeCodigo ?? r.placa,
+      descricao: r.fipeModelo ?? r.marcaModelo ?? "FIPE",
+      valor: Number.isFinite(valor as number) ? valor : null,
+      status: !r.ok ? "ignorado" : "alterado",
+      aviso: r.erro ?? null,
+    });
+  }
+  return out;
+}
+
 async function runMotoristas(opts: SyncRastreameOpts) {
   const r = await syncMotoristas({
     dryRun: opts.dryRun,
@@ -167,13 +198,15 @@ async function runRastreaveis(opts: SyncRastreaveisOpts) {
 }
 
 async function runFipe(opts: SyncFipeOpts) {
+  let data: Awaited<ReturnType<typeof fipeService.atualizarFipeFrota>>;
   if (opts.placa?.trim()) {
-    return fipeService.atualizarFipeVeiculo(opts.placa.trim());
+    data = await fipeService.atualizarFipeVeiculo(opts.placa.trim());
+  } else if (opts.faltantes) {
+    data = await fipeService.atualizarFipeFaltantes(opts.onProgress);
+  } else {
+    data = await fipeService.atualizarFipeFrota(opts.onProgress);
   }
-  if (opts.faltantes) {
-    return fipeService.atualizarFipeFaltantes(opts.onProgress);
-  }
-  return fipeService.atualizarFipeFrota(opts.onProgress);
+  return { ...data, alteracoes: alteracoesFromFipe(data) };
 }
 
 async function runRecebimentos(opts: SyncRecebimentosOpts) {
@@ -217,7 +250,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
     const r = await processarPassagensJson(opts.placa, opts.jsonPath, {
       dryRun: opts.dryRun,
     });
-    return { modo: "json-placa", resultado: r };
+    return { modo: "json-placa", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (opts.placa) {
@@ -226,7 +259,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
     const r = await sincronizarPedagiosVeiculo(opts.placa, { dryRun: opts.dryRun });
     const falhas = r.avisos.length > 0 ? 1 : 0;
     report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
-    return { modo: "placa", resultado: r };
+    return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
 
   const placas = loadPlacasParaSync(opts.placa);
@@ -277,7 +310,13 @@ async function runPedagios(opts: SyncPedagiosOpts) {
     fase: "Concluído",
   });
 
-  return { modo: opts.jsonPath ? "json-lote" : "frota", ...resumo, push, relatorioPath };
+  return {
+    modo: opts.jsonPath ? "json-lote" : "frota",
+    ...resumo,
+    push,
+    relatorioPath,
+    alteracoes: flattenAlteracoesSync(results),
+  };
 }
 
 async function runEstacionamento(opts: SyncEstacionamentoOpts) {
@@ -301,7 +340,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
     const r = await processarAvisosJson(opts.placa, opts.jsonPath, {
       dryRun: opts.dryRun,
     });
-    return { modo: "json-placa", resultado: r };
+    return { modo: "json-placa", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (opts.placa) {
@@ -316,7 +355,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
     const r = await sincronizarEstacionamentoVeiculo(opts.placa, { dryRun: opts.dryRun });
     const falhas = r.avisos.length > 0 ? 1 : 0;
     report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
-    return { modo: "placa", resultado: r, portal };
+    return { modo: "placa", resultado: r, portal, alteracoes: r.alteracoes };
   }
 
   const placas = loadPlacasParaSyncEstacionamento(opts.placa);
@@ -372,6 +411,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
     ...resumo,
     relatorioPath,
     portal: portalAvisos,
+    alteracoes: flattenAlteracoesSync(results),
   };
 }
 
@@ -414,6 +454,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
       modo: "json",
       resultado: r,
       auditoria: auditarInfracoesSemCondutor(placa),
+      alteracoes: r.alteracoes,
     };
   }
 
@@ -429,6 +470,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
       modo: "ticket",
       resultado: r,
       auditoria: auditarInfracoesSemCondutor(v.placa),
+      alteracoes: r.alteracoes,
     };
   }
 
@@ -446,6 +488,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
       modo: "placa",
       resultado: r,
       auditoria: auditarInfracoesSemCondutor(v.placa),
+      alteracoes: r.alteracoes,
     };
   }
 
@@ -487,7 +530,12 @@ async function runInfracoes(opts: SyncDetranScOpts) {
     );
   }
 
-  return { modo: "frota", ...resumoLista(results), relatorioPath };
+  return {
+    modo: "frota",
+    ...resumoLista(results),
+    relatorioPath,
+    alteracoes: flattenAlteracoesSync(results),
+  };
 }
 
 async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
@@ -519,7 +567,7 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
     if (!placa) throw new HttpError(400, "jsonPath exige placa");
     const raw = readJsonFile(opts.jsonPath);
     const r = processarDespesasDetranSc(placa, raw, { dryRun: opts.dryRun });
-    return { modo: "json", resultado: r };
+    return { modo: "json", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (opts.ticket) {
@@ -528,7 +576,7 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
     const r = await sincronizarDespesasPorTicketDetranSc(v.placa, opts.ticket, {
       dryRun: opts.dryRun,
     });
-    return { modo: "ticket", resultado: r };
+    return { modo: "ticket", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (placa) {
@@ -540,7 +588,7 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
     });
     const falhas = r.avisos.length > 0 ? 1 : 0;
     report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
-    return { modo: "placa", resultado: r };
+    return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
 
   const veiculos = loadVeiculosParaSync(opts.placa);
@@ -580,7 +628,12 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
     );
   }
 
-  return { modo: "frota", ...resumoLista(results), relatorioPath };
+  return {
+    modo: "frota",
+    ...resumoLista(results),
+    relatorioPath,
+    alteracoes: flattenAlteracoesSync(results),
+  };
 }
 
 async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: number }) {
@@ -590,13 +643,13 @@ async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: n
     if (!placa) throw new HttpError(400, "jsonPath exige placa");
     const raw = readJsonFile(opts.jsonPath) as DetranRsConsultaVeiculo;
     const r = processarRespostaDetranRs(placa, raw, { dryRun: opts.dryRun });
-    return { modo: "json", resultado: r };
+    return { modo: "json", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (placa) {
     const v = loadVeiculosRsParaSync(placa)[0]!;
     const r = await sincronizarVeiculoDetranRs(v.placa, v.renavam, { dryRun: opts.dryRun });
-    return { modo: "placa", resultado: r };
+    return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
 
   const results = await sincronizarFrotaDetranRs({
@@ -615,7 +668,12 @@ async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: n
     );
   }
 
-  return { modo: "frota", ...resumoLista(results), relatorioPath };
+  return {
+    modo: "frota",
+    ...resumoLista(results),
+    relatorioPath,
+    alteracoes: flattenAlteracoesSync(results),
+  };
 }
 
 async function runSeguro(opts: SyncSeguroOpts) {

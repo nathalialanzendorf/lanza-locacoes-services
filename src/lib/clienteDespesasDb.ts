@@ -1213,6 +1213,55 @@ export async function sincronizarClienteDespesa(
   };
 }
 
+/** Simula sync de cobrança cliente (dry-run) — compara com DB sem gravar. */
+export function simularSincronizarClienteDespesa(
+  veiculoIdRaw: string,
+  input: ClienteDespesaInput,
+): SincronizarClienteDespesaResult {
+  const db = loadClienteDespesasDb();
+  const veiculoId = formatPlacaHyphen(veiculoIdRaw);
+  const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;
+  const autoKeyU = String(input.autoInfracao).trim().toUpperCase();
+  const idx = db.clienteDespesas.findIndex(
+    (m) => m.autoInfracao.trim().toUpperCase() === autoKeyU,
+  );
+
+  if (idx < 0) {
+    return {
+      registro: {
+        id: "(dry-run)",
+        categoria,
+        veiculoId,
+        autoInfracao: String(input.autoInfracao).trim(),
+        descricao: String(input.descricao ?? "").trim(),
+        localInfracao: String(input.localInfracao ?? "").trim(),
+        dataAutuacao: String(input.dataAutuacao ?? "").trim(),
+        valorMulta: parseValorSafe(input.valorMulta),
+        situacao: String(input.situacao ?? "").trim(),
+        limiteDefesa: String(input.limiteDefesa ?? "").trim(),
+        condutorId: null,
+        condutorConfirmado: input.quitadaDetran === true,
+        condutorContrato: null,
+        quitadaDetran: input.quitadaDetran === true,
+        cadastradoEm: "",
+        atualizadoEm: "",
+        origem: input.origem ?? "manual",
+      },
+      aviso: null,
+      acao: "novo",
+    };
+  }
+
+  const m = db.clienteDespesas[idx]!;
+  if (
+    !registroChanged(m, { ...input, categoria }) &&
+    !(input.quitadaDetran === true && !m.condutorConfirmado)
+  ) {
+    return { registro: m, aviso: null, acao: "sem_alteracao" };
+  }
+  return { registro: m, aviso: null, acao: "atualizado" };
+}
+
 /** @deprecated use sincronizarClienteDespesa */
 export function sincronizarInfracao(
   veiculoIdRaw: string,

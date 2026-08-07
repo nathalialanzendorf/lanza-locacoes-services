@@ -9,6 +9,10 @@ import {
   loadVeiculosParaSync,
   type VeiculoFrota,
 } from "./syncVeiculo.js";
+import {
+  acaoParaStatusSync,
+  type SyncAlteracaoLinha,
+} from "./syncAlteracoes.js";
 
 export type SyncDespesasResult = {
   placa: string;
@@ -17,6 +21,7 @@ export type SyncDespesasResult = {
   semAlteracao: number;
   ignorados: number;
   avisos: string[];
+  alteracoes: SyncAlteracaoLinha[];
 };
 
 function aplicarDespesa(
@@ -25,11 +30,9 @@ function aplicarDespesa(
   dryRun: boolean,
 ): GravarParceiroDespesaResult | null {
   if (dryRun) {
-    return {
-      registro: {
-        id: "(dry-run)",
-        veiculoId: null,
-        placa: formatPlacaHyphen(placa),
+    return sincronizarParceiroDespesa(
+      {
+        placa,
         categoria: d.categoria,
         descricao: d.descricao,
         data: d.data,
@@ -37,9 +40,8 @@ function aplicarDespesa(
         competencia: d.competencia,
         origem: d.origem,
       },
-      aviso: null,
-      acao: "novo",
-    };
+      { dryRun: true },
+    );
   }
 
   return sincronizarParceiroDespesa({
@@ -66,6 +68,7 @@ export function processarDespesasDetranSc(
     semAlteracao: 0,
     ignorados,
     avisos: [],
+    alteracoes: [],
   };
 
   for (const d of despesas) {
@@ -75,6 +78,16 @@ export function processarDespesasDetranSc(
     else if (r.acao === "atualizado") result.atualizados++;
     else result.semAlteracao++;
     if (r.aviso) result.avisos.push(`${d.categoria} ${d.exercicio || d.data}: ${r.aviso}`);
+    result.alteracoes.push({
+      placa: formatPlacaHyphen(placa),
+      entidade: "despesa_parceiro",
+      referencia: d.origem || `${d.categoria}-${d.exercicio || d.data}`,
+      descricao: d.descricao,
+      valor: d.valor,
+      data: d.data || null,
+      status: acaoParaStatusSync(r.acao),
+      aviso: r.aviso,
+    });
   }
 
   return result;
@@ -129,6 +142,7 @@ export async function sincronizarDespesasFrotaDetranSc(opts?: {
         semAlteracao: 0,
         ignorados: 0,
         avisos: [e instanceof Error ? e.message : String(e)],
+        alteracoes: [],
       });
     }
     opts?.onProgress?.(i + 1, total, falhasAcum);
