@@ -61,7 +61,7 @@ export function linhaFromClienteDespesa(
   return {
     placa,
     entidade,
-    referencia: referencia ?? reg.autoInfracao || reg.id,
+    referencia: referencia ?? (reg.autoInfracao || reg.id),
     descricao: reg.descricao || reg.titulo || "",
     valor: reg.valorMulta ?? null,
     data: reg.dataAutuacao || null,
