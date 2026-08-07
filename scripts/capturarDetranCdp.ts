@@ -20,6 +20,8 @@ import os from "node:os";
 import path from "node:path";
 import WebSocket from "ws";
 
+import { cdpKeepOpen, fecharChromeCdp } from "./lib/fecharChromeCdp.js";
+
 const PORT = 9222;
 const DEFAULT_PORTAL = "https://servicos.detran.sc.gov.br/";
 const urlArg = process.argv.find((a) => a.startsWith("--url="))?.slice(6)?.trim();
@@ -50,7 +52,7 @@ let authPrinted = false;
 let lastPlaca = "";
 const pageSockets = new Map<string, WebSocket>();
 const keepOpen =
-  process.argv.includes("--keep-open") || process.env.DETRAN_CDP_KEEP_OPEN === "1";
+  cdpKeepOpen() || process.env.DETRAN_CDP_KEEP_OPEN === "1";
 
 function persist(): void {
   fs.writeFileSync(OUT_FILE, JSON.stringify(cap, null, 2), "utf8");
@@ -229,37 +231,7 @@ function fecharSockets(): void {
 
 /** Fecha o Chrome desta sessao CDP (porta 9222 / perfil DETRAN). */
 async function fecharChrome(): Promise<void> {
-  if (keepOpen) {
-    console.log("Chrome mantido aberto (--keep-open / DETRAN_CDP_KEEP_OPEN=1).");
-    return;
-  }
-  try {
-    const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
-    if (!r.ok) return;
-    const j = (await r.json()) as { webSocketDebuggerUrl?: string };
-    if (!j.webSocketDebuggerUrl) return;
-
-    await new Promise<void>((resolve) => {
-      const ws = new WebSocket(j.webSocketDebuggerUrl!);
-      const done = () => {
-        try {
-          ws.close();
-        } catch {
-          /* ignore */
-        }
-        resolve();
-      };
-      ws.on("open", () => {
-        ws.send(JSON.stringify({ id: 1, method: "Browser.close", params: {} }));
-        setTimeout(done, 600);
-      });
-      ws.on("error", done);
-      setTimeout(done, 2000);
-    });
-    console.log("Chrome fechado automaticamente.");
-  } catch {
-    console.log("Nao foi possivel fechar o Chrome via CDP — feche a janela manualmente.");
-  }
+  await fecharChromeCdp(PORT, keepOpen);
 }
 
 async function main(): Promise<void> {

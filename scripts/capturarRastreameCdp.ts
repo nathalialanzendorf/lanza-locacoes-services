@@ -17,6 +17,7 @@ import path from "node:path";
 import WebSocket from "ws";
 
 import { loginRastreame } from "../src/lib/rastreame/auth.js";
+import { fecharChromeCdp } from "./lib/fecharChromeCdp.js";
 
 const PORT = Number(process.env.RASTREAME_CDP_PORT ?? "9226");
 const PORTAL = "https://rastreame.com.br/";
@@ -176,7 +177,7 @@ async function main(): Promise<void> {
     console.log(`RASTREAME_LOGIN=${LOGIN} no env - preencha a senha na janela se preciso.`);
   }
   console.log(
-    "Capturo o token do login (X-r2f-auth ou resposta JSON). Aguarde o portal carregar apos entrar.",
+    "Capturo o token do login (X-r2f-auth ou resposta JSON). Ao capturar, o Chrome fecha sozinho.",
   );
 
   const pendingLogin = new Map<string, { sessionId?: string }>();
@@ -254,7 +255,7 @@ async function main(): Promise<void> {
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Token capturado - pode fechar o Chrome.");
+        console.log("Token capturado.");
         resolve();
         return;
       }
@@ -279,7 +280,12 @@ async function main(): Promise<void> {
     /* ignore */
   }
 
-  await fallbackLoginApi();
+  if (captured()) {
+    await fecharChromeCdp(PORT);
+  } else {
+    await fallbackLoginApi();
+    if (cap.token) await fecharChromeCdp(PORT);
+  }
 
   console.log(`FIM. token=${cap.token ? "OK" : "nao capturado"} authFormat=${cap.authFormat ?? "?"}`);
   if (!cap.token) process.exit(1);

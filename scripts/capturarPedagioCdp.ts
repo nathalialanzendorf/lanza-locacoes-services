@@ -14,6 +14,7 @@ import path from "node:path";
 import WebSocket from "ws";
 
 import { REPO_ROOT } from "../src/lib/repoRoot.js";
+import { fecharChromeCdp } from "./lib/fecharChromeCdp.js";
 
 const PORT = Number(process.env.PEDAGIO_CDP_PORT ?? "9225");
 const PORTAL = "https://pedagiodigital.com/";
@@ -132,7 +133,7 @@ async function main(): Promise<void> {
 
   console.log("Chrome (janela dedicada) aberto. Faça login no pedagiodigital.com (CPF/senha + reCAPTCHA).");
   console.log(
-    "Após entrar, a lista de placas carrega sozinha — capturo cookie + CSRF. Feche o Chrome ao terminar.",
+    "Após entrar, a lista de placas carrega sozinha — capturo cookie + CSRF. Ao capturar, o Chrome fecha sozinho.",
   );
 
   const ws = new WebSocket(wsUrl);
@@ -168,7 +169,7 @@ async function main(): Promise<void> {
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Sessao capturada (cookie + CSRF) - pode fechar o Chrome.");
+        console.log("Sessao capturada (cookie + CSRF).");
         resolve();
         return;
       }
@@ -191,6 +192,9 @@ async function main(): Promise<void> {
     ws.close();
   } catch {
     /* ignore */
+  }
+  if (captured()) {
+    await fecharChromeCdp(PORT);
   }
   console.log(`FIM. sessão=${captured() ? "OK" : "não capturada"}`);
 }

@@ -149,7 +149,7 @@ if (-not $SkipRastreame) {
 }
 
 Write-Host "Login de portais - $($steps.Count) etapa(s)"
-Write-Host "Feche cada janela do Chrome apenas apos concluir login e carregar dados."
+Write-Host "Apos capturar a sessao, o Chrome fecha sozinho e abre-se o proximo portal."
 Write-Host ""
 
 $ok = 0

@@ -15,6 +15,8 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
+import { fecharChromeCdp } from "./lib/fecharChromeCdp.js";
+
 const PORT = Number(process.env.DETRAN_RS_CDP_PORT ?? "9223");
 const PORTAL = "https://pcsdetran.rs.gov.br/";
 const API_HOST = "pcsdetran.procergs.com.br";
@@ -118,7 +120,7 @@ async function main(): Promise<void> {
 
   console.log("Chrome (janela dedicada) aberto. Faça login gov.br (certificado ou CPF/senha).");
   console.log(
-    "Navegue até o portal carregar a frota — capturo Authorization + X-User-Id da rede. Feche o Chrome ao terminar.",
+    "Navegue até o portal carregar a frota — capturo Authorization + X-User-Id da rede. Ao capturar, o Chrome fecha sozinho.",
   );
 
   const ws = new WebSocket(wsUrl);
@@ -153,7 +155,7 @@ async function main(): Promise<void> {
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Sessão capturada (auth + userId) — pode fechar o Chrome.");
+        console.log("Sessão capturada (auth + userId).");
         resolve();
         return;
       }
@@ -169,6 +171,9 @@ async function main(): Promise<void> {
     ws.close();
   } catch {
     /* ignore */
+  }
+  if (captured()) {
+    await fecharChromeCdp(PORT);
   }
   console.log(
     `FIM. token=${cap.auth ? "OK" : "não capturado"} | userId=${cap.userId ? "OK" : "não capturado"}`,
