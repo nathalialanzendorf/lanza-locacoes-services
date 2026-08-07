@@ -12,6 +12,9 @@
 #   # 1a vez com .pfx (importa para o Windows + auto-selecao no Chrome):
 #   .\scripts\login-detran-sc.ps1 -Pfx "C:\caminho\certificado.pfx" -PfxPass "<senha>"
 #
+#   # URL directa do gov.br (authorization_id fresco — expira em minutos):
+#   .\scripts\login-detran-sc.ps1 -Url "https://sso.acesso.gov.br/login?client_id=acesso.ciasc.sc.gov.br&authorization_id=..."
+#
 #   # Perfil Chrome corrompido / 400 ou 302 repetidos - limpa sessao gov.br:
 #   .\scripts\login-detran-sc.ps1 -Fresh
 #
@@ -23,6 +26,7 @@
 param(
   [string]$Pfx,
   [string]$PfxPass,
+  [string]$Url,
   [switch]$Playwright,
   [switch]$Manual,
   [switch]$Fresh
@@ -67,6 +71,11 @@ try {
   } else {
     Write-Host "Abrindo Chrome real (CDP) - resolva o hCaptcha no login por certificado."
     $scriptArgs = @("tsx", "scripts/capturarDetranCdp.ts")
+    if ($Url) {
+      $u = $Url.Trim()
+      $scriptArgs += "--url=$u"
+      Write-Host "URL de login: $u"
+    }
   }
 
   & npx @scriptArgs
@@ -79,6 +88,7 @@ if (-not (Test-Path $captureFile)) {
 Captura nao gerou token (ficheiro ausente).
 Se viu HTTP 302 no gov.br: o hCaptcha provavelmente falhou - tente de novo no Chrome real.
 Se viu HTTP 400: nao use curl; entre pelo portal servicos.detran.sc.gov.br ou rode com -Fresh.
+Se viu 'Debugger is paused' ou popup vazio: feche Chrome na porta 9222 e rode com -Fresh.
 Consulte um veiculo no portal antes de fechar a janela.
 "@
   exit 1

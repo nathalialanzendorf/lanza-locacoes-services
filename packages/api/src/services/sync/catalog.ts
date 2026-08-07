@@ -65,7 +65,6 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "cliente-despesas.json",
     interativo: true,
     direcao: "buscar",
-    nota: "Sessão BFF expira em minutos; modo offline com jsonPath",
   },
   {
     id: "estacionamento",

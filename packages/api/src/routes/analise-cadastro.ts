@@ -44,7 +44,7 @@ export function registerAnaliseCadastroRoutes(routes: RouteDef[]): void {
       const asyncMode = parseBoolQuery(ctx.query.get("async"), body.semBrowser !== true);
 
       if (asyncMode && !body.semBrowser) {
-        const job = createJob("analise-cadastro", body);
+        const job = await createJob("analise-cadastro", body);
         runJobAsync(job.id, () => analiseService.executarAnaliseCadastro(body));
         json(ctx.res, 202, { jobId: job.id, status: job.status });
         return;
@@ -75,11 +75,11 @@ export function registerAnaliseCadastroRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: jobStatus.regex,
     paramNames: jobStatus.paramNames,
-    handler: (ctx) => {
-      const job = getJob(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const job = await getJob(ctx.params.id);
       if (!job) return notFound(ctx, "Job");
       json(ctx.res, 200, job);
-    },
+    }),
   });
 
   const one = compileRoute("/api/analise-cadastro/:id");

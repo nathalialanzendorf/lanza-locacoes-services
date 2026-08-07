@@ -241,11 +241,16 @@ export async function sincronizarEstacionamentoVeiculo(
 export async function sincronizarEstacionamentoFrota(opts?: {
   placa?: string;
   dryRun?: boolean;
+  onProgress?: (done: number, total: number, falhas: number) => void;
 }): Promise<SyncEstacionamentoResult[]> {
   if (!opts?.dryRun) await normalizarCategoriaEstacionamentoNoDb();
 
   const placas = loadPlacasParaSync(opts?.placa);
   if (placas.length === 0) return [];
+
+  const total = placas.length;
+  let falhasAcum = 0;
+  opts?.onProgress?.(0, total, 0);
 
   let porPlaca: Map<string, AvisoEstacionamento[]>;
   try {
@@ -256,6 +261,8 @@ export async function sincronizarEstacionamentoFrota(opts?: {
   } catch (e) {
     if (e instanceof SigapayAuthError) throw e;
     const msg = e instanceof Error ? e.message : String(e);
+    falhasAcum = placas.length;
+    opts?.onProgress?.(total, total, falhasAcum);
     return placas.map((placa) => ({
       placa: formatPlacaHyphen(placa),
       novos: 0,
@@ -266,13 +273,17 @@ export async function sincronizarEstacionamentoFrota(opts?: {
     }));
   }
 
-  return Promise.all(
-    placas.map((placa) =>
-      processarAvisos(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
-        dryRun: opts?.dryRun,
-      }),
-    ),
-  );
+  const results: SyncEstacionamentoResult[] = [];
+  for (let i = 0; i < placas.length; i++) {
+    const placa = placas[i]!;
+    const r = await processarAvisos(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
+      dryRun: opts?.dryRun,
+    });
+    results.push(r);
+    if (r.avisos.length > 0) falhasAcum++;
+    opts?.onProgress?.(i + 1, total, falhasAcum);
+  }
+  return results;
 }
 
 export { loadPlacasParaSync };

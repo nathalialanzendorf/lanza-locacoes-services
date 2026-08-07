@@ -4,6 +4,7 @@ import {
   findVeiculoByPlaca,
   formatPlacaHyphen,
   listarAvisos,
+  listarAvisosLote,
   listarVeiculosSigapay,
   loadPlacasParaSyncEstacionamento,
   placasIguais,
@@ -78,7 +79,30 @@ export async function excluirVeiculoPortal(placa: string, dryRun = false) {
 export async function listarAvisosPlaca(placa: string, status: AvisoStatus = "aberto") {
   if (!placa?.trim()) throw new HttpError(400, "Placa obrigatória");
   const items = await listarAvisos(placa, { status });
-  return { placa: formatPlacaHyphen(placa), status, total: items.length, items };
+  return { placa: formatPlacaHyphen(placa), status, total: items.length, items: serializarAvisos(items) };
+}
+
+function serializarAvisos(items: Awaited<ReturnType<typeof listarAvisos>>) {
+  return items.map(({ id, placa, dataHoraRaw, dataHoraIso, valor, local, emAberto }) => ({
+    id,
+    placa,
+    dataHoraRaw,
+    dataHoraIso,
+    valor,
+    local,
+    emAberto,
+  }));
+}
+
+export async function listarAvisosFrota(status: AvisoStatus = "aberto", placaFiltro?: string) {
+  const placas = loadPlacasParaSyncEstacionamento(placaFiltro);
+  const items = placas.length ? await listarAvisosLote(placas, { status }) : [];
+  return {
+    placas: placas.map(formatPlacaHyphen),
+    status,
+    total: items.length,
+    items: serializarAvisos(items),
+  };
 }
 
 export async function conferirPlacasPortal(registrar = false) {

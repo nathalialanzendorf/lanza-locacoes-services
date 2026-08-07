@@ -24,6 +24,16 @@ function parseBoolQuery(raw: string | null, fallback = false): boolean {
   return fallback;
 }
 
+function jobProgressHook(syncId: string, jobId: string) {
+  const withProgress = new Set(["fipe", "pedagios", "estacionamento", "infracoes", "ipva-licenciamento"]);
+  if (!withProgress.has(syncId)) return {};
+  return {
+    onProgress: (p: Parameters<typeof updateJobProgress>[1]) => {
+      void updateJobProgress(jobId, p);
+    },
+  };
+}
+
 function parseSyncInput(body: Record<string, unknown>): SyncInput {
   return {
     dryRun: body.dryRun === true,
@@ -64,11 +74,11 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: jobsList.regex,
     paramNames: jobsList.paramNames,
-    handler: (ctx) => {
+    handler: routeAsync(async (ctx) => {
       const limit = Number(ctx.query.get("limit") ?? "20");
-      const jobs = listJobs(Number.isFinite(limit) ? limit : 20);
+      const jobs = await listJobs(Number.isFinite(limit) ? limit : 20);
       json(ctx.res, 200, { total: jobs.length, jobs });
-    },
+    }),
   });
 
   const jobDetail = compileRoute("/api/sync/jobs/:id");
@@ -76,11 +86,11 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
     method: "GET",
     pattern: jobDetail.regex,
     paramNames: jobDetail.paramNames,
-    handler: (ctx) => {
-      const job = getJob(ctx.params.id);
+    handler: routeAsync(async (ctx) => {
+      const job = await getJob(ctx.params.id);
       if (!job) return notFound(ctx, "Job");
       json(ctx.res, 200, job);
-    },
+    }),
   });
 
   const completo = compileRoute("/api/sync/completo");
@@ -93,7 +103,7 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
       const asyncMode = parseBoolQuery(ctx.query.get("async"), body.async === true);
 
       if (asyncMode) {
-        const job = createJob("completo", body);
+        const job = await createJob("completo", body);
         runJobAsync(job.id, () => executarSyncCompleto(body));
         json(ctx.res, 202, { jobId: job.id, status: job.status });
         return;
@@ -123,13 +133,11 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
       const asyncMode = parseBoolQuery(ctx.query.get("async"), body.async === true);
 
       if (asyncMode) {
-        const job = createJob(syncId, input);
+        const job = await createJob(syncId, input);
         runJobAsync(job.id, () =>
           executarSync(syncId, {
             ...input,
-            ...(syncId === "fipe"
-              ? { onProgress: (p) => updateJobProgress(job.id, p) }
-              : {}),
+            ...jobProgressHook(syncId, job.id),
           }),
         );
         json(ctx.res, 202, { jobId: job.id, status: job.status, sync: syncId });

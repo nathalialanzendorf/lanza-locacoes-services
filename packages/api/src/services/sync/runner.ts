@@ -42,7 +42,9 @@ import {
   type FipeSyncProgress,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
+import * as estacionamentoService from "../estacionamento.js";
 import * as fipeService from "../fipe.js";
+import type { JobProgress } from "./jobsTypes.js";
 import { normalizarSyncId, syncDirecaoDefaults, SYNC_COMPLETO_ORDEM, type SyncId } from "./catalog.js";
 
 export type SyncBaseOpts = {
@@ -77,15 +79,18 @@ export type SyncDetranScOpts = SyncBaseOpts & {
   prazoDias?: number;
   delayMs?: number;
   noRs?: boolean;
+  onProgress?: (p: JobProgress) => void;
 };
 
 export type SyncPedagiosOpts = SyncBaseOpts & {
   jsonPath?: string;
   normalizarTitulos?: boolean;
+  onProgress?: (p: JobProgress) => void;
 };
 
 export type SyncEstacionamentoOpts = SyncBaseOpts & {
   jsonPath?: string;
+  onProgress?: (p: JobProgress) => void;
 };
 
 export type SyncSeguroOpts = {
@@ -183,6 +188,21 @@ async function runRecebimentos(opts: SyncRecebimentosOpts) {
 }
 
 async function runPedagios(opts: SyncPedagiosOpts) {
+  const report = (
+    done: number,
+    total: number,
+    extra?: Pick<JobProgress, "sucesso" | "falhas" | "fase">,
+  ) => {
+    opts.onProgress?.({
+      total,
+      done,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      sucesso: extra?.sucesso ?? 0,
+      falhas: extra?.falhas ?? 0,
+      fase: extra?.fase,
+    });
+  };
+
   if (opts.normalizarTitulos) {
     const r = normalizarTitulosPedagioNoDb({ dryRun: opts.dryRun });
     let push = null;
@@ -202,15 +222,40 @@ async function runPedagios(opts: SyncPedagiosOpts) {
 
   if (opts.placa) {
     loadPlacasParaSync(opts.placa);
+    report(0, 1, { fase: `Consultando ${opts.placa}…` });
     const r = await sincronizarPedagiosVeiculo(opts.placa, { dryRun: opts.dryRun });
+    const falhas = r.avisos.length > 0 ? 1 : 0;
+    report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
     return { modo: "placa", resultado: r };
   }
 
+  const placas = loadPlacasParaSync(opts.placa);
+  const total = Math.max(placas.length, 1);
+  report(0, total, { fase: "Consultando pedagiodigital.com…" });
+
   const results = opts.jsonPath
     ? await processarPassagensJsonLote(opts.jsonPath, { dryRun: opts.dryRun })
-    : await sincronizarPedagiosFrota({ dryRun: opts.dryRun });
+    : await sincronizarPedagiosFrota({
+        dryRun: opts.dryRun,
+        onProgress: (done, t, falhasParciais) => {
+          report(done, t, {
+            sucesso: done - falhasParciais,
+            falhas: falhasParciais,
+            fase: done >= t ? "Gravando relatório…" : "Processando passagens…",
+          });
+        },
+      });
 
   const resumo = resumoLista(results);
+  let falhas = 0;
+  for (const r of results) {
+    if (r.avisos.length > 0) falhas++;
+  }
+  report(total, total, {
+    sucesso: results.length - falhas,
+    falhas,
+    fase: opts.dryRun ? "Concluído (dry-run)" : "Espelhando no Rastreame…",
+  });
   let push = null;
   let relatorioPath: string | null = null;
 
@@ -226,10 +271,31 @@ async function runPedagios(opts: SyncPedagiosOpts) {
     push = await pushRecebimentosToRastreame({});
   }
 
+  report(total, total, {
+    sucesso: results.length - falhas,
+    falhas,
+    fase: "Concluído",
+  });
+
   return { modo: opts.jsonPath ? "json-lote" : "frota", ...resumo, push, relatorioPath };
 }
 
 async function runEstacionamento(opts: SyncEstacionamentoOpts) {
+  const report = (
+    done: number,
+    total: number,
+    extra?: Pick<JobProgress, "sucesso" | "falhas" | "fase">,
+  ) => {
+    opts.onProgress?.({
+      total,
+      done,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      sucesso: extra?.sucesso ?? 0,
+      falhas: extra?.falhas ?? 0,
+      fase: extra?.fase,
+    });
+  };
+
   if (opts.jsonPath && opts.placa) {
     loadPlacasParaSyncEstacionamento(opts.placa);
     const r = await processarAvisosJson(opts.placa, opts.jsonPath, {
@@ -240,15 +306,54 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
 
   if (opts.placa) {
     loadPlacasParaSyncEstacionamento(opts.placa);
+    report(0, 1, { fase: `Consultando ${opts.placa} no SigaPay…` });
+    let portal: Awaited<ReturnType<typeof estacionamentoService.listarAvisosPlaca>> | null = null;
+    try {
+      portal = await estacionamentoService.listarAvisosPlaca(opts.placa, "aberto");
+    } catch {
+      /* opcional */
+    }
     const r = await sincronizarEstacionamentoVeiculo(opts.placa, { dryRun: opts.dryRun });
-    return { modo: "placa", resultado: r };
+    const falhas = r.avisos.length > 0 ? 1 : 0;
+    report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
+    return { modo: "placa", resultado: r, portal };
+  }
+
+  const placas = loadPlacasParaSyncEstacionamento(opts.placa);
+  const total = Math.max(placas.length, 1);
+  report(0, total, { fase: "Consultando sigapay.com.br…" });
+
+  let portalAvisos: Awaited<ReturnType<typeof estacionamentoService.listarAvisosFrota>> | null =
+    null;
+  try {
+    portalAvisos = await estacionamentoService.listarAvisosFrota("aberto", opts.placa);
+  } catch {
+    /* resumo opcional — sync continua */
   }
 
   const results = opts.jsonPath
     ? await processarAvisosJsonLote(opts.jsonPath, { dryRun: opts.dryRun })
-    : await sincronizarEstacionamentoFrota({ dryRun: opts.dryRun });
+    : await sincronizarEstacionamentoFrota({
+        dryRun: opts.dryRun,
+        onProgress: (done, t, falhasParciais) => {
+          report(done, t, {
+            sucesso: done - falhasParciais,
+            falhas: falhasParciais,
+            fase: done >= t ? "Gravando relatório…" : "Processando avisos…",
+          });
+        },
+      });
 
   const resumo = resumoLista(results);
+  let falhas = 0;
+  for (const r of results) {
+    if (r.avisos.length > 0) falhas++;
+  }
+  report(total, total, {
+    sucesso: results.length - falhas,
+    falhas,
+    fase: opts.dryRun ? "Concluído (dry-run)" : "Concluído",
+  });
   let relatorioPath: string | null = null;
 
   if (!opts.dryRun) {
@@ -262,12 +367,32 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
     );
   }
 
-  return { modo: opts.jsonPath ? "json-lote" : "frota", ...resumo, relatorioPath };
+  return {
+    modo: opts.jsonPath ? "json-lote" : "frota",
+    ...resumo,
+    relatorioPath,
+    portal: portalAvisos,
+  };
 }
 
 async function runInfracoes(opts: SyncDetranScOpts) {
   const placa = opts.placa?.trim();
   const prazoDias = opts.prazoDias ?? 90;
+
+  const report = (
+    done: number,
+    total: number,
+    extra?: Pick<JobProgress, "sucesso" | "falhas" | "fase">,
+  ) => {
+    opts.onProgress?.({
+      total,
+      done,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      sucesso: extra?.sucesso ?? 0,
+      falhas: extra?.falhas ?? 0,
+      fase: extra?.fase,
+    });
+  };
 
   if (placa && !opts.noRs && ufRegistroDaPlaca(placa) === "RS") {
     return {
@@ -309,11 +434,14 @@ async function runInfracoes(opts: SyncDetranScOpts) {
 
   if (placa) {
     const v = loadVeiculosParaSync(placa)[0]!;
+    report(0, 1, { fase: `Consultando ${v.placa}…` });
     const r = await sincronizarMultasVeiculoDetranSc(v.placa, v.renavam, {
       dryRun: opts.dryRun,
       prazoDias,
       captcha: opts.captcha,
     });
+    const falhas = r.avisos.length > 0 ? 1 : 0;
+    report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
     return {
       modo: "placa",
       resultado: r,
@@ -321,10 +449,31 @@ async function runInfracoes(opts: SyncDetranScOpts) {
     };
   }
 
+  const veiculos = loadVeiculosParaSync(opts.placa);
+  const total = Math.max(veiculos.length, 1);
+  report(0, total, { fase: "Consultando DETRAN SC…" });
+
   const results = await sincronizarMultasFrotaDetranSc({
     dryRun: opts.dryRun,
     prazoDias,
     delayMs: opts.delayMs ?? 1500,
+    onProgress: (done, t, falhasParciais) => {
+      report(done, t, {
+        sucesso: done - falhasParciais,
+        falhas: falhasParciais,
+        fase: done >= t ? "Gravando relatório…" : "Processando infrações…",
+      });
+    },
+  });
+
+  let falhas = 0;
+  for (const r of results) {
+    if (r.avisos.length > 0) falhas++;
+  }
+  report(total, total, {
+    sucesso: results.length - falhas,
+    falhas,
+    fase: opts.dryRun ? "Concluído (dry-run)" : "Concluído",
   });
 
   let relatorioPath: string | null = null;
@@ -343,6 +492,21 @@ async function runInfracoes(opts: SyncDetranScOpts) {
 
 async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
   const placa = opts.placa?.trim();
+
+  const report = (
+    done: number,
+    total: number,
+    extra?: Pick<JobProgress, "sucesso" | "falhas" | "fase">,
+  ) => {
+    opts.onProgress?.({
+      total,
+      done,
+      percent: total > 0 ? Math.round((done / total) * 100) : 0,
+      sucesso: extra?.sucesso ?? 0,
+      falhas: extra?.falhas ?? 0,
+      fase: extra?.fase,
+    });
+  };
 
   if (placa && !opts.noRs && ufRegistroDaPlaca(placa) === "RS") {
     return {
@@ -369,16 +533,40 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
 
   if (placa) {
     const v = loadVeiculosParaSync(placa)[0]!;
+    report(0, 1, { fase: `Consultando ${v.placa}…` });
     const r = await sincronizarDespesasVeiculoDetranSc(v.placa, v.renavam, {
       dryRun: opts.dryRun,
       captcha: opts.captcha,
     });
+    const falhas = r.avisos.length > 0 ? 1 : 0;
+    report(1, 1, { sucesso: 1 - falhas, falhas, fase: "Concluído" });
     return { modo: "placa", resultado: r };
   }
+
+  const veiculos = loadVeiculosParaSync(opts.placa);
+  const total = Math.max(veiculos.length, 1);
+  report(0, total, { fase: "Consultando DETRAN SC…" });
 
   const results = await sincronizarDespesasFrotaDetranSc({
     dryRun: opts.dryRun,
     delayMs: opts.delayMs ?? 1500,
+    onProgress: (done, t, falhasParciais) => {
+      report(done, t, {
+        sucesso: done - falhasParciais,
+        falhas: falhasParciais,
+        fase: done >= t ? "Gravando relatório…" : "Processando IPVA/licenciamento…",
+      });
+    },
+  });
+
+  let falhas = 0;
+  for (const r of results) {
+    if (r.avisos.length > 0) falhas++;
+  }
+  report(total, total, {
+    sucesso: results.length - falhas,
+    falhas,
+    fase: opts.dryRun ? "Concluído (dry-run)" : "Concluído",
   });
 
   let relatorioPath: string | null = null;

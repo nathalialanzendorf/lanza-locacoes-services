@@ -119,6 +119,61 @@ Verifique: `GET /api/auth/status` → `"jwtConfigured": true`.
 
 > **Nota:** o cluster RDS está em **us-east-1** (não sa-east-1).
 
+## Portais — Rastreame e Pedágio Digital (login automático)
+
+Na Vercel **não há browser** — syncs e cron usam login por API. DETRAN/SigaPay continuam a exigir tokens capturados localmente (`login-*.ps1`).
+
+### Rastreame (recomendado: login + senha)
+
+| Variável | Valor |
+|----------|-------|
+| `RASTREAME_LOGIN` | E-mail de acesso ao rastreame.com.br |
+| `RASTREAME_SENHA` | Senha do portal |
+
+A API obtém o JWT automaticamente em cada pedido (`POST /auth/rest/login`). Opcional: `RASTREAME_AUTH` (token em cache) — **não é API key**.
+
+Verificar após redeploy:
+
+```bash
+curl https://api.lanzalocacoes.vercel.app/api/rastreame/auth
+# esperado: "configurado": true, "metodo": "login"
+```
+
+### Pedágio Digital (login + senha + reCAPTCHA)
+
+| Variável | Valor |
+|----------|-------|
+| `PEDAGIO_DIGITAL_LOGIN` | CPF (só dígitos ou formatado) |
+| `PEDAGIO_DIGITAL_SENHA` | Senha do portal |
+| `PEDAGIO_DIGITAL_CAPTCHA_PROVIDER` | `capsolver` *(default)* \| `2captcha` \| `anticaptcha` |
+| `PEDAGIO_DIGITAL_CAPTCHA_APIKEY` | API key do serviço solver |
+
+O login BFF exige **reCAPTCHA v2** — na Vercel é obrigatório um solver pago ou, como alternativa temporária, `PEDAGIO_DIGITAL_COOKIE` + `PEDAGIO_DIGITAL_CSRF` capturados localmente (`.\scripts\login-pedagio.ps1`; expiram em poucos minutos).
+
+### Gravar via CLI
+
+```powershell
+cd D:\Dropbox\Aworklanza\lanza-locacoes-services
+$env:VERCEL_TOKEN = "..."   # vercel.com/account/tokens
+
+# Ler credenciais do env do utilizador Windows:
+.\scripts\set-vercel-portal-env.ps1
+
+# Ou passar explicitamente:
+.\scripts\set-vercel-portal-env.ps1 `
+  -RastreameLogin "email@exemplo.com" -RastreameSenha "..." `
+  -PedagioLogin "12345678901" -PedagioSenha "..." `
+  -PedagioCaptchaProvider capsolver -PedagioCaptchaApiKey "..."
+
+# Wrapper unificado (login local + Vercel):
+.\scripts\login-todos.ps1 -SomenteVercel `
+  -RastreameLogin "..." -RastreameSenha "..." `
+  -PedagioCpf "..." -PedagioSenha "..." `
+  -PedagioCaptchaProvider capsolver -PedagioCaptchaApiKey "..."
+```
+
+Depois: **Redeploy Production** na Vercel.
+
 ## Autenticação
 
 | Ambiente | Método |

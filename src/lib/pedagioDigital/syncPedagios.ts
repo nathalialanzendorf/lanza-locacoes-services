@@ -361,11 +361,16 @@ export function loadPlacasParaSync(placaFiltro?: string): string[] {
 export async function sincronizarPedagiosFrota(opts?: {
   placa?: string;
   dryRun?: boolean;
+  onProgress?: (done: number, total: number, falhas: number) => void;
 }): Promise<SyncPedagiosResult[]> {
   if (!opts?.dryRun) await normalizarCategoriaPedagioNoDb();
 
   const placas = loadPlacasParaSync(opts?.placa);
   if (placas.length === 0) return [];
+
+  const total = placas.length;
+  let falhasAcum = 0;
+  opts?.onProgress?.(0, total, 0);
 
   let porPlaca: Map<string, PassagemPedagio[]>;
   try {
@@ -376,6 +381,8 @@ export async function sincronizarPedagiosFrota(opts?: {
     // aviso repetido por placa, fingindo que processou a frota.
     if (e instanceof PedagioAuthError) throw e;
     const msg = e instanceof Error ? e.message : String(e);
+    falhasAcum = placas.length;
+    opts?.onProgress?.(total, total, falhasAcum);
     return placas.map((placa) => ({
       placa: formatPlacaHyphen(placa),
       novos: 0,
@@ -386,11 +393,15 @@ export async function sincronizarPedagiosFrota(opts?: {
     }));
   }
 
-  return Promise.all(
-    placas.map((placa) =>
-      processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
-        dryRun: opts?.dryRun,
-      }),
-    ),
-  );
+  const results: SyncPedagiosResult[] = [];
+  for (let i = 0; i < placas.length; i++) {
+    const placa = placas[i]!;
+    const r = await processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
+      dryRun: opts?.dryRun,
+    });
+    results.push(r);
+    if (r.avisos.length > 0) falhasAcum++;
+    opts?.onProgress?.(i + 1, total, falhasAcum);
+  }
+  return results;
 }

@@ -102,10 +102,15 @@ export async function sincronizarDespesasFrotaDetranSc(opts?: {
   placa?: string;
   dryRun?: boolean;
   delayMs?: number;
+  onProgress?: (done: number, total: number, falhas: number) => void;
 }): Promise<SyncDespesasResult[]> {
   const veiculos = loadVeiculosParaSync(opts?.placa);
   const out: SyncDespesasResult[] = [];
   const delay = opts?.delayMs ?? 1500;
+  const total = veiculos.length;
+  let falhasAcum = 0;
+
+  opts?.onProgress?.(0, total, 0);
 
   for (let i = 0; i < veiculos.length; i++) {
     const v = veiculos[i]!;
@@ -114,7 +119,9 @@ export async function sincronizarDespesasFrotaDetranSc(opts?: {
         dryRun: opts?.dryRun,
       });
       out.push(r);
+      if (r.avisos.length > 0) falhasAcum++;
     } catch (e) {
+      falhasAcum++;
       out.push({
         placa: formatPlacaHyphen(v.placa),
         novos: 0,
@@ -124,6 +131,7 @@ export async function sincronizarDespesasFrotaDetranSc(opts?: {
         avisos: [e instanceof Error ? e.message : String(e)],
       });
     }
+    opts?.onProgress?.(i + 1, total, falhasAcum);
     if (i < veiculos.length - 1) {
       await new Promise((r) => setTimeout(r, delay));
     }

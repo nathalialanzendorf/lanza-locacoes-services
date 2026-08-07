@@ -1,117 +1,50 @@
-import crypto from "node:crypto";
+import type { JobProgress, JobStatus } from "./jobsTypes.js";
+import {
+  storeCreateJob,
+  storeGetJob,
+  storeListJobs,
+  storeMarkJobCompleted,
+  storeMarkJobFailed,
+  storeMarkJobRunning,
+  storeUpdateJobProgress,
+} from "./jobsStore.js";
 
-export type JobStatus = "pending" | "running" | "completed" | "failed";
+export type { JobProgress, JobStatus, SyncJob } from "./jobsTypes.js";
 
-export type JobProgress = {
-  total: number;
-  done: number;
-  percent: number;
-  sucesso: number;
-  falhas: number;
-  /** Linhas por veículo (sync FIPE). */
-  resultados?: Array<{
-    placa: string;
-    marcaModelo?: string;
-    anoModelo?: string;
-    ok: boolean;
-    fipeCodigo?: string;
-    fipeModelo?: string;
-    fipeValor?: string;
-    fipeReferencia?: string;
-    fipe?: string;
-    fonte?: "parallelum" | "placafipebrasil";
-    erro?: string;
-  }>;
-};
-
-export type SyncJob = {
-  id: string;
-  sync: string;
-  status: JobStatus;
-  createdAt: string;
-  startedAt?: string;
-  finishedAt?: string;
-  input: unknown;
-  result?: unknown;
-  error?: string;
-  progress?: JobProgress;
-};
-
-const jobs = new Map<string, SyncJob>();
-const MAX_JOBS = 100;
-
-function trimJobs(): void {
-  if (jobs.size <= MAX_JOBS) return;
-  const sorted = [...jobs.values()].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-  while (jobs.size > MAX_JOBS && sorted.length) {
-    const old = sorted.shift()!;
-    jobs.delete(old.id);
-  }
+export async function createJob(sync: string, input: unknown) {
+  return storeCreateJob(sync, input);
 }
 
-export function createJob(sync: string, input: unknown): SyncJob {
-  const job: SyncJob = {
-    id: crypto.randomUUID(),
-    sync,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-    input,
-  };
-  jobs.set(job.id, job);
-  trimJobs();
-  return job;
+export async function getJob(id: string) {
+  return storeGetJob(id);
 }
 
-export function getJob(id: string): SyncJob | null {
-  return jobs.get(id) ?? null;
+export async function listJobs(limit = 20) {
+  return storeListJobs(limit);
 }
 
-export function listJobs(limit = 20): SyncJob[] {
-  return [...jobs.values()]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, limit);
+export async function markJobRunning(id: string): Promise<void> {
+  await storeMarkJobRunning(id);
 }
 
-export function markJobRunning(id: string): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = "running";
-  job.startedAt = new Date().toISOString();
+export async function updateJobProgress(id: string, progress: JobProgress): Promise<void> {
+  await storeUpdateJobProgress(id, progress);
 }
 
-export function updateJobProgress(id: string, progress: JobProgress): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.progress = progress;
+export async function markJobCompleted(id: string, result: unknown): Promise<void> {
+  await storeMarkJobCompleted(id, result);
 }
 
-export function markJobCompleted(id: string, result: unknown): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = "completed";
-  job.finishedAt = new Date().toISOString();
-  job.result = result;
+export async function markJobFailed(id: string, error: string): Promise<void> {
+  await storeMarkJobFailed(id, error);
 }
 
-export function markJobFailed(id: string, error: string): void {
-  const job = jobs.get(id);
-  if (!job) return;
-  job.status = "failed";
-  job.finishedAt = new Date().toISOString();
-  job.error = error;
-}
-
-export function runJobAsync(
-  jobId: string,
-  fn: () => Promise<unknown>,
-): void {
-  markJobRunning(jobId);
-  void fn()
+export function runJobAsync(jobId: string, fn: () => Promise<unknown>): void {
+  void markJobRunning(jobId)
+    .then(() => fn())
     .then((result) => markJobCompleted(jobId, result))
     .catch((err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      markJobFailed(jobId, msg);
+      return markJobFailed(jobId, msg);
     });
 }

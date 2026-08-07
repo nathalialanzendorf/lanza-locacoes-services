@@ -74,17 +74,15 @@ export function registerEstacionamentoRoutes(routes: RouteDef[]): void {
     pattern: avisos.regex,
     paramNames: avisos.paramNames,
     handler: routeAsync(async (ctx) => {
-      const placaQ = ctx.query.get("placa");
-      if (!placaQ) return badRequest(ctx, 'Query "placa" é obrigatória');
+      const placaQ = ctx.query.get("placa")?.trim() || undefined;
       const statusRaw = ctx.query.get("status") ?? "aberto";
       if (!STATUS_VALIDOS.has(statusRaw)) {
         return badRequest(ctx, 'Query "status" inválida — use aberto, pago ou todos');
       }
       try {
-        const data = await estacionamentoService.listarAvisosPlaca(
-          placaQ,
-          statusRaw as AvisoStatus,
-        );
+        const data = placaQ
+          ? await estacionamentoService.listarAvisosPlaca(placaQ, statusRaw as AvisoStatus)
+          : await estacionamentoService.listarAvisosFrota(statusRaw as AvisoStatus);
         json(ctx.res, 200, data);
       } catch (err) {
         handleServiceError(ctx, err);

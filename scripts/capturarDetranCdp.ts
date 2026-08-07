@@ -1,19 +1,18 @@
 /**
- * Captura passiva (CDP) do token DETRAN SC a partir de um Edge NORMAL.
+ * Captura passiva (CDP) do token DETRAN SC a partir de Chrome REAL.
  *
- * Por que assim: o Cloudflare Turnstile do portal recusa navegadores
- * automatizados (Playwright/Selenium → `navigator.webdriver=true`). Aqui o Edge
- * é aberto como um navegador comum (só com a porta de depuração) e nós apenas
- * "ouvimos" a rede via CDP, habilitando somente o domínio Network — sem injetar
- * automação. O login (certificado A1) e o captcha são feitos por você, no browser.
+ * Liga-se a cada ABA (nao ao browser root) para evitar o banner
+ * "Debugger is paused" que impede o site de carregar.
  *
  * Captura, de chamadas a backend.detran.sc.gov.br/transito-api:
  *   - Authorization (Bearer)  -> DETRAN_SC_AUTH
  *   - X-Empresa               -> DETRAN_SC_EMPRESA
  *   - X-App-Version           -> DETRAN_SC_APP_VERSION
- *   - tickets `resposta-consulta?t=...` (com a placa do `requisitar-consulta?p=`)
  *
  * Uso: npx tsx scripts/capturarDetranCdp.ts
+ *      npx tsx scripts/capturarDetranCdp.ts --url="https://sso.acesso.gov.br/login?..."
+ *
+ * URL inicial: --url= | DETRAN_SC_LOGIN_URL | servicos.detran.sc.gov.br
  */
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -22,12 +21,11 @@ import path from "node:path";
 import WebSocket from "ws";
 
 const PORT = 9222;
-const PORTAL = "https://servicos.detran.sc.gov.br/";
+const DEFAULT_PORTAL = "https://servicos.detran.sc.gov.br/";
+const urlArg = process.argv.find((a) => a.startsWith("--url="))?.slice(6)?.trim();
+const START_URL = urlArg || process.env.DETRAN_SC_LOGIN_URL?.trim() || DEFAULT_PORTAL;
 const API_HOST = "backend.detran.sc.gov.br";
 const OUT_FILE = path.join(os.tmpdir(), "detran_capture.json");
-// Perfil DEDICADO (não conflita com o Chrome principal e mantém a porta de
-// depuração estável — o perfil padrão faz o Chrome se reiniciar e perder a flag).
-// O certificado A1 vem do repositório do Windows, então o login é rápido.
 const USER_DATA_DIR =
   process.env.CHROME_USER_DATA_DIR ?? path.join(os.tmpdir(), "lanza_chrome_detran");
 
@@ -37,12 +35,22 @@ const CHROME_CANDS = [
   path.join(os.homedir(), "AppData/Local/Google/Chrome/Application/chrome.exe"),
 ];
 
+type TabTarget = {
+  id: string;
+  type: string;
+  url: string;
+  webSocketDebuggerUrl?: string;
+};
+
 type Ticket = { placa: string; ticket: string };
 const cap: { auth?: string; empresa?: string; appVersion?: string; tickets: Ticket[] } = {
   tickets: [],
 };
 let authPrinted = false;
 let lastPlaca = "";
+const pageSockets = new Map<string, WebSocket>();
+const keepOpen =
+  process.argv.includes("--keep-open") || process.env.DETRAN_CDP_KEEP_OPEN === "1";
 
 function persist(): void {
   fs.writeFileSync(OUT_FILE, JSON.stringify(cap, null, 2), "utf8");
@@ -63,34 +71,32 @@ function acharChrome(): string {
   return "chrome";
 }
 
-async function devtoolsUp(): Promise<string | undefined> {
+async function listarAbas(): Promise<TabTarget[]> {
   try {
-    const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
-    if (r.ok) {
-      const j = (await r.json()) as { webSocketDebuggerUrl?: string };
-      return j.webSocketDebuggerUrl;
-    }
+    const r = await fetch(`http://127.0.0.1:${PORT}/json/list`);
+    if (!r.ok) return [];
+    const tabs = (await r.json()) as TabTarget[];
+    return tabs.filter((t) => t.type === "page" && t.webSocketDebuggerUrl);
   } catch {
-    /* não está em pé */
+    return [];
   }
-  return undefined;
 }
 
+async function devtoolsUp(): Promise<boolean> {
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
 
-async function esperarDevtools(): Promise<string> {
+async function esperarDevtools(): Promise<void> {
   for (let i = 0; i < 60; i++) {
-    try {
-      const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
-      if (r.ok) {
-        const j = (await r.json()) as { webSocketDebuggerUrl?: string };
-        if (j.webSocketDebuggerUrl) return j.webSocketDebuggerUrl;
-      }
-    } catch {
-      /* ainda subindo */
-    }
+    if (await devtoolsUp()) return;
     await new Promise((res) => setTimeout(res, 500));
   }
-  throw new Error("DevTools não respondeu na porta de depuração.");
+  throw new Error("DevTools nao respondeu na porta de depuracao.");
 }
 
 function lerHeader(headers: Record<string, string>, nome: string): string | undefined {
@@ -128,83 +134,194 @@ function tratarRequest(url: string, headers: Record<string, string>): void {
   }
 }
 
-async function main(): Promise<void> {
-  let wsUrl = await devtoolsUp();
-  if (!wsUrl) {
-    const chrome = acharChrome();
-    const child = spawn(
-      chrome,
-      [
-        `--remote-debugging-port=${PORT}`,
-        `--user-data-dir=${USER_DATA_DIR}`,
-        "--no-first-run",
-        "--no-default-browser-check",
-        PORTAL,
-      ],
-      { detached: true, stdio: "ignore" },
-    );
-    child.unref();
-    wsUrl = await esperarDevtools();
-  }
-  console.log("Chrome (janela dedicada) aberto. Faça login com o certificado A1 e consulte os veículos.");
-  console.log(
-    "O gov.br exige hCaptcha no login por certificado. Resolva o captcha na janela — se falhar, o POST devolve 302 de volta ao login (não é bug do script).",
-  );
-  console.log("O captcha funciona porque NÃO é automatizado. Feche essa janela para finalizar (timeout 15 min).");
+function anexarAba(tab: TabTarget): void {
+  const wsUrl = tab.webSocketDebuggerUrl!;
+  if (pageSockets.has(wsUrl)) return;
 
   const ws = new WebSocket(wsUrl);
+  pageSockets.set(wsUrl, ws);
   let msgId = 1;
-  const send = (method: string, params: Record<string, unknown> = {}, sessionId?: string) => {
-    ws.send(JSON.stringify({ id: msgId++, method, params, sessionId }));
-  };
 
   ws.on("open", () => {
-    // Anexa a todos os alvos (páginas) e habilita SÓ o domínio Network.
-    send("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
+    ws.send(JSON.stringify({ id: msgId++, method: "Network.enable", params: {} }));
   });
 
   ws.on("message", (data: WebSocket.RawData) => {
-    let msg: any;
+    let msg: { method?: string; params?: Record<string, unknown> };
     try {
       msg = JSON.parse(data.toString());
     } catch {
       return;
     }
-    if (msg.method === "Target.attachedToTarget") {
-      const sid = msg.params?.sessionId as string | undefined;
-      if (sid) send("Network.enable", {}, sid);
-    } else if (msg.method === "Network.requestWillBeSent") {
-      const req = msg.params?.request;
-      if (req?.url) tratarRequest(req.url as string, (req.headers ?? {}) as Record<string, string>);
+    if (msg.method === "Network.requestWillBeSent") {
+      const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
+      if (req?.url) tratarRequest(req.url, req.headers ?? {});
     }
   });
 
+  ws.on("close", () => {
+    pageSockets.delete(wsUrl);
+  });
+
+  ws.on("error", () => {
+    pageSockets.delete(wsUrl);
+  });
+}
+
+async function anexarTodasAbas(): Promise<void> {
+  for (const tab of await listarAbas()) {
+    anexarAba(tab);
+  }
+}
+
+async function navegarPrimeiraAba(url: string): Promise<void> {
+  const tabs = await listarAbas();
+  const tab = tabs[0];
+  if (!tab?.webSocketDebuggerUrl) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const ws = new WebSocket(tab.webSocketDebuggerUrl!);
+    ws.on("open", () => {
+      ws.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url } }));
+    });
+    ws.on("error", reject);
+    setTimeout(() => {
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, 800);
+  });
+}
+
+async function abrirChrome(): Promise<void> {
+  fs.mkdirSync(USER_DATA_DIR, { recursive: true });
+  const child = spawn(
+    acharChrome(),
+    [
+      `--remote-debugging-port=${PORT}`,
+      "--remote-allow-origins=*",
+      `--user-data-dir=${USER_DATA_DIR}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-popup-blocking",
+      START_URL,
+    ],
+    { detached: true, stdio: "ignore" },
+  );
+  child.unref();
+  await esperarDevtools();
+  await new Promise((r) => setTimeout(r, 800));
+}
+
+function fecharSockets(): void {
+  for (const ws of pageSockets.values()) {
+    try {
+      ws.close();
+    } catch {
+      /* ignore */
+    }
+  }
+  pageSockets.clear();
+}
+
+/** Fecha o Chrome desta sessao CDP (porta 9222 / perfil DETRAN). */
+async function fecharChrome(): Promise<void> {
+  if (keepOpen) {
+    console.log("Chrome mantido aberto (--keep-open / DETRAN_CDP_KEEP_OPEN=1).");
+    return;
+  }
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/json/version`);
+    if (!r.ok) return;
+    const j = (await r.json()) as { webSocketDebuggerUrl?: string };
+    if (!j.webSocketDebuggerUrl) return;
+
+    await new Promise<void>((resolve) => {
+      const ws = new WebSocket(j.webSocketDebuggerUrl!);
+      const done = () => {
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
+        resolve();
+      };
+      ws.on("open", () => {
+        ws.send(JSON.stringify({ id: 1, method: "Browser.close", params: {} }));
+        setTimeout(done, 600);
+      });
+      ws.on("error", done);
+      setTimeout(done, 2000);
+    });
+    console.log("Chrome fechado automaticamente.");
+  } catch {
+    console.log("Nao foi possivel fechar o Chrome via CDP — feche a janela manualmente.");
+  }
+}
+
+async function main(): Promise<void> {
+  if (START_URL !== DEFAULT_PORTAL) {
+    console.log(`URL de login: ${START_URL}`);
+    if (/sso\.acesso\.gov\.br/i.test(START_URL)) {
+      console.log(
+        "AVISO: URL directa gov.br — authorization_id expira rapido. Se falhar, use -Fresh e entre por servicos.detran.sc.gov.br.",
+      );
+    }
+  }
+
+  const jaAberto = await devtoolsUp();
+  if (!jaAberto) {
+    await abrirChrome();
+  } else {
+    console.log("Chrome CDP ja activo na porta 9222 — a navegar sem abrir popup.");
+    await navegarPrimeiraAba(START_URL);
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  console.log(`Chrome (janela dedicada) — ${START_URL}`);
+  console.log(
+    "Faca login com certificado A1. Consulte um veiculo — ao capturar auth+empresa o Chrome fecha sozinho.",
+  );
+  console.log("Timeout 15 min. Para manter o browser aberto: --keep-open");
+
+  await anexarTodasAbas();
+
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, 15 * 60 * 1000);
+    let devtoolsFails = 0;
     const poll = setInterval(() => {
+      void anexarTodasAbas();
       if (captured()) {
         clearInterval(poll);
         clearTimeout(timer);
-        console.log("Sessão capturada (auth + empresa) — pode fechar o Chrome.");
+        console.log("Sessao capturada (auth + empresa).");
         resolve();
         return;
       }
-      // Encerra quando o Chrome fechar (DevTools deixa de responder).
-      fetch(`http://127.0.0.1:${PORT}/json/version`).catch(() => {
-        clearInterval(poll);
-        clearTimeout(timer);
-        resolve();
-      });
+      fetch(`http://127.0.0.1:${PORT}/json/version`)
+        .then((r) => {
+          if (r.ok) devtoolsFails = 0;
+        })
+        .catch(() => {
+          devtoolsFails++;
+          if (devtoolsFails >= 3) {
+            clearInterval(poll);
+            clearTimeout(timer);
+            resolve();
+          }
+        });
     }, 1500);
   });
 
-  try {
-    ws.close();
-  } catch {
-    /* ignore */
+  fecharSockets();
+  if (captured()) {
+    await fecharChrome();
   }
   console.log(
-    `FIM. token=${cap.auth ? "OK" : "não capturado"} | empresa=${cap.empresa ?? "?"} | tickets=${cap.tickets.length}`,
+    `FIM. token=${cap.auth ? "OK" : "nao capturado"} | empresa=${cap.empresa ?? "?"} | tickets=${cap.tickets.length}`,
   );
 }
 

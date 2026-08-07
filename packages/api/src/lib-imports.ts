@@ -641,6 +641,7 @@ export {
 
 export {
   listarAvisos,
+  listarAvisosLote,
   type AvisoStatus,
 } from "../../../src/lib/sigapay/avisos.js";
 
