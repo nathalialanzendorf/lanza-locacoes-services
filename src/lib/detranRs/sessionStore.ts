@@ -1,12 +1,17 @@
 /**
  * Persistência da sessão DETRAN RS (Bearer + X-User-Id) — Postgres + ficheiro local.
  */
-import fs from "node:fs";
 import path from "node:path";
 
 import { pgQuery, useRelationalStore } from "@lanza/db";
 
 import { REPO_ROOT } from "../repoRoot.js";
+import {
+  assertPersistedOnVercel,
+  deleteSessionFile,
+  readSessionFile,
+  writeSessionFile,
+} from "../sessionStore/localCache.js";
 
 export type DetranRsStoredSession = {
   auth: string;
@@ -50,33 +55,15 @@ function sessionFromEnv(): DetranRsStoredSession | null {
 }
 
 function readFileSession(): DetranRsStoredSession | null {
-  try {
-    const raw = fs.readFileSync(SESSION_FILE, "utf8");
-    const s = JSON.parse(raw) as DetranRsStoredSession;
-    if (s?.auth?.trim() && s?.userId?.trim()) {
-      return {
-        auth: normalizeAuth(s.auth),
-        userId: s.userId.trim(),
-        updatedAt: s.updatedAt || new Date(0).toISOString(),
-      };
-    }
-  } catch {
-    /* sem cache */
+  const s = readSessionFile<DetranRsStoredSession>(SESSION_FILE);
+  if (s?.auth?.trim() && s?.userId?.trim()) {
+    return {
+      auth: normalizeAuth(s.auth),
+      userId: s.userId.trim(),
+      updatedAt: s.updatedAt || new Date(0).toISOString(),
+    };
   }
   return null;
-}
-
-function writeFileSession(session: DetranRsStoredSession): void {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2) + "\n", "utf8");
-}
-
-function deleteFileSession(): void {
-  try {
-    fs.rmSync(SESSION_FILE, { force: true });
-  } catch {
-    /* ignore */
-  }
 }
 
 async function readSqlSession(): Promise<DetranRsStoredSession | null> {
@@ -139,13 +126,14 @@ export async function saveDetranRsSession(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  writeFileSession(session);
-  await writeSqlSession(session);
+  const sqlOk = await writeSqlSession(session);
+  writeSessionFile(SESSION_FILE, session);
+  assertPersistedOnVercel(sqlOk, "DETRAN RS");
   return session;
 }
 
 export async function clearStoredDetranRsSession(): Promise<void> {
-  deleteFileSession();
+  deleteSessionFile(SESSION_FILE);
   await deleteSqlSession();
 }
 

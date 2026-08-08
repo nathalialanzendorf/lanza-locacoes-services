@@ -177,6 +177,18 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
         const placa = ctx.query.get("placa")?.trim() || undefined;
         const renavam = ctx.query.get("renavam")?.trim() || undefined;
         const fonte = ctx.query.get("fonte")?.trim() || undefined;
+        const frota = !placa && !renavam;
+        const asyncMode = parseBoolQuery(ctx.query.get("async"), frota);
+
+        if (asyncMode) {
+          const job = await createJob("veiculo-portais", { placa, renavam, fonte });
+          runJobAsync(job.id, () =>
+            veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte }),
+          );
+          json(ctx.res, 202, { jobId: job.id, status: job.status });
+          return;
+        }
+
         const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
         json(ctx.res, 200, { data });
       } catch (err) {

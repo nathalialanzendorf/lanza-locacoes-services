@@ -1,12 +1,17 @@
 /**
  * Persistência da sessão SigaPay (cookie + token) — Postgres (produção) + ficheiro local.
  */
-import fs from "node:fs";
 import path from "node:path";
 
 import { pgQuery, useRelationalStore } from "@lanza/db";
 
 import { REPO_ROOT } from "../repoRoot.js";
+import {
+  assertPersistedOnVercel,
+  deleteSessionFile,
+  readSessionFile,
+  writeSessionFile,
+} from "../sessionStore/localCache.js";
 
 export type SigapayStoredSession = {
   cookie?: string;
@@ -51,34 +56,16 @@ function sessionFromEnv(): SigapayStoredSession | null {
 }
 
 function readFileSession(): SigapayStoredSession | null {
-  try {
-    const raw = fs.readFileSync(SESSION_FILE, "utf8");
-    const s = JSON.parse(raw) as SigapayStoredSession;
-    if (s?.cookie?.trim() || s?.token?.trim()) {
-      return {
-        cookie: s.cookie?.trim() || undefined,
-        token: s.token ? tokenLimpo(s.token) : undefined,
-        apiBase: s.apiBase?.trim() || null,
-        updatedAt: s.updatedAt || new Date(0).toISOString(),
-      };
-    }
-  } catch {
-    /* sem cache */
+  const s = readSessionFile<SigapayStoredSession>(SESSION_FILE);
+  if (s?.cookie?.trim() || s?.token?.trim()) {
+    return {
+      cookie: s.cookie?.trim() || undefined,
+      token: s.token ? tokenLimpo(s.token) : undefined,
+      apiBase: s.apiBase?.trim() || null,
+      updatedAt: s.updatedAt || new Date(0).toISOString(),
+    };
   }
   return null;
-}
-
-function writeFileSession(session: SigapayStoredSession): void {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2) + "\n", "utf8");
-}
-
-function deleteFileSession(): void {
-  try {
-    fs.rmSync(SESSION_FILE, { force: true });
-  } catch {
-    /* ignore */
-  }
 }
 
 async function readSqlSession(): Promise<SigapayStoredSession | null> {
@@ -146,13 +133,14 @@ export async function saveSigapaySession(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  writeFileSession(session);
-  await writeSqlSession(session);
+  const sqlOk = await writeSqlSession(session);
+  writeSessionFile(SESSION_FILE, session);
+  assertPersistedOnVercel(sqlOk, "SigaPay");
   return session;
 }
 
 export async function clearStoredSigapaySession(): Promise<void> {
-  deleteFileSession();
+  deleteSessionFile(SESSION_FILE);
   await deleteSqlSession();
 }
 

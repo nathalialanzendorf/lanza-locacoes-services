@@ -10,6 +10,7 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
+import { obterBrowserWsPortal } from "../cdp/portalChrome.js";
 import { cdpKeepOpen, fecharChromeCdp } from "../cdp/fecharChromeCdp.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { clearPedagioSession } from "./auth.js";
@@ -17,6 +18,7 @@ import { savePedagioSession } from "./sessionStore.js";
 
 const DEBUG_PORT = Number(process.env.PEDAGIO_CDP_PORT ?? "9225");
 const PORTAL = "https://pedagiodigital.com/";
+const PORTAL_HOST_RE = /(^|\.)pedagiodigital\.com$/i;
 const CAPTURE_TIMEOUT_MS = 15 * 60 * 1000;
 const keepChromeOpen =
   cdpKeepOpen() || process.env.PEDAGIO_CDP_KEEP_OPEN === "1";
@@ -34,6 +36,8 @@ const CHROME_CANDS = [
 const COOKIE_URLS = [
   "https://pedagiodigital.com",
   "https://www.pedagiodigital.com",
+  "https://pedagiodigital.com/bff",
+  "https://www.pedagiodigital.com/bff",
 ];
 
 type TabTarget = {
@@ -70,7 +74,7 @@ export type PedagioCaptureStartOpts = {
 
 type Cap = PedagioCapturedSession;
 
-type CdpCookie = { name: string; value: string };
+type CdpCookie = { name: string; value: string; domain?: string };
 
 let state: PedagioCaptureState = { status: "idle", available: isPedagioCaptureAvailable() };
 let chromeChild: ChildProcess | null = null;
@@ -127,25 +131,45 @@ function sessaoCompleta(c: Cap): boolean {
   return Boolean(c.cookie?.includes("bff_sid") && c.csrf?.trim());
 }
 
+function cookiesPedagio(cookies: CdpCookie[]): CdpCookie[] {
+  return cookies.filter((c) => {
+    if (!c.domain) return true;
+    return /(^|\.)pedagiodigital\.com$/i.test(c.domain.replace(/^\./, ""));
+  });
+}
+
 function montarSessaoDeCookies(cookies: CdpCookie[]): void {
+  const filtrados = cookiesPedagio(cookies);
+  if (!filtrados.length) return;
+
   const byName = new Map<string, string>();
-  for (const c of cookies) byName.set(c.name, c.value);
+  for (const c of filtrados) byName.set(c.name, c.value);
   if (!byName.has("bff_sid")) return;
-  const csrf = byName.get("bff-csrf") ?? byName.get("XSRF-TOKEN") ?? "";
-  if (!csrf) return;
+
   const cookieHeader = [...byName].map(([k, v]) => `${k}=${v}`).join("; ");
   cap.cookie = cookieHeader;
-  cap.csrf = csrf;
+
+  const csrf = byName.get("bff-csrf") ?? byName.get("XSRF-TOKEN") ?? "";
+  if (csrf) cap.csrf = csrf;
+
+  atualizarMensagemParcial();
   if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
 }
 
-async function devtoolsUp(): Promise<boolean> {
-  try {
-    const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`);
-    return r.ok;
-  } catch {
-    return false;
+function atualizarMensagemParcial(): void {
+  if (state.status !== "waiting") return;
+  if (cap.cookie?.includes("bff_sid") && !cap.csrf?.trim()) {
+    state = {
+      ...state,
+      message:
+        "Login detectado — carregue a lista de placas no portal (F5 se necessário) para capturar cookie + CSRF.",
+    };
   }
+}
+
+async function devtoolsUp(): Promise<boolean> {
+  const info = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+  return Boolean(info.wsUrl && !info.wrongPortal);
 }
 
 async function listarAbas(): Promise<TabTarget[]> {
@@ -238,11 +262,17 @@ function tratarRequest(url: string, headers: Record<string, string>): void {
   if (!hostOk(url)) return;
 
   const cookie = lerHeader(headers, "cookie");
-  if (!cookie?.includes("bff_sid")) return;
-  const csrf = lerHeader(headers, "x-csrf-token") || csrfFromCookie(cookie);
-  if (!csrf) return;
-  cap.cookie = cookie;
-  cap.csrf = csrf;
+  const csrfHeader = lerHeader(headers, "x-csrf-token");
+
+  if (cookie?.includes("bff_sid")) cap.cookie = cookie;
+  if (csrfHeader) {
+    cap.csrf = csrfHeader;
+  } else if (cookie) {
+    const csrfCookie = csrfFromCookie(cookie);
+    if (csrfCookie) cap.csrf = csrfCookie;
+  }
+
+  atualizarMensagemParcial();
   if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
 }
 
@@ -443,7 +473,14 @@ export async function startPedagioCapture(
   };
 
   try {
-    const jaAberto = await devtoolsUp();
+    const chromeInfo = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+    if (chromeInfo.wrongPortal) {
+      throw new Error(
+        `Porta CDP ${DEBUG_PORT} está em uso por outro portal. Feche esse Chrome ou defina PEDAGIO_CDP_PORT.`,
+      );
+    }
+
+    const jaAberto = Boolean(chromeInfo.wsUrl);
     if (!jaAberto) {
       await abrirChrome();
     } else {
@@ -457,7 +494,7 @@ export async function startPedagioCapture(
       status: "waiting",
       available: true,
       message:
-        "Chrome aberto. Faça login no pedagiodigital.com (CPF/senha + reCAPTCHA) — ao capturar cookie + CSRF, o Chrome fecha sozinho.",
+        "Chrome aberto. Faça login no pedagiodigital.com (CPF/senha + reCAPTCHA) e carregue a lista de placas — cookie + CSRF serão capturados automaticamente.",
       startedAt: state.startedAt,
     };
 

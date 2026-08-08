@@ -20,6 +20,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { REPO_ROOT } from "../repoRoot.js";
+import {
+  deleteSessionFile,
+  readSessionFile,
+  writeSessionFile,
+} from "../sessionStore/localCache.js";
 import type { PedagioSession } from "./auth.js";
 
 const CACHE_DIR = path.join(REPO_ROOT, ".cache", "pedagio-digital");
@@ -46,30 +51,20 @@ function chromeExecutable(): string | undefined {
 
 /** Lê a sessão capturada do ficheiro de cache (se existir). */
 export function readCachedSession(): PedagioSession | null {
-  try {
-    const raw = fs.readFileSync(SESSION_FILE, "utf8");
-    const s = JSON.parse(raw) as StoredSession;
-    if (s?.cookie && s?.csrf) return { cookie: s.cookie, csrf: s.csrf };
-  } catch {
-    /* sem cache */
-  }
+  const s = readSessionFile<StoredSession>(SESSION_FILE);
+  if (s?.cookie && s?.csrf) return { cookie: s.cookie, csrf: s.csrf };
   return null;
 }
 
 /** Grava a sessão capturada no ficheiro de cache. */
 function writeCachedSession(session: PedagioSession): void {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
   const payload: StoredSession = { ...session, savedAt: new Date().toISOString() };
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(payload, null, 2), "utf8");
+  writeSessionFile(SESSION_FILE, payload);
 }
 
 /** Apaga a sessão em cache (após 401 confirmado). */
 export function clearCachedSession(): void {
-  try {
-    fs.rmSync(SESSION_FILE, { force: true });
-  } catch {
-    /* ignore */
-  }
+  deleteSessionFile(SESSION_FILE);
 }
 
 type AnyContext = any;

@@ -1,12 +1,17 @@
 /**
  * Persistência da sessão Pedágio Digital (cookie + CSRF) — Postgres + ficheiro local.
  */
-import fs from "node:fs";
 import path from "node:path";
 
 import { pgQuery, useRelationalStore } from "@lanza/db";
 
 import { REPO_ROOT } from "../repoRoot.js";
+import {
+  assertPersistedOnVercel,
+  deleteSessionFile,
+  readSessionFile,
+  writeSessionFile,
+} from "../sessionStore/localCache.js";
 
 export type PedagioStoredSession = {
   cookie: string;
@@ -41,33 +46,15 @@ function sessionFromEnv(): PedagioStoredSession | null {
 }
 
 function readFileSession(): PedagioStoredSession | null {
-  try {
-    const raw = fs.readFileSync(SESSION_FILE, "utf8");
-    const s = JSON.parse(raw) as PedagioStoredSession;
-    if (s?.cookie?.trim() && s?.csrf?.trim()) {
-      return {
-        cookie: s.cookie.trim(),
-        csrf: s.csrf.trim(),
-        updatedAt: s.updatedAt || new Date(0).toISOString(),
-      };
-    }
-  } catch {
-    /* sem cache */
+  const s = readSessionFile<PedagioStoredSession>(SESSION_FILE);
+  if (s?.cookie?.trim() && s?.csrf?.trim()) {
+    return {
+      cookie: s.cookie.trim(),
+      csrf: s.csrf.trim(),
+      updatedAt: s.updatedAt || new Date(0).toISOString(),
+    };
   }
   return null;
-}
-
-function writeFileSession(session: PedagioStoredSession): void {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2) + "\n", "utf8");
-}
-
-function deleteFileSession(): void {
-  try {
-    fs.rmSync(SESSION_FILE, { force: true });
-  } catch {
-    /* ignore */
-  }
 }
 
 async function readSqlSession(): Promise<PedagioStoredSession | null> {
@@ -130,13 +117,14 @@ export async function savePedagioSession(input: {
     updatedAt: new Date().toISOString(),
   };
 
-  writeFileSession(session);
-  await writeSqlSession(session);
+  const sqlOk = await writeSqlSession(session);
+  writeSessionFile(SESSION_FILE, session);
+  assertPersistedOnVercel(sqlOk, "Pedágio Digital");
   return session;
 }
 
 export async function clearStoredPedagioSession(): Promise<void> {
-  deleteFileSession();
+  deleteSessionFile(SESSION_FILE);
   await deleteSqlSession();
 }
 

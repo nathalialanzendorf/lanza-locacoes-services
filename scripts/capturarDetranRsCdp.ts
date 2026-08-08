@@ -17,7 +17,7 @@ import WebSocket from "ws";
 
 import { fecharChromeCdp } from "./lib/fecharChromeCdp.js";
 
-const PORT = Number(process.env.DETRAN_RS_CDP_PORT ?? "9223");
+const PORT = Number(process.env.DETRAN_RS_CDP_PORT ?? "9227");
 const PORTAL = "https://pcsdetran.rs.gov.br/";
 const API_HOST = "pcsdetran.procergs.com.br";
 const OUT_FILE = path.join(os.tmpdir(), "detran_rs_capture.json");
@@ -33,6 +33,7 @@ const CHROME_CANDS = [
 
 const cap: { auth?: string; userId?: string } = {};
 let okPrinted = false;
+const pendingRequestUrls = new Map<string, string>();
 
 function persist(): void {
   fs.writeFileSync(OUT_FILE, JSON.stringify(cap, null, 2), "utf8");
@@ -144,8 +145,16 @@ async function main(): Promise<void> {
       const sid = msg.params?.sessionId as string | undefined;
       if (sid) send("Network.enable", {}, sid);
     } else if (msg.method === "Network.requestWillBeSent") {
+      const requestId = msg.params?.requestId as string | undefined;
       const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
+      if (requestId && req?.url) pendingRequestUrls.set(requestId, req.url);
       if (req?.url) tratarRequest(req.url, req.headers ?? {});
+    } else if (msg.method === "Network.requestWillBeSentExtraInfo") {
+      const requestId = msg.params?.requestId as string | undefined;
+      const url = requestId ? pendingRequestUrls.get(requestId) : undefined;
+      const headers = msg.params?.headers as Record<string, string> | undefined;
+      if (url && headers) tratarRequest(url, headers);
+      if (requestId) pendingRequestUrls.delete(requestId);
     }
   });
 

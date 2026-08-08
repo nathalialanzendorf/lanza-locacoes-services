@@ -1,5 +1,6 @@
 /**
- * Captura passiva da sessão DETRAN RS via Chrome real + CDP (Network por aba).
+ * Captura passiva da sessão DETRAN RS via Chrome real + CDP (browser root + auto-attach).
+ * O padrão auto-attach captura pedidos em iframes/workers (Gov.br → PROCERGS).
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
@@ -8,13 +9,15 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
+import { obterBrowserWsPortal } from "../cdp/portalChrome.js";
 import { cdpKeepOpen, fecharChromeCdp } from "../cdp/fecharChromeCdp.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { clearDetranRsRuntimeSession } from "./auth.js";
 import { saveDetranRsSession } from "./sessionStore.js";
 
-const DEBUG_PORT = Number(process.env.DETRAN_RS_CDP_PORT ?? "9226");
+const DEBUG_PORT = Number(process.env.DETRAN_RS_CDP_PORT ?? "9227");
 const PORTAL = "https://pcsdetran.rs.gov.br/";
+const PORTAL_HOST_RE = /pcsdetran\.(rs\.gov\.br|procergs\.com\.br)/i;
 const API_HOST = "pcsdetran.procergs.com.br";
 const CAPTURE_TIMEOUT_MS = 15 * 60 * 1000;
 const keepChromeOpen =
@@ -29,13 +32,6 @@ const CHROME_CANDS = [
   "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
   path.join(os.homedir(), "AppData/Local/Google/Chrome/Application/chrome.exe"),
 ];
-
-type TabTarget = {
-  id: string;
-  type: string;
-  url: string;
-  webSocketDebuggerUrl?: string;
-};
 
 export type DetranRsCaptureStatus =
   | "idle"
@@ -66,12 +62,13 @@ type Cap = DetranRsCapturedSession;
 
 let state: DetranRsCaptureState = { status: "idle", available: isDetranRsCaptureAvailable() };
 let chromeChild: ChildProcess | null = null;
+let ws: WebSocket | null = null;
 let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let cap: Partial<Cap> = {};
 let persistFn: DetranRsCaptureStartOpts["persist"] | null = null;
 let persisting = false;
-const pageSockets = new Map<string, WebSocket>();
+const pendingRequestUrls = new Map<string, string>();
 
 export function isDetranRsCaptureAvailable(): boolean {
   if (process.env.VERCEL) return false;
@@ -121,43 +118,13 @@ function cleanupTimers(): void {
   }
 }
 
-function fecharSockets(): void {
-  for (const ws of pageSockets.values()) {
-    try {
-      ws.close();
-    } catch {
-      /* ignore */
-    }
-  }
-  pageSockets.clear();
-}
-
-async function devtoolsUp(): Promise<boolean> {
-  try {
-    const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`);
-    return r.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function esperarDevtools(): Promise<void> {
+async function esperarDevtools(): Promise<string> {
   for (let i = 0; i < 60; i++) {
-    if (await devtoolsUp()) return;
+    const info = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+    if (info.wsUrl && !info.wrongPortal) return info.wsUrl;
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error("Chrome DevTools não respondeu — verifique se o Chrome está instalado.");
-}
-
-async function listarAbas(): Promise<TabTarget[]> {
-  try {
-    const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/list`);
-    if (!r.ok) return [];
-    const tabs = (await r.json()) as TabTarget[];
-    return tabs.filter((t) => t.type === "page" && t.webSocketDebuggerUrl);
-  } catch {
-    return [];
-  }
 }
 
 async function persistCapture(): Promise<void> {
@@ -187,8 +154,6 @@ async function persistCapture(): Promise<void> {
       startedAt: state.startedAt,
       capturedAt: new Date().toISOString(),
     };
-    fecharSockets();
-    await fecharChromeCdp(DEBUG_PORT, keepChromeOpen);
     await stopDetranRsCapture(false);
   } catch (err) {
     persisting = false;
@@ -202,7 +167,9 @@ async function persistCapture(): Promise<void> {
   }
 }
 
-function tratarRequest(_url: string, headers: Record<string, string>): void {
+function tratarRequest(url: string, headers: Record<string, string>): void {
+  if (!url.includes(API_HOST)) return;
+
   const auth = lerHeader(headers, "authorization");
   const userId = lerHeader(headers, "x-user-id");
   if (auth && /^Bearer\s/i.test(auth)) cap.auth = auth;
@@ -210,16 +177,18 @@ function tratarRequest(_url: string, headers: Record<string, string>): void {
   if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
 }
 
-function anexarAba(tab: TabTarget): void {
-  const wsUrl = tab.webSocketDebuggerUrl!;
-  if (pageSockets.has(wsUrl)) return;
-
-  const socket = new WebSocket(wsUrl);
-  pageSockets.set(wsUrl, socket);
+function attachNetworkListener(socket: WebSocket): void {
   let msgId = 1;
+  const send = (method: string, params: Record<string, unknown> = {}, sessionId?: string) => {
+    socket.send(JSON.stringify({ id: msgId++, method, params, sessionId }));
+  };
 
   socket.on("open", () => {
-    socket.send(JSON.stringify({ id: msgId++, method: "Network.enable", params: {} }));
+    send("Target.setAutoAttach", {
+      autoAttach: true,
+      waitForDebuggerOnStart: false,
+      flatten: true,
+    });
   });
 
   socket.on("message", (data: WebSocket.RawData) => {
@@ -229,60 +198,22 @@ function anexarAba(tab: TabTarget): void {
     } catch {
       return;
     }
-    if (msg.method === "Network.requestWillBeSent") {
+    if (msg.method === "Target.attachedToTarget") {
+      const sid = msg.params?.sessionId as string | undefined;
+      if (sid) send("Network.enable", {}, sid);
+    } else if (msg.method === "Network.requestWillBeSent") {
+      const requestId = msg.params?.requestId as string | undefined;
       const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
-      if (req?.url?.includes(API_HOST)) tratarRequest(req.url, req.headers ?? {});
+      if (requestId && req?.url) pendingRequestUrls.set(requestId, req.url);
+      if (req?.url) tratarRequest(req.url, req.headers ?? {});
+    } else if (msg.method === "Network.requestWillBeSentExtraInfo") {
+      const requestId = msg.params?.requestId as string | undefined;
+      const url = requestId ? pendingRequestUrls.get(requestId) : undefined;
+      const headers = msg.params?.headers as Record<string, string> | undefined;
+      if (url && headers) tratarRequest(url, headers);
+      if (requestId) pendingRequestUrls.delete(requestId);
     }
   });
-
-  socket.on("close", () => pageSockets.delete(wsUrl));
-  socket.on("error", () => pageSockets.delete(wsUrl));
-}
-
-async function anexarTodasAbas(): Promise<void> {
-  for (const tab of await listarAbas()) anexarAba(tab);
-}
-
-async function navegarPrimeiraAba(url: string): Promise<void> {
-  const tabs = await listarAbas();
-  const tab = tabs.find((t) => t.url && t.url !== "about:blank") ?? tabs[0];
-  if (!tab?.webSocketDebuggerUrl) return;
-
-  await new Promise<void>((resolve, reject) => {
-    const socket = new WebSocket(tab.webSocketDebuggerUrl!);
-    socket.on("open", () => {
-      socket.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url } }));
-    });
-    socket.on("error", reject);
-    setTimeout(() => {
-      try {
-        socket.close();
-      } catch {
-        /* ignore */
-      }
-      resolve();
-    }, 800);
-  });
-}
-
-async function abrirChrome(): Promise<void> {
-  fs.mkdirSync(PROFILE_DIR, { recursive: true });
-  chromeChild = spawn(
-    acharChrome(),
-    [
-      `--remote-debugging-port=${DEBUG_PORT}`,
-      "--remote-allow-origins=*",
-      `--user-data-dir=${PROFILE_DIR}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-popup-blocking",
-      PORTAL,
-    ],
-    { detached: true, stdio: "ignore" },
-  );
-  chromeChild.unref();
-  await esperarDevtools();
-  await new Promise((r) => setTimeout(r, 800));
 }
 
 export async function startDetranRsCapture(
@@ -305,8 +236,15 @@ export async function startDetranRsCapture(
   cap = {};
   persisting = false;
   persistFn = opts?.persist ?? null;
+  pendingRequestUrls.clear();
   cleanupTimers();
-  fecharSockets();
+
+  try {
+    ws?.close();
+  } catch {
+    /* ignore */
+  }
+  ws = null;
 
   state = {
     status: "starting",
@@ -316,15 +254,36 @@ export async function startDetranRsCapture(
   };
 
   try {
-    const jaAberto = await devtoolsUp();
-    if (!jaAberto) {
-      await abrirChrome();
-    } else {
-      await navegarPrimeiraAba(PORTAL);
-      await new Promise((r) => setTimeout(r, 500));
+    const chromeInfo = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+    let wsUrl = chromeInfo.wsUrl;
+
+    if (chromeInfo.wrongPortal) {
+      throw new Error(
+        `Porta CDP ${DEBUG_PORT} está em uso por outro portal. Feche esse Chrome ou defina DETRAN_RS_CDP_PORT.`,
+      );
     }
 
-    await anexarTodasAbas();
+    if (!wsUrl) {
+      fs.mkdirSync(PROFILE_DIR, { recursive: true });
+      chromeChild = spawn(
+        acharChrome(),
+        [
+          `--remote-debugging-port=${DEBUG_PORT}`,
+          "--remote-allow-origins=*",
+          `--user-data-dir=${PROFILE_DIR}`,
+          "--no-first-run",
+          "--no-default-browser-check",
+          "--disable-popup-blocking",
+          PORTAL,
+        ],
+        { detached: true, stdio: "ignore" },
+      );
+      chromeChild.unref();
+      wsUrl = await esperarDevtools();
+    }
+
+    ws = new WebSocket(wsUrl);
+    attachNetworkListener(ws);
 
     state = {
       status: "waiting",
@@ -350,28 +309,21 @@ export async function startDetranRsCapture(
       }
     }, CAPTURE_TIMEOUT_MS);
 
-    let devtoolsFails = 0;
     pollTimer = setInterval(() => {
-      void anexarTodasAbas();
       if (sessaoCompleta(cap) && state.status === "waiting") {
         void persistCapture().catch(() => {});
       }
-      fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`)
-        .then((r) => {
-          if (r.ok) devtoolsFails = 0;
-        })
-        .catch(() => {
-          devtoolsFails++;
-          if (devtoolsFails >= 3 && state.status === "waiting") {
-            state = {
-              status: "error",
-              available: true,
-              message: "Chrome fechado antes da captura.",
-              startedAt: state.startedAt,
-            };
-            void stopDetranRsCapture(false);
-          }
-        });
+      fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`).catch(() => {
+        if (state.status === "waiting") {
+          state = {
+            status: "error",
+            available: true,
+            message: "Chrome fechado antes da captura.",
+            startedAt: state.startedAt,
+          };
+          void stopDetranRsCapture(false);
+        }
+      });
     }, 1500);
   } catch (err) {
     state = {
@@ -389,8 +341,18 @@ export async function startDetranRsCapture(
 export async function stopDetranRsCapture(resetIdle = true): Promise<DetranRsCaptureState> {
   cleanupTimers();
   persistFn = null;
-  fecharSockets();
+  pendingRequestUrls.clear();
+  try {
+    ws?.close();
+  } catch {
+    /* ignore */
+  }
+  ws = null;
   chromeChild = null;
+
+  if (state.status === "captured" && !keepChromeOpen) {
+    await fecharChromeCdp(DEBUG_PORT, false);
+  }
 
   if (resetIdle && state.status !== "captured") {
     state = { status: "idle", available: isDetranRsCaptureAvailable() };
