@@ -105,14 +105,51 @@ function tokenLimpo(auth: string): string {
 function hostOk(url: string): boolean {
   try {
     const h = new URL(url).hostname.toLowerCase();
-    return h.includes("sigapay") || h.includes("zonaazul");
+    return (
+      h.includes("sigapay") ||
+      h.includes("zonaazul") ||
+      h.includes("zonaazulbrasil")
+    );
   } catch {
-    return url.toLowerCase().includes("sigapay");
+    return /sigapay|zonaazul/i.test(url);
   }
 }
 
+const COOKIE_URLS = [
+  "https://sigapay.com.br",
+  "https://www.sigapay.com.br",
+  "https://zonaazulbrasil.com.br",
+  "https://www.zonaazulbrasil.com.br",
+];
+
+type CdpCookie = { name: string; value: string; domain?: string };
+
+function cookieAnalytics(name: string): boolean {
+  return /^(_ga|_gid|_cl|_gcl|_fbp|RT$|g_state)/i.test(name);
+}
+
+function montarCookieHeader(cookies: CdpCookie[]): string {
+  const byName = new Map<string, string>();
+  for (const c of cookies) {
+    if (!cookieAnalytics(c.name)) byName.set(c.name, c.value);
+  }
+  return [...byName].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
+function sessaoAutenticada(c: Cap): boolean {
+  if (c.token?.trim()) return true;
+  const cookie = c.cookie?.trim() ?? "";
+  if (!cookie) return false;
+  // Sessão real costuma ter mais do que só cookies de analytics.
+  const pairs = cookie.split(";").map((p) => p.trim()).filter(Boolean);
+  return pairs.some((p) => {
+    const name = p.split("=")[0]?.trim() ?? "";
+    return name && !cookieAnalytics(name);
+  });
+}
+
 function sessaoCompleta(c: Cap): boolean {
-  return Boolean(c.cookie?.trim() || c.token?.trim());
+  return sessaoAutenticada(c);
 }
 
 async function devtoolsUp(): Promise<boolean> {
@@ -226,13 +263,159 @@ function tratarRequest(url: string, headers: Record<string, string>): void {
   }
 
   const looksApi =
-    /\/api\//i.test(url) ||
-    /Aviso|Placa|Veiculo|list-logado/i.test(url) ||
+    /\/api\b/i.test(url) ||
+    /Aviso|Placa|Veiculo|list-logado|auth|login|usuario|sessao/i.test(url) ||
     Boolean(auth);
 
   if (looksApi && sessaoCompleta(cap)) {
     void persistCapture().catch(() => {});
   }
+}
+
+function tratarAssociatedCookies(
+  associated: Array<{ cookie?: CdpCookie }> | undefined,
+): void {
+  if (!associated?.length) return;
+  const cookies = associated.map((a) => a.cookie).filter(Boolean) as CdpCookie[];
+  if (!cookies.length) return;
+  const header = montarCookieHeader(cookies);
+  if (header) cap.cookie = header;
+  if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
+}
+
+function tratarResponseCookies(cookies: CdpCookie[] | undefined): void {
+  if (!cookies?.length) return;
+  const header = montarCookieHeader(cookies);
+  if (header) cap.cookie = header;
+  if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
+}
+
+async function colherCookiesViaCdp(): Promise<void> {
+  if (state.status === "captured" || sessaoCompleta(cap)) return;
+  const tabs = await listarAbas();
+  const tab =
+    tabs.find((t) => /sigapay|zonaazul/i.test(t.url ?? "")) ?? tabs[0];
+  if (!tab?.webSocketDebuggerUrl) return;
+
+  await new Promise<void>((resolve) => {
+    const ws = new WebSocket(tab.webSocketDebuggerUrl!);
+    const timer = setTimeout(() => {
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, 3000);
+
+    ws.on("open", () => {
+      ws.send(
+        JSON.stringify({
+          id: 1,
+          method: "Network.getCookies",
+          params: { urls: COOKIE_URLS },
+        }),
+      );
+    });
+
+    ws.on("message", (data: WebSocket.RawData) => {
+      let msg: { id?: number; result?: { cookies?: CdpCookie[] } };
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        return;
+      }
+      if (msg.id === 1 && msg.result?.cookies?.length) {
+        const header = montarCookieHeader(msg.result.cookies);
+        if (header) cap.cookie = header;
+        if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
+      }
+      clearTimeout(timer);
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    });
+
+    ws.on("error", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+async function colherTokenStorage(): Promise<void> {
+  if (state.status === "captured" || cap.token?.trim()) return;
+  const tabs = await listarAbas();
+  const tab = tabs.find((t) => /sigapay|zonaazul/i.test(t.url ?? ""));
+  if (!tab?.webSocketDebuggerUrl) return;
+
+  await new Promise<void>((resolve) => {
+    const ws = new WebSocket(tab.webSocketDebuggerUrl!);
+    const timer = setTimeout(() => {
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    }, 3000);
+
+    const expr = `(() => {
+      const keys = ["token","accessToken","authToken","jwt","authorization","userToken","idToken","bearer"];
+      for (const store of [localStorage, sessionStorage]) {
+        for (const k of keys) {
+          const v = store.getItem(k);
+          if (v && v.length > 20) return v;
+        }
+        for (let i = 0; i < store.length; i++) {
+          const k = store.key(i);
+          if (!k || !/token|auth|jwt|bearer/i.test(k)) continue;
+          const v = store.getItem(k);
+          if (v && v.length > 20) return v;
+        }
+      }
+      return null;
+    })()`;
+
+    ws.on("open", () => {
+      ws.send(
+        JSON.stringify({
+          id: 1,
+          method: "Runtime.evaluate",
+          params: { expression: expr, returnByValue: true },
+        }),
+      );
+    });
+
+    ws.on("message", (data: WebSocket.RawData) => {
+      let msg: { id?: number; result?: { result?: { value?: string } } };
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        return;
+      }
+      const token = msg.result?.result?.value;
+      if (typeof token === "string" && token.length > 20) {
+        cap.token = tokenLimpo(token);
+        if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
+      }
+      clearTimeout(timer);
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+      resolve();
+    });
+
+    ws.on("error", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 }
 
 function anexarAba(tab: TabTarget): void {
@@ -257,6 +440,18 @@ function anexarAba(tab: TabTarget): void {
     if (msg.method === "Network.requestWillBeSent") {
       const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
       if (req?.url) tratarRequest(req.url, req.headers ?? {});
+    } else if (msg.method === "Network.requestWillBeSentExtraInfo") {
+      tratarAssociatedCookies(
+        msg.params?.associatedCookies as Array<{ cookie?: CdpCookie }> | undefined,
+      );
+    } else if (msg.method === "Network.responseReceivedExtraInfo") {
+      tratarResponseCookies(msg.params?.cookies as CdpCookie[] | undefined);
+      const headers = msg.params?.headers as Record<string, string> | undefined;
+      const auth = headers ? lerHeader(headers, "authorization") : undefined;
+      if (auth?.trim()) {
+        cap.token = tokenLimpo(auth);
+        if (sessaoCompleta(cap)) void persistCapture().catch(() => {});
+      }
     }
   });
 
@@ -385,6 +580,11 @@ export async function startSigapayCapture(
     let devtoolsFails = 0;
     pollTimer = setInterval(() => {
       void anexarTodasAbas();
+      void colherCookiesViaCdp();
+      void colherTokenStorage();
+      if (sessaoCompleta(cap) && state.status === "waiting") {
+        void persistCapture().catch(() => {});
+      }
       fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`)
         .then((r) => {
           if (r.ok) devtoolsFails = 0;

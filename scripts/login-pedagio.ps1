@@ -53,9 +53,10 @@ try {
     $data = Get-Content $sessionFile -Raw | ConvertFrom-Json
   } else {
     Write-Host "Abrindo Chrome real (CDP) - faca login e resolva o reCAPTCHA na janela."
+    Write-Host "  Apos entrar, aguarde a lista de placas (F5 se nao carregar). Nao feche o Chrome manualmente."
     & npx tsx scripts/capturarPedagioCdp.ts
     if (-not (Test-Path $captureFile)) {
-      Write-Error "Captura nao gerou sessao. Concluiu login e carregou as placas?"
+      Write-Error "Captura nao gerou sessao. Entrou no portal e a lista de placas carregou? Tente: .\login-pedagio.ps1 -Fresh"
       exit 1
     }
     $data = Get-Content $captureFile -Raw | ConvertFrom-Json

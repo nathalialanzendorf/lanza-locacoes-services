@@ -3,9 +3,14 @@
 # SIGAPAY_COOKIE, SIGAPAY_TOKEN e (se capturado) SIGAPAY_API_BASE.
 #
 #   .\scripts\login-sigapay.ps1
+#   .\scripts\login-sigapay.ps1 -Fresh
 #
 # Depois de logar, abra avisos/placas no portal para a captura automatica.
 # As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
+
+param(
+  [switch]$Fresh
+)
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -15,13 +20,23 @@ if (Test-Path $captureFile) { Remove-Item $captureFile -Force }
 
 Push-Location $repoRoot
 try {
+  if ($Fresh) {
+    $profileDir = Join-Path $repoRoot ".cache\sigapay\chrome-profile"
+    if (Test-Path $profileDir) {
+      Write-Host "Limpando perfil Chrome ($profileDir)..."
+      Remove-Item $profileDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+
+  Write-Host "Abrindo Chrome real (CDP) - faca login no SigaPay."
+  Write-Host "  Apos entrar, abra avisos ou placas (F5 se necessario). Nao feche o Chrome manualmente."
   & npx tsx scripts/capturarSigapayToken.ts
 } finally {
   Pop-Location
 }
 
 if (-not (Test-Path $captureFile)) {
-  Write-Error "Captura nao gerou sessao (ficheiro ausente). Fez login e abriu avisos/placas?"
+  Write-Error "Captura nao gerou sessao. Fez login e abriu avisos/placas? Tente: .\login-sigapay.ps1 -Fresh"
   exit 1
 }
 
