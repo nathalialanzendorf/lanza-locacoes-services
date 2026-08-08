@@ -687,6 +687,13 @@ export {
 } from "../../../src/lib/sigapay/avisos.js";
 
 export {
+  solicitarCodigoPixRegularizacao,
+  verificarCodigoPixRegularizacao,
+  type PixRegularizacaoSolicitarResult,
+  type PixRegularizacaoVerificarResult,
+} from "../../../src/lib/sigapay/pixRegularizacao.js";
+
+export {
   listarVeiculosSigapay,
   registrarPlacaSigapay,
   excluirPlacaSigapayPorPlaca,

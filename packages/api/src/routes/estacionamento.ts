@@ -121,4 +121,36 @@ export function registerEstacionamentoRoutes(routes: RouteDef[]): void {
       }
     }),
   });
+
+  const pixSolicitar = compileRoute("/api/estacionamento/pix/solicitar");
+  routes.push({
+    method: "POST",
+    pattern: pixSolicitar.regex,
+    paramNames: pixSolicitar.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{ phone?: string; plate?: string }>(ctx.req);
+        const data = await estacionamentoService.solicitarPixRegularizacao(body);
+        json(ctx.res, 200, data);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const pixVerificar = compileRoute("/api/estacionamento/pix/verificar");
+  routes.push({
+    method: "POST",
+    pattern: pixVerificar.regex,
+    paramNames: pixVerificar.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{ id?: string; code?: string }>(ctx.req);
+        const data = await estacionamentoService.verificarPixRegularizacao(body);
+        json(ctx.res, 200, data);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
 }

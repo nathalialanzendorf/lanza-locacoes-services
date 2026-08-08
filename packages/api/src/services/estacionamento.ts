@@ -9,6 +9,8 @@ import {
   loadPlacasParaSyncEstacionamento,
   placasIguais,
   registrarPlacaSigapay,
+  solicitarCodigoPixRegularizacao,
+  verificarCodigoPixRegularizacao,
   type AvisoStatus,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
@@ -152,4 +154,32 @@ export async function conferirPlacasPortal(registrar = false) {
     extras: extras.map((v) => ({ placa: v.placa, modelo: v.modelo })),
     registrados,
   };
+}
+
+export async function solicitarPixRegularizacao(body: { phone?: string; plate?: string }) {
+  const phone = body.phone?.trim();
+  const plate = body.plate?.trim();
+  if (!phone) throw new HttpError(400, 'Campo "phone" é obrigatório.');
+  if (!plate) throw new HttpError(400, 'Campo "plate" é obrigatório.');
+
+  try {
+    const data = await solicitarCodigoPixRegularizacao(phone, plate);
+    return { data };
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
+  }
+}
+
+export async function verificarPixRegularizacao(body: { id?: string; code?: string }) {
+  const id = body.id?.trim();
+  const code = body.code?.trim();
+  if (!id) throw new HttpError(400, 'Campo "id" é obrigatório.');
+  if (!code) throw new HttpError(400, 'Campo "code" é obrigatório.');
+
+  try {
+    const data = await verificarCodigoPixRegularizacao(id, code);
+    return { data };
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
+  }
 }
