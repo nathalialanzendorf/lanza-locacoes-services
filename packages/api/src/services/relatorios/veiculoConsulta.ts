@@ -17,6 +17,28 @@ import { extrairInfracoesResumoDetranRs } from "../../../../../src/lib/detranRs/
 
 export type VeiculoConsultaFonte = "detran-sc" | "detran-rs" | "pedagio" | "sigapay" | "todos";
 
+/** Portais consultáveis individualmente (exclui `todos`). */
+export const VEICULO_PORTAIS_CONSULTA = [
+  "detran-sc",
+  "detran-rs",
+  "pedagio",
+  "sigapay",
+] as const satisfies readonly Exclude<VeiculoConsultaFonte, "todos">[];
+
+export type VeiculoConsultaPortalId = (typeof VEICULO_PORTAIS_CONSULTA)[number];
+
+export function veiculoPortaisJobSyncId(fonte: VeiculoConsultaPortalId): string {
+  return `veiculo-portais-${fonte}`;
+}
+
+export type VeiculoConsultaProgress = {
+  done: number;
+  total: number;
+  sucesso?: number;
+  falhas?: number;
+  fase?: string;
+};
+
 export type VeiculoConsultaPortalItem = {
   id: string;
   ref?: string;
@@ -310,7 +332,9 @@ async function consultarSigapayFrota(): Promise<{
   };
 }
 
-async function consultarDetranScFrota(): Promise<{
+async function consultarDetranScFrota(opts?: {
+  onProgress?: (p: VeiculoConsultaProgress) => void;
+}): Promise<{
   secao: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   veiculosConsultados: number;
 }> {
@@ -325,10 +349,18 @@ async function consultarDetranScFrota(): Promise<{
   const items: VeiculoConsultaPortalItem[] = [];
   const avisos: string[] = [];
   let falhas = 0;
+  const total = veiculos.length;
 
   for (let i = 0; i < veiculos.length; i++) {
     const v = veiculos[i]!;
     const placa = formatPlacaHyphen(v.placa);
+    opts?.onProgress?.({
+      done: i,
+      total,
+      sucesso: i - falhas,
+      falhas,
+      fase: `DETRAN SC · ${placa} (${i + 1}/${total})`,
+    });
     const sec = await runSecao(() => consultarDetranSc(placa, v.renavam!.trim()));
     if (sec.error) {
       falhas++;
@@ -344,6 +376,13 @@ async function consultarDetranScFrota(): Promise<{
     }
     if (i < veiculos.length - 1) await sleep(DETRAN_FROTA_DELAY_MS);
   }
+  opts?.onProgress?.({
+    done: total,
+    total,
+    sucesso: total - falhas,
+    falhas,
+    fase: "DETRAN SC · concluído",
+  });
 
   if (falhas > 0) {
     avisos.unshift(`${falhas} veículo(s) com erro na consulta DETRAN SC.`);
@@ -360,7 +399,9 @@ async function consultarDetranScFrota(): Promise<{
   };
 }
 
-async function consultarDetranRsFrota(): Promise<{
+async function consultarDetranRsFrota(opts?: {
+  onProgress?: (p: VeiculoConsultaProgress) => void;
+}): Promise<{
   secao: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   veiculosConsultados: number;
 }> {
@@ -375,10 +416,18 @@ async function consultarDetranRsFrota(): Promise<{
   const items: VeiculoConsultaPortalItem[] = [];
   const avisos: string[] = [];
   let falhas = 0;
+  const total = veiculos.length;
 
   for (let i = 0; i < veiculos.length; i++) {
     const v = veiculos[i]!;
     const placa = formatPlacaHyphen(v.placa);
+    opts?.onProgress?.({
+      done: i,
+      total,
+      sucesso: i - falhas,
+      falhas,
+      fase: `DETRAN RS · ${placa} (${i + 1}/${total})`,
+    });
     const sec = await runSecao(() => consultarDetranRs(placa, v.renavam!.trim()));
     if (sec.error) {
       falhas++;
@@ -395,6 +444,13 @@ async function consultarDetranRsFrota(): Promise<{
     }
     if (i < veiculos.length - 1) await sleep(DETRAN_FROTA_DELAY_MS);
   }
+  opts?.onProgress?.({
+    done: total,
+    total,
+    sucesso: total - falhas,
+    falhas,
+    fase: "DETRAN RS · concluído",
+  });
 
   if (falhas > 0) {
     avisos.unshift(`${falhas} veículo(s) com erro na consulta DETRAN RS.`);
@@ -432,6 +488,7 @@ export async function consultarVeiculoPortais(opts: {
   placa?: string;
   renavam?: string;
   fonte?: string;
+  onProgress?: (p: VeiculoConsultaProgress) => void;
 }): Promise<VeiculoConsultaResultado> {
   const fonte = parseVeiculoConsultaFonte(opts.fonte);
   const placaNorm = compactPlaca(opts.placa ?? "");
@@ -452,8 +509,8 @@ export async function consultarVeiculoPortais(opts: {
     const consultarTodos = fonte === "todos";
     if (consultarTodos) {
       const [rSc, rRs, rPed, rSig] = await Promise.all([
-        consultarDetranScFrota(),
-        consultarDetranRsFrota(),
+        consultarDetranScFrota({ onProgress: opts.onProgress }),
+        consultarDetranRsFrota({ onProgress: opts.onProgress }),
         consultarPedagioFrota().catch((err) => ({
           secao: settledSecaoError(err),
           veiculosConsultados: 0,
@@ -475,11 +532,11 @@ export async function consultarVeiculoPortais(opts: {
       );
     } else {
       if (fonte === "detran-sc") {
-        const r = await consultarDetranScFrota();
+        const r = await consultarDetranScFrota({ onProgress: opts.onProgress });
         detranSc = r.secao;
         veiculosConsultados = r.veiculosConsultados;
       } else if (fonte === "detran-rs") {
-        const r = await consultarDetranRsFrota();
+        const r = await consultarDetranRsFrota({ onProgress: opts.onProgress });
         detranRs = r.secao;
         veiculosConsultados = r.veiculosConsultados;
       } else if (fonte === "pedagio") {

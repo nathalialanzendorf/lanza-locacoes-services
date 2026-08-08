@@ -28,6 +28,9 @@
     "sigapay-capture-bridge": "tsx scripts/sigapayCaptureBridge.ts",
     "pedagio-capture-bridge": "tsx scripts/pedagioCaptureBridge.ts",
     "detran-rs-capture-bridge": "tsx scripts/detranRsCaptureBridge.ts",
+    "test:sigapay-pix-otp": "tsx scripts/testSigapayPixOtpPlacas.ts",
+    "push:sigapay-session-rds": "tsx scripts/push-sigapay-session-rds.ts",
+    "parse:sigapay-mitm": "tsx scripts/parseSigapayMitmCapture.ts",
     "start": "tsx packages/api/src/index.ts",
     "sync:main": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-main.ps1",
     "sync:install-hooks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"

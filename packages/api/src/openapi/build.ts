@@ -65,4 +65,5 @@ export const OPENAPI_PUBLIC_PATHS = new Set([
   "/api/auth/login",
   "/api/auth/register",
   "/api/auth/status",
+  "/api/cron/sync-estacionamento",
 ]);

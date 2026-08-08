@@ -9,6 +9,7 @@ import { registerAnaliseCadastroRoutes } from "./routes/analise-cadastro.js";
 import { registerClienteAnaliseRoutes } from "./routes/cliente-analise.js";
 import { registerClientesRoutes } from "./routes/clientes.js";
 import { registerConfigRoutes } from "./routes/config.js";
+import { registerCronRoutes } from "./routes/cron.js";
 import { registerContratosRoutes } from "./routes/contratos.js";
 import { registerDespesasRoutes } from "./routes/despesas.js";
 import { registerDocumentosRoutes } from "./routes/documentos.js";
@@ -75,6 +76,7 @@ async function isAuthorized(req: IncomingMessage, pathname: string): Promise<boo
 function collectRoutes(): RouteDef[] {
   const routes: RouteDef[] = [];
   registerHealthRoutes(routes);
+  registerCronRoutes(routes);
   registerOpenApiRoutes(routes);
   registerAuthRoutes(routes);
   registerAdminRoutes(routes);

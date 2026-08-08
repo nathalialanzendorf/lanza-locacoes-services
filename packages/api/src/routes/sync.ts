@@ -16,7 +16,13 @@ import {
   type SyncCompletoInput,
   type SyncInput,
 } from "../services/sync/runner.js";
-import * as veiculoConsulta from "../services/relatorios/veiculoConsulta.js";
+import {
+  consultarVeiculoPortais,
+  parseVeiculoConsultaFonte,
+  VEICULO_PORTAIS_CONSULTA,
+  veiculoPortaisJobSyncId,
+  type VeiculoConsultaPortalId,
+} from "../services/relatorios/veiculoConsulta.js";
 
 function parseBoolQuery(raw: string | null, fallback = false): boolean {
   if (raw == null || raw === "") return fallback;
@@ -27,13 +33,51 @@ function parseBoolQuery(raw: string | null, fallback = false): boolean {
 }
 
 function jobProgressHook(syncId: string, jobId: string) {
-  const withProgress = new Set(["fipe", "pedagios", "estacionamento", "infracoes", "ipva-licenciamento"]);
+  const withProgress = new Set([
+    "fipe",
+    "pedagios",
+    "estacionamento",
+    "infracoes",
+    "ipva-licenciamento",
+    "veiculo-portais-detran-sc",
+    "veiculo-portais-detran-rs",
+    "veiculo-portais-pedagio",
+    "veiculo-portais-sigapay",
+  ]);
   if (!withProgress.has(syncId)) return {};
   return {
     onProgress: (p: Parameters<typeof updateJobProgress>[1]) => {
       void updateJobProgress(jobId, p);
     },
   };
+}
+
+function dispararJobConsultaPortal(
+  fonte: VeiculoConsultaPortalId,
+  input: { placa?: string; renavam?: string },
+) {
+  const sync = veiculoPortaisJobSyncId(fonte);
+  return createJob(sync, { ...input, fonte }).then((job) => {
+    runJobAsync(job.id, () =>
+      consultarVeiculoPortais({
+        placa: input.placa,
+        renavam: input.renavam,
+        fonte,
+        onProgress: (p) => {
+          const total = Math.max(p.total, 1);
+          void updateJobProgress(job.id, {
+            total: p.total,
+            done: p.done,
+            percent: Math.round((p.done / total) * 100),
+            sucesso: p.sucesso ?? p.done,
+            falhas: p.falhas ?? 0,
+            fase: p.fase,
+          });
+        },
+      }),
+    );
+    return { jobId: job.id, sync, fonte, status: job.status };
+  });
 }
 
 function parseSyncInput(body: Record<string, unknown>): SyncInput {
@@ -176,20 +220,28 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
       try {
         const placa = ctx.query.get("placa")?.trim() || undefined;
         const renavam = ctx.query.get("renavam")?.trim() || undefined;
-        const fonte = ctx.query.get("fonte")?.trim() || undefined;
+        const fonteRaw = ctx.query.get("fonte")?.trim() || undefined;
+        const fonte = parseVeiculoConsultaFonte(fonteRaw);
         const frota = !placa && !renavam;
-        const asyncMode = parseBoolQuery(ctx.query.get("async"), frota);
+        const asyncMode = parseBoolQuery(ctx.query.get("async"), frota || fonte === "todos");
 
         if (asyncMode) {
-          const job = await createJob("veiculo-portais", { placa, renavam, fonte });
-          runJobAsync(job.id, () =>
-            veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte }),
-          );
-          json(ctx.res, 202, { jobId: job.id, status: job.status });
+          const input = { placa, renavam };
+
+          if (fonte === "todos") {
+            const jobs = await Promise.all(
+              VEICULO_PORTAIS_CONSULTA.map((f) => dispararJobConsultaPortal(f, input)),
+            );
+            json(ctx.res, 202, { jobs, status: "pending" });
+            return;
+          }
+
+          const jobInfo = await dispararJobConsultaPortal(fonte, input);
+          json(ctx.res, 202, jobInfo);
           return;
         }
 
-        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
+        const data = await consultarVeiculoPortais({ placa, renavam, fonte: fonteRaw });
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);

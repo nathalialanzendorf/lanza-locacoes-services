@@ -94,3 +94,10 @@ export function allowPublicRegister(): boolean {
 export function authRequired(): boolean {
   return Boolean(jwtSecret() || apiKey());
 }
+
+/** Segredo para Vercel Cron (`Authorization: Bearer …`). Usa CRON_SECRET ou LANZA_CRON_SECRET. */
+export function cronSecret(): string | null {
+  const secret =
+    process.env.CRON_SECRET?.trim() || process.env.LANZA_CRON_SECRET?.trim();
+  return secret || null;
+}

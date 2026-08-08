@@ -4,12 +4,14 @@
 #
 #   .\scripts\login-sigapay.ps1
 #   .\scripts\login-sigapay.ps1 -Fresh
+#   .\scripts\login-sigapay.ps1 -PushRds
 #
 # Depois de logar, abra avisos/placas no portal para a captura automatica.
 # As credenciais NAO vao para `.env` nem para o Git - so para variaveis do utilizador.
 
 param(
-  [switch]$Fresh
+  [switch]$Fresh,
+  [switch]$PushRds
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,3 +73,16 @@ if ($data.apiBase) {
 }
 Write-Host "    A sessao expira periodicamente; ao falhar (HTTP 401), rode este script de novo."
 Write-Host "    Feche e reabra os terminais (ou o Cursor) para os outros processos verem os novos valores."
+
+if ($PushRds) {
+  Write-Host ""
+  Write-Host "A gravar sessao no RDS (lanza.portal_sessions)..."
+  Push-Location $repoRoot
+  try {
+    & npx tsx scripts/push-sigapay-session-rds.ts
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  } finally {
+    Pop-Location
+  }
+  Write-Host "    Sync automatico na Vercel usara esta sessao (cron sync-estacionamento)."
+}
