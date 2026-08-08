@@ -199,4 +199,146 @@ export function registerPortaisRoutes(routes: RouteDef[]): void {
       }
     }),
   });
+
+  const pedagioSessao = compileRoute("/api/portais/pedagio/sessao");
+  routes.push({
+    method: "GET",
+    pattern: pedagioSessao.regex,
+    paramNames: pedagioSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.statusPedagioSessao() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "PUT",
+    pattern: pedagioSessao.regex,
+    paramNames: pedagioSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{ cookie?: string; csrf?: string }>(ctx.req);
+        json(ctx.res, 200, { data: await portaisService.gravarPedagioSessao(body) });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "DELETE",
+    pattern: pedagioSessao.regex,
+    paramNames: pedagioSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.removerPedagioSessao() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const pedagioCaptura = compileRoute("/api/portais/pedagio/captura");
+  routes.push({
+    method: "GET",
+    pattern: pedagioCaptura.regex,
+    paramNames: pedagioCaptura.paramNames,
+    handler: (ctx) => json(ctx.res, 200, { data: portaisService.statusCapturaPedagio() }),
+  });
+  routes.push({
+    method: "POST",
+    pattern: pedagioCaptura.regex,
+    paramNames: pedagioCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.iniciarCapturaPedagio() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "DELETE",
+    pattern: pedagioCaptura.regex,
+    paramNames: pedagioCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.pararCapturaPedagio() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const detranRsSessao = compileRoute("/api/portais/detran-rs/sessao");
+  routes.push({
+    method: "GET",
+    pattern: detranRsSessao.regex,
+    paramNames: detranRsSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.statusDetranRsSessao() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "PUT",
+    pattern: detranRsSessao.regex,
+    paramNames: detranRsSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{ auth?: string; userId?: string }>(ctx.req);
+        json(ctx.res, 200, { data: await portaisService.gravarDetranRsSessao(body) });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "DELETE",
+    pattern: detranRsSessao.regex,
+    paramNames: detranRsSessao.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.removerDetranRsSessao() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+
+  const detranRsCaptura = compileRoute("/api/portais/detran-rs/captura");
+  routes.push({
+    method: "GET",
+    pattern: detranRsCaptura.regex,
+    paramNames: detranRsCaptura.paramNames,
+    handler: (ctx) => json(ctx.res, 200, { data: portaisService.statusCapturaDetranRs() }),
+  });
+  routes.push({
+    method: "POST",
+    pattern: detranRsCaptura.regex,
+    paramNames: detranRsCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.iniciarCapturaDetranRs() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
+  routes.push({
+    method: "DELETE",
+    pattern: detranRsCaptura.regex,
+    paramNames: detranRsCaptura.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        json(ctx.res, 200, { data: await portaisService.pararCapturaDetranRs() });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
+    }),
+  });
 }

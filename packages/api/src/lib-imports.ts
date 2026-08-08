@@ -304,6 +304,40 @@ export {
 } from "../../../src/lib/sigapay/captureCdp.js";
 
 export {
+  clearPedagioSession,
+} from "../../../src/lib/pedagioDigital/auth.js";
+
+export {
+  clearStoredPedagioSession,
+  obterStatusPedagioSession,
+  savePedagioSession,
+} from "../../../src/lib/pedagioDigital/sessionStore.js";
+
+export {
+  getPedagioCaptureState,
+  isPedagioCaptureAvailable,
+  startPedagioCapture,
+  stopPedagioCapture,
+} from "../../../src/lib/pedagioDigital/captureCdp.js";
+
+export {
+  clearDetranRsRuntimeSession,
+} from "../../../src/lib/detranRs/auth.js";
+
+export {
+  clearStoredDetranRsSession,
+  obterStatusDetranRsSession,
+  saveDetranRsSession,
+} from "../../../src/lib/detranRs/sessionStore.js";
+
+export {
+  getDetranRsCaptureState,
+  isDetranRsCaptureAvailable,
+  startDetranRsCapture,
+  stopDetranRsCapture,
+} from "../../../src/lib/detranRs/captureCdp.js";
+
+export {
   flattenAlteracoesSync,
   type SyncAlteracaoLinha,
 } from "../../../src/lib/sync/syncAlteracoes.js";

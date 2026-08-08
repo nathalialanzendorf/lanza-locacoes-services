@@ -14,7 +14,7 @@ import * as prestacaoRel from "../services/relatorios/prestacaoContas.js";
 import type { PrestacaoContasInput } from "../lib-imports.js";
 import { listarEscoposContratosAtivosAsync } from "../services/relatorios/filtro.js";
 import * as infracoesRel from "../services/relatorios/infracoes.js";
-import * as veiculoConsulta from "../services/relatorios/veiculoConsulta.js";
+import * as veiculoDadosLocal from "../services/relatorios/veiculoDadosLocal.js";
 import * as documentos from "../services/documentos.js";
 
 export function registerRelatoriosRoutes(routes: RouteDef[]): void {
@@ -195,9 +195,7 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
     handler: routeAsync(async (ctx) => {
       try {
         const placa = ctx.query.get("placa")?.trim();
-        const renavam = ctx.query.get("renavam")?.trim();
-        const fonte = ctx.query.get("fonte")?.trim();
-        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
+        const data = await veiculoDadosLocal.consultarVeiculoDadosLocal({ placa });
         json(ctx.res, 200, { data });
       } catch (err) {
         handleServiceError(ctx, err);

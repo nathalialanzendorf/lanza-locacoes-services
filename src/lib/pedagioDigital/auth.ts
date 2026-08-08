@@ -164,6 +164,13 @@ export async function getPedagioSession(): Promise<PedagioSession> {
     return fromEnv;
   }
 
+  const { readStoredPedagioSession } = await import("./sessionStore.js");
+  const stored = await readStoredPedagioSession();
+  if (stored) {
+    sessionCache = stored;
+    return stored;
+  }
+
   const fromFile = readCachedSession();
   if (fromFile) {
     sessionCache = fromFile;

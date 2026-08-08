@@ -1,6 +1,7 @@
 import {
   badRequest,
   compileRoute,
+  handleServiceError,
   json,
   notFound,
   readJsonBody,
@@ -15,6 +16,7 @@ import {
   type SyncCompletoInput,
   type SyncInput,
 } from "../services/sync/runner.js";
+import * as veiculoConsulta from "../services/relatorios/veiculoConsulta.js";
 
 function parseBoolQuery(raw: string | null, fallback = false): boolean {
   if (raw == null || raw === "") return fallback;
@@ -146,6 +148,24 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
 
       const data = await executarSync(syncId, input);
       json(ctx.res, 200, data);
+    }),
+  });
+
+  const veiculoConsultaRoute = compileRoute("/api/sync/veiculo/consulta");
+  routes.push({
+    method: "GET",
+    pattern: veiculoConsultaRoute.regex,
+    paramNames: veiculoConsultaRoute.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const placa = ctx.query.get("placa")?.trim() || undefined;
+        const renavam = ctx.query.get("renavam")?.trim() || undefined;
+        const fonte = ctx.query.get("fonte")?.trim() || undefined;
+        const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
+        json(ctx.res, 200, { data });
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     }),
   });
 }

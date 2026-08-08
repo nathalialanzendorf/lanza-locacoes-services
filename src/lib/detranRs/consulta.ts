@@ -18,7 +18,7 @@ export async function consultarVeiculoDetranRs(
   const renavamUrl = String(renavam).replace(/\D/g, "");
   const url = `${DETRAN_RS_API_BASE}/veiculos/${encodeURIComponent(placaUrl)}/?renavam=${encodeURIComponent(renavamUrl)}&contabiliza=false`;
 
-  const resp = await fetchWithTimeout(url, { headers: detranRsJsonHeaders() });
+  const resp = await fetchWithTimeout(url, { headers: await detranRsJsonHeaders() });
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
     throw new Error(

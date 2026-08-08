@@ -65,6 +65,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "cliente-despesas.json",
     interativo: true,
     direcao: "buscar",
+    nota: "Passagens CCR; Capturar sessão (bridge) ou PEDAGIO_DIGITAL_COOKIE+CSRF",
   },
   {
     id: "estacionamento",
