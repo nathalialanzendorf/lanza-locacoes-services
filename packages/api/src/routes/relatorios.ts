@@ -197,9 +197,6 @@ export function registerRelatoriosRoutes(routes: RouteDef[]): void {
         const placa = ctx.query.get("placa")?.trim();
         const renavam = ctx.query.get("renavam")?.trim();
         const fonte = ctx.query.get("fonte")?.trim();
-        if (!placa && !renavam) {
-          return badRequest(ctx, 'Informe "placa" ou "renavam"');
-        }
         const data = await veiculoConsulta.consultarVeiculoPortais({ placa, renavam, fonte });
         json(ctx.res, 200, { data });
       } catch (err) {
