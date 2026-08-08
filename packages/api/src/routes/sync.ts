@@ -9,7 +9,7 @@ import {
   type RouteDef,
 } from "../http.js";
 import { metaSync, normalizarSyncId } from "../services/sync/catalog.js";
-import { createJob, getJob, listJobs, runJobAsync, updateJobProgress } from "../services/sync/jobs.js";
+import { createJob, getJob, listJobs, requestCancelJob, runJobAsync, updateJobProgress } from "../services/sync/jobs.js";
 import {
   executarSync,
   executarSyncCompleto,
@@ -92,6 +92,22 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
       const job = await getJob(ctx.params.id);
       if (!job) return notFound(ctx, "Job");
       json(ctx.res, 200, job);
+    }),
+  });
+
+  routes.push({
+    method: "DELETE",
+    pattern: jobDetail.regex,
+    paramNames: jobDetail.paramNames,
+    handler: routeAsync(async (ctx) => {
+      const ok = await requestCancelJob(ctx.params.id);
+      if (!ok) {
+        const job = await getJob(ctx.params.id);
+        if (!job) return notFound(ctx, "Job");
+        return badRequest(ctx, "Job já concluído ou cancelado.");
+      }
+      const job = await getJob(ctx.params.id);
+      json(ctx.res, 200, { ok: true, job });
     }),
   });
 

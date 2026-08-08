@@ -234,3 +234,17 @@ export async function storeMarkJobFailed(id: string, error: string): Promise<voi
     },
   );
 }
+
+export async function storeMarkJobCancelled(id: string, error: string): Promise<void> {
+  const finishedAt = new Date().toISOString();
+  await withStore(
+    () => pgUpdateJob(id, { status: "cancelled", finishedAt, error }),
+    () => {
+      const job = memoryJobs.get(id);
+      if (!job) return;
+      job.status = "cancelled";
+      job.finishedAt = finishedAt;
+      job.error = error;
+    },
+  );
+}
