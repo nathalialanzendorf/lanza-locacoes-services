@@ -15,6 +15,12 @@ import {
   parseIsoOrDataBr,
 } from "../migration/relationalUtils.js";
 
+const CATEGORIAS_DESPESA_VENDA = ["Venda entrada", "Venda parcela"];
+
+function autoInfracaoPrefixoVenda(vendaId: string): string {
+  return `VENDA-${vendaId.trim().replace(/-/g, "").toUpperCase()}`;
+}
+
 async function loadPlacaMap(): Promise<Map<string, string>> {
   const now = Date.now();
   if (placaMapCache && now - placaMapCache.at < PLACA_MAP_TTL_MS) {
@@ -901,6 +907,10 @@ export type ClienteDespesasSqlFilter = {
   /** Filtro ILIKE em descricao (ex.: ATRASADO). */
   descricaoIlike?: string;
   limit?: number;
+  /** true = só venda; false = exclui venda */
+  moduloVenda?: boolean;
+  /** auto_infracao prefixo VENDA-{uuid}-* */
+  vendaId?: string;
 };
 
 function mapClienteDespesaRow(row: Record<string, unknown>): Record<string, unknown> {
@@ -1001,6 +1011,20 @@ export async function queryClienteDespesasFromSql(
   if (filter.categoria?.trim()) {
     params.push(filter.categoria.trim());
     where.push(`cd.categoria = $${p++}`);
+  }
+
+  if (filter.moduloVenda === true) {
+    params.push(CATEGORIAS_DESPESA_VENDA);
+    where.push(`cd.categoria = ANY($${p++}::text[])`);
+  } else if (filter.moduloVenda === false) {
+    params.push(CATEGORIAS_DESPESA_VENDA);
+    where.push(`(cd.categoria IS NULL OR NOT (cd.categoria = ANY($${p++}::text[])))`);
+  }
+
+  if (filter.vendaId?.trim()) {
+    const prefix = `${autoInfracaoPrefixoVenda(filter.vendaId.trim())}-%`;
+    params.push(prefix);
+    where.push(`cd.auto_infracao ILIKE $${p++}`);
   }
 
   if (filter.descricaoIlike?.trim()) {

@@ -65,6 +65,15 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         );
       }
 
+      const moduloVendaRaw = ctx.query.get("moduloVenda");
+      let moduloVenda: boolean | undefined;
+      if (moduloVendaRaw != null && moduloVendaRaw.trim() !== "") {
+        const mv = moduloVendaRaw.trim().toLowerCase();
+        if (mv === "true" || mv === "1") moduloVenda = true;
+        else if (mv === "false" || mv === "0") moduloVenda = false;
+        else return badRequest(ctx, 'Query "moduloVenda" inválida — use true ou false');
+      }
+
       json(ctx.res, 200, await despesasService.listarDespesasAsync({
         clienteId: ctx.query.get("clienteId") ?? undefined,
         veiculoId: ctx.query.get("veiculoId") ?? undefined,
@@ -77,6 +86,8 @@ export function registerDespesasRoutes(routes: RouteDef[]): void {
         emAberto,
         statusCobranca,
         semCliente: semCliente === true || semCondutor === true ? true : undefined,
+        moduloVenda,
+        vendaId: ctx.query.get("vendaId") ?? undefined,
       }));
     }),
   });

@@ -55,6 +55,7 @@ export async function atualizarVenda(id: string, patch: Partial<VendaInput>): Pr
       formaPagamento: patch.formaPagamento !== undefined ? patch.formaPagamento : atual.formaPagamento,
       observacao: patch.observacao !== undefined ? patch.observacao : atual.observacao,
       ativo: patch.ativo !== undefined ? patch.ativo : atual.ativo,
+      veiculoVendido: patch.veiculoVendido,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao atualizar venda";

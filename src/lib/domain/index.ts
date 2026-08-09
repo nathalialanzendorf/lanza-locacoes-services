@@ -7,6 +7,17 @@ export {
 } from "./categoriaDespesaCliente.js";
 
 export {
+  CategoriaDespesaVenda,
+  CATEGORIAS_DESPESA_VENDA,
+  isCategoriaVenda,
+  isCategoriaLocacaoOperacional,
+  autoInfracaoPrefixoVenda,
+  autoInfracaoEntradaVenda,
+  autoInfracaoParcelaVenda,
+  type CategoriaDespesaVendaValor,
+} from "./categoriaDespesaVenda.js";
+
+export {
   DiaSemanaJs,
   DIAS_SEMANA,
   DOW_JS,

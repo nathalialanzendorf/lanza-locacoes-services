@@ -45,6 +45,11 @@ import {
   resolveSyncRastreame,
 } from "../lib-imports.js";
 import { HttpError } from "../http.js";
+import {
+  CATEGORIAS_DESPESA_VENDA,
+  autoInfracaoPrefixoVenda,
+  isCategoriaVenda,
+} from "../../../../src/lib/domain/categoriaDespesaVenda.js";
 
 export type ListarDespesasOpts = {
   clienteId?: string;
@@ -62,6 +67,10 @@ export type ListarDespesasOpts = {
   semCondutor?: boolean;
   dataInicial?: string;
   dataFinal?: string;
+  /** true = só despesas de venda; false = exclui venda; omitido = todas */
+  moduloVenda?: boolean;
+  /** Filtra parcelas/entrada de uma venda (auto_infracao VENDA-{id}-*). */
+  vendaId?: string;
 };
 
 export type SyncOpts = {
@@ -186,6 +195,17 @@ function filtrarDespesas(items: ClienteDespesaRegistro[], opts: ListarDespesasOp
     }
   }
 
+  if (opts.moduloVenda === true) {
+    items = items.filter((d) => isCategoriaVenda(d.categoria));
+  } else if (opts.moduloVenda === false) {
+    items = items.filter((d) => !isCategoriaVenda(d.categoria));
+  }
+
+  if (opts.vendaId?.trim()) {
+    const prefix = `${autoInfracaoPrefixoVenda(opts.vendaId.trim())}-`.toUpperCase();
+    items = items.filter((d) => String(d.autoInfracao ?? "").toUpperCase().startsWith(prefix));
+  }
+
   if (opts.competencia?.trim()) {
     const comp = opts.competencia.trim();
     items = items.filter((d) => competenciaDeDespesa(d) === comp);
@@ -254,6 +274,9 @@ async function loadDespesasCatalogo(opts: ListarDespesasOpts = {}): Promise<Desp
       emAberto: opts.statusCobranca ? undefined : opts.emAberto,
       statusCobranca: opts.statusCobranca,
       ativo: opts.ativo,
+      categoria: opts.categoria,
+      moduloVenda: opts.moduloVenda,
+      vendaId: opts.vendaId,
     })) as ClienteDespesaRegistro[];
     const veiculoIds = [
       ...new Set(

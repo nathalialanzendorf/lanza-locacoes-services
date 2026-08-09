@@ -457,7 +457,7 @@ async function loadDespesasMut(): Promise<ClienteDespesasDb> {
 }
 
 /** Carrega uma despesa por id ou auto (sem catálogo inteiro no Postgres). */
-async function findClienteDespesaByReferenciaAsync(
+export async function findClienteDespesaByReferenciaAsync(
   idOrAuto: string,
 ): Promise<ClienteDespesaRegistro | null> {
   const key = idOrAuto.trim();

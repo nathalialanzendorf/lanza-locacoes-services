@@ -51,6 +51,8 @@ export type VendaInput = {
   formaPagamento?: string | null;
   observacao?: string | null;
   ativo?: boolean;
+  /** true = veículo marcado como vendido (ativo=false no estoque); false = permanece disponível */
+  veiculoVendido?: boolean;
 };
 
 export type ListarVendasOpts = {
@@ -162,6 +164,15 @@ export async function obterVendaAsync(id: string): Promise<VendaRegistro | null>
   return row ? mapRow(row) : null;
 }
 
+async function sincronizarStatusVeiculoVenda(
+  veiculoId: string | null | undefined,
+  veiculoVendido: boolean | undefined,
+): Promise<void> {
+  if (!veiculoId?.trim() || veiculoVendido === undefined) return;
+  const { editarVeiculoAsync } = await import("./veiculosDb.js");
+  await editarVeiculoAsync(veiculoId.trim(), { ativo: !veiculoVendido });
+}
+
 export async function gravarVendaAsync(input: VendaInput): Promise<VendaRegistro> {
   if (!(await useRelationalStore())) {
     assertRelationalStore();
@@ -176,6 +187,26 @@ export async function gravarVendaAsync(input: VendaInput): Promise<VendaRegistro
   const veiculo = await resolverVeiculoVenda(input.veiculoId, input.placa);
   const comprador = await resolverComprador(input.clienteId, input.compradorNome);
 
+  const valorEntrada = parseValor(input.valorEntrada);
+  const valorParcela = parseValor(input.valorParcela);
+  const quantidadeParcelas = parseIntPositivo(input.quantidadeParcelas);
+  const temCobranca =
+    (valorEntrada != null && valorEntrada > 0) ||
+    (quantidadeParcelas != null && quantidadeParcelas > 0 && valorParcela != null && valorParcela > 0);
+
+  if (temCobranca && !comprador.clienteId?.trim()) {
+    throw new Error("Cliente comprador é obrigatório para gerar entrada e parcelas");
+  }
+  if (
+    quantidadeParcelas != null &&
+    quantidadeParcelas > 0 &&
+    valorParcela != null &&
+    valorParcela > 0 &&
+    !input.dataPagamentoParcelas?.trim()
+  ) {
+    throw new Error("Data da primeira parcela é obrigatória quando há parcelamento");
+  }
+
   const registro: VendaRegistro = {
     id: input.id?.trim() || crypto.randomUUID(),
     veiculoId: veiculo.veiculoId,
@@ -184,10 +215,10 @@ export async function gravarVendaAsync(input: VendaInput): Promise<VendaRegistro
     compradorNome: comprador.compradorNome,
     dataVenda,
     valorVenda,
-    valorEntrada: parseValor(input.valorEntrada),
+    valorEntrada,
     dataPagamentoParcelas: input.dataPagamentoParcelas?.trim() || null,
-    valorParcela: parseValor(input.valorParcela),
-    quantidadeParcelas: parseIntPositivo(input.quantidadeParcelas),
+    valorParcela,
+    quantidadeParcelas,
     formaPagamento: input.formaPagamento?.trim() || null,
     observacao: input.observacao?.trim() || null,
     ativo: input.ativo !== false,
@@ -196,7 +227,15 @@ export async function gravarVendaAsync(input: VendaInput): Promise<VendaRegistro
   };
 
   await upsertVendaToSql(registro as unknown as Record<string, unknown>);
-  return (await obterVendaAsync(registro.id)) ?? registro;
+  const salvo = (await obterVendaAsync(registro.id)) ?? registro;
+  if (temCobranca && salvo.ativo) {
+    const { sincronizarDespesasVenda } = await import("./vendaDespesas.js");
+    await sincronizarDespesasVenda(salvo);
+  }
+
+  await sincronizarStatusVeiculoVenda(salvo.veiculoId, input.veiculoVendido);
+
+  return salvo;
 }
 
 export async function excluirVendaAsync(id: string): Promise<VendaRegistro | null> {
