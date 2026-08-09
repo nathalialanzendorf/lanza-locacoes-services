@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   auditarInfracoesSemCondutor,
+  defaultSeguroAnos,
   defaultSeguroComprovantesDirs,
   ensureRelatoriosDirs,
   extrairSeguroComprovantesDirs,
@@ -677,8 +678,11 @@ async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: n
 }
 
 async function runSeguro(opts: SyncSeguroOpts) {
-  if (opts.anos?.length) {
-    const scanDirs = defaultSeguroComprovantesDirs(opts.anos);
+  const anos =
+    opts.anos?.length ? opts.anos : opts.boletosPath ? undefined : defaultSeguroAnos();
+
+  if (anos?.length) {
+    const scanDirs = defaultSeguroComprovantesDirs(anos);
     const { boletos, erros } = await extrairSeguroComprovantesDirs(scanDirs);
     if (opts.jsonOnly) {
       return { modo: "scan", boletos: boletos.length, erros, apenasJson: true };
@@ -704,6 +708,8 @@ async function runSeguro(opts: SyncSeguroOpts) {
     }
     return {
       modo: "scan",
+      anos,
+      pastas: scanDirs,
       boletos: boletos.length,
       novos,
       atualizados,

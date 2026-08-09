@@ -371,6 +371,7 @@ export {
 } from "../../../src/lib/auditarInfracoes.js";
 
 export {
+  defaultSeguroAnos,
   defaultSeguroComprovantesDirs,
   extrairSeguroComprovantesDirs,
 } from "../../../src/lib/extrairSeguroComprovante.js";

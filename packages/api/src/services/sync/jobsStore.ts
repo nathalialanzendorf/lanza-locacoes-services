@@ -207,16 +207,27 @@ export async function storeUpdateJobProgress(id: string, progress: JobProgress):
   );
 }
 
-export async function storeMarkJobCompleted(id: string, result: unknown): Promise<void> {
+export async function storeMarkJobCompleted(
+  id: string,
+  result: unknown,
+  error?: string,
+): Promise<void> {
   const finishedAt = new Date().toISOString();
+  const patch = {
+    status: "completed" as const,
+    finishedAt,
+    result,
+    ...(error?.trim() ? { error: error.trim() } : {}),
+  };
   await withStore(
-    () => pgUpdateJob(id, { status: "completed", finishedAt, result }),
+    () => pgUpdateJob(id, patch),
     () => {
       const job = memoryJobs.get(id);
       if (!job) return;
       job.status = "completed";
       job.finishedAt = finishedAt;
       job.result = result;
+      if (error?.trim()) job.error = error.trim();
     },
   );
 }

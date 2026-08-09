@@ -1,4 +1,5 @@
 import type { JobProgress, JobStatus, SyncJob } from "./jobsTypes.js";
+import { summarizeSyncJobResult } from "./jobResultSummary.js";
 import {
   storeCreateJob,
   storeGetJob,
@@ -48,12 +49,16 @@ export async function updateJobProgress(id: string, progress: JobProgress): Prom
   await storeUpdateJobProgress(id, progress);
 }
 
-export async function markJobCompleted(id: string, result: unknown): Promise<void> {
+export async function markJobCompleted(
+  id: string,
+  result: unknown,
+  errorSummary?: string,
+): Promise<void> {
   if (await isJobCancellationRequested(id)) {
     await finalizeCancellation(id);
     return;
   }
-  await storeMarkJobCompleted(id, result);
+  await storeMarkJobCompleted(id, result, errorSummary);
   cancellationReasons.delete(id);
 }
 
@@ -150,7 +155,7 @@ export function runJobAsync(jobId: string, fn: () => Promise<unknown>): void {
   void markJobRunning(jobId)
     .then(() => assertJobActive(jobId))
     .then(() => runJobWithLimits(jobId, fn))
-    .then((result) => markJobCompleted(jobId, result))
+    .then((result) => markJobCompleted(jobId, result, summarizeSyncJobResult(result)))
     .catch(async (err) => {
       if (err instanceof JobCancelledError || (await isJobCancellationRequested(jobId))) {
         await finalizeCancellation(jobId);

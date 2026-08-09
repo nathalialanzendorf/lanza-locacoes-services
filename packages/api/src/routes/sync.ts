@@ -39,6 +39,7 @@ function jobProgressHook(syncId: string, jobId: string) {
     "estacionamento",
     "infracoes",
     "ipva-licenciamento",
+    "detran-rs",
     "veiculo-portais-detran-sc",
     "veiculo-portais-detran-rs",
     "veiculo-portais-pedagio",
@@ -99,7 +100,9 @@ function parseSyncInput(body: Record<string, unknown>): SyncInput {
     normalizarTitulos: body.normalizarTitulos === true,
     anos: Array.isArray(body.anos)
       ? body.anos.filter((a): a is string => typeof a === "string")
-      : undefined,
+      : typeof body.ano === "string" && body.ano.trim()
+        ? [body.ano.trim()]
+        : undefined,
     boletosPath: typeof body.boletosPath === "string" ? body.boletosPath : undefined,
     jsonOnly: body.jsonOnly === true,
     categoria: typeof body.categoria === "string" ? body.categoria : undefined,

@@ -180,3 +180,8 @@ export function defaultSeguroComprovantesDirs(anos: string[]): string[] {
     : path.join(cfg.documentosRaiz || "", "Proteção Veicular", "Comprovantes");
   return anos.map((a) => path.join(base, a));
 }
+
+/** Ano padrão para sync-seguro — sempre o ano corrente. */
+export function defaultSeguroAnos(): string[] {
+  return [String(new Date().getFullYear())];
+}
