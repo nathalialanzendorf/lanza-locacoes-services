@@ -9,8 +9,42 @@ import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { closePgPool } from "@lanza/db";
+import { closePgPool, getPgConfig } from "@lanza/db";
 import { saveSigapaySession } from "../src/lib/sigapay/sessionStore.js";
+
+const PG_ENV_KEYS = [
+  "PGHOST",
+  "PGPORT",
+  "PGDATABASE",
+  "PGUSER",
+  "PGPASSWORD",
+  "PGSSLMODE",
+  "AWS_REGION",
+  "AWS_ROLE_ARN",
+] as const;
+
+function pamAuthHelp(password?: string): string {
+  const looksLikeIamToken =
+    !!password &&
+    (password.includes("X-Amz-Algorithm") || password.includes("Action=connect"));
+  return [
+    "Autenticação RDS falhou (PAM / IAM).",
+    "",
+    looksLikeIamToken
+      ? "  PGPASSWORD parece ser um token IAM — expira em ~15 min."
+      : "  PGPASSWORD pode estar expirado ou incorrecto.",
+    "",
+    "  Renovar token IAM (~15 min):",
+    "    .\\scripts\\postgres-console-token.ps1 -Check",
+    "",
+    "  Ou senha estática permanente:",
+    "    .\\scripts\\postgres-console-token.ps1 -SetPassword \"SuaSenhaSegura\"",
+    "    .\\scripts\\set-postgres-user-env.ps1 -PromptPassword",
+    "",
+    "  Depois repita:",
+    "    npx tsx scripts/push-sigapay-session-rds.ts",
+  ].join("\n");
+}
 
 function loadEnvLocal(): void {
   const envLocal = resolve(process.cwd(), ".env.local");
@@ -77,9 +111,23 @@ function fromCaptureFile(filePath: string): {
   };
 }
 
+function syncPgEnvFromUser(): void {
+  for (const name of PG_ENV_KEYS) {
+    const v = userEnv(name);
+    if (v) process.env[name] = v;
+  }
+}
+
 async function main(): Promise<void> {
   loadEnvLocal();
   process.env.LANZA_DB_BACKEND = "postgres";
+  syncPgEnvFromUser();
+
+  if (!process.env.PGHOST?.trim()) {
+    throw new Error(
+      "PGHOST ausente — configure Postgres: .\\scripts\\set-postgres-user-env.ps1",
+    );
+  }
 
   const fileArg = arg("--file");
   let cookie = userEnv("SIGAPAY_COOKIE");
@@ -98,10 +146,6 @@ async function main(): Promise<void> {
       "SIGAPAY_COOKIE/TOKEN ausentes. Rode .\\scripts\\login-sigapay.ps1 ou passe --file capture.json.",
     );
   }
-  if (!process.env.PGPASSWORD?.trim()) {
-    throw new Error("PGPASSWORD ausente — configure Postgres (set-postgres-user-env.ps1).");
-  }
-
   const saved = await saveSigapaySession({
     cookie: cookie || undefined,
     token: token || undefined,
@@ -117,7 +161,22 @@ async function main(): Promise<void> {
 
 main()
   .catch((err) => {
-    console.error(err instanceof Error ? err.message : err);
+    const msg = err instanceof Error ? err.message : String(err);
+    const pgCode =
+      err && typeof err === "object" && "code" in err
+        ? String((err as { code?: string }).code)
+        : "";
+    if (msg.includes("PAM authentication failed") || pgCode === "28P01") {
+      let passwordHint: string | undefined;
+      try {
+        passwordHint = getPgConfig().password;
+      } catch {
+        /* ignore */
+      }
+      console.error(pamAuthHelp(passwordHint));
+    } else {
+      console.error(msg);
+    }
     process.exit(1);
   })
   .finally(() => closePgPool());

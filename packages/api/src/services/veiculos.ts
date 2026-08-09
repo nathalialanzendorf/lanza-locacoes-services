@@ -18,6 +18,10 @@ import {
 
   placasIguais,
 
+  findVeiculoInDb,
+
+  isEntityUuid,
+
   saveVeiculosDbAsync,
 
   type VeiculoPatch,
@@ -183,15 +187,9 @@ function filtrarVeiculos(
 
 
 export async function obterVeiculoAsync(idOuPlaca: string): Promise<VeiculoRegistro | null> {
-
-  const db = await loadVeiculosDbAsync();
-
-  const byId = db.veiculos.find((v) => v.id === idOuPlaca);
-
-  if (byId) return byId;
-
-  return db.veiculos.find((v) => placasIguais(v.placa, idOuPlaca)) ?? null;
-
+  const key = idOuPlaca.trim();
+  const db = await loadVeiculosDbAsync(isEntityUuid(key) ? { veiculoId: key } : { placa: key });
+  return findVeiculoInDb(db, key);
 }
 
 

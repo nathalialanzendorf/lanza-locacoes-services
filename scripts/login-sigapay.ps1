@@ -75,6 +75,9 @@ Write-Host "    A sessao expira periodicamente; ao falhar (HTTP 401), rode este 
 Write-Host "    Feche e reabra os terminais (ou o Cursor) para os outros processos verem os novos valores."
 
 if ($PushRds) {
+  . (Join-Path $PSScriptRoot "sync-user-env.ps1")
+  Sync-UserEnvToProcess
+
   Write-Host ""
   Write-Host "A gravar sessao no RDS (lanza.portal_sessions)..."
   Push-Location $repoRoot
