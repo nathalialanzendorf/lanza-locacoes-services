@@ -107,7 +107,6 @@ function upsertVeiculoVenda(db: VeiculosDb, input: VeiculoVendaInput): "novo" | 
     anoModelo: input.anoModelo,
     ano,
     renavam: input.renavam,
-    cor: input.cor,
     tipoFrota: "venda",
     particular: false,
     ativo: true,
@@ -123,6 +122,7 @@ function upsertVeiculoVenda(db: VeiculosDb, input: VeiculoVendaInput): "novo" | 
     valorCaucao: null,
     atualizadoEm: ts,
   };
+  if (input.cor?.trim()) patch.cor = input.cor.trim();
 
   if (patch.inicioLocacoes === undefined) delete patch.inicioLocacoes;
 
