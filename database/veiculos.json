@@ -18,7 +18,12 @@
       "proprietarioNome": "Elton",
       "proprietarioDocumento": "68283440900",
       "rastreameLabel": "Elton — 68283440900",
-      "atualizadoEm": "2026-08-09T17:45:11.514Z"
+      "atualizadoEm": "2026-08-09T17:46:54.277Z",
+      "clienteVinculadoId": null,
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "94cc021d-005e-4f93-af0a-bdff66d4ce95",
@@ -163,7 +168,7 @@
       "ativo": true,
       "origem": "import-venda-estoque",
       "id": "1f46546e-ee6c-4de8-a02b-39df98b870f0",
-      "atualizadoEm": "2026-08-09T17:45:11.512Z",
+      "atualizadoEm": "2026-08-09T17:46:54.276Z",
       "fipe": "https://veiculos.fipe.org.br?carro/gm-chevrolet/7-2026/004338-9/2008",
       "fipeCodigo": "004338-9",
       "fipeModelo": "MONTANA 1.4 8V Conquest ECONOFLEX  2p",
@@ -173,7 +178,12 @@
       "proprietarioNome": "Ramon",
       "proprietarioDocumento": "43051371000105",
       "rastreameLabel": "Ramon — 43051371000105",
-      "particular": false
+      "particular": false,
+      "clienteVinculadoId": null,
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "e2af98ed-402d-4fa0-b8ec-31d4a10b4c26",
@@ -305,7 +315,12 @@
       "proprietarioNome": "Venezuelano",
       "proprietarioDocumento": "06598411939",
       "rastreameLabel": "Venezuelano — 06598411939",
-      "atualizadoEm": "2026-08-09T17:45:11.514Z"
+      "atualizadoEm": "2026-08-09T17:46:54.277Z",
+      "clienteVinculadoId": null,
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "02829ead-3e9d-4956-84f5-f829092b96f0",
@@ -324,7 +339,12 @@
       "proprietarioNome": "Ricardo",
       "proprietarioDocumento": "04062432552",
       "rastreameLabel": "Ricardo — 04062432552",
-      "atualizadoEm": "2026-08-09T17:45:11.514Z"
+      "atualizadoEm": "2026-08-09T17:46:54.277Z",
+      "clienteVinculadoId": null,
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "1adc725d-9dfc-4570-9961-a7aff66efe86",
@@ -505,7 +525,12 @@
       "proprietarioNome": "Bruno",
       "proprietarioDocumento": "10562102906",
       "rastreameLabel": "Bruno — 10562102906",
-      "atualizadoEm": "2026-08-09T17:45:11.514Z"
+      "atualizadoEm": "2026-08-09T17:46:54.277Z",
+      "clienteVinculadoId": null,
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "b76e08f1-3b53-4581-9419-805e5764586a",
@@ -537,31 +562,37 @@
       "id": "e1698af5-a4cd-49b0-874b-9b6cfba6912e",
       "placa": "OWN-3C59",
       "placaAntiga": "OWN-3259",
-      "marcaModelo": "RENAULT/SANDERO 1.0 Flex",
+      "marcaModelo": "Renault/Sandero Exp 1.0",
       "anoModelo": "2013/2014",
       "chassi": "93YBSR7RHEJ989747",
       "renavam": "00597756635",
-      "cor": "PRETA",
       "fipe": "https://veiculos.fipe.org.br?carro/renault/7-2026/025143-7/2014",
       "fipeModelo": "SANDERO Expression Hi-Flex 1.0 16V 5p",
       "fipeCodigo": "025143-7",
       "fipeValor": "R$ 31.307,00",
       "fipeReferencia": "julho de 2026",
       "rastreameRastreavelKey": "223",
-      "rastreameLabel": "OWN-3C59 - OWN3C59 - SANDERO (Felipe)",
+      "rastreameLabel": "Felipe — 52318451915",
       "rastreameSyncEm": "2026-07-08T23:59:14.804Z",
       "ativo": true,
-      "origem": "rastreame",
+      "origem": "import-venda-estoque",
       "marca": "Renault",
-      "modelo": "SANDERO EXP1016V",
+      "modelo": "Sandero Exp 1.0",
       "ano": 2014,
       "combustivel": "Flex",
       "categoria": "Veiculo",
       "tipo": "Carro",
       "vencimentoDocumento": "2026-11-30",
-      "inicioLocacoes": "2026-05-06",
-      "clienteVinculadoId": "caf97370-463d-468f-af8c-931906c89ca2",
-      "atualizadoEm": "2026-07-18T15:22:37.418Z"
+      "clienteVinculadoId": null,
+      "atualizadoEm": "2026-08-09T17:46:54.277Z",
+      "tipoFrota": "venda",
+      "particular": false,
+      "proprietarioNome": "Felipe",
+      "proprietarioDocumento": "52318451915",
+      "valorSemanal": null,
+      "valorMensal": null,
+      "valorDiaria": null,
+      "valorCaucao": null
     },
     {
       "id": "cf8d3ebe-5246-4e7e-a28d-368173633fc2",

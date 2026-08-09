@@ -65,6 +65,15 @@ const VEICULOS: VeiculoVendaInput[] = [
     renavam: "373630310",
     documento: "10562102906",
   },
+  {
+    dono: "Felipe",
+    placa: "OWN3C59",
+    marca: "Renault",
+    modelo: "Sandero Exp 1.0",
+    anoModelo: "2013/2014",
+    renavam: "00597756635",
+    documento: "52318451915",
+  },
 ];
 
 type VeiculoJson = Record<string, unknown> & {
@@ -106,8 +115,16 @@ function upsertVeiculoVenda(db: VeiculosDb, input: VeiculoVendaInput): "novo" | 
     proprietarioNome: input.dono,
     proprietarioDocumento: input.documento,
     rastreameLabel: `${input.dono} — ${input.documento}`,
+    clienteVinculadoId: null,
+    inicioLocacoes: undefined,
+    valorSemanal: null,
+    valorMensal: null,
+    valorDiaria: null,
+    valorCaucao: null,
     atualizadoEm: ts,
   };
+
+  if (patch.inicioLocacoes === undefined) delete patch.inicioLocacoes;
 
   if (idx >= 0) {
     db.veiculos[idx] = patch;
