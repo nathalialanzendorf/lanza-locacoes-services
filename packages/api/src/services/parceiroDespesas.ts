@@ -200,6 +200,11 @@ export async function criarParceiroDespesa(input: ParceiroDespesaInput) {
     throw new HttpError(400, 'Informe "veiculoId" ou "placa"');
   }
   if (!input.categoria?.trim()) throw new HttpError(400, 'Campo "categoria" é obrigatório');
+  const origem = input.origem?.trim();
+  if (origem && origem !== "manual") {
+    const { sincronizarParceiroDespesaAsync } = await import("../lib-imports.js");
+    return sincronizarParceiroDespesaAsync(input);
+  }
   return gravarParceiroDespesaManualAsync(input);
 }
 
