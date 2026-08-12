@@ -373,11 +373,14 @@ export {
 export {
   defaultSeguroAnos,
   defaultSeguroComprovantesDirs,
+  extrairSeguroComprovanteBuffer,
   extrairSeguroComprovantesDirs,
+  type SeguroBoletoExtraido,
 } from "../../../src/lib/extrairSeguroComprovante.js";
 
 export {
   sincronizarParceiroDespesa,
+  sincronizarParceiroDespesaAsync,
 } from "../../../src/lib/parceiroDespesasDb.js";
 
 export { RELATORIOS_SYNC_DIR, ensureRelatoriosDirs } from "../../../src/lib/relatoriosPaths.js";

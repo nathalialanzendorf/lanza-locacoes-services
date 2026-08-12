@@ -141,7 +141,7 @@ export const SYNC_CATALOG: SyncCatalogEntry[] = [
     destino: "parceiro-despesas.json",
     interativo: false,
     direcao: "buscar",
-    nota: "Lê PDFs em seguroComprovantesDir (config/lanza_paths.json)",
+    nota: "PDFs locais (Dropbox) ou Vercel Blob — use upload na UI ou POST /api/sync/seguro/upload",
   },
   {
     id: "manutencao",

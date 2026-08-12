@@ -13,6 +13,7 @@ import { createJob, getJob, listJobs, requestCancelJob, runJobAsync, updateJobPr
 import {
   executarSync,
   executarSyncCompleto,
+  uploadSeguroSync,
   type SyncCompletoInput,
   type SyncInput,
 } from "../services/sync/runner.js";
@@ -105,6 +106,11 @@ function parseSyncInput(body: Record<string, unknown>): SyncInput {
         : undefined,
     boletosPath: typeof body.boletosPath === "string" ? body.boletosPath : undefined,
     jsonOnly: body.jsonOnly === true,
+    fonte:
+      body.fonte === "local" || body.fonte === "blob" || body.fonte === "auto"
+        ? body.fonte
+        : undefined,
+    mes: typeof body.mes === "string" ? body.mes : undefined,
     categoria: typeof body.categoria === "string" ? body.categoria : undefined,
   };
 }
@@ -176,6 +182,56 @@ export function registerSyncRoutes(routes: RouteDef[]): void {
 
       const data = await executarSyncCompleto(body);
       json(ctx.res, 200, data);
+    }),
+  });
+
+  const seguroUpload = compileRoute("/api/sync/seguro/upload");
+  routes.push({
+    method: "POST",
+    pattern: seguroUpload.regex,
+    paramNames: seguroUpload.paramNames,
+    handler: routeAsync(async (ctx) => {
+      try {
+        const body = await readJsonBody<{
+          ano?: string;
+          mes?: string;
+          sincronizar?: boolean;
+          dryRun?: boolean;
+          jsonOnly?: boolean;
+          arquivos?: Array<{ nome?: string; conteudo?: string }>;
+        }>(ctx.req);
+
+        const ano = body.ano?.trim() || String(new Date().getFullYear());
+        const mes = body.mes?.trim();
+        if (!mes) return badRequest(ctx, 'Campo "mes" é obrigatório (01–12)');
+
+        const arquivosRaw = body.arquivos ?? [];
+        if (!arquivosRaw.length) {
+          return badRequest(ctx, 'Informe "arquivos" com pelo menos um PDF (nome + conteudo base64)');
+        }
+
+        const arquivos: Array<{ nome: string; conteudo: Buffer }> = [];
+        for (const arq of arquivosRaw) {
+          const nome = arq.nome?.trim();
+          const b64 = arq.conteudo?.trim();
+          if (!nome || !b64) {
+            return badRequest(ctx, "Cada arquivo precisa de nome e conteudo (base64)");
+          }
+          arquivos.push({ nome, conteudo: Buffer.from(b64, "base64") });
+        }
+
+        const data = await uploadSeguroSync({
+          ano,
+          mes,
+          arquivos,
+          sincronizar: body.sincronizar !== false,
+          dryRun: body.dryRun === true,
+          jsonOnly: body.jsonOnly === true,
+        });
+        json(ctx.res, 201, data);
+      } catch (err) {
+        handleServiceError(ctx, err);
+      }
     }),
   });
 

@@ -11,6 +11,7 @@ import {
   marcarBaixaParceiroDespesaAsync,
   resolveVeiculoIdListagem,
   saveParceiroDespesasDbAsync,
+  sincronizarParceiroDespesaAsync,
   type ParceiroDespesaInput,
   type ParceiroDespesaRegistro,
   isEntityUuid,
@@ -202,7 +203,6 @@ export async function criarParceiroDespesa(input: ParceiroDespesaInput) {
   if (!input.categoria?.trim()) throw new HttpError(400, 'Campo "categoria" é obrigatório');
   const origem = input.origem?.trim();
   if (origem && origem !== "manual") {
-    const { sincronizarParceiroDespesaAsync } = await import("../lib-imports.js");
     return sincronizarParceiroDespesaAsync(input);
   }
   return gravarParceiroDespesaManualAsync(input);

@@ -29,7 +29,7 @@ import {
   sincronizarMultasFrotaDetranSc,
   sincronizarMultasPorTicketDetranSc,
   sincronizarMultasVeiculoDetranSc,
-  sincronizarParceiroDespesa,
+  sincronizarParceiroDespesaAsync,
   sincronizarPedagiosFrota,
   sincronizarPedagiosVeiculo,
   sincronizarEstacionamentoFrota,
@@ -47,6 +47,11 @@ import {
 import { HttpError } from "../../http.js";
 import * as estacionamentoService from "../estacionamento.js";
 import * as fipeService from "../fipe.js";
+import {
+  extrairSeguroComprovantesBlob,
+  extrairSeguroDeUpload,
+  uploadSeguroComprovantes,
+} from "./seguroStorage.js";
 import type { JobProgress } from "./jobsTypes.js";
 import { normalizarSyncId, syncDirecaoDefaults, SYNC_COMPLETO_ORDEM, type SyncId } from "./catalog.js";
 
@@ -96,10 +101,14 @@ export type SyncEstacionamentoOpts = SyncBaseOpts & {
   onProgress?: (p: JobProgress) => void;
 };
 
-export type SyncSeguroOpts = {
+export type SyncSeguroOpts = SyncBaseOpts & {
   anos?: string[];
   boletosPath?: string;
   jsonOnly?: boolean;
+  /** local = pastas Dropbox; blob = Vercel Blob; auto = local se existir, senão blob */
+  fonte?: "local" | "blob" | "auto";
+  /** Filtra mês (01–12) ao ler do Blob */
+  mes?: string;
 };
 
 export type SyncManutencaoOpts = SyncBaseOpts & {
@@ -677,45 +686,103 @@ async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: n
   };
 }
 
+async function sincronizarBoletosSeguro(
+  boletos: Array<{
+    placa: string;
+    valor: number;
+    data?: string;
+    competencia?: string;
+    origem?: string;
+  }>,
+  dryRun?: boolean,
+) {
+  let novos = 0;
+  let atualizados = 0;
+  let semAlteracao = 0;
+  const semVeiculo: string[] = [];
+  const despesas: Array<{ placa: string; acao: string; id?: string }> = [];
+
+  for (const b of boletos) {
+    if (dryRun) {
+      novos++;
+      despesas.push({ placa: b.placa, acao: "novo" });
+      continue;
+    }
+    const r = await sincronizarParceiroDespesaAsync({
+      placa: b.placa,
+      categoria: "Seguro",
+      descricao: "Seguro",
+      data: b.data ?? "",
+      valor: b.valor,
+      competencia: b.competencia,
+      origem: b.origem,
+    });
+    if (r.aviso?.includes("placa")) semVeiculo.push(b.placa);
+    if (r.acao === "novo") novos++;
+    else if (r.acao === "atualizado") atualizados++;
+    else if (r.acao === "sem_alteracao") semAlteracao++;
+    despesas.push({ placa: b.placa, acao: r.acao, id: r.registro.id });
+  }
+
+  return {
+    novos,
+    atualizados,
+    semAlteracao,
+    semVeiculo: [...new Set(semVeiculo)],
+    despesas,
+  };
+}
+
+function seguroUsarBlob(opts: SyncSeguroOpts, scanDirs: string[]): boolean {
+  const fonte = opts.fonte ?? (process.env.VERCEL ? "blob" : "auto");
+  if (fonte === "blob") return true;
+  if (fonte === "local") return false;
+  return !scanDirs.some((d) => fs.existsSync(d));
+}
+
 async function runSeguro(opts: SyncSeguroOpts) {
   const anos =
     opts.anos?.length ? opts.anos : opts.boletosPath ? undefined : defaultSeguroAnos();
 
   if (anos?.length) {
     const scanDirs = defaultSeguroComprovantesDirs(anos);
+    const usarBlob = seguroUsarBlob(opts, scanDirs);
+
+    if (usarBlob) {
+      const { boletos, erros, prefixes, pdfs } = await extrairSeguroComprovantesBlob({
+        anos,
+        mes: opts.mes,
+      });
+      if (opts.jsonOnly) {
+        return { modo: "blob", boletos: boletos.length, pdfs, prefixes, erros, apenasJson: true };
+      }
+      const stats = await sincronizarBoletosSeguro(boletos, opts.dryRun);
+      return {
+        modo: "blob",
+        fonte: "blob",
+        anos,
+        mes: opts.mes,
+        prefixes,
+        pdfs,
+        boletos: boletos.length,
+        erros,
+        ...stats,
+      };
+    }
+
     const { boletos, erros } = await extrairSeguroComprovantesDirs(scanDirs);
     if (opts.jsonOnly) {
       return { modo: "scan", boletos: boletos.length, erros, apenasJson: true };
     }
-    let novos = 0;
-    let atualizados = 0;
-    let semAlteracao = 0;
-    const semVeiculo: string[] = [];
-    for (const b of boletos) {
-      const r = sincronizarParceiroDespesa({
-        placa: b.placa,
-        categoria: "Seguro",
-        descricao: "Seguro",
-        data: b.data ?? "",
-        valor: b.valor,
-        competencia: b.competencia,
-        origem: b.origem,
-      });
-      if (r.aviso?.includes("placa")) semVeiculo.push(b.placa);
-      if (r.acao === "novo") novos++;
-      else if (r.acao === "atualizado") atualizados++;
-      else if (r.acao === "sem_alteracao") semAlteracao++;
-    }
+    const stats = await sincronizarBoletosSeguro(boletos, opts.dryRun);
     return {
       modo: "scan",
+      fonte: "local",
       anos,
       pastas: scanDirs,
       boletos: boletos.length,
-      novos,
-      atualizados,
-      semAlteracao,
-      semVeiculo: [...new Set(semVeiculo)],
       erros,
+      ...stats,
     };
   }
 
@@ -733,24 +800,54 @@ async function runSeguro(opts: SyncSeguroOpts) {
     competencia?: string;
     origem?: string;
   }>;
-  let novos = 0;
-  let atualizados = 0;
-  let semAlteracao = 0;
-  for (const b of boletos) {
-    const r = sincronizarParceiroDespesa({
-      placa: b.placa,
-      categoria: "Seguro",
-      descricao: "Seguro",
-      data: b.data ?? "",
-      valor: b.valor,
-      competencia: b.competencia,
-      origem: b.origem,
+  const stats = await sincronizarBoletosSeguro(boletos, opts.dryRun);
+  return { modo: "boletos", total: boletos.length, ...stats };
+}
+
+export async function uploadSeguroSync(input: {
+  ano: string;
+  mes: string;
+  arquivos: Array<{ nome: string; conteudo: Buffer }>;
+  sincronizar?: boolean;
+  dryRun?: boolean;
+  jsonOnly?: boolean;
+}) {
+  const upload = await uploadSeguroComprovantes({
+    ano: input.ano,
+    mes: input.mes,
+    arquivos: input.arquivos,
+  });
+
+  let sync: Record<string, unknown> | undefined;
+  if (input.sincronizar !== false && upload.uploaded.length > 0) {
+    const { boletos, erros: errosExtracao } = await extrairSeguroDeUpload({
+      arquivos: input.arquivos,
+      uploaded: upload.uploaded,
     });
-    if (r.acao === "novo") novos++;
-    else if (r.acao === "atualizado") atualizados++;
-    else if (r.acao === "sem_alteracao") semAlteracao++;
+
+    if (input.jsonOnly) {
+      sync = {
+        modo: "upload",
+        boletos: boletos.length,
+        pdfs: upload.uploaded.length,
+        erros: errosExtracao,
+        apenasJson: true,
+      };
+    } else {
+      const stats = await sincronizarBoletosSeguro(boletos, input.dryRun);
+      sync = {
+        modo: "upload",
+        ano: input.ano,
+        mes: input.mes,
+        pdfs: upload.uploaded.length,
+        boletos: boletos.length,
+        erros: errosExtracao,
+        ...stats,
+      };
+    }
   }
-  return { modo: "boletos", total: boletos.length, novos, atualizados, semAlteracao };
+
+  return { upload, sync };
 }
 
 async function runManutencao(opts: SyncManutencaoOpts) {

@@ -132,24 +132,32 @@ export function listarPdfSeguro(dirs: string[]): string[] {
   return [...pdfs].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
+export async function extrairSeguroComprovanteBuffer(
+  buf: Buffer,
+  opts: { filename: string; origem: string },
+): Promise<SeguroBoletoExtraido | null> {
+  const parsed = await pdfParse(buf);
+  const fields = parseSeguroComprovanteText(parsed.text, {
+    filename: opts.filename,
+  });
+  if (!fields) return null;
+  return { ...fields, origem: opts.origem };
+}
+
 export async function extrairSeguroComprovantePdf(
   filePath: string,
   documentosRaiz?: string,
 ): Promise<SeguroBoletoExtraido | null> {
   const buf = fs.readFileSync(filePath);
-  const parsed = await pdfParse(buf);
-  const fields = parseSeguroComprovanteText(parsed.text, {
-    filename: path.basename(filePath),
-  });
-  if (!fields) return null;
-
   const raiz =
     documentosRaiz ||
     readLanzaPaths().documentosRaiz ||
     path.dirname(path.dirname(path.dirname(filePath)));
   const origem = origemRelativaDocumentosRaiz(filePath, raiz);
-
-  return { ...fields, origem };
+  return extrairSeguroComprovanteBuffer(buf, {
+    filename: path.basename(filePath),
+    origem,
+  });
 }
 
 export async function extrairSeguroComprovantesDirs(

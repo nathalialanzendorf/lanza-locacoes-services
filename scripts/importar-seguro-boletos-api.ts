@@ -1,9 +1,10 @@
 /**
- * Extrai boletos de seguro de uma pasta local e grava via POST /api/parceiro-despesas.
+ * Extrai boletos de seguro de uma pasta local e grava via API.
  *
  * Uso:
  *   npx tsx scripts/importar-seguro-boletos-api.ts --scan "D:/Dropbox/.../08 Agosto"
  *   npx tsx scripts/importar-seguro-boletos-api.ts --mes 08 --ano 2026
+ *   npx tsx scripts/importar-seguro-boletos-api.ts --mes 08 --ano 2026 --upload-blob
  */
 import path from "node:path";
 import fs from "node:fs";
@@ -11,6 +12,7 @@ import fs from "node:fs";
 import {
   defaultSeguroComprovantesDirs,
   extrairSeguroComprovantesDirs,
+  listarPdfSeguro,
 } from "../src/lib/extrairSeguroComprovante.js";
 import { readLanzaPaths } from "../src/lib/lanzaPaths.js";
 
@@ -128,11 +130,71 @@ async function importarBoleto(
   return { placa: b.placa, acao: json.acao ?? "ok" };
 }
 
+async function uploadPdfsBlob(
+  base: string,
+  scanDirs: string[],
+  ano: string,
+  mes: string,
+): Promise<{ uploaded: number; erros: string[] }> {
+  const pdfs = listarPdfSeguro(scanDirs);
+  const arquivos = pdfs.map((p) => ({
+    nome: path.basename(p),
+    conteudo: fs.readFileSync(p).toString("base64"),
+  }));
+
+  const res = await fetch(`${base}/api/sync/seguro/upload`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      ano,
+      mes,
+      arquivos,
+      sincronizar: true,
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    upload?: { uploaded?: unknown[]; erros?: string[] };
+    sync?: unknown;
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(json.error || `Upload HTTP ${res.status}`);
+  }
+  return {
+    uploaded: json.upload?.uploaded?.length ?? 0,
+    erros: json.upload?.erros ?? [],
+  };
+}
+
 async function main(): Promise<void> {
   const base = arg("--base") || process.env.LANZA_API_BASE?.trim() || DEFAULT_BASE;
   await ensureBearerToken(base);
 
   const scanDirs = resolveScanDirs();
+  const ano = arg("--ano") || String(new Date().getFullYear());
+  const mes = arg("--mes") || "08";
+  const uploadBlob = process.argv.includes("--upload-blob");
+
+  if (uploadBlob) {
+    const blob = await uploadPdfsBlob(base, scanDirs, ano, mes);
+    console.log(
+      JSON.stringify(
+        {
+          base,
+          modo: "upload-blob",
+          pastas: scanDirs,
+          ano,
+          mes,
+          ...blob,
+        },
+        null,
+        2,
+      ),
+    );
+    if (blob.erros.length) process.exit(1);
+    return;
+  }
+
   const { boletos, erros } = await extrairSeguroComprovantesDirs(scanDirs);
 
   const mesFiltro = arg("--competencia") || arg("--mes");
