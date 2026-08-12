@@ -19,7 +19,7 @@ import type { DetranScInfracao, DetranScMultaNormalizada, StatusInfracaoDetran }
 import { inferirCondutorInfracao, parseDataAutuacao } from "./inferirCondutorInfracao.js";
 import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
-import { espelharInfracaoParceiro } from "./espelharSemLocatarioParceiro.js";
+import { espelharInfracaoParceiro, espelharInfracaoParceiroAsync } from "./espelharSemLocatarioParceiro.js";
 import type { ParceiroDespesaInput } from "./parceiroDespesasDb.js";
 import { competenciaFromData } from "./parceiroDespesasDb.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -556,7 +556,7 @@ export async function confirmarDebitoParceiroInfracaoAsync(
   } else {
     await saveInfracoesDbAsync(db);
   }
-  espelharInfracaoParceiro(reg);
+  await espelharInfracaoParceiroAsync(reg);
   return reg;
 }
 
@@ -615,6 +615,27 @@ export function atualizarPdfArquivoInfracaoDb(
   return reg;
 }
 
+export async function atualizarPdfArquivoInfracaoDbAsync(
+  numeroAuto: string,
+  pdfArquivo: string,
+): Promise<InfracaoRegistro | null> {
+  const db = await loadInfracoesDbAsync();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  if (reg.pdfArquivo === pdfArquivo) return reg;
+  reg.pdfArquivo = pdfArquivo;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  if (await useRelationalStore()) {
+    await upsertInfracaoToSql(reg as unknown as Record<string, unknown>);
+  } else {
+    await saveInfracoesDbAsync(db);
+  }
+  return reg;
+}
+
 export function atualizarNotificacaoPdfArquivoInfracaoDb(
   numeroAuto: string,
   notificacaoPdfArquivo: string,
@@ -632,7 +653,29 @@ export function atualizarNotificacaoPdfArquivoInfracaoDb(
   return reg;
 }
 
-export function sincronizarInfracao(
+export async function atualizarNotificacaoPdfArquivoInfracaoDbAsync(
+  numeroAuto: string,
+  notificacaoPdfArquivo: string,
+): Promise<InfracaoRegistro | null> {
+  const db = await loadInfracoesDbAsync();
+  const key = autoKey(numeroAuto);
+  const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
+  if (idx < 0) return null;
+  const reg = db.infracoes[idx]!;
+  if (reg.notificacaoPdfArquivo === notificacaoPdfArquivo) return reg;
+  reg.notificacaoPdfArquivo = notificacaoPdfArquivo;
+  reg.atualizadoEm = nowIso();
+  db.infracoes[idx] = reg;
+  if (await useRelationalStore()) {
+    await upsertInfracaoToSql(reg as unknown as Record<string, unknown>);
+  } else {
+    await saveInfracoesDbAsync(db);
+  }
+  return reg;
+}
+
+function sincronizarInfracaoOnDb(
+  db: InfracoesDb,
   veiculoIdRaw: string,
   input: InfracaoInput,
   opts?: { prazoDias?: number; dryRun?: boolean },
@@ -643,7 +686,6 @@ export function sincronizarInfracao(
   const dataFinal = String(input.dataAutuacao ?? "").trim();
 
   if (opts?.dryRun) {
-    const db = loadInfracoesDb();
     const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
     if (idx < 0) {
       return {
@@ -685,7 +727,6 @@ export function sincronizarInfracao(
     return { registro: reg, aviso: "sync detran-sc (dry-run)", acao: "atualizado" };
   }
 
-  const db = loadInfracoesDb();
   const idx = db.infracoes.findIndex((i) => autoKey(i.numeroAuto) === key);
   const ts = nowIso();
 
@@ -750,7 +791,6 @@ export function sincronizarInfracao(
     };
 
     db.infracoes.push(registro);
-    saveInfracoesDb(db);
     return { registro, aviso, acao: "novo" };
   }
 
@@ -815,12 +855,38 @@ export function sincronizarInfracao(
   }
 
   db.infracoes[idx] = reg;
-  saveInfracoesDb(db);
   return {
     registro: reg,
     aviso: input.origem === "detran-sc" ? "sync detran-sc" : null,
     acao: "atualizado",
   };
+}
+
+export function sincronizarInfracao(
+  veiculoIdRaw: string,
+  input: InfracaoInput,
+  opts?: { prazoDias?: number; dryRun?: boolean },
+): SincronizarInfracaoResult {
+  const db = loadInfracoesDb();
+  const result = sincronizarInfracaoOnDb(db, veiculoIdRaw, input, opts);
+  if (!opts?.dryRun && result.acao !== "sem_alteracao") saveInfracoesDb(db);
+  return result;
+}
+
+export async function sincronizarInfracaoAsync(
+  veiculoIdRaw: string,
+  input: InfracaoInput,
+  opts?: { prazoDias?: number; dryRun?: boolean },
+): Promise<SincronizarInfracaoResult> {
+  const db = await loadInfracoesDbAsync();
+  const result = sincronizarInfracaoOnDb(db, veiculoIdRaw, input, opts);
+  if (opts?.dryRun || result.acao === "sem_alteracao") return result;
+  if (await useRelationalStore()) {
+    await upsertInfracaoToSql(result.registro as unknown as Record<string, unknown>);
+    return result;
+  }
+  await saveInfracoesDbAsync(db);
+  return result;
 }
 
 /** Converte registro de infração para input de cliente-despesas (espelho cobrável). */

@@ -3,11 +3,13 @@ import path from "node:path";
 
 import { CategoriaDespesaCliente } from "../domain/categoriaDespesaCliente.js";
 import type { DetranScInfracao } from "./types.js";
+import { loadVeiculosDbAsync } from "../veiculosDb.js";
 import { formatPlacaHyphen } from "../placa.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import {
   sincronizarClienteDespesa,
   atualizarPdfArquivoInfracao,
+  atualizarPdfArquivoInfracaoAsync,
   excluirClienteDespesa,
   loadClienteDespesasDb,
   simularSincronizarClienteDespesa,
@@ -16,7 +18,9 @@ import {
 } from "../clienteDespesasDb.js";
 import {
   atualizarPdfArquivoInfracaoDb,
+  atualizarPdfArquivoInfracaoDbAsync,
   atualizarNotificacaoPdfArquivoInfracaoDb,
+  atualizarNotificacaoPdfArquivoInfracaoDbAsync,
   clienteDespesaInputFromInfracao,
   inputInfracaoFromDetran,
   infracaoDeveEspelharClienteDespesa,
@@ -24,13 +28,15 @@ import {
   origemParceiroInfracaoSemLocatario,
   parceiroDespesaInputFromInfracao,
   sincronizarInfracao,
+  sincronizarInfracaoAsync,
   vincularClienteDespesaInfracao,
+  vincularClienteDespesaInfracaoAsync,
   type InfracaoRegistro,
 } from "../infracoesDb.js";
 import { caminhoRelativoPdfSalvo, localizarPdfInfracaoExistente, salvarPdfInfracao } from "../infracaoPdfStorage.js";
 import {
-  sincronizarParceiroDespesa,
-  removerParceiroDespesaPorOrigem,
+  sincronizarParceiroDespesaAsync,
+  removerParceiroDespesaPorOrigemAsync,
   findParceiroDespesaPorOrigem,
   type GravarParceiroDespesaResult,
 } from "../parceiroDespesasDb.js";
@@ -78,6 +84,16 @@ export type SyncVeiculoResult = {
   alteracoes: SyncAlteracaoLinha[];
 };
 
+async function loadVeiculosFrotaAsync(placaFiltro?: string): Promise<VeiculoFrota[]> {
+  const db = await loadVeiculosDbAsync({ ativo: true, placa: placaFiltro });
+  const filtro = placaFiltro ? formatPlacaHyphen(placaFiltro) : null;
+  return db.veiculos
+    .filter((v) => !v.ufRegistro || String(v.ufRegistro).toUpperCase() === "SC")
+    .filter((v) => v.placa && v.renavam)
+    .filter((v) => !filtro || formatPlacaHyphen(v.placa) === filtro)
+    .map((v) => ({ placa: v.placa, renavam: String(v.renavam) }));
+}
+
 function loadVeiculosFrota(placaFiltro?: string): VeiculoFrota[] {
   const p = path.join(REPO_ROOT, "database", "veiculos.json");
   const j = JSON.parse(fs.readFileSync(p, "utf8")) as {
@@ -89,7 +105,7 @@ function loadVeiculosFrota(placaFiltro?: string): VeiculoFrota[] {
     // Sync atualiza apenas veículos ATIVOS (sync-veiculo/cliente é que tratam inativos).
     .filter((v) => v.ativo !== false)
     // DETRAN SC só tem dados de veículos registrados em SC — pular outras UFs.
-    .filter((v) => !v.ufRegistro || v.ufRegistro.toUpperCase() === "SC")
+    .filter((v) => !v.ufRegistro || String(v.ufRegistro).toUpperCase() === "SC")
     .filter((v) => v.placa && v.renavam)
     .filter((v) => !filtro || formatPlacaHyphen(v.placa!) === filtro)
     .map((v) => ({ placa: v.placa!, renavam: String(v.renavam!) }));
@@ -219,7 +235,7 @@ async function espelharDebitoInfracao(
           status: "excluido",
         });
       }
-      const parceiroDespesa = sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg), {
+      const parceiroDespesa = await sincronizarParceiroDespesaAsync(parceiroDespesaInputFromInfracao(reg), {
         dryRun: true,
       });
       alteracoes.push(
@@ -268,7 +284,7 @@ async function espelharDebitoInfracao(
         status: "excluido",
       });
     }
-    const parceiroDespesa = sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg));
+    const parceiroDespesa = await sincronizarParceiroDespesaAsync(parceiroDespesaInputFromInfracao(reg));
     alteracoes.push(linhaParceiro(placa, parceiroDespesa.registro, parceiroDespesa.acao, parceiroDespesa.aviso));
     return {
       clienteDespesa: null,
@@ -281,7 +297,7 @@ async function espelharDebitoInfracao(
   if (infracaoDeveEspelharClienteDespesa(reg)) {
     const origemParceiro = origemParceiroInfracaoSemLocatario(reg.veiculoId, reg.numeroAuto);
     const parceiroAntigo = findParceiroDespesaPorOrigem(origemParceiro);
-    if (parceiroAntigo && removerParceiroDespesaPorOrigem(origemParceiro)) {
+    if (parceiroAntigo && (await removerParceiroDespesaPorOrigemAsync(origemParceiro))) {
       alteracoes.push({
         ...linhaParceiro(placa, parceiroAntigo, "sem_alteracao"),
         status: "excluido",
@@ -293,7 +309,7 @@ async function espelharDebitoInfracao(
       { fonteDetran: m.fonte, prazoDias: opts?.prazoDias },
     );
     if (clienteDespesa.registro.id && clienteDespesa.acao !== "ignorado") {
-      vincularClienteDespesaInfracao(m.numeroAuto, clienteDespesa.registro.id);
+      await vincularClienteDespesaInfracaoAsync(m.numeroAuto, clienteDespesa.registro.id);
     }
     alteracoes.push(
       linhaCobranca(placa, clienteDespesa.registro, clienteDespesa.acao, clienteDespesa.aviso),
@@ -322,7 +338,7 @@ async function aplicarMulta(
 ): Promise<EspelhoInfracaoResult> {
   const rawItem = rawPorAuto.get(m.autoInfracao.trim().toUpperCase());
   const infracaoInput = inputInfracaoFromDetran(m, rawItem);
-  const infracao = sincronizarInfracao(placa, infracaoInput, {
+  const infracao = await sincronizarInfracaoAsync(placa, infracaoInput, {
     dryRun: opts?.dryRun,
     prazoDias: opts?.prazoDias,
   });
@@ -364,15 +380,15 @@ async function tentarBaixarPdfInfracao(
     avisos.push(`${m.autoInfracao} [AIT]: PDF já existe (pulado): ${aitExistente}`);
     if (!opts?.dryRun && !registro.pdfArquivo) {
       const rel = caminhoRelativoPdfSalvo(aitExistente);
-      atualizarPdfArquivoInfracaoDb(m.autoInfracao, rel);
-      atualizarPdfArquivoInfracao(m.autoInfracao, rel);
+      await atualizarPdfArquivoInfracaoDbAsync(m.autoInfracao, rel);
+      await atualizarPdfArquivoInfracaoAsync(m.autoInfracao, rel);
       registro.pdfArquivo = rel;
     }
   }
   if (naExistente) {
     avisos.push(`${m.autoInfracao} [NA]: PDF já existe (pulado): ${naExistente}`);
     if (!opts?.dryRun && !opts?.notificacaoPdfArquivo) {
-      atualizarNotificacaoPdfArquivoInfracaoDb(
+      await atualizarNotificacaoPdfArquivoInfracaoDbAsync(
         m.autoInfracao,
         caminhoRelativoPdfSalvo(naExistente),
       );
@@ -409,8 +425,8 @@ async function tentarBaixarPdfInfracao(
       if (saved.pdfArquivo) {
         gravados++;
         if (!opts?.dryRun) {
-          atualizarPdfArquivoInfracaoDb(m.autoInfracao, saved.pdfArquivo);
-          atualizarPdfArquivoInfracao(m.autoInfracao, saved.pdfArquivo);
+          await atualizarPdfArquivoInfracaoDbAsync(m.autoInfracao, saved.pdfArquivo);
+          await atualizarPdfArquivoInfracaoAsync(m.autoInfracao, saved.pdfArquivo);
           registro.pdfArquivo = saved.pdfArquivo;
         }
       }
@@ -430,7 +446,7 @@ async function tentarBaixarPdfInfracao(
       if (saved.pdfArquivo) {
         gravados++;
         if (!opts?.dryRun) {
-          atualizarNotificacaoPdfArquivoInfracaoDb(m.autoInfracao, saved.pdfArquivo);
+          await atualizarNotificacaoPdfArquivoInfracaoDbAsync(m.autoInfracao, saved.pdfArquivo);
         }
       }
     } else {
@@ -559,6 +575,14 @@ export async function processarRespostaDetranSc(
   return result;
 }
 
+export async function loadVeiculosParaSyncAsync(placaFiltro?: string): Promise<VeiculoFrota[]> {
+  const list = await loadVeiculosFrotaAsync(placaFiltro);
+  if (placaFiltro && list.length === 0) {
+    throw new Error(`Placa não encontrada (SC): ${placaFiltro}`);
+  }
+  return list;
+}
+
 export function loadVeiculosParaSync(placaFiltro?: string): VeiculoFrota[] {
   const list = loadVeiculosFrota(placaFiltro);
   if (placaFiltro && list.length === 0) {
@@ -574,7 +598,7 @@ export async function sincronizarMultasFrotaDetranSc(opts?: {
   delayMs?: number;
   onProgress?: (done: number, total: number, falhas: number) => void;
 }): Promise<SyncVeiculoResult[]> {
-  const veiculos = loadVeiculosParaSync(opts?.placa);
+  const veiculos = await loadVeiculosParaSyncAsync(opts?.placa);
   const out: SyncVeiculoResult[] = [];
   const delay = opts?.delayMs ?? 1500;
   const total = veiculos.length;

@@ -393,10 +393,11 @@ export function sincronizarParceiroDespesa(
 
 export async function sincronizarParceiroDespesaAsync(
   input: ParceiroDespesaInput,
+  opts?: { dryRun?: boolean },
 ): Promise<GravarParceiroDespesaResult> {
   const db = await loadParceiroDespesasDbAsync();
   const result = sincronizarParceiroDespesaOnDb(db, input);
-  if (result.acao === "sem_alteracao") return result;
+  if (opts?.dryRun || result.acao === "sem_alteracao") return result;
   if (await useRelationalStore()) {
     await upsertParceiroDespesaToSql(result.registro as unknown as Record<string, unknown>);
     return result;
@@ -522,6 +523,23 @@ export function marcarParceiroDespesaRastreameSync(
   if (fields.hash !== undefined) reg.rastreameHash = fields.hash;
   reg.rastreameSyncEm = new Date().toISOString();
   saveParceiroDespesasDb(db);
+}
+
+export async function marcarParceiroDespesaRastreameSyncAsync(
+  id: string,
+  fields: { manutencaoId?: string | number | null; hash?: string | null },
+): Promise<void> {
+  const db = await loadParceiroDespesasDbAsync();
+  const reg = db.parceiroDespesas.find((d) => d.id === id);
+  if (!reg) return;
+  if (fields.manutencaoId !== undefined) reg.rastreameManutencaoId = fields.manutencaoId;
+  if (fields.hash !== undefined) reg.rastreameHash = fields.hash;
+  reg.rastreameSyncEm = new Date().toISOString();
+  if (await useRelationalStore()) {
+    await upsertParceiroDespesaToSql(reg as unknown as Record<string, unknown>);
+    return;
+  }
+  await saveParceiroDespesasDbAsync(db);
 }
 
 /** Localiza despesa parceiro pela origem exacta (antes de remover no espelho DETRAN). */

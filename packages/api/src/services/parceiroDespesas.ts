@@ -6,6 +6,7 @@ import {
   gravarParceiroDespesaManualAsync,
   isVeiculoAtivo,
   lancarRastreadorFixo,
+  lancarRastreadorFixoAsync,
   loadParceiroDespesasDbAsync,
   loadVeiculosDbAsync,
   marcarBaixaParceiroDespesaAsync,
@@ -251,12 +252,12 @@ export async function removerParceiroDespesa(id: string): Promise<ParceiroDespes
   return removido!;
 }
 
-export function lancarRastreador(opts: {
+export async function lancarRastreador(opts: {
   desde?: string;
   ate?: string;
   dryRun?: boolean;
 }) {
-  return lancarRastreadorFixo({
+  return lancarRastreadorFixoAsync({
     desde: opts.desde ?? "01/2026",
     ate: opts.ate,
     dryRun: opts.dryRun,

@@ -8,10 +8,14 @@ import crypto from "node:crypto";
 
 import {
   loadParceiroDespesasDb,
+  loadParceiroDespesasDbAsync,
   saveParceiroDespesasDb,
+  saveParceiroDespesasDbAsync,
   type ParceiroDespesaRegistro,
 } from "./parceiroDespesasDb.js";
+import { loadVeiculosDbAsync } from "./veiculosDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
+import { deleteParceiroDespesaFromSql, upsertParceiroDespesaToSql, useRelationalStore } from "@lanza/db";
 import { DB_VEICULOS } from "./parceiroDespesasDb.js";
 
 export const RASTREADOR_DIA_PADRAO = 10;
@@ -178,6 +182,106 @@ export function lancarRastreadorFixo(opts: LancarRastreadorOpts = {}): LancarRas
 
   if (!opts.dryRun && (novos > 0 || atualizados > 0 || duplicatasRemovidas > 0)) {
     saveParceiroDespesasDb(db);
+  }
+
+  return {
+    novos,
+    atualizados,
+    semAlteracao,
+    duplicatasRemovidas,
+    competencias,
+    veiculos: veiculos.length,
+  };
+}
+
+export async function lancarRastreadorFixoAsync(
+  opts: LancarRastreadorOpts = {},
+): Promise<LancarRastreadorResult> {
+  const desde = opts.desde ?? "01/2026";
+  const ate = opts.ate ?? competenciaAtual();
+  const competencias = listCompetenciasMensais(desde, ate);
+  const veiculosDb = await loadVeiculosDbAsync({ ativo: true, tipoFrota: "locacao" });
+  const veiculos = veiculosDb.veiculos.map((v) => ({ id: v.id, placa: v.placa }));
+  const db = await loadParceiroDespesasDbAsync();
+
+  let novos = 0;
+  let atualizados = 0;
+  let semAlteracao = 0;
+  let duplicatasRemovidas = 0;
+  const toUpsert: ParceiroDespesaRegistro[] = [];
+  const toDelete: string[] = [];
+
+  for (const v of veiculos) {
+    for (const comp of competencias) {
+      const valor = rastreadorValorFixo(comp);
+      const data = rastreadorDataFixa(comp);
+      const origem = origemRastreadorFixo(v.placa, comp);
+      const matches = findRastreadoresMes(db.parceiroDespesas, v.placa, comp);
+      const ex = pickCanonicRastreador(matches, origem);
+
+      const extras = matches.filter((d) => d !== ex);
+      if (extras.length && !opts.dryRun) {
+        const removeIds = new Set(extras.map((d) => d.id));
+        db.parceiroDespesas = db.parceiroDespesas.filter((d) => !removeIds.has(d.id));
+        toDelete.push(...extras.map((d) => d.id));
+        duplicatasRemovidas += extras.length;
+      } else if (extras.length) {
+        duplicatasRemovidas += extras.length;
+      }
+
+      if (!ex) {
+        if (!opts.dryRun) {
+          const reg: ParceiroDespesaRegistro = {
+            id: crypto.randomUUID(),
+            veiculoId: v.id,
+            placa: formatPlacaHyphen(v.placa),
+            categoria: "Rastreador",
+            descricao: "Rastreador",
+            data,
+            valor,
+            competencia: comp,
+            origem,
+          };
+          db.parceiroDespesas.push(reg);
+          toUpsert.push(reg);
+        }
+        novos++;
+        continue;
+      }
+
+      const changed =
+        ex.valor !== valor ||
+        ex.data !== data ||
+        ex.descricao !== "Rastreador" ||
+        ex.veiculoId !== v.id ||
+        ex.origem !== origem;
+
+      if (changed) {
+        if (!opts.dryRun) {
+          ex.valor = valor;
+          ex.data = data;
+          ex.descricao = "Rastreador";
+          ex.placa = formatPlacaHyphen(v.placa);
+          ex.veiculoId = v.id;
+          ex.origem = origem;
+          toUpsert.push(ex);
+        }
+        atualizados++;
+      } else {
+        semAlteracao++;
+      }
+    }
+  }
+
+  if (!opts.dryRun && (toUpsert.length > 0 || toDelete.length > 0)) {
+    if (await useRelationalStore()) {
+      for (const id of toDelete) await deleteParceiroDespesaFromSql(id);
+      for (const reg of toUpsert) {
+        await upsertParceiroDespesaToSql(reg as unknown as Record<string, unknown>);
+      }
+    } else {
+      await saveParceiroDespesasDbAsync(db);
+    }
   }
 
   return {

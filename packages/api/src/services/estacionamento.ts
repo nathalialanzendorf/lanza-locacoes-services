@@ -7,6 +7,7 @@ import {
   listarAvisosLote,
   listarVeiculosSigapay,
   loadPlacasParaSyncEstacionamento,
+  loadPlacasParaSyncEstacionamentoAsync,
   placasIguais,
   registrarPlacaSigapay,
   solicitarCodigoPixRegularizacao,
@@ -97,7 +98,7 @@ function serializarAvisos(items: Awaited<ReturnType<typeof listarAvisos>>) {
 }
 
 export async function listarAvisosFrota(status: AvisoStatus = "aberto", placaFiltro?: string) {
-  const placas = loadPlacasParaSyncEstacionamento(placaFiltro);
+  const placas = await loadPlacasParaSyncEstacionamentoAsync(placaFiltro);
   const items = placas.length ? await listarAvisosLote(placas, { status }) : [];
   return {
     placas: placas.map(formatPlacaHyphen),
@@ -108,7 +109,7 @@ export async function listarAvisosFrota(status: AvisoStatus = "aberto", placaFil
 }
 
 export async function conferirPlacasPortal(registrar = false) {
-  const locais = loadPlacasParaSyncEstacionamento();
+  const locais = await loadPlacasParaSyncEstacionamentoAsync();
   const portal = await listarVeiculosSigapay();
   const portalSet = new Set(portal.map((v) => compactPlaca(v.placa)));
   const localSet = new Set(locais.map((p) => compactPlaca(p)));

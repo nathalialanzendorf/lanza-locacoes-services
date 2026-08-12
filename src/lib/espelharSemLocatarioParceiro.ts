@@ -8,6 +8,7 @@ import {
   isClienteDespesaAtiva,
   isInfracaoTransito,
   loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
   type ClienteDespesaRegistro,
 } from "./clienteDespesasDb.js";
 import { parseDataAutuacao } from "./inferirCondutorInfracao.js";
@@ -15,15 +16,16 @@ import { infracaoNaoCobravelDetran } from "./infracaoTitulo.js";
 import {
   infracaoDeveEspelharParceiroDespesa,
   loadInfracoesDb,
+  loadInfracoesDbAsync,
   origemParceiroInfracaoSemLocatario,
   parceiroDespesaInputFromInfracao,
-  saveInfracoesDb,
   type InfracaoRegistro,
 } from "./infracoesDb.js";
 import { compactPlaca, formatPlacaHyphen } from "./placa.js";
 import {
   competenciaFromData,
   sincronizarParceiroDespesa,
+  sincronizarParceiroDespesaAsync,
   type GravarParceiroDespesaResult,
   type ParceiroDespesaInput,
 } from "./parceiroDespesasDb.js";
@@ -112,6 +114,14 @@ export function espelharInfracaoParceiro(
   return sincronizarParceiroDespesa(parceiroDespesaInputFromInfracao(reg));
 }
 
+export async function espelharInfracaoParceiroAsync(
+  reg: InfracaoRegistro,
+): Promise<GravarParceiroDespesaResult | null> {
+  if (!infracaoDeveEspelharParceiroDespesa(reg)) return null;
+  await excluirClienteDespesa(reg.numeroAuto, { syncRastreame: false });
+  return sincronizarParceiroDespesaAsync(parceiroDespesaInputFromInfracao(reg));
+}
+
 export function espelharClienteDespesaSemLocatario(
   d: ClienteDespesaRegistro,
 ): GravarParceiroDespesaResult | null {
@@ -124,6 +134,22 @@ export function espelharClienteDespesaSemLocatario(
     void excluirClienteDespesa(d.autoInfracao, { syncRastreame: false });
   } else {
     void excluirClienteDespesa(d.id, { syncRastreame: false });
+  }
+  return r;
+}
+
+export async function espelharClienteDespesaSemLocatarioAsync(
+  d: ClienteDespesaRegistro,
+): Promise<GravarParceiroDespesaResult | null> {
+  if (!clienteDespesaDeveEspelharParceiro(d)) return null;
+  const input = isInfracaoTransito(d)
+    ? parceiroDespesaInputFromClienteInfracaoSemLocatario(d)
+    : parceiroDespesaInputFromPedagioSemLocatario(d);
+  const r = await sincronizarParceiroDespesaAsync(input);
+  if (isInfracaoTransito(d)) {
+    await excluirClienteDespesa(d.autoInfracao, { syncRastreame: false });
+  } else {
+    await excluirClienteDespesa(d.id, { syncRastreame: false });
   }
   return r;
 }
@@ -188,6 +214,61 @@ export function reconciliarEspelhosParceiro(opts?: {
 
     if (!opts?.dryRun) {
       espelharClienteDespesaSemLocatario(d);
+      espelhados++;
+    }
+    itens.push({ ...base, acao: opts?.dryRun ? "ignorado" : "espelhado" });
+  }
+
+  return {
+    espelhados,
+    ignorados: itens.filter((i) => i.acao === "ignorado").length,
+    itens,
+  };
+}
+
+export async function reconciliarEspelhosParceiroAsync(opts?: {
+  dryRun?: boolean;
+  placa?: string;
+}): Promise<ReconciliarParceiroResult> {
+  const filtro = opts?.placa ? compactPlaca(opts.placa) : null;
+  const itens: ReconciliarParceiroItem[] = [];
+  let espelhados = 0;
+
+  const infracoesDb = await loadInfracoesDbAsync();
+
+  for (const reg of infracoesDb.infracoes ?? []) {
+    if (filtro && compactPlaca(reg.veiculoId) !== filtro) continue;
+    if (!infracaoDeveEspelharParceiroDespesa(reg)) continue;
+
+    const base = {
+      placa: formatPlacaHyphen(reg.veiculoId),
+      chave: reg.numeroAuto,
+      tipo: "infracao" as const,
+    };
+
+    if (!opts?.dryRun) {
+      await espelharInfracaoParceiroAsync(reg);
+      espelhados++;
+    }
+    itens.push({ ...base, acao: opts?.dryRun ? "ignorado" : "espelhado" });
+  }
+
+  const db = await loadClienteDespesasDbAsync();
+
+  for (const d of db.clienteDespesas) {
+    if (!isClienteDespesaAtiva(d)) continue;
+    if (!categoriaInfereCondutor(d.categoria)) continue;
+    if (filtro && compactPlaca(d.veiculoId) !== filtro) continue;
+    if (!clienteDespesaDeveEspelharParceiro(d)) continue;
+
+    const base = {
+      placa: formatPlacaHyphen(d.veiculoId),
+      chave: d.autoInfracao,
+      tipo: isInfracaoTransito(d) ? ("infracao" as const) : ("pedagio" as const),
+    };
+
+    if (!opts?.dryRun) {
+      await espelharClienteDespesaSemLocatarioAsync(d);
       espelhados++;
     }
     itens.push({ ...base, acao: opts?.dryRun ? "ignorado" : "espelhado" });

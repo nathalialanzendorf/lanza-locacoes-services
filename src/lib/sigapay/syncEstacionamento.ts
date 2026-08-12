@@ -19,7 +19,7 @@ import {
   type SyncAlteracaoLinha,
 } from "../sync/syncAlteracoes.js";
 import { REPO_ROOT } from "../repoRoot.js";
-import { loadPlacasParaSync } from "../pedagioDigital/syncPedagios.js";
+import { loadPlacasParaSync, loadPlacasParaSyncAsync, loadAliasesPlacaAsync } from "../pedagioDigital/syncPedagios.js";
 import { SigapayAuthError } from "./client.js";
 import {
   extrairAvisos,
@@ -193,6 +193,24 @@ function resolverPlacaFrota(
   return candidatos.length === 1 ? candidatos[0]! : lida;
 }
 
+async function agruparPorPlacaAsync(
+  avisos: AvisoEstacionamento[],
+  frota?: string[],
+): Promise<Map<string, AvisoEstacionamento[]>> {
+  const frotaCompact = (frota ?? []).map(compactPlaca).filter(Boolean);
+  const aliases = frotaCompact.length ? await loadAliasesPlacaAsync() : new Map<string, string>();
+  const m = new Map<string, AvisoEstacionamento[]>();
+  for (const a of avisos) {
+    const lida = compactPlaca(a.placa);
+    if (!lida) continue;
+    const k = frotaCompact.length ? resolverPlacaFrota(lida, frotaCompact, aliases) : lida;
+    const arr = m.get(k);
+    if (arr) arr.push(a);
+    else m.set(k, [a]);
+  }
+  return m;
+}
+
 function agruparPorPlaca(
   avisos: AvisoEstacionamento[],
   frota?: string[],
@@ -227,8 +245,8 @@ export async function processarAvisosJsonLote(
   opts?: { dryRun?: boolean; placa?: string },
 ): Promise<SyncEstacionamentoResult[]> {
   const raw = JSON.parse(fs.readFileSync(path.resolve(jsonPath), "utf8"));
-  const placas = loadPlacasParaSync(opts?.placa);
-  const porPlaca = agruparPorPlaca(extrairAvisos(raw), placas);
+  const placas = await loadPlacasParaSyncAsync(opts?.placa);
+  const porPlaca = await agruparPorPlacaAsync(extrairAvisos(raw), placas);
   return Promise.all(
     placas.map((placa) =>
       processarAvisos(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
@@ -253,7 +271,7 @@ export async function sincronizarEstacionamentoFrota(opts?: {
 }): Promise<SyncEstacionamentoResult[]> {
   if (!opts?.dryRun) await normalizarCategoriaEstacionamentoNoDb();
 
-  const placas = loadPlacasParaSync(opts?.placa);
+  const placas = await loadPlacasParaSyncAsync(opts?.placa);
   if (placas.length === 0) return [];
 
   const total = placas.length;
@@ -262,7 +280,7 @@ export async function sincronizarEstacionamentoFrota(opts?: {
 
   let porPlaca: Map<string, AvisoEstacionamento[]>;
   try {
-    porPlaca = agruparPorPlaca(
+    porPlaca = await agruparPorPlacaAsync(
       await listarAvisosLote(placas, { status: "aberto" }),
       placas,
     );
@@ -295,4 +313,4 @@ export async function sincronizarEstacionamentoFrota(opts?: {
   return results;
 }
 
-export { loadPlacasParaSync };
+export { loadPlacasParaSync, loadPlacasParaSyncAsync };

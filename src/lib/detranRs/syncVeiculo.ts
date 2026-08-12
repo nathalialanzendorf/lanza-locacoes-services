@@ -1,13 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
-
-import { sincronizarParceiroDespesa } from "../parceiroDespesasDb.js";
+import { sincronizarParceiroDespesaAsync } from "../parceiroDespesasDb.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
 import {
   acaoParaStatusSync,
   type SyncAlteracaoLinha,
 } from "../sync/syncAlteracoes.js";
-import { REPO_ROOT } from "../repoRoot.js";
+import { loadVeiculosDb, loadVeiculosDbAsync } from "../veiculosDb.js";
 import { consultarVeiculoDetranRs, type DetranRsConsultaVeiculo } from "./consulta.js";
 import {
   extrairDespesasDetranRs,
@@ -28,19 +25,37 @@ export type SyncDetranRsResult = {
 };
 
 /** Veículos ATIVOS registrados no RS (ufRegistro === "RS"). */
-export function loadVeiculosFrotaRs(placaFiltro?: string): VeiculoFrotaRs[] {
-  const p = path.join(REPO_ROOT, "database", "veiculos.json");
-  const j = JSON.parse(fs.readFileSync(p, "utf8")) as {
-    veiculos?: { placa?: string; renavam?: string; ativo?: boolean; ufRegistro?: string }[];
-  };
+async function loadVeiculosFrotaRsAsync(placaFiltro?: string): Promise<VeiculoFrotaRs[]> {
+  const db = await loadVeiculosDbAsync({ ativo: true, placa: placaFiltro });
   const filtro = placaFiltro ? compactPlaca(placaFiltro) : null;
 
-  return (j.veiculos ?? [])
+  return db.veiculos
+    .filter((v) => String(v.ufRegistro ?? "").toUpperCase() === "RS")
+    .filter((v) => v.placa && v.renavam)
+    .filter((v) => !filtro || compactPlaca(v.placa) === filtro)
+    .map((v) => ({ placa: v.placa, renavam: String(v.renavam) }));
+}
+
+export function loadVeiculosFrotaRs(placaFiltro?: string): VeiculoFrotaRs[] {
+  const j = loadVeiculosDb();
+  const filtro = placaFiltro ? compactPlaca(placaFiltro) : null;
+
+  return j.veiculos
     .filter((v) => v.ativo !== false)
     .filter((v) => String(v.ufRegistro ?? "").toUpperCase() === "RS")
     .filter((v) => v.placa && v.renavam)
-    .filter((v) => !filtro || compactPlaca(v.placa!) === filtro)
-    .map((v) => ({ placa: v.placa!, renavam: String(v.renavam!) }));
+    .filter((v) => !filtro || compactPlaca(v.placa) === filtro)
+    .map((v) => ({ placa: v.placa, renavam: String(v.renavam) }));
+}
+
+export async function loadVeiculosRsParaSyncAsync(
+  placaFiltro?: string,
+): Promise<VeiculoFrotaRs[]> {
+  const list = await loadVeiculosFrotaRsAsync(placaFiltro);
+  if (placaFiltro && list.length === 0) {
+    throw new Error(`Placa RS não encontrada (ufRegistro="RS"): ${placaFiltro}`);
+  }
+  return list;
 }
 
 export function loadVeiculosRsParaSync(placaFiltro?: string): VeiculoFrotaRs[] {
@@ -53,11 +68,11 @@ export function loadVeiculosRsParaSync(placaFiltro?: string): VeiculoFrotaRs[] {
   return list;
 }
 
-export function processarRespostaDetranRs(
+export async function processarRespostaDetranRs(
   placa: string,
   raw: DetranRsConsultaVeiculo,
   opts?: { dryRun?: boolean },
-): SyncDetranRsResult {
+): Promise<SyncDetranRsResult> {
   const dryRun = opts?.dryRun === true;
   const { despesas, ignorados } = extrairDespesasDetranRs(placa, raw);
   const resumo = extrairInfracoesResumoDetranRs(raw);
@@ -74,7 +89,7 @@ export function processarRespostaDetranRs(
   };
 
   for (const d of despesas) {
-    const r = sincronizarParceiroDespesa(
+    const r = await sincronizarParceiroDespesaAsync(
       {
         placa,
         categoria: d.categoria,
@@ -119,7 +134,7 @@ export async function sincronizarVeiculoDetranRs(
   opts?: { dryRun?: boolean },
 ): Promise<SyncDetranRsResult> {
   const raw = await consultarVeiculoDetranRs(placa, renavam);
-  return processarRespostaDetranRs(placa, raw, opts);
+  return await processarRespostaDetranRs(placa, raw, opts);
 }
 
 export async function sincronizarFrotaDetranRs(opts?: {
@@ -127,7 +142,7 @@ export async function sincronizarFrotaDetranRs(opts?: {
   dryRun?: boolean;
   delayMs?: number;
 }): Promise<SyncDetranRsResult[]> {
-  const veiculos = loadVeiculosRsParaSync(opts?.placa);
+  const veiculos = await loadVeiculosRsParaSyncAsync(opts?.placa);
   const out: SyncDetranRsResult[] = [];
   const delay = opts?.delayMs ?? 1500;
 

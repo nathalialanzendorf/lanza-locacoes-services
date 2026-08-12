@@ -8,11 +8,16 @@ import path from "node:path";
 
 import {
   loadClienteDespesasDb,
+  loadClienteDespesasDbAsync,
   saveClienteDespesasDb,
+  saveClienteDespesasDbAsync,
   sincronizarClienteDespesa,
   simularSincronizarClienteDespesa,
+  type ClienteDespesaRegistro,
   type SincronizarClienteDespesaResult,
 } from "../clienteDespesasDb.js";
+import { useRelationalStore, upsertClienteDespesaRowToSql } from "@lanza/db";
+import { loadVeiculosDbAsync } from "../veiculosDb.js";
 import { compactPlaca, formatPlacaHyphen } from "../placa.js";
 import {
   linhaFromClienteDespesa,
@@ -121,6 +126,42 @@ export function normalizarTitulosPedagioNoDb(opts?: {
   }
 
   if (!opts?.dryRun && atualizados > 0) saveClienteDespesasDb(db);
+  return { atualizados, exemplos };
+}
+
+export async function normalizarTitulosPedagioNoDbAsync(opts?: {
+  dryRun?: boolean;
+}): Promise<{ atualizados: number; exemplos: string[] }> {
+  const db = await loadClienteDespesasDbAsync();
+  let atualizados = 0;
+  const exemplos: string[] = [];
+  const changed: ClienteDespesaRegistro[] = [];
+
+  for (const m of db.clienteDespesas) {
+    if (m.ativo === false) continue;
+    if (!isCategoriaPedagio(m.categoria) && !isDescricaoPedagio(m.descricao ?? "")) continue;
+    const nova = normalizarDescricaoPedagioLegado(m.descricao ?? "", m.paga);
+    if (!nova || nova === m.descricao) continue;
+    if (exemplos.length < 3) {
+      exemplos.push(`${m.autoInfracao}: ${m.descricao} → ${nova}`);
+    }
+    if (!opts?.dryRun) {
+      m.descricao = nova;
+      m.atualizadoEm = new Date().toISOString();
+      changed.push(m);
+    }
+    atualizados++;
+  }
+
+  if (!opts?.dryRun && changed.length) {
+    if (await useRelationalStore()) {
+      for (const row of changed) {
+        await upsertClienteDespesaRowToSql(row as unknown as Record<string, unknown>);
+      }
+    } else {
+      await saveClienteDespesasDbAsync(db);
+    }
+  }
   return { atualizados, exemplos };
 }
 
@@ -248,6 +289,21 @@ function loadAliasesPlaca(): Map<string, string> {
   return m;
 }
 
+export async function loadAliasesPlacaAsync(): Promise<Map<string, string>> {
+  const m = new Map<string, string>();
+  try {
+    const db = await loadVeiculosDbAsync({ ativo: true });
+    for (const v of db.veiculos) {
+      const antiga = (v as { placaAntiga?: string }).placaAntiga;
+      if (!v.placa || !antiga) continue;
+      m.set(compactPlaca(antiga), compactPlaca(v.placa));
+    }
+  } catch {
+    // sem aliases
+  }
+  return m;
+}
+
 /**
  * Resolve a placa registrada na passagem para a placa cadastrada da frota:
  * 1) match exato; 2) `placaAntiga` (determinístico); 3) única placa da frota a
@@ -269,6 +325,24 @@ function resolverPlacaFrota(
  * Agrupa passagens (de várias placas) por placa compacta. Com `frota`,
  * religa placas registradas pela placa antiga/mal lida ao veículo cadastrado.
  */
+async function agruparPorPlacaAsync(
+  passagens: PassagemPedagio[],
+  frota?: string[],
+): Promise<Map<string, PassagemPedagio[]>> {
+  const frotaCompact = (frota ?? []).map(compactPlaca).filter(Boolean);
+  const aliases = frotaCompact.length ? await loadAliasesPlacaAsync() : new Map<string, string>();
+  const m = new Map<string, PassagemPedagio[]>();
+  for (const p of passagens) {
+    const lida = compactPlaca(p.placa);
+    if (!lida) continue;
+    const k = frotaCompact.length ? resolverPlacaFrota(lida, frotaCompact, aliases) : lida;
+    const arr = m.get(k);
+    if (arr) arr.push(p);
+    else m.set(k, [p]);
+  }
+  return m;
+}
+
 function agruparPorPlaca(
   passagens: PassagemPedagio[],
   frota?: string[],
@@ -308,8 +382,8 @@ export async function processarPassagensJsonLote(
   opts?: { dryRun?: boolean; placa?: string },
 ): Promise<SyncPedagiosResult[]> {
   const raw = JSON.parse(fs.readFileSync(path.resolve(jsonPath), "utf8"));
-  const placas = loadPlacasParaSync(opts?.placa);
-  const porPlaca = agruparPorPlaca(extrairPassagens(raw), placas);
+  const placas = await loadPlacasParaSyncAsync(opts?.placa);
+  const porPlaca = await agruparPorPlacaAsync(extrairPassagens(raw), placas);
   return Promise.all(
     placas.map((placa) =>
       processarPassagens(placa, porPlaca.get(compactPlaca(placa)) ?? [], {
@@ -335,11 +409,37 @@ function loadPlacasFrota(placaFiltro?: string): string[] {
   };
   const filtro = placaFiltro ? formatPlacaHyphen(placaFiltro) : null;
   return (j.veiculos ?? [])
-    // Sincroniza apenas veículos ATIVOS (ignora vendidos/inativos).
     .filter((v) => v.ativo !== false)
     .map((v) => v.placa)
     .filter((p): p is string => !!p)
     .filter((p) => !filtro || formatPlacaHyphen(p) === filtro);
+}
+
+async function loadPlacasFrotaAsync(placaFiltro?: string): Promise<string[]> {
+  const db = await loadVeiculosDbAsync({
+    ativo: true,
+    placa: placaFiltro,
+    tipoFrota: "locacao",
+  });
+  const filtro = placaFiltro ? formatPlacaHyphen(placaFiltro) : null;
+  return db.veiculos
+    .map((v) => v.placa)
+    .filter((p): p is string => !!p)
+    .filter((p) => !filtro || formatPlacaHyphen(p) === filtro);
+}
+
+export async function loadPlacasParaSyncAsync(placaFiltro?: string): Promise<string[]> {
+  const list = await loadPlacasFrotaAsync(placaFiltro);
+  if (placaFiltro && list.length === 0) {
+    const db = await loadVeiculosDbAsync({ placa: placaFiltro });
+    const alvo = formatPlacaHyphen(placaFiltro);
+    const existe = db.veiculos.find((v) => v.placa && formatPlacaHyphen(v.placa) === alvo);
+    if (existe && existe.ativo === false) {
+      throw new Error(`Placa ${alvo} está inativa — sync ocorre só para ativos.`);
+    }
+    throw new Error(`Placa não encontrada: ${placaFiltro}`);
+  }
+  return list;
 }
 
 export function loadPlacasParaSync(placaFiltro?: string): string[] {
@@ -373,7 +473,7 @@ export async function sincronizarPedagiosFrota(opts?: {
 }): Promise<SyncPedagiosResult[]> {
   if (!opts?.dryRun) await normalizarCategoriaPedagioNoDb();
 
-  const placas = loadPlacasParaSync(opts?.placa);
+  const placas = await loadPlacasParaSyncAsync(opts?.placa);
   if (placas.length === 0) return [];
 
   const total = placas.length;
@@ -382,7 +482,7 @@ export async function sincronizarPedagiosFrota(opts?: {
 
   let porPlaca: Map<string, PassagemPedagio[]>;
   try {
-    porPlaca = agruparPorPlaca(await listarPassagensLote(placas, { status: "aberto" }), placas);
+    porPlaca = await agruparPorPlacaAsync(await listarPassagensLote(placas, { status: "aberto" }), placas);
   } catch (e) {
     // Sessão inválida/expirada: aborta cedo com mensagem clara (recapturar
     // PEDAGIO_DIGITAL_COOKIE + PEDAGIO_DIGITAL_CSRF) em vez de devolver o mesmo

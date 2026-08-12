@@ -8,9 +8,13 @@ import {
   ensureRelatoriosDirs,
   extrairSeguroComprovantesDirs,
   loadPlacasParaSync,
+  loadPlacasParaSyncAsync,
   loadVeiculosParaSync,
+  loadVeiculosParaSyncAsync,
   loadVeiculosRsParaSync,
+  loadVeiculosRsParaSyncAsync,
   normalizarTitulosPedagioNoDb,
+  normalizarTitulosPedagioNoDbAsync,
   processarDespesasDetranSc,
   processarPassagensJson,
   processarPassagensJsonLote,
@@ -40,6 +44,8 @@ import {
   syncRecebimentos,
   ufRegistroDaPlaca,
   flattenAlteracoesSync,
+  formatPlacaHyphen,
+  linhaFromParceiroDespesa,
   type DetranRsConsultaVeiculo,
   type FipeSyncProgress,
   type SyncAlteracaoLinha,
@@ -247,7 +253,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
   };
 
   if (opts.normalizarTitulos) {
-    const r = normalizarTitulosPedagioNoDb({ dryRun: opts.dryRun });
+    const r = await normalizarTitulosPedagioNoDbAsync({ dryRun: opts.dryRun });
     let push = null;
     if (!opts.dryRun && r.atualizados > 0) {
       push = await pushRecebimentosToRastreame({});
@@ -256,7 +262,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
   }
 
   if (opts.jsonPath && opts.placa) {
-    loadPlacasParaSync(opts.placa);
+    await loadPlacasParaSyncAsync(opts.placa);
     const r = await processarPassagensJson(opts.placa, opts.jsonPath, {
       dryRun: opts.dryRun,
     });
@@ -264,7 +270,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
   }
 
   if (opts.placa) {
-    loadPlacasParaSync(opts.placa);
+    await loadPlacasParaSyncAsync(opts.placa);
     report(0, 1, { fase: `Consultando ${opts.placa}…` });
     const r = await sincronizarPedagiosVeiculo(opts.placa, { dryRun: opts.dryRun });
     const falhas = r.avisos.length > 0 ? 1 : 0;
@@ -272,7 +278,7 @@ async function runPedagios(opts: SyncPedagiosOpts) {
     return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
 
-  const placas = loadPlacasParaSync(opts.placa);
+  const placas = await loadPlacasParaSyncAsync(opts.placa);
   const total = Math.max(placas.length, 1);
   report(0, total, { fase: "Consultando pedagiodigital.com…" });
 
@@ -346,7 +352,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
   };
 
   if (opts.jsonPath && opts.placa) {
-    loadPlacasParaSyncEstacionamento(opts.placa);
+    await loadPlacasParaSyncAsync(opts.placa);
     const r = await processarAvisosJson(opts.placa, opts.jsonPath, {
       dryRun: opts.dryRun,
     });
@@ -354,7 +360,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
   }
 
   if (opts.placa) {
-    loadPlacasParaSyncEstacionamento(opts.placa);
+    await loadPlacasParaSyncAsync(opts.placa);
     report(0, 1, { fase: `Consultando ${opts.placa} no SigaPay…` });
     let portal: Awaited<ReturnType<typeof estacionamentoService.listarAvisosPlaca>> | null = null;
     try {
@@ -368,7 +374,7 @@ async function runEstacionamento(opts: SyncEstacionamentoOpts) {
     return { modo: "placa", resultado: r, portal, alteracoes: r.alteracoes };
   }
 
-  const placas = loadPlacasParaSyncEstacionamento(opts.placa);
+  const placas = await loadPlacasParaSyncAsync(opts.placa);
   const total = Math.max(placas.length, 1);
   report(0, total, { fase: "Consultando sigapay.com.br…" });
 
@@ -454,7 +460,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
   if (opts.jsonPath) {
     if (!placa) throw new HttpError(400, "jsonPath exige placa");
     const raw = readJsonFile(opts.jsonPath);
-    const v = loadVeiculosParaSync(placa)[0]!;
+    const v = (await loadVeiculosParaSyncAsync(placa))[0]!;
     const r = await processarRespostaDetranSc(placa, raw, {
       dryRun: opts.dryRun,
       prazoDias,
@@ -470,7 +476,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
 
   if (opts.ticket) {
     if (!placa) throw new HttpError(400, "ticket exige placa");
-    const v = loadVeiculosParaSync(placa)[0]!;
+    const v = (await loadVeiculosParaSyncAsync(placa))[0]!;
     const r = await sincronizarMultasPorTicketDetranSc(v.placa, opts.ticket, {
       dryRun: opts.dryRun,
       prazoDias,
@@ -485,7 +491,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
   }
 
   if (placa) {
-    const v = loadVeiculosParaSync(placa)[0]!;
+    const v = (await loadVeiculosParaSyncAsync(placa))[0]!;
     report(0, 1, { fase: `Consultando ${v.placa}…` });
     const r = await sincronizarMultasVeiculoDetranSc(v.placa, v.renavam, {
       dryRun: opts.dryRun,
@@ -502,7 +508,7 @@ async function runInfracoes(opts: SyncDetranScOpts) {
     };
   }
 
-  const veiculos = loadVeiculosParaSync(opts.placa);
+  const veiculos = await loadVeiculosParaSyncAsync(opts.placa);
   const total = Math.max(veiculos.length, 1);
   report(0, total, { fase: "Consultando DETRAN SC…" });
 
@@ -576,13 +582,13 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
   if (opts.jsonPath) {
     if (!placa) throw new HttpError(400, "jsonPath exige placa");
     const raw = readJsonFile(opts.jsonPath);
-    const r = processarDespesasDetranSc(placa, raw, { dryRun: opts.dryRun });
+    const r = await processarDespesasDetranSc(placa, raw, { dryRun: opts.dryRun });
     return { modo: "json", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (opts.ticket) {
     if (!placa) throw new HttpError(400, "ticket exige placa");
-    const v = loadVeiculosParaSync(placa)[0]!;
+    const v = (await loadVeiculosParaSyncAsync(placa))[0]!;
     const r = await sincronizarDespesasPorTicketDetranSc(v.placa, opts.ticket, {
       dryRun: opts.dryRun,
     });
@@ -590,7 +596,7 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
   }
 
   if (placa) {
-    const v = loadVeiculosParaSync(placa)[0]!;
+    const v = (await loadVeiculosParaSyncAsync(placa))[0]!;
     report(0, 1, { fase: `Consultando ${v.placa}…` });
     const r = await sincronizarDespesasVeiculoDetranSc(v.placa, v.renavam, {
       dryRun: opts.dryRun,
@@ -601,7 +607,7 @@ async function runIpvaLicenciamento(opts: SyncDetranScOpts) {
     return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
 
-  const veiculos = loadVeiculosParaSync(opts.placa);
+  const veiculos = await loadVeiculosParaSyncAsync(opts.placa);
   const total = Math.max(veiculos.length, 1);
   report(0, total, { fase: "Consultando DETRAN SC…" });
 
@@ -652,12 +658,12 @@ async function runDetranRs(opts: SyncBaseOpts & { jsonPath?: string; delayMs?: n
   if (opts.jsonPath) {
     if (!placa) throw new HttpError(400, "jsonPath exige placa");
     const raw = readJsonFile(opts.jsonPath) as DetranRsConsultaVeiculo;
-    const r = processarRespostaDetranRs(placa, raw, { dryRun: opts.dryRun });
+    const r = await processarRespostaDetranRs(placa, raw, { dryRun: opts.dryRun });
     return { modo: "json", resultado: r, alteracoes: r.alteracoes };
   }
 
   if (placa) {
-    const v = loadVeiculosRsParaSync(placa)[0]!;
+    const v = (await loadVeiculosRsParaSyncAsync(placa))[0]!;
     const r = await sincronizarVeiculoDetranRs(v.placa, v.renavam, { dryRun: opts.dryRun });
     return { modo: "placa", resultado: r, alteracoes: r.alteracoes };
   }
@@ -701,27 +707,32 @@ async function sincronizarBoletosSeguro(
   let semAlteracao = 0;
   const semVeiculo: string[] = [];
   const despesas: Array<{ placa: string; acao: string; id?: string }> = [];
+  const alteracoes: SyncAlteracaoLinha[] = [];
 
   for (const b of boletos) {
-    if (dryRun) {
-      novos++;
-      despesas.push({ placa: b.placa, acao: "novo" });
-      continue;
-    }
-    const r = await sincronizarParceiroDespesaAsync({
-      placa: b.placa,
-      categoria: "Seguro",
-      descricao: "Seguro",
-      data: b.data ?? "",
-      valor: b.valor,
-      competencia: b.competencia,
-      origem: b.origem,
-    });
+    const r = await sincronizarParceiroDespesaAsync(
+      {
+        placa: b.placa,
+        categoria: "Seguro",
+        descricao: "Seguro",
+        data: b.data ?? "",
+        valor: b.valor,
+        competencia: b.competencia,
+        origem: b.origem,
+      },
+      { dryRun },
+    );
     if (r.aviso?.includes("placa")) semVeiculo.push(b.placa);
     if (r.acao === "novo") novos++;
     else if (r.acao === "atualizado") atualizados++;
     else if (r.acao === "sem_alteracao") semAlteracao++;
     despesas.push({ placa: b.placa, acao: r.acao, id: r.registro.id });
+    const placaFmt = formatPlacaHyphen(b.placa);
+    const linha = linhaFromParceiroDespesa(placaFmt, r.registro, r.acao, r.aviso);
+    if (b.competencia) {
+      linha.descricao = `Seguro · ${b.competencia}`;
+    }
+    alteracoes.push(linha);
   }
 
   return {
@@ -730,6 +741,7 @@ async function sincronizarBoletosSeguro(
     semAlteracao,
     semVeiculo: [...new Set(semVeiculo)],
     despesas,
+    alteracoes,
   };
 }
 

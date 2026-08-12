@@ -1,4 +1,4 @@
-import { sincronizarParceiroDespesa, type GravarParceiroDespesaResult } from "../parceiroDespesasDb.js";
+import { sincronizarParceiroDespesaAsync, type GravarParceiroDespesaResult } from "../parceiroDespesasDb.js";
 import { formatPlacaHyphen } from "../placa.js";
 import { consultarVeiculoDetranSc, consultarVeiculoDetranScPorTicket } from "./consulta.js";
 import {
@@ -6,7 +6,7 @@ import {
   type DetranDespesaNormalizada,
 } from "./mapDebitosProprietario.js";
 import {
-  loadVeiculosParaSync,
+  loadVeiculosParaSyncAsync,
   type VeiculoFrota,
 } from "./syncVeiculo.js";
 import {
@@ -24,42 +24,30 @@ export type SyncDespesasResult = {
   alteracoes: SyncAlteracaoLinha[];
 };
 
-function aplicarDespesa(
+async function aplicarDespesa(
   placa: string,
   d: DetranDespesaNormalizada,
   dryRun: boolean,
-): GravarParceiroDespesaResult | null {
-  if (dryRun) {
-    return sincronizarParceiroDespesa(
-      {
-        placa,
-        categoria: d.categoria,
-        descricao: d.descricao,
-        data: d.data,
-        valor: d.valor,
-        competencia: d.competencia,
-        origem: d.origem,
-      },
-      { dryRun: true },
-    );
-  }
-
-  return sincronizarParceiroDespesa({
-    placa,
-    categoria: d.categoria,
-    descricao: d.descricao,
-    data: d.data,
-    valor: d.valor,
-    competencia: d.competencia,
-    origem: d.origem,
-  });
+): Promise<GravarParceiroDespesaResult | null> {
+  return sincronizarParceiroDespesaAsync(
+    {
+      placa,
+      categoria: d.categoria,
+      descricao: d.descricao,
+      data: d.data,
+      valor: d.valor,
+      competencia: d.competencia,
+      origem: d.origem,
+    },
+    { dryRun },
+  );
 }
 
-export function processarDespesasDetranSc(
+export async function processarDespesasDetranSc(
   placa: string,
   raw: unknown,
   opts?: { dryRun?: boolean },
-): SyncDespesasResult {
+): Promise<SyncDespesasResult> {
   const { despesas, ignorados } = extrairDespesasDetranSc(placa, raw);
   const result: SyncDespesasResult = {
     placa: formatPlacaHyphen(placa),
@@ -72,7 +60,7 @@ export function processarDespesasDetranSc(
   };
 
   for (const d of despesas) {
-    const r = aplicarDespesa(placa, d, opts?.dryRun === true);
+    const r = await aplicarDespesa(placa, d, opts?.dryRun === true);
     if (!r) continue;
     if (r.acao === "novo") result.novos++;
     else if (r.acao === "atualizado") result.atualizados++;
@@ -99,7 +87,7 @@ export async function sincronizarDespesasVeiculoDetranSc(
   opts?: { dryRun?: boolean; captcha?: string },
 ): Promise<SyncDespesasResult> {
   const raw = await consultarVeiculoDetranSc(placa, renavam, { captcha: opts?.captcha });
-  return processarDespesasDetranSc(placa, raw, opts);
+  return await processarDespesasDetranSc(placa, raw, opts);
 }
 
 export async function sincronizarDespesasPorTicketDetranSc(
@@ -108,7 +96,7 @@ export async function sincronizarDespesasPorTicketDetranSc(
   opts?: { dryRun?: boolean },
 ): Promise<SyncDespesasResult> {
   const raw = await consultarVeiculoDetranScPorTicket(ticket);
-  return processarDespesasDetranSc(placa, raw, opts);
+  return await processarDespesasDetranSc(placa, raw, opts);
 }
 
 export async function sincronizarDespesasFrotaDetranSc(opts?: {
@@ -117,7 +105,7 @@ export async function sincronizarDespesasFrotaDetranSc(opts?: {
   delayMs?: number;
   onProgress?: (done: number, total: number, falhas: number) => void;
 }): Promise<SyncDespesasResult[]> {
-  const veiculos = loadVeiculosParaSync(opts?.placa);
+  const veiculos = await loadVeiculosParaSyncAsync(opts?.placa);
   const out: SyncDespesasResult[] = [];
   const delay = opts?.delayMs ?? 1500;
   const total = veiculos.length;

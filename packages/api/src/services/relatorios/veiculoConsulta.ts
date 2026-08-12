@@ -3,7 +3,9 @@ import {
   formatPlacaHyphen,
   loadVeiculosDb,
   loadVeiculosParaSync,
+  loadVeiculosParaSyncAsync,
   loadVeiculosRsParaSync,
+  loadVeiculosRsParaSyncAsync,
   ufRegistroDaPlaca,
 } from "../../lib-imports.js";
 import { HttpError } from "../../http.js";
@@ -338,7 +340,7 @@ async function consultarDetranScFrota(opts?: {
   secao: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   veiculosConsultados: number;
 }> {
-  const veiculos = loadVeiculosParaSync().filter((v) => v.renavam?.trim());
+  const veiculos = (await loadVeiculosParaSyncAsync()).filter((v) => v.renavam?.trim());
   if (!veiculos.length) {
     return {
       veiculosConsultados: 0,
@@ -405,7 +407,7 @@ async function consultarDetranRsFrota(opts?: {
   secao: VeiculoConsultaSecao<VeiculoConsultaPortalItem>;
   veiculosConsultados: number;
 }> {
-  const veiculos = loadVeiculosRsParaSync().filter((v) => v.renavam?.trim());
+  const veiculos = (await loadVeiculosRsParaSyncAsync()).filter((v) => v.renavam?.trim());
   if (!veiculos.length) {
     return {
       veiculosConsultados: 0,

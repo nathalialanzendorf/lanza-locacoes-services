@@ -118,7 +118,7 @@ export function registerParceiroDespesasRoutes(routes: RouteDef[]): void {
       const body = await readJsonBody<{ desde?: string; ate?: string; dryRun?: boolean }>(ctx.req).catch(
         () => ({}),
       );
-      const data = parceiroDespService.lancarRastreador(body);
+      const data = await parceiroDespService.lancarRastreador(body);
       json(ctx.res, 200, { data });
     }),
   });

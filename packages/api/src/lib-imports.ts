@@ -257,7 +257,10 @@ export {
   processarPassagensJson,
   processarPassagensJsonLote,
   normalizarTitulosPedagioNoDb,
+  normalizarTitulosPedagioNoDbAsync,
   loadPlacasParaSync,
+  loadPlacasParaSyncAsync,
+  loadAliasesPlacaAsync,
 } from "../../../src/lib/pedagioDigital/syncPedagios.js";
 
 export {
@@ -266,6 +269,7 @@ export {
   processarAvisosJson,
   processarAvisosJsonLote,
   loadPlacasParaSync as loadPlacasParaSyncEstacionamento,
+  loadPlacasParaSyncAsync as loadPlacasParaSyncEstacionamentoAsync,
 } from "../../../src/lib/sigapay/syncEstacionamento.js";
 
 export {
@@ -339,11 +343,13 @@ export {
 
 export {
   flattenAlteracoesSync,
+  linhaFromParceiroDespesa,
   type SyncAlteracaoLinha,
 } from "../../../src/lib/sync/syncAlteracoes.js";
 
 export {
   loadVeiculosParaSync,
+  loadVeiculosParaSyncAsync,
   processarRespostaDetranSc,
   sincronizarMultasFrotaDetranSc,
   sincronizarMultasPorTicketDetranSc,
@@ -359,6 +365,7 @@ export {
 
 export {
   loadVeiculosRsParaSync,
+  loadVeiculosRsParaSyncAsync,
   processarRespostaDetranRs,
   sincronizarFrotaDetranRs,
   sincronizarVeiculoDetranRs,
@@ -618,6 +625,10 @@ export {
 
 export {
   espelharInfracaoParceiro,
+  espelharInfracaoParceiroAsync,
+  espelharClienteDespesaSemLocatarioAsync,
+  reconciliarEspelhosParceiro,
+  reconciliarEspelhosParceiroAsync,
 } from "../../../src/lib/espelharSemLocatarioParceiro.js";
 
 export {
@@ -643,6 +654,7 @@ export {
 
 export {
   lancarRastreadorFixo,
+  lancarRastreadorFixoAsync,
   competenciaAtual,
   RASTREADOR_VALOR_PADRAO,
   RASTREADOR_DIA_PADRAO,

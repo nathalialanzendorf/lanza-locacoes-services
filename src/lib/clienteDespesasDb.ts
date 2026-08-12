@@ -36,7 +36,7 @@ export { CATEGORIAS_SYNC_RASTREAME };
 import { isCategoriaPedagio } from "./pedagioCategoria.js";
 import { isCategoriaEstacionamento } from "./estacionamentoCategoria.js";
 import { atualizarPdfArquivoInfracaoDb } from "./infracoesDb.js";
-import { espelharClienteDespesaSemLocatario, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
+import { espelharClienteDespesaSemLocatario, espelharClienteDespesaSemLocatarioAsync, origemParceiroPedagioSemLocatario } from "./espelharSemLocatarioParceiro.js";
 import { removerParceiroDespesaPorOrigem, removerParceiroDespesaPorOrigemAsync } from "./parceiroDespesasDb.js";
 import { despesaResponsavelConfirmado, parceiroDebitoConfirmado } from "./responsavelDebito.js";
 import { REPO_ROOT } from "./repoRoot.js";
@@ -993,7 +993,8 @@ export async function sincronizarClienteDespesa(
   input: ClienteDespesaInput,
   opts?: ClienteDespesaPersistOpts,
 ): Promise<SincronizarClienteDespesaResult> {
-  const db = loadClienteDespesasDb();
+  const relational = await useRelationalStore();
+  const db = relational ? await loadClienteDespesasDbAsync() : loadClienteDespesasDb();
   const veiculoId = formatPlacaHyphen(veiculoIdRaw);
   const autoKey = String(input.autoInfracao).trim().toUpperCase();
   const categoria = input.categoria?.trim() || CategoriaDespesaCliente.Infracao;
@@ -1074,7 +1075,7 @@ export async function sincronizarClienteDespesa(
     }
     m.atualizadoEm = nowIso();
     db.clienteDespesas[idx] = m;
-    saveClienteDespesasDb(db);
+    await saveDespesasMut(db, [m]);
     const [synced] = await pushAposPersistir([m], opts);
     return {
       registro: synced ?? m,
@@ -1192,10 +1193,10 @@ export async function sincronizarClienteDespesa(
   }
 
   db.clienteDespesas[idx] = m;
-  saveClienteDespesasDb(db);
+  await saveDespesasMut(db, [m]);
 
   if (parceiroDebitoConfirmado(m) && categoriaInfereCondutor(categoria)) {
-    espelharClienteDespesaSemLocatario(m);
+    await espelharClienteDespesaSemLocatarioAsync(m);
     return {
       registro: m,
       aviso: opts?.fonteDetran
@@ -1294,6 +1295,28 @@ export function atualizarPdfArquivoInfracao(
   return m;
 }
 
+export async function atualizarPdfArquivoInfracaoAsync(
+  autoInfracao: string,
+  pdfArquivo: string,
+): Promise<ClienteDespesaRegistro | null> {
+  await atualizarPdfArquivoInfracaoDbAsync(autoInfracao, pdfArquivo);
+  const m = await findClienteDespesaByReferenciaAsync(autoInfracao);
+  if (!m) return null;
+  if (m.pdfArquivo === pdfArquivo) return m;
+  m.pdfArquivo = pdfArquivo;
+  m.atualizadoEm = nowIso();
+  if (await useRelationalStore()) {
+    await persistClienteDespesasRowsAsync([m]);
+    return m;
+  }
+  const db = await loadClienteDespesasDbAsync();
+  const key = autoInfracao.trim().toUpperCase();
+  const idx = db.clienteDespesas.findIndex((x) => x.autoInfracao.trim().toUpperCase() === key);
+  if (idx >= 0) db.clienteDespesas[idx] = m;
+  await saveClienteDespesasDbAsync(db);
+  return m;
+}
+
 export async function confirmarCondutorClienteDespesa(
   autoInfracao: string,
   condutorId?: string | null,
@@ -1377,7 +1400,7 @@ export async function confirmarDebitoParceiroDespesa(
     m.revisarMotivo = null;
     m.atualizadoEm = nowIso();
     await persistClienteDespesasRowsAsync([m]);
-    espelharClienteDespesaSemLocatario(m);
+    await espelharClienteDespesaSemLocatarioAsync(m);
     return m;
   }
 
@@ -1397,7 +1420,7 @@ export async function confirmarDebitoParceiroDespesa(
   m.atualizadoEm = nowIso();
   db.clienteDespesas[idx] = m;
   await saveDespesasMut(db, [m]);
-  espelharClienteDespesaSemLocatario(m);
+  await espelharClienteDespesaSemLocatarioAsync(m);
   return m;
 }
 

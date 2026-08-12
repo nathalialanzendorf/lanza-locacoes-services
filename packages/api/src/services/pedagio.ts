@@ -7,6 +7,7 @@ import {
   listarPassagensLote,
   listarVeiculosPedagio,
   loadPlacasParaSync,
+  loadPlacasParaSyncAsync,
   placasIguais,
   registrarPlaca,
   type PassagemPedagio,
@@ -120,7 +121,7 @@ export async function listarPassagensFrota(
   status: PassagemStatus = "aberto",
   placaFiltro?: string,
 ) {
-  const todasPlacas = loadPlacasParaSync();
+  const todasPlacas = await loadPlacasParaSyncAsync();
   const placas = placaFiltro?.trim()
     ? todasPlacas.filter((p) => placasIguais(p, placaFiltro))
     : todasPlacas;
@@ -134,7 +135,7 @@ export async function listarPassagensFrota(
 }
 
 export async function conferirPlacasPortal(registrar = false) {
-  const locais = loadPlacasParaSync();
+  const locais = await loadPlacasParaSyncAsync();
   const portal = await listarVeiculosPedagio();
   const portalSet = new Set(portal.map((v) => compactPlaca(v.placa)));
   const localSet = new Set(locais.map((p) => compactPlaca(p)));
