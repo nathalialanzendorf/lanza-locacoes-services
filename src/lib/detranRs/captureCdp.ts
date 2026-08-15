@@ -156,14 +156,25 @@ async function persistCapture(): Promise<void> {
     };
     await stopDetranRsCapture(false);
   } catch (err) {
+    let localOk = false;
+    if (persistFn) {
+      try {
+        await saveDetranRsSession(session);
+        localOk = true;
+      } catch {
+        /* ignore */
+      }
+    }
     persisting = false;
+    const baseMsg = err instanceof Error ? err.message : String(err);
     state = {
       status: "error",
       available: isDetranRsCaptureAvailable(),
-      message: err instanceof Error ? err.message : String(err),
+      message: localOk
+        ? `${baseMsg} Token copiado para .cache/detran-rs/session.json — use Colagem manual na app.`
+        : baseMsg,
       startedAt: state.startedAt,
     };
-    throw err;
   }
 }
 
