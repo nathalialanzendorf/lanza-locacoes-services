@@ -18,7 +18,8 @@ const BRIDGES = [
   { name: "DETRAN RS", port: 9237, script: "detran-rs-capture-bridge" },
 ] as const;
 
-console.log("Bridges de captura — Ctrl+C encerra todos\n");
+console.log("Bridges de captura — Ctrl+C encerra todos");
+console.log("Se der EADDRINUSE, rode antes: npm run capture-bridges-stop\n");
 
 const children: ChildProcess[] = [];
 

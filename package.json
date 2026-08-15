@@ -29,6 +29,8 @@
     "pedagio-capture-bridge": "tsx scripts/pedagioCaptureBridge.ts",
     "detran-rs-capture-bridge": "tsx scripts/detranRsCaptureBridge.ts",
     "capture-bridges-all": "tsx scripts/captureBridgesAll.ts",
+    "capture-bridges-stop": "tsx scripts/captureBridgesStop.ts",
+    "capture-bridges-restart": "tsx scripts/captureBridgesStop.ts && tsx scripts/captureBridgesAll.ts",
     "test:sigapay-pix-otp": "tsx scripts/testSigapayPixOtpPlacas.ts",
     "push:sigapay-session-rds": "tsx scripts/push-sigapay-session-rds.ts",
     "parse:sigapay-mitm": "tsx scripts/parseSigapayMitmCapture.ts",

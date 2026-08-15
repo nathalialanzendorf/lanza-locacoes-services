@@ -19,6 +19,7 @@ import {
   persistSessionToRemoteApi,
   respondCaptureStart,
 } from "./captureBridgeHttp.js";
+import { listenCaptureBridge } from "./captureBridgeListen.js";
 
 const PORT = Number(process.env.DETRAN_RS_CAPTURE_BRIDGE_PORT ?? "9237");
 const HOST = "127.0.0.1";
@@ -72,7 +73,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
+listenCaptureBridge(server, PORT, HOST, "detran-rs-capture-bridge", () => {
   console.log(`[detran-rs-capture-bridge] http://${HOST}:${PORT}`);
   console.log("  GET  /capture/status");
   console.log("  GET|POST /capture/start  ?apiUrl=&bearer=&apiKey=");
