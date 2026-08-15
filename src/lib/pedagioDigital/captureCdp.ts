@@ -10,8 +10,14 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
-import { obterBrowserWsPortal } from "../cdp/portalChrome.js";
+import {
+  abrirAbaPortalCdp,
+  CHROME_PORTAL_ARGS,
+  navegarPrimeiraAbaCdp,
+  obterBrowserWsPortal,
+} from "../cdp/portalChrome.js";
 import { cdpKeepOpen, fecharChromeCdp } from "../cdp/fecharChromeCdp.js";
+import { esperarDevtoolsPort } from "../cdp/esperarDevtools.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { clearPedagioSession } from "./auth.js";
 import { savePedagioSession } from "./sessionStore.js";
@@ -167,11 +173,6 @@ function atualizarMensagemParcial(): void {
   }
 }
 
-async function devtoolsUp(): Promise<boolean> {
-  const info = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
-  return Boolean(info.wsUrl && !info.wrongPortal);
-}
-
 async function listarAbas(): Promise<TabTarget[]> {
   try {
     const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/list`);
@@ -181,14 +182,6 @@ async function listarAbas(): Promise<TabTarget[]> {
   } catch {
     return [];
   }
-}
-
-async function esperarDevtools(): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    if (await devtoolsUp()) return;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error("Chrome DevTools não respondeu — verifique se o Chrome está instalado.");
 }
 
 function cleanupTimers(): void {
@@ -247,14 +240,28 @@ async function persistCapture(): Promise<void> {
     await fecharChromeCdp(DEBUG_PORT, keepChromeOpen);
     await stopPedagioCapture(false);
   } catch (err) {
+    let localOk = false;
+    if (persistFn) {
+      try {
+        await savePedagioSession({
+          cookie: session.cookie!,
+          csrf: session.csrf!,
+        });
+        localOk = true;
+      } catch {
+        /* ignore */
+      }
+    }
     persisting = false;
+    const baseMsg = err instanceof Error ? err.message : String(err);
     state = {
       status: "error",
       available: isPedagioCaptureAvailable(),
-      message: err instanceof Error ? err.message : String(err),
+      message: localOk
+        ? `${baseMsg} Cookie guardado em .cache/pedagio-digital — use Colagem manual na app.`
+        : baseMsg,
       startedAt: state.startedAt,
     };
-    throw err;
   }
 }
 
@@ -401,45 +408,34 @@ async function anexarTodasAbas(): Promise<void> {
 }
 
 async function navegarPrimeiraAba(url: string): Promise<void> {
-  const tabs = await listarAbas();
-  const tab = tabs.find((t) => t.url && t.url !== "about:blank") ?? tabs[0];
-  if (!tab?.webSocketDebuggerUrl) return;
-
-  await new Promise<void>((resolve, reject) => {
-    const socket = new WebSocket(tab.webSocketDebuggerUrl!);
-    socket.on("open", () => {
-      socket.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url } }));
-    });
-    socket.on("error", reject);
-    setTimeout(() => {
-      try {
-        socket.close();
-      } catch {
-        /* ignore */
-      }
-      resolve();
-    }, 800);
-  });
+  await navegarPrimeiraAbaCdp(DEBUG_PORT, url);
 }
 
-async function abrirChrome(): Promise<void> {
+async function garantirPortalAberto(wsUrl: string): Promise<void> {
+  await abrirAbaPortalCdp(wsUrl, PORTAL);
+  await new Promise((r) => setTimeout(r, 600));
+  await navegarPrimeiraAba(PORTAL);
+}
+
+async function abrirChrome(): Promise<string> {
+  await fecharChromeCdp(DEBUG_PORT, false);
   fs.mkdirSync(PROFILE_DIR, { recursive: true });
   chromeChild = spawn(
     acharChrome(),
     [
       `--remote-debugging-port=${DEBUG_PORT}`,
-      "--remote-allow-origins=*",
+      ...CHROME_PORTAL_ARGS,
       `--user-data-dir=${PROFILE_DIR}`,
-      "--no-first-run",
-      "--no-default-browser-check",
-      "--disable-popup-blocking",
       PORTAL,
     ],
     { detached: true, stdio: "ignore" },
   );
   chromeChild.unref();
-  await esperarDevtools();
+  const wsUrl = await esperarDevtoolsPort(DEBUG_PORT, {
+    label: `Pedágio CDP ${DEBUG_PORT}`,
+  });
   await new Promise((r) => setTimeout(r, 800));
+  return wsUrl;
 }
 
 export async function startPedagioCapture(
@@ -473,18 +469,23 @@ export async function startPedagioCapture(
   };
 
   try {
-    const chromeInfo = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+    let chromeInfo = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
     if (chromeInfo.wrongPortal) {
-      throw new Error(
-        `Porta CDP ${DEBUG_PORT} está em uso por outro portal. Feche esse Chrome ou defina PEDAGIO_CDP_PORT.`,
-      );
+      await fecharChromeCdp(DEBUG_PORT, false);
+      await new Promise((r) => setTimeout(r, 800));
+      chromeInfo = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+      if (chromeInfo.wrongPortal) {
+        throw new Error(
+          `Porta CDP ${DEBUG_PORT} está em uso por outro portal. Feche esse Chrome ou defina PEDAGIO_CDP_PORT.`,
+        );
+      }
     }
 
     const jaAberto = Boolean(chromeInfo.wsUrl);
     if (!jaAberto) {
       await abrirChrome();
     } else {
-      await navegarPrimeiraAba(PORTAL);
+      await garantirPortalAberto(chromeInfo.wsUrl!);
       await new Promise((r) => setTimeout(r, 500));
     }
 
