@@ -9,12 +9,19 @@ import path from "node:path";
 
 import WebSocket from "ws";
 
+import {
+  abrirAbaPortalCdp,
+  CHROME_PORTAL_ARGS,
+  navegarPrimeiraAbaCdp,
+  obterBrowserWsPortal,
+} from "../cdp/portalChrome.js";
 import { REPO_ROOT } from "../repoRoot.js";
 import { clearDetranScRuntimeSession } from "./auth.js";
 import { saveDetranScSession } from "./sessionStore.js";
 
 const DEBUG_PORT = Number(process.env.DETRAN_SC_CDP_PORT ?? "9223");
 const PORTAL = "https://servicos.detran.sc.gov.br/";
+const PORTAL_HOST_RE = /detran\.sc\.gov\.br|acesso\.gov\.br|ciasc\.sc\.gov\.br/i;
 const API_HOST = "backend.detran.sc.gov.br";
 const CAPTURE_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -64,6 +71,7 @@ let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let cap: Cap = {};
 let persistFn: DetranScCaptureStartOpts["persist"] | null = null;
+const pendingRequestUrls = new Map<string, string>();
 
 export function isDetranScCaptureAvailable(): boolean {
   if (process.env.VERCEL) return false;
@@ -99,16 +107,13 @@ function isLikelyJwt(auth: string): boolean {
 }
 
 async function devtoolsUp(): Promise<string | undefined> {
-  try {
-    const r = await fetch(`http://127.0.0.1:${DEBUG_PORT}/json/version`);
-    if (r.ok) {
-      const j = (await r.json()) as { webSocketDebuggerUrl?: string };
-      return j.webSocketDebuggerUrl;
-    }
-  } catch {
-    /* offline */
+  const info = await obterBrowserWsPortal(DEBUG_PORT, PORTAL_HOST_RE);
+  if (info.wrongPortal) {
+    throw new Error(
+      `Porta CDP ${DEBUG_PORT} está em uso por outro portal. Feche esse Chrome ou defina DETRAN_SC_CDP_PORT.`,
+    );
   }
-  return undefined;
+  return info.wsUrl;
 }
 
 async function esperarDevtools(): Promise<string> {
@@ -118,6 +123,31 @@ async function esperarDevtools(): Promise<string> {
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error("Chrome DevTools não respondeu — verifique se o Chrome está instalado.");
+}
+
+async function abrirChrome(): Promise<string> {
+  fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  const chrome = acharChrome();
+  chromeChild = spawn(
+    chrome,
+    [
+      `--remote-debugging-port=${DEBUG_PORT}`,
+      ...CHROME_PORTAL_ARGS,
+      `--user-data-dir=${PROFILE_DIR}`,
+      PORTAL,
+    ],
+    { detached: true, stdio: "ignore" },
+  );
+  chromeChild.unref();
+  const wsUrl = await esperarDevtools();
+  await new Promise((r) => setTimeout(r, 800));
+  return wsUrl;
+}
+
+async function garantirPortalAberto(wsUrl: string): Promise<void> {
+  await abrirAbaPortalCdp(wsUrl, PORTAL);
+  await new Promise((r) => setTimeout(r, 600));
+  await navegarPrimeiraAbaCdp(DEBUG_PORT, PORTAL);
 }
 
 function cleanupTimers(): void {
@@ -207,8 +237,16 @@ function attachNetworkListener(socket: WebSocket): void {
       const sid = msg.params?.sessionId as string | undefined;
       if (sid) send("Network.enable", {}, sid);
     } else if (msg.method === "Network.requestWillBeSent") {
+      const requestId = msg.params?.requestId as string | undefined;
       const req = msg.params?.request as { url?: string; headers?: Record<string, string> } | undefined;
+      if (requestId && req?.url) pendingRequestUrls.set(requestId, req.url);
       if (req?.url) tratarRequest(req.url, req.headers ?? {});
+    } else if (msg.method === "Network.requestWillBeSentExtraInfo") {
+      const requestId = msg.params?.requestId as string | undefined;
+      const url = requestId ? pendingRequestUrls.get(requestId) : undefined;
+      const headers = msg.params?.headers as Record<string, string> | undefined;
+      if (url && headers) tratarRequest(url, headers);
+      if (requestId) pendingRequestUrls.delete(requestId);
     }
   });
 }
@@ -232,6 +270,7 @@ export async function startDetranScCapture(
 
   cap = {};
   persistFn = opts?.persist ?? null;
+  pendingRequestUrls.clear();
   cleanupTimers();
 
   state = {
@@ -244,27 +283,9 @@ export async function startDetranScCapture(
   try {
     let wsUrl = await devtoolsUp();
     if (!wsUrl) {
-      fs.mkdirSync(PROFILE_DIR, { recursive: true });
-      const chrome = acharChrome();
-      chromeChild = spawn(
-        chrome,
-        [
-          `--remote-debugging-port=${DEBUG_PORT}`,
-          `--user-data-dir=${PROFILE_DIR}`,
-          "--no-first-run",
-          "--no-default-browser-check",
-          PORTAL,
-        ],
-        { detached: true, stdio: "ignore" },
-      );
-      chromeChild.unref();
-      wsUrl = await esperarDevtools();
+      wsUrl = await abrirChrome();
     } else {
-      try {
-        await fetch(PORTAL).catch(() => {});
-      } catch {
-        /* ignore */
-      }
+      await garantirPortalAberto(wsUrl);
     }
 
     ws = new WebSocket(wsUrl);
@@ -274,7 +295,7 @@ export async function startDetranScCapture(
       status: "waiting",
       available: true,
       message:
-        "Chrome aberto. Faça login Gov.br (certificado A1 costuma ser automático) e consulte um veículo — o token será capturado sozinho.",
+        "Chrome aberto no portal DETRAN SC. Clique em Entrar com gov.br, faça login (certificado A1) e consulte um veículo — o token será capturado sozinho.",
       startedAt: state.startedAt,
     };
 
