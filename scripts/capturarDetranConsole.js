@@ -126,6 +126,24 @@
     console.log("captura limpa");
   };
 
+  window.copiarSessaoDetranSc = async () => {
+    const auth = out.auth ? out.auth.replace(/^Bearer\s+/i, "").trim() : null;
+    if (!auth || !out.empresa) {
+      console.warn("Incompleto — consulte um veículo. Ou use scripts/browser/detran-sc-sessao.js");
+      console.log({ auth, empresa: out.empresa });
+      return;
+    }
+    const json = JSON.stringify({ auth, empresa: out.empresa }, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch (e) {
+      console.log("Copie:\n", json);
+      return;
+    }
+    console.log("%cCopiado para Colagem manual DETRAN SC na app", "color:#0a0;font-weight:bold");
+    console.log(json);
+  };
+
   // Busca os payloads AGORA (no navegador) e baixa o dado completo. Imune à
   // expiração/uso-único do ticket, pois consome cada ticket uma vez e salva o
   // resultado. Sem credentials:include (evita bloqueio de CORS do backend).
@@ -164,8 +182,9 @@
   };
 
   console.log(
-    "%cCAPTURA DETRAN ATIVA (sobrevive a reload). Consulte as placas; depois rode baixarDetran().",
+    "%cCaptura DETRAN ATIVA (sobrevive a reload). Consulte as placas; depois rode baixarDetran() ou copiarSessaoDetranSc().",
     "color:#06c;font-weight:bold",
   );
+  console.log("Sessão app: copiarSessaoDetranSc()  (atenção ao camelCase)");
   mostrar();
 })();
